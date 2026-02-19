@@ -1,0 +1,265 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { Calendar, Users, Mail, Upload, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+const Dashboard = () => {
+  const token = localStorage.getItem("token");
+  const navigate = useNavigate();
+
+  const [activeTab, setActiveTab] = useState("upload");
+  const [teamTab, setTeamTab] = useState("add");
+
+  /* ================= EVENTS ================= */
+  const [events, setEvents] = useState<any[]>([]);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [date, setDate] = useState("");
+  const [location, setLocation] = useState("");
+  const [status, setStatus] = useState("Upcoming");
+  const [images, setImages] = useState<FileList | null>(null);
+
+  /* ================= TEAM ================= */
+  const [members, setMembers] = useState<any[]>([]);
+
+  /* ================= MESSAGES ================= */
+  const [messages, setMessages] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchEvents();
+    fetchMembers();
+    fetchMessages();
+  }, []);
+
+  const fetchEvents = async () => {
+    const res = await axios.get("http://localhost:5000/events");
+    setEvents(res.data);
+  };
+
+  const fetchMembers = async () => {
+    const res = await axios.get("http://localhost:5000/team");
+    setMembers(res.data);
+  };
+
+  const fetchMessages = async () => {
+    const res = await axios.get("http://localhost:5000/messages", {
+      headers: { Authorization: token }
+    });
+    setMessages(res.data);
+  };
+
+  /* ================= LOGOUT ================= */
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/");
+  };
+
+  /* ================= EVENT UPLOAD ================= */
+  const handleEventUpload = async (e: any) => {
+    e.preventDefault();
+
+    if (status === "Completed" && !images) {
+      alert("Completed events must include images.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("description", description);
+    formData.append("date", date);
+    formData.append("location", location);
+    formData.append("status", status);
+
+    if (status === "Completed" && images) {
+      for (let i = 0; i < images.length; i++) {
+        formData.append("images", images[i]);
+      }
+    }
+
+    await axios.post("http://localhost:5000/events", formData, {
+      headers: { Authorization: token }
+    });
+
+    alert("Event Uploaded!");
+    setTitle("");
+    setDescription("");
+    setDate("");
+    setLocation("");
+    setImages(null);
+    setStatus("Upcoming");
+    fetchEvents();
+  };
+
+  /* ================= UPDATE STATUS ================= */
+  const updateStatus = async (id: string, newStatus: string) => {
+    if (newStatus === "Completed") {
+      alert("After marking as Completed, please upload event gallery images.");
+    }
+
+    await axios.put(
+      `http://localhost:5000/events/status/${id}`,
+      { status: newStatus },
+      { headers: { Authorization: token } }
+    );
+
+    fetchEvents();
+  };
+
+  const deleteEvent = async (id: string) => {
+    if (!confirm("Delete this event?")) return;
+
+    await axios.delete(`http://localhost:5000/events/${id}`, {
+      headers: { Authorization: token }
+    });
+
+    fetchEvents();
+  };
+
+  const menu = [
+    { id: "upload", label: "Upload Event", icon: Upload },
+    { id: "events", label: "Manage Events", icon: Calendar },
+    { id: "team", label: "Team Management", icon: Users },
+    { id: "messages", label: "Messages", icon: Mail }
+  ];
+
+  return (
+    <div className="min-h-screen bg-black text-white flex flex-col">
+
+      {/* HEADER */}
+      <div className="flex justify-end items-center px-8 py-4 border-b border-cyan-500/20 bg-zinc-900">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 px-5 py-2 text-sm rounded-full 
+                     border border-cyan-400 text-cyan-400
+                     hover:bg-cyan-400 hover:text-black
+                     transition-all duration-300"
+        >
+          <LogOut size={16} />
+          Logout
+        </button>
+      </div>
+
+      <div className="flex flex-1">
+
+        {/* SIDEBAR */}
+        <div className="w-64 bg-zinc-900 border-r border-cyan-500/20 p-6">
+          <h2 className="text-xl text-cyan-400 mb-8">Admin Panel</h2>
+          <div className="space-y-3">
+            {menu.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${
+                  activeTab === item.id
+                    ? "bg-cyan-500 text-black"
+                    : "hover:bg-white/10 text-white/70"
+                }`}
+              >
+                <item.icon size={18} />
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* CONTENT */}
+        <div className="flex-1 p-10 overflow-y-auto">
+
+          {/* UPLOAD EVENT */}
+          {activeTab === "upload" && (
+            <div>
+              <h2 className="text-2xl mb-6 text-cyan-400">Upload Event</h2>
+
+              <form onSubmit={handleEventUpload} className="space-y-4 max-w-xl">
+
+                <input placeholder="Title" value={title}
+                  onChange={e=>setTitle(e.target.value)}
+                  className="w-full p-2 bg-zinc-800 rounded"/>
+
+                <textarea placeholder="Description" value={description}
+                  onChange={e=>setDescription(e.target.value)}
+                  className="w-full p-2 bg-zinc-800 rounded"/>
+
+                <input placeholder="Date" value={date}
+                  onChange={e=>setDate(e.target.value)}
+                  className="w-full p-2 bg-zinc-800 rounded"/>
+
+                <input placeholder="Location" value={location}
+                  onChange={e=>setLocation(e.target.value)}
+                  className="w-full p-2 bg-zinc-800 rounded"/>
+
+                <select
+                  value={status}
+                  onChange={(e)=>setStatus(e.target.value)}
+                  className="w-full p-2 bg-zinc-800 rounded"
+                >
+                  <option value="Upcoming">Upcoming</option>
+                  <option value="Completed">Completed</option>
+                </select>
+
+                {status === "Completed" && (
+                  <input
+                    type="file"
+                    multiple
+                    required
+                    onChange={(e:any)=>setImages(e.target.files)}
+                  />
+                )}
+
+                <button className="bg-cyan-500 px-6 py-2 rounded hover:bg-cyan-400">
+                  Upload
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* MANAGE EVENTS */}
+          {activeTab === "events" && (
+            <div>
+              <h2 className="text-2xl mb-6 text-cyan-400">Manage Events</h2>
+
+              {events.map((event)=>(
+                <div key={event._id} className="bg-zinc-800 p-4 rounded mb-4">
+                  <h3>{event.title}</h3>
+                  <p className="text-gray-400">{event.description}</p>
+
+                  <select
+                    value={event.status}
+                    onChange={(e)=>updateStatus(event._id, e.target.value)}
+                    className="mt-2 p-1 bg-zinc-700 rounded"
+                  >
+                    <option value="Upcoming">Upcoming</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+
+                  <button
+                    onClick={()=>deleteEvent(event._id)}
+                    className="bg-red-500 px-4 py-1 mt-2 rounded"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* MESSAGES */}
+          {activeTab === "messages" && (
+            <div>
+              <h2 className="text-2xl mb-6 text-cyan-400">Messages</h2>
+              {messages.map((m,i)=>(
+                <div key={i} className="bg-zinc-800 p-4 rounded mb-3">
+                  <p><b>{m.name}</b> ({m.email})</p>
+                  <p className="text-gray-400">{m.message}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;

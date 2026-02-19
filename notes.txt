@@ -1,0 +1,406 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { motion } from "framer-motion";
+
+const Dashboard = () => {
+
+  const token = localStorage.getItem("token");
+
+  /* ================= EVENTS ================= */
+
+  const [events, setEvents] = useState<any[]>([]);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [date, setDate] = useState("");
+  const [location, setLocation] = useState("");
+  const [status, setStatus] = useState("Upcoming");
+  const [images, setImages] = useState<FileList | null>(null);
+
+  const [editId, setEditId] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editImages, setEditImages] = useState<FileList | null>(null);
+
+  /* ================= TEAM ================= */
+
+  const [members, setMembers] = useState<any[]>([]);
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  const [department, setDepartment] = useState("");
+  const [rollNumber, setRollNumber] = useState("");
+  const [registrationNumber, setRegistrationNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [priority, setPriority] = useState(5);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [selectedMember, setSelectedMember] = useState<any>(null);
+
+  /* ================= MESSAGES ================= */
+
+  const [messages, setMessages] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchEvents();
+    fetchMembers();
+    fetchMessages();
+  }, []);
+
+  const fetchEvents = async () => {
+    const res = await axios.get("http://localhost:5000/events");
+    setEvents(res.data);
+  };
+
+  const fetchMembers = async () => {
+    const res = await axios.get("http://localhost:5000/team");
+    setMembers(res.data);
+  };
+
+  const fetchMessages = async () => {
+    const res = await axios.get("http://localhost:5000/messages", {
+      headers: { Authorization: token }
+    });
+    setMessages(res.data);
+  };
+
+  /* ================= ADD EVENT ================= */
+
+ const handleEventUpload = async (e: any) => {
+  e.preventDefault();
+  console.log("UPLOAD CLICKED");
+
+
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("description", description);
+    formData.append("date", date);
+    formData.append("location", location);
+    formData.append("status", status);
+
+    if (images) {
+      for (let i = 0; i < images.length; i++) {
+        formData.append("images", images[i]);
+      }
+    }
+
+    await axios.post("http://localhost:5000/events", formData, {
+      headers: {
+        Authorization: token,
+        "Content-Type": "multipart/form-data"
+      }
+    });
+
+    alert("Event Uploaded!");
+    setTitle("");
+    setDescription("");
+    setImages(null);
+    fetchEvents();
+  };
+
+  /* ================= EDIT EVENT ================= */
+
+  const editEvent = async (id: string) => {
+    const formData = new FormData();
+    formData.append("title", editTitle);
+    formData.append("description", editDesc);
+
+    if (editImages) {
+      for (let i = 0; i < editImages.length; i++) {
+        formData.append("images", editImages[i]);
+      }
+    }
+
+    await axios.put(
+      `http://localhost:5000/events/${id}`,
+      formData,
+      {
+        headers: {
+          Authorization: token,
+          "Content-Type": "multipart/form-data"
+        }
+      }
+    );
+
+    alert("Event Updated!");
+    setEditId("");
+    fetchEvents();
+  };
+
+  const deleteEvent = async (id: string) => {
+    if (!confirm("Delete this event?")) return;
+
+    await axios.delete(`http://localhost:5000/events/${id}`, {
+      headers: { Authorization: token }
+    });
+
+    fetchEvents();
+  };
+
+  /* ================= ADD TEAM ================= */
+
+  const handleAddMember = async (e: any) => {
+    e.preventDefault();
+
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("role", role);
+    formData.append("department", department);
+    formData.append("rollNumber", rollNumber);
+    formData.append("registrationNumber", registrationNumber);
+    formData.append("email", email);
+    formData.append("phone", phone);
+    formData.append("priority", priority.toString());
+    if (photo) formData.append("photo", photo);
+
+    await axios.post("http://localhost:5000/team", formData, {
+      headers: {
+        Authorization: token,
+        "Content-Type": "multipart/form-data"
+      }
+    });
+
+    alert("Member Added!");
+    fetchMembers();
+  };
+
+  const deleteMember = async (id: string) => {
+    if (!confirm("Delete this member?")) return;
+
+    await axios.delete(`http://localhost:5000/team/${id}`, {
+      headers: { Authorization: token }
+    });
+
+    fetchMembers();
+  };
+
+  /* ================= UI ================= */
+
+  return (
+    <div className="p-10 text-white">
+
+      <h1 className="text-3xl mb-10">Admin Dashboard</h1>
+
+      {/* ================= EVENTS SECTION ================= */}
+
+      <h2 className="text-2xl mb-4">Upload Event</h2>
+
+      <form onSubmit={handleEventUpload} className="space-y-4">
+
+        <input
+          placeholder="Event Title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full p-2 bg-black border"
+        />
+
+        <textarea
+          placeholder="Event Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="w-full p-2 bg-black border"
+        />
+
+        <input
+  type="text"
+  placeholder="Event Date"
+  value={date}
+  onChange={(e) => setDate(e.target.value)}
+  className="w-full p-2 bg-black border"
+  required
+/>
+
+<input
+  type="text"
+  placeholder="Event Location"
+  value={location}
+  onChange={(e) => setLocation(e.target.value)}
+  className="w-full p-2 bg-black border"
+  required
+/>
+
+
+
+
+        <select
+  value={status}
+  onChange={(e) => setStatus(e.target.value)}
+  className="w-full p-2 bg-black border"
+>
+  <option value="upcoming">Upcoming</option>
+  <option value="completed">Completed</option>
+</select>
+
+
+        <input type="file" multiple onChange={(e: any) => setImages(e.target.files)} />
+
+        <button
+  type="submit"
+  className="bg-blue-500 px-6 py-2 rounded hover:bg-blue-600"
+>
+  Upload Event
+</button>
+
+      </form>
+
+      <h2 className="text-2xl mb-4">Manage Events</h2>
+
+      {events.map((event) => (
+        <div key={event._id} className="border p-4 mb-4 rounded">
+
+          <h3 className="text-xl">{event.title}</h3>
+          <p>{event.description}</p>
+          <p>Status: {event.status}</p>
+
+          <button
+            onClick={() => deleteEvent(event._id)}
+            className="bg-red-500 px-3 py-1 mr-2"
+          >
+            Delete
+          </button>
+
+          <button
+            onClick={() => {
+              setEditId(event._id);
+              setEditTitle(event.title);
+              setEditDesc(event.description);
+            }}
+            className="bg-green-500 px-3 py-1"
+          >
+            Edit
+          </button>
+
+          {editId === event._id && (
+            <div className="mt-3 border p-3">
+              <input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full p-2 bg-black border mb-2"
+              />
+              <textarea
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                className="w-full p-2 bg-black border mb-2"
+              />
+              <input type="file" multiple onChange={(e: any) => setEditImages(e.target.files)} />
+              <button
+                onClick={() => editEvent(event._id)}
+                className="bg-blue-500 px-4 py-1 mt-2"
+              >
+                Save Changes
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* ================= TEAM SECTION ================= */}
+
+      <h2 className="text-2xl mt-16 mb-4">Add Team Member</h2>
+
+      <form onSubmit={handleAddMember} className="space-y-4 border p-6 rounded-xl mb-10">
+
+  <input
+    placeholder="Name"
+    value={name}
+    onChange={(e) => setName(e.target.value)}
+    className="w-full p-2 bg-black border"
+    required
+  />
+
+  <input
+    placeholder="Role (Chair, Vice Chair, etc.)"
+    value={role}
+    onChange={(e) => setRole(e.target.value)}
+    className="w-full p-2 bg-black border"
+    required
+  />
+
+  <input
+    placeholder="Roll Number"
+    value={rollNumber}
+    onChange={(e) => setRollNumber(e.target.value)}
+    className="w-full p-2 bg-black border"
+  />
+
+  <input
+    placeholder="Department"
+    value={department}
+    onChange={(e) => setDepartment(e.target.value)}
+    className="w-full p-2 bg-black border"
+  />
+
+  
+
+  <input
+    placeholder="Registration Number"
+    value={registrationNumber}
+    onChange={(e) => setRegistrationNumber(e.target.value)}
+    className="w-full p-2 bg-black border"
+  />
+
+  <input
+    placeholder="Email"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    className="w-full p-2 bg-black border"
+  />
+
+
+  <input type="number" placeholder="Priority (1 = Chair)" onChange={e=>setPriority(Number(e.target.value))} className="w-full p-2 bg-black border"/>
+
+
+  <input
+    type="file"
+    onChange={(e: any) => setPhoto(e.target.files[0])}
+  />
+
+  <button className="bg-green-500 px-6 py-2 rounded">
+    Add Member
+  </button>
+
+</form>
+
+
+      <h2 className="text-2xl mb-4">Manage Team</h2>
+
+      <div className="grid md:grid-cols-3 gap-6">
+        {members.map((m)=>(
+          <div key={m._id} className="bg-white/5 p-6 rounded-xl text-center">
+            <img
+              src={`http://localhost:5000/uploads/${m.photo}`}
+              className="w-32 h-32 rounded-full mx-auto mb-4 object-cover"
+            />
+            <h3 className="text-lg font-bold">{m.name}</h3>
+<p className="text-blue-400">{m.role}</p>
+<p className="text-sm text-gray-400">{m.department}</p>
+<p className="text-sm">Roll: {m.rollNumber}</p>
+<p className="text-sm">Reg: {m.registrationNumber}</p>
+<p className="text-sm">{m.email}</p>
+<p className="text-sm">{m.phone}</p>
+
+            <button
+              onClick={()=>deleteMember(m._id)}
+              className="bg-red-500 px-3 py-1 mt-2 rounded"
+            >
+              Delete
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* ================= MESSAGES ================= */}
+
+      <h2 className="text-2xl mt-16 mb-4">Messages</h2>
+
+      {messages.map((m,i)=>(
+        <div key={i} className="border p-4 mb-3">
+          <p><b>Name:</b> {m.name}</p>
+          <p><b>Email:</b> {m.email}</p>
+          <p><b>Message:</b> {m.message}</p>
+        </div>
+      ))}
+
+    </div>
+  );
+};
+
+export default Dashboard;
