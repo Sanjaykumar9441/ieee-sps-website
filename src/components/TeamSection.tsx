@@ -14,7 +14,7 @@ const TeamSection = () => {
 
   const fetchMembers = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/team");
+      const res = await axios.get("https://ieee-sps-backend.onrender.com/team");
       setMembers(res.data);
     } catch (err) {
       console.log(err);
@@ -56,7 +56,7 @@ const TeamSection = () => {
 
               <div className="relative w-28 h-28 mx-auto mb-4">
                 <img
-                  src={`http://localhost:5000/uploads/${member.photo}`}
+                  src={`https://ieee-sps-backend.onrender.com/uploads/${member.photo}`}
                   className="w-28 h-28 object-cover rounded-full border-2 border-cyan-400/40 
                              group-hover:border-cyan-400 transition-all duration-300"
                 />
