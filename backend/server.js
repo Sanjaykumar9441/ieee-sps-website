@@ -1,17 +1,14 @@
 require("dotenv").config();
+console.log("MONGO_URI from ENV:", process.env.MONGO_URI);
 
 const express = require("express");
 const mongoose = require("mongoose");
 const nodemailer = require("nodemailer");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
+
 const teamRoutes = require("./routes/teamRoutes");
-
-
-// 🔐 Admin Routes
 const adminRoutes = require("./routes/adminRoutes");
-
-// 📅 Event Routes
 const eventRoutes = require("./routes/eventRoutes");
 
 const app = express();
@@ -22,27 +19,27 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔐 Admin Routes
+/* ===============================
+   ✅ Routes
+================================= */
 app.use("/admin", adminRoutes);
-
-// 📅 Event Routes
 app.use("/events", eventRoutes);
-
 app.use("/team", teamRoutes);
 
-
-
-// 📂 Serve Uploaded Images
+/* ===============================
+   📂 Serve Uploaded Images
+================================= */
 app.use("/uploads", express.static("uploads"));
 
 /* ===============================
    ✅ MongoDB Connection
 ================================= */
-
 async function connectDB() {
   try {
-    console.log("🔄 Connecting to MongoDB...");
-    await mongoose.connect(process.env.MONGO_URI);
+    console.log("🔄 Connecting to MongoDB..."); {}
+    await mongoose.connect(process.env.MONGO_URI, {
+      family: 4
+    });
     console.log("✅ MongoDB Connected Successfully");
   } catch (error) {
     console.error("❌ MongoDB Connection Failed:", error.message);
@@ -53,7 +50,6 @@ async function connectDB() {
 /* ===============================
    ✅ Message Schema
 ================================= */
-
 const messageSchema = new mongoose.Schema(
   {
     name: String,
@@ -68,7 +64,6 @@ const Message = mongoose.model("Message", messageSchema);
 /* ===============================
    📩 CONTACT FORM ROUTE
 ================================= */
-
 app.post("/contact", async (req, res) => {
   try {
     const { name, email, message } = req.body;
@@ -79,7 +74,7 @@ app.post("/contact", async (req, res) => {
 
     await Message.create({ name, email, message });
 
-    // Optional Email
+    // Optional Email Sending
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
       const transporter = nodemailer.createTransport({
         service: "gmail",
@@ -113,7 +108,6 @@ app.post("/contact", async (req, res) => {
 /* ===============================
    🔐 GET MESSAGES (ADMIN)
 ================================= */
-
 app.get("/messages", async (req, res) => {
   try {
     const token = req.headers.authorization;
@@ -136,7 +130,6 @@ app.get("/messages", async (req, res) => {
 /* ===============================
    🚀 Start Server
 ================================= */
-
 const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {

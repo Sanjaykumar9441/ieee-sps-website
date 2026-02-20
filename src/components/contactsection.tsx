@@ -33,7 +33,7 @@ const ContactSection = () => {
     try {
       setLoading(true);
 
-      const res = await fetch("http://localhost:5000/send", {
+      const res = await fetch("http://localhost:5000/contact", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -27,7 +27,7 @@ const EventsSection = () => {
 
         {/* Header */}
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-semibold mb-4">Events</h2>
+          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight mb-6">Events</h2>
           <div className="w-16 h-[2px] bg-cyan-400 mx-auto" />
         </div>
 
