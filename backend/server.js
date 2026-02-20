@@ -14,14 +14,34 @@ const eventRoutes = require("./routes/eventRoutes");
 const app = express();
 
 /* ===============================
-   ✅ Middleware
+   ✅ CORS (Allow Vercel + Local)
 ================================= */
+const allowedOrigins = [
+  "http://localhost:8080",
+  "http://localhost:5173",
+  "https://ieee-sps-website-seven.vercel.app"
+];
+
 app.use(cors({
-  origin: "https://ieee-sps-website-seven.vercel.app",
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      return callback(new Error("Not allowed by CORS"), false);
+    }
+    return callback(null, true);
+  },
   methods: ["GET", "POST"],
   credentials: true
 }));
+
 app.use(express.json());
+
+/* ===============================
+   ✅ ROOT ROUTE (IMPORTANT)
+================================= */
+app.get("/", (req, res) => {
+  res.send("Backend is running 🚀");
+});
 
 /* ===============================
    ✅ Routes
@@ -40,7 +60,7 @@ app.use("/uploads", express.static("uploads"));
 ================================= */
 async function connectDB() {
   try {
-    console.log("🔄 Connecting to MongoDB..."); {}
+    console.log("🔄 Connecting to MongoDB...");
     await mongoose.connect(process.env.MONGO_URI, {
       family: 4
     });
@@ -138,6 +158,6 @@ const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {
   app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
   });
 });
