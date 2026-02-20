@@ -10,13 +10,15 @@ const EventsSection = () => {
   }, []);
 
   const fetchEvents = async () => {
-    try {
-      const res = await axios.get("http://localhost:5000/events");
-      setEvents(res.data);
-    } catch (err) {
-      console.log(err);
-    }
-  };
+  try {
+    const res = await axios.get(
+      "https://ieee-sps-backend.onrender.com/events"
+    );
+    setEvents(res.data);
+  } catch (err) {
+    console.log(err);
+  }
+};
 
   const visibleEvents = events.slice(0, 4);
 

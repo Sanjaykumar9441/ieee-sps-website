@@ -43,6 +43,9 @@ app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
 });
 
+app.get("/test-events", (req, res) => {
+  res.json({ message: "Events route working" });
+});
 /* ===============================
    ✅ Routes
 ================================= */
