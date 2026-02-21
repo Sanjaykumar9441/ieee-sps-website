@@ -54,11 +54,34 @@ const Dashboard = () => {
   };
 
   const fetchMessages = async () => {
-    const res = await axios.get("https://ieee-sps-website.onrender.com/messages", {
+    const res = await axios.get("https://ieee-sps-website.onrender.com/contact", {
       headers: { Authorization: token }
     });
     setMessages(res.data);
   };
+
+  const markAsRead = async (id: string) => {
+  try {
+    await axios.put(
+      `https://ieee-sps-website.onrender.com/contact/${id}`,
+      { read: true },
+      {
+        headers: { Authorization: token }
+      }
+    );
+
+    // Update UI instantly
+    setMessages(prev =>
+      prev.map(msg =>
+        msg._id === id ? { ...msg, read: true } : msg
+      )
+    );
+
+  } catch (error) {
+    console.error("Error marking as read:", error);
+    alert("Failed to update message");
+  }
+};
 
   /* ================= LOGOUT ================= */
 
@@ -203,7 +226,7 @@ const Dashboard = () => {
   formData.append("rollNumber", member.rollNumber);
   formData.append("registrationNumber", member.registrationNumber);
   formData.append("email", member.email);
-  formData.append("priority", member.priority);
+  formData.append("priority", member.priority.toString());
 
   if (member.newPhoto) {
     formData.append("photo", member.newPhoto);
@@ -413,24 +436,55 @@ const Dashboard = () => {
 
 
 
-          {/* MESSAGES */}
-          {activeTab === "messages" && (
-            <div>
-              <h2 className="text-2xl text-cyan-400 mb-6">Messages</h2>
-              {messages.map((m,i)=>(
-                <div key={i} className="bg-zinc-800 p-4 rounded mb-3">
-                  <p><b>{m.name}</b> ({m.email})</p>
-                  <p className="text-gray-400">{m.message}</p>
-                </div>
-              ))}
-            </div>
-          )}
+         {/* MESSAGES */}
+{activeTab === "messages" && (
+  <div>
+    <h2 className="text-2xl text-cyan-400 mb-6">Messages</h2>
 
+    {/* ===== UNREAD SECTION ===== */}
+    <h3 className="text-lg text-red-400 mb-3">Unread</h3>
+
+    {messages.filter(m => !m.read).length === 0 && (
+      <p className="text-gray-500 mb-4">No unread messages</p>
+    )}
+
+    {messages
+      .filter(m => !m.read)
+      .map((m) => (
+        <div key={m._id} className="bg-zinc-800 p-4 rounded mb-3">
+          <p><b>{m.name}</b> ({m.email})</p>
+          <p className="text-gray-400 mb-3">{m.message}</p>
+
+          <button
+            onClick={() => markAsRead(m._id)}
+            className="bg-green-500 px-3 py-1 rounded text-sm"
+          >
+            Mark as Read
+          </button>
         </div>
-      </div>
-    </div>
-  );
-};
+      ))}
+
+    {/* ===== READ SECTION ===== */}
+    <h3 className="text-lg text-cyan-400 mt-8 mb-3">Read</h3>
+
+    {messages.filter(m => m.read).length === 0 && (
+      <p className="text-gray-500">No read messages</p>
+    )}
+
+    {messages
+      .filter(m => m.read)
+      .map((m) => (
+        <div key={m._id} className="bg-zinc-900 p-4 rounded mb-3 opacity-70">
+          <p><b>{m.name}</b> ({m.email})</p>
+          <p className="text-gray-400 mb-2">{m.message}</p>
+
+          <span className="text-xs text-green-400">
+            ✔ Read successfully
+          </span>
+        </div>
+      ))}
+  </div>
+)}
 
 /* ================= EDITABLE EVENT ================= */
 

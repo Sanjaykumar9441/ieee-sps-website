@@ -11,6 +11,7 @@ const bcrypt = require("bcryptjs");
 const teamRoutes = require("./routes/teamRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const eventRoutes = require("./routes/eventRoutes");
+const contactRoutes = require("./routes/contactRoutes");
 const Admin = require("./models/admin");
 
 const app = express();
@@ -64,6 +65,7 @@ app.get("/test-events", (req, res) => {
 ================================= */
 app.use("/admin", adminRoutes);
 app.use("/events", eventRoutes);
+app.use("/contact", contactRoutes);
 app.use("/team", teamRoutes);
 
 /* ===============================

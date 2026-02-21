@@ -5,14 +5,23 @@ const contactSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+
   email: {
     type: String,
     required: true,
   },
+
   message: {
     type: String,
     required: true,
   },
+
+  // ✅ ADD THIS
+  read: {
+    type: Boolean,
+    default: false,
+  },
+
   createdAt: {
     type: Date,
     default: Date.now,

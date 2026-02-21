@@ -23,40 +23,48 @@ const ContactSection = () => {
   };
 
   const handleSubmit = async (e: any) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!validateEmail(form.email)) {
-      setError("Please enter a valid email address.");
-      return;
-    }
+  if (!validateEmail(form.email)) {
+    setError("Please enter a valid email address.");
+    return;
+  }
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
+    setError("");
+    setSuccess(false);
 
-      const res = await fetch("https://ieee-sps-website.onrender.com/contact", {
+    const res = await fetch(
+      "https://ieee-sps-website.onrender.com/contact",
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(form),
-      });
-
-      if (res.ok) {
-        setSuccess(true);
-        setForm({ name: "", email: "", message: "" });
-
-        setTimeout(() => {
-          setSuccess(false);
-        }, 3000);
-      } else {
-        setError("Something went wrong. Try again.");
       }
-    } catch (err) {
-      setError("Server not connected.");
-    } finally {
-      setLoading(false);
+    );
+
+    const data = await res.json();   // ✅ read response
+
+    if (res.status === 200 || res.status === 201) {
+      setSuccess(true);
+      setForm({ name: "", email: "", message: "" });
+
+      setTimeout(() => {
+        setSuccess(false);
+      }, 3000);
+    } else {
+      setError(data?.msg || "Something went wrong.");
     }
-  };
+
+  } catch (err) {
+    setError("Server not connected.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <motion.section
