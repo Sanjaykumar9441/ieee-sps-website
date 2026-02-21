@@ -14,7 +14,7 @@ const TeamSection = () => {
 
   const fetchMembers = async () => {
     try {
-      const res = await axios.get("https://ieee-sps-backend.onrender.com/team");
+      const res = await axios.get("https://ieee-sps-website.onrender.com/team");
       setMembers(res.data);
     } catch (err) {
       console.log(err);
