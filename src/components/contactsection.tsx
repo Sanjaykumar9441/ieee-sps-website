@@ -33,7 +33,7 @@ const ContactSection = () => {
     try {
       setLoading(true);
 
-      const res = await fetch("https://ieee-sps-backend.onrender.com/contact", {
+      const res = await fetch("https://ieee-sps-website.onrender.com/contact", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
