@@ -23,18 +23,18 @@ const upload = multer({ storage });
    🔐 Auth Middleware
 ================================= */
 
-const verifyToken = (req, res) => {
+const verifyToken = (req, res, next) => {
   const token = req.headers.authorization;
+
   if (!token) {
-    res.status(401).json({ msg: "No token provided" });
-    return null;
+    return res.status(401).json({ msg: "No token provided" });
   }
 
   try {
-    return jwt.verify(token, process.env.JWT_SECRET);
+    jwt.verify(token, process.env.JWT_SECRET);
+    next();
   } catch (err) {
-    res.status(401).json({ msg: "Invalid token" });
-    return null;
+    return res.status(401).json({ msg: "Invalid token" });
   }
 };
 
@@ -42,9 +42,9 @@ const verifyToken = (req, res) => {
    ➕ ADD EVENT
 ================================= */
 
-router.post("/", upload.array("images", 5), async (req, res) => {
+router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
   try {
-    if (!verifyToken(req, res)) return;
+   
 
     const { title, description, date, status, location } = req.body;
 
@@ -76,7 +76,7 @@ router.post("/", upload.array("images", 5), async (req, res) => {
    ✏️ EDIT EVENT + ADD NEW IMAGES
 ================================= */
 
-router.put("/:id", upload.array("images", 10), async (req, res) => {
+router.put("/:id", verifyToken, upload.array("images", 10), async (req, res) => {
   try {
     if (!verifyToken(req, res)) return;
 
