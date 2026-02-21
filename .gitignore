@@ -20,8 +20,7 @@ dist-ssr/
 backend/.env
 *.local
 
-# Uploads
-backend/uploads/
+
 
 # Editor directories and files
 .vscode/*
