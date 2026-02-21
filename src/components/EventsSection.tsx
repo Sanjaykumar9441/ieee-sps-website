@@ -12,8 +12,8 @@ const EventsSection = () => {
   const fetchEvents = async () => {
   try {
     const res = await axios.get(
-      "https://ieee-sps-backend.onrender.com/events"
-    );
+  "https://ieee-sps-website.onrender.com/events"
+);
     setEvents(res.data);
   } catch (err) {
     console.log(err);
