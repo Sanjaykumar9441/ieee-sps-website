@@ -24,17 +24,23 @@ const upload = multer({ storage });
 ================================= */
 
 const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization;
+  const authHeader = req.headers.authorization;
 
-  if (!token) {
+  if (!authHeader) {
     return res.status(401).json({ msg: "No token provided" });
   }
 
+  // Remove "Bearer " if present
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.split(" ")[1]
+    : authHeader;
+
   try {
-    jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // optional but useful
     next();
   } catch (err) {
-    return res.status(401).json({ msg: "Invalid token" });
+    return res.status(401).json({ msg: "Invalid or expired token" });
   }
 };
 
