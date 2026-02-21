@@ -19,9 +19,10 @@ const AdminLogin = () => {
 
       window.location.href = "/dashboard";
 
-    } catch (err) {
-      alert("Login Failed");
-    }
+    } catch (err: any) {
+  console.log(err.response?.data);
+  alert(err.response?.data?.msg || "Login Failed");
+}
   };
 
   return (
