@@ -72,10 +72,7 @@ const Dashboard = () => {
   const handleEventUpload = async (e: any) => {
     e.preventDefault();
 
-    if (status === "Completed" && !images) {
-      alert("Completed events must include gallery images.");
-      return;
-    }
+    
 
     const formData = new FormData();
     formData.append("title", title);
@@ -108,21 +105,18 @@ const Dashboard = () => {
 
   /* ================= UPDATE EVENT ================= */
 
-  const handleUpdate = async (event: any, newData: any) => {
-
-    if (newData.status === "Completed" && !newData.images) {
-      alert("Completed events require gallery images.");
-      return;
-    }
-
+ const handleUpdate = async (event: any, newData: any) => {
+  try {
     const formData = new FormData();
+
     formData.append("title", newData.title);
     formData.append("description", newData.description);
     formData.append("date", newData.date);
     formData.append("location", newData.location);
     formData.append("status", newData.status);
 
-    if (newData.images) {
+    // Append images only if new images are selected
+    if (newData.images && newData.images.length > 0) {
       for (let i = 0; i < newData.images.length; i++) {
         formData.append("images", newData.images[i]);
       }
@@ -131,12 +125,21 @@ const Dashboard = () => {
     await axios.put(
       `https://ieee-sps-website.onrender.com/events/${event._id}`,
       formData,
-      { headers: { Authorization: token } }
+      {
+        headers: {
+          Authorization: token
+        }
+      }
     );
 
     alert("Event Updated Successfully");
     fetchEvents();
-  };
+
+  } catch (error) {
+    console.error("Update Error:", error);
+    alert("Error updating event");
+  }
+};
 
   const deleteEvent = async (id: string) => {
     if (!confirm("Delete this event?")) return;
@@ -468,7 +471,13 @@ const EditableEvent = ({ event, onUpdate, onDelete }: any) => {
           </select>
 
           {data.status === "Completed" && (
-            <input type="file" multiple required onChange={(e:any)=>setData({...data,images:e.target.files})}/>
+            <input
+  type="file"
+  multiple
+  onChange={(e: any) =>
+    setData({ ...data, images: e.target.files })
+  }
+/>
           )}
 
           <div className="flex gap-3">
