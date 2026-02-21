@@ -13,7 +13,7 @@ const TeamDetails = () => {
   }, []);
 
   const fetchMember = async () => {
-    const res = await axios.get(`http://localhost:5000/team/${id}`);
+    const res = await axios.get(`https://ieee-sps-website.onrender.com/team/${id}`);
     setMember(res.data);
   };
 
@@ -77,7 +77,7 @@ const TeamDetails = () => {
                             blur-xl opacity-30 animate-pulse"></div>
 
             <img
-              src={`http://localhost:5000/uploads/${member.photo}`}
+              src={`https://ieee-sps-website.onrender.com/uploads/${member.photo}`}
               className="relative w-52 h-52 object-cover 
                          rounded-full border-4 border-cyan-400 
                          shadow-[0_0_25px_rgba(0,255,255,0.6)]"

@@ -44,17 +44,17 @@ const Dashboard = () => {
   /* ================= FETCH ================= */
 
   const fetchEvents = async () => {
-    const res = await axios.get("http://localhost:5000/events");
+    const res = await axios.get("https://ieee-sps-website.onrender.com/events");
     setEvents(res.data);
   };
 
   const fetchMembers = async () => {
-    const res = await axios.get("http://localhost:5000/team");
+    const res = await axios.get("https://ieee-sps-website.onrender.com/team");
     setMembers(res.data);
   };
 
   const fetchMessages = async () => {
-    const res = await axios.get("http://localhost:5000/messages", {
+    const res = await axios.get("https://ieee-sps-website.onrender.com/messages", {
       headers: { Authorization: token }
     });
     setMessages(res.data);
@@ -90,7 +90,7 @@ const Dashboard = () => {
       }
     }
 
-    await axios.post("http://localhost:5000/events", formData, {
+    await axios.post("https://ieee-sps-website.onrender.com/events", formData, {
       headers: { Authorization: token }
     });
 
@@ -129,7 +129,7 @@ const Dashboard = () => {
     }
 
     await axios.put(
-      `http://localhost:5000/events/${event._id}`,
+      `https://ieee-sps-website.onrender.com/events/${event._id}`,
       formData,
       { headers: { Authorization: token } }
     );
@@ -141,7 +141,7 @@ const Dashboard = () => {
   const deleteEvent = async (id: string) => {
     if (!confirm("Delete this event?")) return;
 
-    await axios.delete(`http://localhost:5000/events/${id}`, {
+    await axios.delete(`https://ieee-sps-website.onrender.com/events/${id}`, {
       headers: { Authorization: token }
     });
 
@@ -164,7 +164,7 @@ const Dashboard = () => {
     formData.append("priority", priority.toString());
     if (photo) formData.append("photo", photo);
 
-    await axios.post("http://localhost:5000/team", formData, {
+    await axios.post("https://ieee-sps-website.onrender.com/team", formData, {
       headers: { Authorization: token }
     });
 
@@ -186,7 +186,7 @@ const Dashboard = () => {
   const deleteMember = async (id: string) => {
     if (!confirm("Delete this member?")) return;
 
-    await axios.delete(`http://localhost:5000/team/${id}`, {
+    await axios.delete(`https://ieee-sps-website.onrender.com/team/${id}`, {
       headers: { Authorization: token }
     });
 
@@ -210,7 +210,7 @@ const Dashboard = () => {
   }
 
   await axios.put(
-    `http://localhost:5000/team/${member._id}`,
+    `https://ieee-sps-website.onrender.com/team/${member._id}`,
     formData,
     { headers: { Authorization: token } }
   );
@@ -356,7 +356,7 @@ const Dashboard = () => {
       <div className="grid md:grid-cols-3 gap-6">
         {members.map((m)=>(
           <div key={m._id} className="bg-zinc-800 p-6 rounded text-center">
-            <img src={`http://localhost:5000/uploads/${m.photo}`} className="w-28 h-28 rounded-full mx-auto mb-4 object-cover"/>
+            <img src={`https://ieee-sps-website.onrender.com/uploads/${m.photo}`} className="w-28 h-28 rounded-full mx-auto mb-4 object-cover"/>
             <h3>{m.name}</h3>
             <p className="text-cyan-400">{m.role}</p>
 

@@ -11,7 +11,7 @@ const AllEvents = () => {
   }, []);
 
   const fetchEvents = async () => {
-    const res = await axios.get("http://localhost:5000/events");
+    const res = await axios.get("https://ieee-sps-website.onrender.com/events");
     setEvents(res.data);
   };
 

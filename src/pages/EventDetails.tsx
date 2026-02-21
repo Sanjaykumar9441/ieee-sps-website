@@ -13,7 +13,7 @@ const EventDetails = () => {
   }, []);
 
   const fetchEvent = async () => {
-    const res = await axios.get(`http://localhost:5000/events/${id}`);
+    const res = await axios.get(`https://ieee-sps-website.onrender.com/events/${id}`);
     setEvent(res.data);
   };
 
@@ -115,7 +115,7 @@ const EventDetails = () => {
                     <div className="overflow-hidden rounded-xl bg-black">
 
                       <img
-                        src={`http://localhost:5000/uploads/${img}`}
+                        src={`https://ieee-sps-website.onrender.com/uploads/${img}`}
                         className="w-full h-64 object-cover 
                                    group-hover:scale-110 
                                    transition-transform duration-700"
