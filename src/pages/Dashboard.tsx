@@ -163,7 +163,6 @@ const Dashboard = () => {
     formData.append("rollNumber", rollNumber);
     formData.append("registrationNumber", registrationNumber);
     formData.append("email", email);
-    formData.append("phone", phone);
     formData.append("priority", priority.toString());
     if (photo) formData.append("photo", photo);
 
@@ -179,7 +178,6 @@ const Dashboard = () => {
     setRollNumber("");
     setRegistrationNumber("");
     setEmail("");
-    setPhone("");
     setPriority(5);
     setPhoto(null);
 
@@ -205,7 +203,6 @@ const Dashboard = () => {
   formData.append("rollNumber", member.rollNumber);
   formData.append("registrationNumber", member.registrationNumber);
   formData.append("email", member.email);
-  formData.append("phone", member.phone);
   formData.append("priority", member.priority);
 
   if (member.newPhoto) {
@@ -347,7 +344,6 @@ const Dashboard = () => {
         <input placeholder="Roll Number" value={rollNumber} onChange={e=>setRollNumber(e.target.value)} className="w-full p-2 bg-zinc-800 rounded"/>
         <input placeholder="Registration Number" value={registrationNumber} onChange={e=>setRegistrationNumber(e.target.value)} className="w-full p-2 bg-zinc-800 rounded"/>
         <input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} className="w-full p-2 bg-zinc-800 rounded"/>
-        <input placeholder="Phone" value={phone} onChange={e=>setPhone(e.target.value)} className="w-full p-2 bg-zinc-800 rounded"/>
         <input type="number" placeholder="Priority (1 = Chair)" onChange={e=>setPriority(Number(e.target.value))} className="w-full p-2 bg-zinc-800 rounded"/>
         <input type="file" onChange={(e:any)=>setPhoto(e.target.files[0])}/>
         <button className="bg-green-500 px-6 py-2 rounded">Add Member</button>
@@ -392,7 +388,11 @@ const Dashboard = () => {
           <input value={editMember.name} onChange={e=>setEditMember({...editMember,name:e.target.value})} className="w-full p-2 bg-zinc-800 rounded"/>
           <input value={editMember.role} onChange={e=>setEditMember({...editMember,role:e.target.value})} className="w-full p-2 bg-zinc-800 rounded"/>
           <input value={editMember.department} onChange={e=>setEditMember({...editMember,department:e.target.value})} className="w-full p-2 bg-zinc-800 rounded"/>
+          <input value={editMember.rollNumber} onChange={e=>setEditMember({...editMember,rollNumber:e.target.value})} className="w-full p-2 bg-zinc-800 rounded"/>
+          <input value={editMember.registrationNumber} onChange={e=>setEditMember({...editMember,registrationNumber:e.target.value})} className="w-full p-2 bg-zinc-800 rounded"/>
           <input value={editMember.email} onChange={e=>setEditMember({...editMember,email:e.target.value})} className="w-full p-2 bg-zinc-800 rounded"/>
+          <input type="number" value={editMember.priority} onChange={e => setEditMember({...editMember, priority: e.target.value})} placeholder="Priority" className="w-full p-2 bg-zinc-800 rounded" />
+
           <input type="file" onChange={(e:any)=>setEditMember({...editMember,newPhoto:e.target.files[0]})}/>
 
           <div className="flex gap-3">
