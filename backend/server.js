@@ -6,10 +6,12 @@ const mongoose = require("mongoose");
 const nodemailer = require("nodemailer");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 
 const teamRoutes = require("./routes/teamRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const eventRoutes = require("./routes/eventRoutes");
+const Admin = require("./models/admin");
 
 const app = express();
 
@@ -37,7 +39,7 @@ app.use(cors({
 app.use(express.json());
 
 /* ===============================
-   ✅ ROOT ROUTE (IMPORTANT)
+   ✅ ROOT ROUTE
 ================================= */
 app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
@@ -46,6 +48,7 @@ app.get("/", (req, res) => {
 app.get("/test-events", (req, res) => {
   res.json({ message: "Events route working" });
 });
+
 /* ===============================
    ✅ Routes
 ================================= */
@@ -71,6 +74,31 @@ async function connectDB() {
   } catch (error) {
     console.error("❌ MongoDB Connection Failed:", error.message);
     process.exit(1);
+  }
+}
+
+/* ===============================
+   🔐 AUTO CREATE DEFAULT ADMIN
+================================= */
+async function ensureAdmin() {
+  try {
+    const existing = await Admin.findOne({ email: "admin@ieee.com" });
+
+    if (!existing) {
+      const hashed = await bcrypt.hash("admin123", 10);
+
+      await Admin.create({
+        email: "admin@ieee.com",
+        password: hashed
+      });
+
+      console.log("✅ Default admin created");
+    } else {
+      console.log("ℹ️ Admin already exists");
+    }
+
+  } catch (err) {
+    console.error("❌ Error creating admin:", err.message);
   }
 }
 
@@ -101,7 +129,6 @@ app.post("/contact", async (req, res) => {
 
     await Message.create({ name, email, message });
 
-    // Optional Email Sending
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
       const transporter = nodemailer.createTransport({
         service: "gmail",
@@ -159,7 +186,9 @@ app.get("/messages", async (req, res) => {
 ================================= */
 const PORT = process.env.PORT || 5000;
 
-connectDB().then(() => {
+connectDB().then(async () => {
+  await ensureAdmin();
+
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
   });
