@@ -86,14 +86,15 @@ router.put("/:id", verifyToken, upload.array("images", 10), async (req, res) => 
   try {
     if (!verifyToken(req, res)) return;
 
-    const updateData = {
-      $set: {
-        title: req.body.title,
-        description: req.body.description,
-        status: req.body.status,
-        date: req.body.date
-      }
-    };
+   const updateData = {
+  $set: {
+    title: req.body.title,
+    description: req.body.description,
+    status: req.body.status,
+    date: req.body.date,
+    location: req.body.location
+  }
+};
 
     // ✅ IMPORTANT IMPROVEMENT
     // If new images uploaded → push them to existing images array
