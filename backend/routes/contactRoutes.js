@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const Contact = require("../models/contact");
-const verifyToken = require("../middleware/verifyToken");
 
 /* ================= SEND MESSAGE ================= */
 
@@ -26,7 +25,7 @@ router.post("/", async (req, res) => {
 
 /* ================= GET ALL MESSAGES (ADMIN) ================= */
 
-router.get("/", verifyToken, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const messages = await Contact.find().sort({ createdAt: -1 });
     res.json(messages);
@@ -37,7 +36,7 @@ router.get("/", verifyToken, async (req, res) => {
 
 /* ================= MARK AS READ ================= */
 
-router.put("/:id", verifyToken, async (req, res) => {
+router.put("/:id", async (req, res) => {
   try {
     const updated = await Contact.findByIdAndUpdate(
       req.params.id,
