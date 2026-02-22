@@ -116,11 +116,6 @@ const TeamDetails = () => {
               <span>{member.email}</span>
             </div>
 
-            <div className="flex justify-between">
-              <span className="text-gray-400">Phone</span>
-              <span>{member.phone}</span>
-            </div>
-
           </div>
 
         </div>
