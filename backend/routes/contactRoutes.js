@@ -34,19 +34,14 @@ router.get("/", async (req, res) => {
   }
 });
 
-/* ================= MARK AS READ ================= */
+/* ================= DELETE MESSAGE (ADMIN) ================= */
 
-router.put("/:id", async (req, res) => {
+router.delete("/:id", verifyToken, async (req, res) => {
   try {
-    const updated = await Contact.findByIdAndUpdate(
-      req.params.id,
-      { read: true },
-      { new: true }
-    );
-
-    res.json(updated);
+    await Contact.findByIdAndDelete(req.params.id);
+    res.json({ msg: "Message deleted successfully" });
   } catch (err) {
-    res.status(500).json({ msg: "Error updating message" });
+    res.status(500).json({ msg: "Error deleting message" });
   }
 });
 

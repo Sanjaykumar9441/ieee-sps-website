@@ -72,6 +72,18 @@ useEffect(() => {
   }
 };
 
+const deleteMessage = async (id: string) => {
+  if (!confirm("Delete this message?")) return;
+
+  await axios.delete(
+    `https://ieee-sps-website.onrender.com/contact/${id}`,
+    {
+      headers: { Authorization: token }
+    }
+  );
+
+  fetchMessages();
+};
   /* ================= LOGOUT ================= */
 
   const handleLogout = () => {
@@ -426,17 +438,31 @@ useEffect(() => {
 
 
           {/* MESSAGES */}
-          {activeTab === "messages" && (
-            <div>
-              <h2 className="text-2xl text-cyan-400 mb-6">Messages</h2>
-              {messages.map((m,i)=>(
-                <div key={i} className="bg-zinc-800 p-4 rounded mb-3">
-                  <p><b>{m.name}</b> ({m.email})</p>
-                  <p className="text-gray-400">{m.message}</p>
-                </div>
-              ))}
-            </div>
-          )}
+{activeTab === "messages" && (
+  <div>
+    <h2 className="text-2xl text-cyan-400 mb-6">Messages</h2>
+
+    {messages.map((m) => (
+      <div key={m._id} className="bg-zinc-800 p-4 rounded mb-3">
+        <div className="flex justify-between items-start">
+          
+          <div>
+            <p><b>{m.name}</b> ({m.email})</p>
+            <p className="text-gray-400">{m.message}</p>
+          </div>
+
+          <button
+            onClick={() => deleteMessage(m._id)}
+            className="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm"
+          >
+            Delete
+          </button>
+
+        </div>
+      </div>
+    ))}
+  </div>
+)}
 
         </div>
       </div>
@@ -504,5 +530,7 @@ const EditableEvent = ({ event, onUpdate, onDelete }: any) => {
     </div>
   );
 };
+
+
 
 export default Dashboard;
