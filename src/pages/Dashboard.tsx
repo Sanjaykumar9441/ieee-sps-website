@@ -35,11 +35,16 @@ const Dashboard = () => {
   /* ================= MESSAGES ================= */
   const [messages, setMessages] = useState<any[]>([]);
 
-  useEffect(() => {
-    fetchEvents();
-    fetchMembers();
+ useEffect(() => {
+  fetchEvents();
+  fetchMembers();
+}, []);
+
+useEffect(() => {
+  if (activeTab === "messages") {
     fetchMessages();
-  }, []);
+  }
+}, [activeTab]);
 
   /* ================= FETCH ================= */
 
@@ -54,11 +59,18 @@ const Dashboard = () => {
   };
 
   const fetchMessages = async () => {
-  const res = await axios.get("https://ieee-sps-website.onrender.com/messages", {
-    headers: { Authorization: token }
-  });
-  setMessages(res.data);
-}; 
+  try {
+    const res = await axios.get(
+      "https://ieee-sps-website.onrender.com/contact",
+      {
+        headers: { Authorization: token }
+      }
+    );
+    setMessages(res.data);
+  } catch (error) {
+    console.error("Message Fetch Error:", error);
+  }
+};
 
   /* ================= LOGOUT ================= */
 
