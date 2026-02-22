@@ -75,17 +75,16 @@ const HeroSection = () => {
         </p>
 
         <a
-          href="https://forms.office.com/r/DU2j5CXpd2"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-block px-12 py-4 bg-primary text-primary-foreground font-semibold rounded-full 
-                     transition-all duration-300 
-                     hover:scale-105 
-                     hover:shadow-[0_0_45px_hsl(var(--primary))] 
-                     hover:-translate-y-1"
-        >
-          Join IEEE SPS
-        </a>
+  href="https://forms.office.com/r/DU2j5CXpd2"
+  target="_blank"
+  rel="noreferrer"
+  className="
+    btn-glow-light
+    inline-block
+  "
+>
+  Join IEEE SPS
+</a>
 
       </div>
     </section>
