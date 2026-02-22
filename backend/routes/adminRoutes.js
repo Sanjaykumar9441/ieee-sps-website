@@ -4,34 +4,60 @@ const Admin = require("../models/admin");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+/* ===============================
+   🔐 ADMIN LOGIN
+================================= */
+
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check admin exists
+    /* ===== Validate Input ===== */
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required"
+      });
+    }
+
+    /* ===== Check Admin Exists ===== */
     const admin = await Admin.findOne({ email });
     if (!admin) {
-      return res.status(400).json({ msg: "Admin not found" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid credentials"
+      });
     }
 
-    // Compare password (IMPORTANT)
+    /* ===== Compare Password ===== */
     const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) {
-      return res.status(400).json({ msg: "Invalid password" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid credentials"
+      });
     }
 
-    // Create token
+    /* ===== Create JWT Token ===== */
     const token = jwt.sign(
-      { id: admin._id },
+      { id: admin._id, email: admin.email },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
-    res.json({ token });
+    /* ===== Send Response ===== */
+    res.json({
+      success: true,
+      token,
+      message: "Login successful"
+    });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Server error");
+    console.error("ADMIN LOGIN ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 });
 

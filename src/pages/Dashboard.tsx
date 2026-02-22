@@ -5,6 +5,12 @@ import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const token = localStorage.getItem("token");
+
+useEffect(() => {
+  if (!token) {
+    navigate("/");
+  }
+}, [token]);
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState("upload");
@@ -63,7 +69,7 @@ useEffect(() => {
     const res = await axios.get(
       "https://ieee-sps-website.onrender.com/contact",
       {
-        headers: { Authorization: token }
+        headers: { Authorization: `Bearer ${token}` }
       }
     );
     setMessages(res.data);
@@ -78,7 +84,7 @@ const deleteMessage = async (id: string) => {
   await axios.delete(
     `https://ieee-sps-website.onrender.com/contact/${id}`,
     {
-      headers: { Authorization: token }
+      headers: { Authorization: `Bearer ${token}` }
     }
   );
 
@@ -112,7 +118,7 @@ const deleteMessage = async (id: string) => {
     }
 
     await axios.post("https://ieee-sps-website.onrender.com/events", formData, {
-      headers: { Authorization: token }
+      headers: { Authorization: `Bearer ${token}` }
     });
 
     alert("Event Uploaded Successfully");
@@ -150,9 +156,7 @@ const deleteMessage = async (id: string) => {
       `https://ieee-sps-website.onrender.com/events/${event._id}`,
       formData,
       {
-        headers: {
-          Authorization: token
-        }
+        headers: { Authorization: `Bearer ${token}` }
       }
     );
 
@@ -169,7 +173,7 @@ const deleteMessage = async (id: string) => {
     if (!confirm("Delete this event?")) return;
 
     await axios.delete(`https://ieee-sps-website.onrender.com/events/${id}`, {
-      headers: { Authorization: token }
+      headers: { Authorization: `Bearer ${token}` }
     });
 
     fetchEvents();
@@ -191,7 +195,7 @@ const deleteMessage = async (id: string) => {
     if (photo) formData.append("photo", photo);
 
     await axios.post("https://ieee-sps-website.onrender.com/team", formData, {
-      headers: { Authorization: token }
+     headers: { Authorization: `Bearer ${token}` }
     });
 
     alert("Member Added Successfully");
@@ -212,7 +216,7 @@ const deleteMessage = async (id: string) => {
     if (!confirm("Delete this member?")) return;
 
     await axios.delete(`https://ieee-sps-website.onrender.com/team/${id}`, {
-      headers: { Authorization: token }
+      headers: { Authorization: `Bearer ${token}` }
     });
 
     fetchMembers();
@@ -236,7 +240,7 @@ const deleteMessage = async (id: string) => {
   await axios.put(
     `https://ieee-sps-website.onrender.com/team/${member._id}`,
     formData,
-    { headers: { Authorization: token } }
+    { headers: { Authorization: `Bearer ${token}` } }
   );
 
   alert("Member Updated Successfully");

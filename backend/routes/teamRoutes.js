@@ -4,7 +4,10 @@ const Team = require("../models/team");
 const multer = require("multer");
 const jwt = require("jsonwebtoken");
 
-/* Upload Setup */
+/* ===============================
+   📸 Upload Setup
+================================= */
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "uploads/");
@@ -16,13 +19,36 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-/* ADD MEMBER */
-router.post("/", upload.single("photo"), async (req, res) => {
-  try {
-    const token = req.headers.authorization;
-    if (!token) return res.status(401).json({ msg: "No token" });
+/* ===============================
+   🔐 Auth Middleware
+================================= */
 
-    jwt.verify(token, process.env.JWT_SECRET);
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).json({ msg: "No token provided" });
+  }
+
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.split(" ")[1]
+    : authHeader;
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ msg: "Invalid or expired token" });
+  }
+};
+
+/* ===============================
+   ➕ ADD MEMBER (Protected)
+================================= */
+
+router.post("/", verifyToken, upload.single("photo"), async (req, res) => {
+  try {
 
     const newMember = new Team({
       ...req.body,
@@ -30,20 +56,21 @@ router.post("/", upload.single("photo"), async (req, res) => {
     });
 
     await newMember.save();
-    res.json({ success: true });
+
+    res.json({ success: true, member: newMember });
 
   } catch (err) {
+    console.error("ADD MEMBER ERROR:", err);
     res.status(500).json({ msg: "Error adding member" });
   }
 });
 
-/* EDIT MEMBER */
-router.put("/:id", upload.single("photo"), async (req, res) => {
-  try {
-    const token = req.headers.authorization;
-    if (!token) return res.status(401).json({ msg: "No token" });
+/* ===============================
+   ✏️ EDIT MEMBER (Protected)
+================================= */
 
-    jwt.verify(token, process.env.JWT_SECRET);
+router.put("/:id", verifyToken, upload.single("photo"), async (req, res) => {
+  try {
 
     const updateData = { ...req.body };
 
@@ -57,39 +84,69 @@ router.put("/:id", upload.single("photo"), async (req, res) => {
       { new: true }
     );
 
+    if (!updated) {
+      return res.status(404).json({ msg: "Member not found" });
+    }
+
     res.json(updated);
 
   } catch (err) {
-    res.status(401).json({ msg: "Unauthorized" });
+    console.error("EDIT MEMBER ERROR:", err);
+    res.status(500).json({ msg: "Error updating member" });
   }
 });
 
-/* DELETE MEMBER */
-router.delete("/:id", async (req, res) => {
+/* ===============================
+   🗑 DELETE MEMBER (Protected)
+================================= */
+
+router.delete("/:id", verifyToken, async (req, res) => {
   try {
-    const token = req.headers.authorization;
-    if (!token) return res.status(401).json({ msg: "No token" });
 
-    jwt.verify(token, process.env.JWT_SECRET);
+    const deleted = await Team.findByIdAndDelete(req.params.id);
 
-    await Team.findByIdAndDelete(req.params.id);
-    res.json({ msg: "Member deleted" });
+    if (!deleted) {
+      return res.status(404).json({ msg: "Member not found" });
+    }
+
+    res.json({ msg: "Member deleted successfully" });
 
   } catch (err) {
-    res.status(401).json({ msg: "Unauthorized" });
+    console.error("DELETE MEMBER ERROR:", err);
+    res.status(500).json({ msg: "Error deleting member" });
   }
 });
 
-/* GET ALL MEMBERS (Hierarchy Order) */
+/* ===============================
+   📥 GET ALL MEMBERS (Public)
+================================= */
+
 router.get("/", async (req, res) => {
-  const members = await Team.find().sort({ priority: 1 });
-  res.json(members);
+  try {
+    const members = await Team.find().sort({ priority: 1 });
+    res.json(members);
+  } catch (err) {
+    res.status(500).json({ msg: "Error fetching members" });
+  }
 });
 
-/* GET SINGLE MEMBER */
+/* ===============================
+   📥 GET SINGLE MEMBER (Public)
+================================= */
+
 router.get("/:id", async (req, res) => {
-  const member = await Team.findById(req.params.id);
-  res.json(member);
+  try {
+    const member = await Team.findById(req.params.id);
+
+    if (!member) {
+      return res.status(404).json({ msg: "Member not found" });
+    }
+
+    res.json(member);
+
+  } catch (err) {
+    res.status(500).json({ msg: "Error fetching member" });
+  }
 });
 
 module.exports = router;

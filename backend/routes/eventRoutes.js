@@ -30,14 +30,13 @@ const verifyToken = (req, res, next) => {
     return res.status(401).json({ msg: "No token provided" });
   }
 
-  // Remove "Bearer " if present
   const token = authHeader.startsWith("Bearer ")
     ? authHeader.split(" ")[1]
     : authHeader;
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // optional but useful
+    req.user = decoded;
     next();
   } catch (err) {
     return res.status(401).json({ msg: "Invalid or expired token" });
@@ -45,13 +44,11 @@ const verifyToken = (req, res, next) => {
 };
 
 /* ===============================
-   ➕ ADD EVENT
+   ➕ ADD EVENT (Protected)
 ================================= */
 
 router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
   try {
-   
-
     const { title, description, date, status, location } = req.body;
 
     const images = req.files
@@ -62,7 +59,7 @@ router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
       title,
       description,
       date,
-      location,   // ✅ ADD THIS
+      location,
       status,
       images
     });
@@ -72,32 +69,28 @@ router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
     res.json({ success: true, event: newEvent });
 
   } catch (err) {
-    console.error("ADD EVENT ERROR:", err); // 🔥 ADD THIS
+    console.error("ADD EVENT ERROR:", err);
     res.status(500).json({ msg: "Error adding event" });
   }
 });
 
-
 /* ===============================
-   ✏️ EDIT EVENT + ADD NEW IMAGES
+   ✏️ UPDATE EVENT (Protected)
 ================================= */
 
 router.put("/:id", verifyToken, upload.array("images", 10), async (req, res) => {
   try {
-    if (!verifyToken(req, res)) return;
 
-   const updateData = {
-  $set: {
-    title: req.body.title,
-    description: req.body.description,
-    status: req.body.status,
-    date: req.body.date,
-    location: req.body.location
-  }
-};
+    const updateData = {
+      $set: {
+        title: req.body.title,
+        description: req.body.description,
+        status: req.body.status,
+        date: req.body.date,
+        location: req.body.location
+      }
+    };
 
-    // ✅ IMPORTANT IMPROVEMENT
-    // If new images uploaded → push them to existing images array
     if (req.files && req.files.length > 0) {
       updateData.$push = {
         images: {
@@ -119,18 +112,17 @@ router.put("/:id", verifyToken, upload.array("images", 10), async (req, res) => 
     res.json(updated);
 
   } catch (err) {
+    console.error("UPDATE ERROR:", err);
     res.status(500).json({ msg: "Error updating event" });
   }
 });
 
 /* ===============================
-   🔄 UPDATE STATUS ONLY
+   🔄 UPDATE STATUS (Protected)
 ================================= */
 
-router.put("/status/:id", async (req, res) => {
+router.put("/status/:id", verifyToken, async (req, res) => {
   try {
-    if (!verifyToken(req, res)) return;
-
     const updated = await Event.findByIdAndUpdate(
       req.params.id,
       { $set: { status: req.body.status } },
@@ -145,13 +137,11 @@ router.put("/status/:id", async (req, res) => {
 });
 
 /* ===============================
-   🗑 DELETE EVENT
+   🗑 DELETE EVENT (Protected)
 ================================= */
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyToken, async (req, res) => {
   try {
-    if (!verifyToken(req, res)) return;
-
     const deleted = await Event.findByIdAndDelete(req.params.id);
 
     if (!deleted) {
@@ -166,26 +156,34 @@ router.delete("/:id", async (req, res) => {
 });
 
 /* ===============================
-   📥 GET ALL EVENTS
+   📥 GET ALL EVENTS (Public)
 ================================= */
 
 router.get("/", async (req, res) => {
-  const events = await Event.find().sort({ createdAt: -1 });
-  res.json(events);
+  try {
+    const events = await Event.find().sort({ createdAt: -1 });
+    res.json(events);
+  } catch (err) {
+    res.status(500).json({ msg: "Error fetching events" });
+  }
 });
 
 /* ===============================
-   📥 GET SINGLE EVENT
+   📥 GET SINGLE EVENT (Public)
 ================================= */
 
 router.get("/:id", async (req, res) => {
-  const event = await Event.findById(req.params.id);
+  try {
+    const event = await Event.findById(req.params.id);
 
-  if (!event) {
-    return res.status(404).json({ msg: "Event not found" });
+    if (!event) {
+      return res.status(404).json({ msg: "Event not found" });
+    }
+
+    res.json(event);
+  } catch (err) {
+    res.status(500).json({ msg: "Error fetching event" });
   }
-
-  res.json(event);
 });
 
 module.exports = router;
