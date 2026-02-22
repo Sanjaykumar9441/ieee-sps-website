@@ -103,29 +103,24 @@ const EventDetails = () => {
               <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
 
                 {event.images.map((img: string, index: number) => (
-
-                  <div
-                    key={index}
-                    className="relative group rounded-xl p-[2px] 
-                               bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 
-                               hover:shadow-[0_0_30px_rgba(0,255,255,0.6)] 
-                               transition-all duration-500"
-                  >
-
-                    <div className="overflow-hidden rounded-xl bg-black">
-
-                      <img
-                        src={img}
-                        className="w-full h-64 object-cover 
-                                   group-hover:scale-110 
-                                   transition-transform duration-700"
-                      />
-
-                    </div>
-
-                  </div>
-
-                ))}
+  <div
+    key={index}
+    className="relative group rounded-xl p-[2px] 
+               bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 
+               hover:shadow-[0_0_30px_rgba(0,255,255,0.6)] 
+               transition-all duration-500"
+  >
+    <div className="overflow-hidden rounded-xl bg-black">
+      <img
+        src={img}
+        alt="Event"
+        className="w-full h-64 object-cover 
+                   group-hover:scale-110 
+                   transition-transform duration-700"
+      />
+    </div>
+  </div>
+))}
 
               </div>
             </>
