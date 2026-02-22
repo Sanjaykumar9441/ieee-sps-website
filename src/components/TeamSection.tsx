@@ -77,7 +77,7 @@ const TeamSection = () => {
 
               <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-4">
                 <img
-                  src={`https://ieee-sps-website.onrender.com/uploads/${member.photo}`}
+                  src={member.photo}
                   className="w-full h-full object-cover rounded-full border-2 border-primary/40
                              group-hover:border-primary transition-all duration-300"
                 />

@@ -77,7 +77,7 @@ const TeamDetails = () => {
                             blur-xl opacity-30 animate-pulse"></div>
 
             <img
-              src={`https://ieee-sps-website.onrender.com/uploads/${member.photo}`}
+              src={member.photo}
               className="relative w-52 h-52 object-cover 
                          rounded-full border-4 border-cyan-400 
                          shadow-[0_0_25px_rgba(0,255,255,0.6)]"

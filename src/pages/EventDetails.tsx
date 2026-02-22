@@ -115,7 +115,7 @@ const EventDetails = () => {
                     <div className="overflow-hidden rounded-xl bg-black">
 
                       <img
-                        src={`https://ieee-sps-website.onrender.com/uploads/${img}`}
+                        src={img}
                         className="w-full h-64 object-cover 
                                    group-hover:scale-110 
                                    transition-transform duration-700"

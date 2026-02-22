@@ -51,7 +51,7 @@ const HeroSection = () => {
 
         {/* Main Heading */}
         <h1
-          className="text-4xl sm:text-5xl md:text-8xl font-bold tracking-tight mb-4"
+          className="text-5xl sm:text-5xl md:text-8xl font-bold tracking-tight mb-4"
           style={{ fontFamily: "Orbitron, sans-serif" }}
         >
           IEEE{" "}
@@ -62,7 +62,7 @@ const HeroSection = () => {
 
         {/* Animated Sub Heading */}
         <h2
-          className="text-lg sm:text-2xl md:text-5xl font-semibold mb-6 text-foreground text-center"
+          className="text-lg sm:text-3xl md:text-5xl font-semibold mb-6 text-foreground text-center"
           style={{
             fontFamily: `${fonts[fontIndex]}, sans-serif`,
             letterSpacing: "2px",
