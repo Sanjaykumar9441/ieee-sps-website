@@ -114,77 +114,11 @@ async function ensureAdmin() {
   }
 }
 
-/* ===============================
-   ✅ Message Schema
-================================= */
-const messageSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    email: { type: String, required: true },
-    message: { type: String, required: true },
-    read: { type: Boolean, default: false }   // 🔥 IMPORTANT
-  },
-  { timestamps: true }
-);
 
-const Message = mongoose.model("Message", messageSchema);
 
-/* ===============================
-   📩 CONTACT FORM ROUTE
-================================= */
-app.post("/contact", async (req, res) => {
-  try {
-    const { name, email, message } = req.body;
 
-    if (!name || !email || !message) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields required"
-      });
-    }
 
-    await Message.create({
-      name,
-      email,
-      message,
-      read: false
-    });
 
-    res.status(201).json({
-      success: true,
-      message: "Message sent successfully"
-    });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Server error"
-    });
-  }
-});
-
-/* ===============================
-   🔐 GET MESSAGES (ADMIN)
-================================= */
-app.get("/messages", async (req, res) => {
-  try {
-    const token = req.headers.authorization;
-
-    if (!token) {
-      return res.status(401).json({ msg: "No token" });
-    }
-
-    jwt.verify(token, process.env.JWT_SECRET);
-
-    const messages = await Message.find().sort({ createdAt: -1 });
-
-    res.json(messages);
-
-  } catch (error) {
-    res.status(401).json({ msg: "Invalid token" });
-  }
-});
 
 /* ===============================
    🚀 Start Server
