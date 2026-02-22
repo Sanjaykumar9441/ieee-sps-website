@@ -23,7 +23,7 @@ const EventsSection = () => {
   const visibleEvents = events.slice(0, 4);
 
   return (
-    <section id="events" className="py-16 px-6 bg-black text-white">
+    <section id="events" className="py-16 px-6 bg-background text-foreground transition-colors duration-300">
 
       <div className="max-w-2xl mx-auto">
 
@@ -47,7 +47,7 @@ const EventsSection = () => {
               <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500 to-green-500 opacity-0 group-hover:opacity-60 blur-md transition duration-300"></div>
 
               {/* Card */}
-              <div className="relative bg-black border border-white/10 
+              <div className="relative bg-card border border-border 
                               rounded-xl p-5 
                               flex justify-between items-center
                               group-hover:border-cyan-400
@@ -70,7 +70,7 @@ const EventsSection = () => {
                     {event.title}
                   </h3>
 
-                  <div className="text-gray-400 text-xs mt-2">
+                  <div className="text-muted-foreground text-xs mt-2">
                     📅 {event.date} &nbsp;&nbsp; | &nbsp;&nbsp; 📍 {event.location}
                   </div>
 

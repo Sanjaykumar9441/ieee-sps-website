@@ -22,7 +22,7 @@ const TeamSection = () => {
   };
 
   return (
-    <section id="team" className="py-16 px-6 text-white bg-black">
+    <section id="team" className="py-16 px-6 bg-background text-foreground transition-colors duration-300">
 
       <div className="max-w-7xl mx-auto">
 
@@ -46,11 +46,11 @@ const TeamSection = () => {
           {(showAll ? members : members.slice(0, 8)).map((member) => (
             <div
               key={member._id}
-              className="group bg-zinc-900/60 backdrop-blur-md 
-                         border border-white/10 
+              className="group bg-card backdrop-blur-md 
+                         border border-border
                          rounded-xl p-6 text-center 
                          hover:border-cyan-400/50 
-                         hover:shadow-[0_0_25px_rgba(0,255,255,0.15)] 
+                         hover:shadow-[0_0_25px_hsl(var(--primary)/0.25)] 
                          transition-all duration-300"
             >
 
