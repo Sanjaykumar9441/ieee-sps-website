@@ -1,20 +1,22 @@
 const express = require("express");
 const router = express.Router();
 const Event = require("../models/event");
-const multer = require("multer");
 const jwt = require("jsonwebtoken");
 
+const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("../config/cloudinary");
+
 /* ===============================
-   📸 Upload Setup
+   ☁️ Cloudinary Storage
 ================================= */
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "ieee-sps-events",
+    allowed_formats: ["jpg", "png", "jpeg", "webp"],
   },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  }
 });
 
 const upload = multer({ storage });
@@ -44,7 +46,7 @@ const verifyToken = (req, res, next) => {
 };
 
 /* ===============================
-   ➕ ADD EVENT (Protected)
+   ➕ ADD EVENT
 ================================= */
 
 router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
@@ -52,7 +54,7 @@ router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
     const { title, description, date, status, location } = req.body;
 
     const images = req.files
-      ? req.files.map(file => file.filename)
+      ? req.files.map(file => file.path) // ✅ Cloudinary URL
       : [];
 
     const newEvent = new Event({
@@ -75,7 +77,7 @@ router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
 });
 
 /* ===============================
-   ✏️ UPDATE EVENT (Protected)
+   ✏️ UPDATE EVENT
 ================================= */
 
 router.put("/:id", verifyToken, upload.array("images", 10), async (req, res) => {
@@ -94,7 +96,7 @@ router.put("/:id", verifyToken, upload.array("images", 10), async (req, res) => 
     if (req.files && req.files.length > 0) {
       updateData.$push = {
         images: {
-          $each: req.files.map(file => file.filename)
+          $each: req.files.map(file => file.path) // ✅ Cloudinary URL
         }
       };
     }
@@ -105,10 +107,6 @@ router.put("/:id", verifyToken, upload.array("images", 10), async (req, res) => 
       { new: true }
     );
 
-    if (!updated) {
-      return res.status(404).json({ msg: "Event not found" });
-    }
-
     res.json(updated);
 
   } catch (err) {
@@ -118,45 +116,20 @@ router.put("/:id", verifyToken, upload.array("images", 10), async (req, res) => 
 });
 
 /* ===============================
-   🔄 UPDATE STATUS (Protected)
-================================= */
-
-router.put("/status/:id", verifyToken, async (req, res) => {
-  try {
-    const updated = await Event.findByIdAndUpdate(
-      req.params.id,
-      { $set: { status: req.body.status } },
-      { new: true }
-    );
-
-    res.json(updated);
-
-  } catch (err) {
-    res.status(500).json({ msg: "Error updating status" });
-  }
-});
-
-/* ===============================
-   🗑 DELETE EVENT (Protected)
+   DELETE
 ================================= */
 
 router.delete("/:id", verifyToken, async (req, res) => {
   try {
-    const deleted = await Event.findByIdAndDelete(req.params.id);
-
-    if (!deleted) {
-      return res.status(404).json({ msg: "Event not found" });
-    }
-
+    await Event.findByIdAndDelete(req.params.id);
     res.json({ msg: "Event deleted successfully" });
-
   } catch (err) {
     res.status(500).json({ msg: "Error deleting event" });
   }
 });
 
 /* ===============================
-   📥 GET ALL EVENTS (Public)
+   GET ALL
 ================================= */
 
 router.get("/", async (req, res) => {
@@ -169,17 +142,12 @@ router.get("/", async (req, res) => {
 });
 
 /* ===============================
-   📥 GET SINGLE EVENT (Public)
+   GET SINGLE
 ================================= */
 
 router.get("/:id", async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
-
-    if (!event) {
-      return res.status(404).json({ msg: "Event not found" });
-    }
-
     res.json(event);
   } catch (err) {
     res.status(500).json({ msg: "Error fetching event" });

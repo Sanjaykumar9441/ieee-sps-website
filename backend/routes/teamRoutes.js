@@ -1,20 +1,22 @@
 const express = require("express");
 const router = express.Router();
 const Team = require("../models/team");
-const multer = require("multer");
 const jwt = require("jsonwebtoken");
 
+const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("../config/cloudinary");
+
 /* ===============================
-   📸 Upload Setup
+   ☁️ Cloudinary Storage
 ================================= */
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "ieee-sps-team",
+    allowed_formats: ["jpg", "png", "jpeg", "webp"],
   },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  }
 });
 
 const upload = multer({ storage });
@@ -44,7 +46,7 @@ const verifyToken = (req, res, next) => {
 };
 
 /* ===============================
-   ➕ ADD MEMBER (Protected)
+   ADD MEMBER
 ================================= */
 
 router.post("/", verifyToken, upload.single("photo"), async (req, res) => {
@@ -52,12 +54,12 @@ router.post("/", verifyToken, upload.single("photo"), async (req, res) => {
 
     const newMember = new Team({
       ...req.body,
-      photo: req.file ? req.file.filename : null
+      photo: req.file ? req.file.path : null // ✅ Cloudinary URL
     });
 
     await newMember.save();
 
-    res.json({ success: true, member: newMember });
+    res.json(newMember);
 
   } catch (err) {
     console.error("ADD MEMBER ERROR:", err);
@@ -66,7 +68,7 @@ router.post("/", verifyToken, upload.single("photo"), async (req, res) => {
 });
 
 /* ===============================
-   ✏️ EDIT MEMBER (Protected)
+   UPDATE MEMBER
 ================================= */
 
 router.put("/:id", verifyToken, upload.single("photo"), async (req, res) => {
@@ -75,7 +77,7 @@ router.put("/:id", verifyToken, upload.single("photo"), async (req, res) => {
     const updateData = { ...req.body };
 
     if (req.file) {
-      updateData.photo = req.file.filename;
+      updateData.photo = req.file.path; // ✅ Cloudinary URL
     }
 
     const updated = await Team.findByIdAndUpdate(
@@ -84,41 +86,29 @@ router.put("/:id", verifyToken, upload.single("photo"), async (req, res) => {
       { new: true }
     );
 
-    if (!updated) {
-      return res.status(404).json({ msg: "Member not found" });
-    }
-
     res.json(updated);
 
   } catch (err) {
-    console.error("EDIT MEMBER ERROR:", err);
+    console.error("UPDATE MEMBER ERROR:", err);
     res.status(500).json({ msg: "Error updating member" });
   }
 });
 
 /* ===============================
-   🗑 DELETE MEMBER (Protected)
+   DELETE MEMBER
 ================================= */
 
 router.delete("/:id", verifyToken, async (req, res) => {
   try {
-
-    const deleted = await Team.findByIdAndDelete(req.params.id);
-
-    if (!deleted) {
-      return res.status(404).json({ msg: "Member not found" });
-    }
-
+    await Team.findByIdAndDelete(req.params.id);
     res.json({ msg: "Member deleted successfully" });
-
   } catch (err) {
-    console.error("DELETE MEMBER ERROR:", err);
     res.status(500).json({ msg: "Error deleting member" });
   }
 });
 
 /* ===============================
-   📥 GET ALL MEMBERS (Public)
+   GET ALL
 ================================= */
 
 router.get("/", async (req, res) => {
@@ -131,19 +121,13 @@ router.get("/", async (req, res) => {
 });
 
 /* ===============================
-   📥 GET SINGLE MEMBER (Public)
+   GET SINGLE
 ================================= */
 
 router.get("/:id", async (req, res) => {
   try {
     const member = await Team.findById(req.params.id);
-
-    if (!member) {
-      return res.status(404).json({ msg: "Member not found" });
-    }
-
     res.json(member);
-
   } catch (err) {
     res.status(500).json({ msg: "Error fetching member" });
   }
