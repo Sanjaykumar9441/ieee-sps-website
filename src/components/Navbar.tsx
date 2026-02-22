@@ -82,8 +82,7 @@ const Navbar = () => {
 
       {/* Navbar */}
       <nav className="fixed top-8 left-[75%] -translate-x-1/2 z-50">
-        <div className="relative bg-white/5 backdrop-blur-xl border border-cyan-400/40 px-5 py-1.5 rounded-full shadow-[0_0_20px_rgba(6,182,212,0.3)] hidden md:flex gap-2 text-sm font-medium items-center">
-
+        <div className="relative bg-card/80 backdrop-blur-xl border border-border px-5 py-1.5 rounded-full shadow-md dark:shadow-[0_0_20px_rgba(6,182,212,0.3)] hidden md:flex gap-2 text-sm font-medium items-center">
           {/* Nav Links */}
           {links.map((l) => {
             const sectionId = l.href.replace("#", "");
@@ -94,8 +93,8 @@ const Navbar = () => {
                 href={l.href}
                 className={`px-4 py-1 rounded-full transition-all duration-300 ${
                   active === sectionId
-                    ? "text-black bg-cyan-400 shadow-[0_0_15px_#06b6d4]"
-                    : "text-white/70 hover:text-white hover:bg-white/10"
+                        ? "bg-primary text-primary-foreground shadow-[0_0_15px_hsl(var(--primary))]"
+                        : "text-foreground hover:text-primary hover:bg-muted"
                 }`}
               >
                 {l.label}

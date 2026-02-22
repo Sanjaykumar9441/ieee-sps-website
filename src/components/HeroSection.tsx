@@ -59,7 +59,7 @@ const HeroSection = () => {
 
         {/* Instant Font Change */}
         <h2
-          className="text-3xl md:text-5xl font-semibold mb-8 text-gray-300"
+          className="text-3xl md:text-5xl font-semibold mb-8 text-foreground"
           style={{
             fontFamily: `${fonts[fontIndex]}, sans-serif`,
             letterSpacing: "2px"
