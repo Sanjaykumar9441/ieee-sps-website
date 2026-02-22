@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import ThemeToggle from "./ThemeToggle";
+
 import ieeeLogo from "../assets/logos/ieee.png";
 import spsLogo from "../assets/logos/sps.png";
 import uniLogo from "../assets/logos/university.png";
@@ -109,6 +111,11 @@ const Navbar = () => {
           </Link>
 
         </div>
+
+       <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <button>Admin</button>
+       </div>
 
         {/* Mobile Toggle */}
         <div className="md:hidden fixed top-4 right-4">
