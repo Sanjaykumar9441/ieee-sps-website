@@ -59,14 +59,14 @@ const HeroSection = () => {
 
         {/* Instant Font Change */}
         <h2
-          className="text-xl sm:text-2xl md:text-5xl font-semibold mb-6 text-foreground"
-          style={{
-            fontFamily: `${fonts[fontIndex]}, sans-serif`,
-            letterSpacing: "2px"
-          }}
-        >
-          Student Branch Chapter
-        </h2>
+  className="text-xl sm:text-2xl md:text-5xl font-semibold mb-8 text-foreground"
+  style={{
+    fontFamily: `${fonts[fontIndex]}, sans-serif`,
+    letterSpacing: "2px"
+  }}
+>
+  Student Branch Chapter
+</h2>
 
         <p className="text-lg md:text-xl max-w-3xl mx-auto mb-14 text-muted-foreground">
           Aditya University — Advancing signal processing research,

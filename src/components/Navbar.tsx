@@ -107,53 +107,74 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* Mobile Toggle Button */}
-      <div className="md:hidden fixed top-4 right-4 z-50 flex items-center gap-3">
+      {/* ================= MOBILE NAV ================= */}
+<div className="md:hidden fixed top-5 right-5 z-50 flex items-center gap-3">
+
+  {/* Theme Toggle */}
   <ThemeToggle />
-        <button
-          onClick={() => setOpen(!open)}
-          className="bg-card/80 backdrop-blur-md p-2 rounded-lg border border-border text-foreground"
+
+  {/* Hamburger */}
+  <button
+    onClick={() => setOpen(!open)}
+    className="bg-card/90 backdrop-blur-xl p-2.5 rounded-full 
+               border border-border shadow-md
+               transition-all duration-300"
+  >
+    {open ? <X size={20} /> : <Menu size={20} />}
+  </button>
+</div>
+
+
+{/* ================= MOBILE MENU ================= */}
+{open && (
+  <div className="md:hidden fixed top-20 left-1/2 -translate-x-1/2 
+                  w-[90%] max-w-sm 
+                  bg-card/95 backdrop-blur-xl 
+                  border border-border 
+                  rounded-2xl 
+                  px-6 py-6 
+                  space-y-5 
+                  z-40 
+                  shadow-xl 
+                  animate-fadeIn">
+
+    {/* Links */}
+    {links.map((l) => {
+      const sectionId = l.href.replace("#", "");
+
+      return (
+        <a
+          key={l.label}
+          href={l.href}
+          onClick={() => setOpen(false)}
+          className={`block text-center px-4 py-2 rounded-lg transition-all duration-300 ${
+            active === sectionId
+              ? "bg-primary text-primary-foreground"
+              : "text-foreground hover:bg-muted"
+          }`}
         >
-          {open ? <X size={20} /> : <Menu size={20} />}
-        </button>
-      </div>
+          {l.label}
+        </a>
+      );
+    })}
 
-      {/* Mobile Menu */}
-      {open && (
-        <div className="md:hidden fixed top-16 right-4 bg-card border border-border rounded-lg px-6 py-4 space-y-4 z-40 shadow-md backdrop-blur-xl">
-          {links.map((l) => {
-            const sectionId = l.href.replace("#", "");
+    {/* Divider */}
+    <div className="h-px bg-border" />
 
-            return (
-              <a
-                key={l.label}
-                href={l.href}
-                onClick={() => setOpen(false)}
-                className={`block px-3 py-2 rounded-lg transition ${
-                  active === sectionId
-                    ? "bg-primary text-primary-foreground"
-                    : "text-foreground hover:bg-muted"
-                }`}
-              >
-                {l.label}
-              </a>
-            );
-          })}
+    {/* Admin */}
+    <Link
+      to="/admin-login"
+      onClick={() => setOpen(false)}
+      className="block text-center border border-primary text-primary 
+                 px-4 py-2 rounded-lg 
+                 hover:bg-primary hover:text-primary-foreground 
+                 transition-all duration-300"
+    >
+      Admin
+    </Link>
 
-          <Link
-            to="/admin-login"
-            onClick={() => setOpen(false)}
-            className="block border border-primary text-primary px-4 py-2 rounded-lg text-center hover:bg-primary hover:text-primary-foreground transition"
-          >
-            Admin
-          </Link>
-
-          {/* Mobile Theme Toggle */}
-          <div className="pt-2">
-            <ThemeToggle />
-          </div>
-        </div>
-      )}
+  </div>
+)}
     </>
   );
 };
