@@ -11,9 +11,7 @@ const verifyToken = (req, res, next) => {
     ? authHeader.split(" ")[1]
     : authHeader;
 
-  // 👇 ADD HERE
-  console.log("TOKEN RECEIVED:", token);
-  console.log("JWT_SECRET:", process.env.JWT_SECRET);
+ 
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
