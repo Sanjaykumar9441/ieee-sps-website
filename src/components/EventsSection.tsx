@@ -10,77 +10,93 @@ const EventsSection = () => {
   }, []);
 
   const fetchEvents = async () => {
-  try {
-    const res = await axios.get(
-  "https://ieee-sps-website.onrender.com/events"
-);
-    setEvents(res.data);
-  } catch (err) {
-    console.log(err);
-  }
-};
+    try {
+      const res = await axios.get(
+        "https://ieee-sps-website.onrender.com/events"
+      );
+      setEvents(res.data);
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   const visibleEvents = events.slice(0, 4);
 
   return (
-    <section id="events" className="py-16 px-6 bg-background text-foreground transition-colors duration-300">
-
-      <div className="max-w-2xl mx-auto">
+    <section
+      id="events"
+      className="py-16 px-4 sm:px-6 bg-background text-foreground transition-colors duration-300"
+    >
+      <div className="max-w-3xl mx-auto">
 
         {/* Header */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight mb-6">Events</h2>
-          <div className="w-16 h-[2px] bg-cyan-400 mx-auto" />
+          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight mb-6">
+            Events
+          </h2>
+          <div className="w-16 h-[2px] bg-primary mx-auto" />
         </div>
 
-        {/* Events */}
+        {/* Events List */}
         <div className="space-y-6">
 
           {visibleEvents.map((event) => (
 
             <div
               key={event._id}
-              className="relative group rounded-xl p-[1px] transition-all duration-300"
+              className="group relative rounded-xl transition-all duration-300"
             >
 
-              {/* Soft Glow */}
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500 to-green-500 opacity-0 group-hover:opacity-60 blur-md transition duration-300"></div>
+              {/* Soft RGB Glow (Subtle in Light Mode) */}
+              <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-40 
+                              blur-xl transition duration-500
+                              bg-gradient-to-r from-primary via-secondary to-accent" />
 
               {/* Card */}
-              <div className="relative bg-card border border-border 
-                              rounded-xl p-5 
-                              flex justify-between items-center
-                              group-hover:border-cyan-400
-                              transition-all duration-300">
+              <div
+                className="relative bg-card border border-border 
+                           rounded-xl p-5 sm:p-6
+                           flex flex-col sm:flex-row 
+                           justify-between sm:items-center 
+                           gap-4
+                           hover:border-primary/60
+                           transition-all duration-300"
+              >
 
                 <div>
 
+                  {/* Status Badge */}
                   <span
-                    className={`text-[10px] px-2 py-1 rounded-full
-                    ${event.status === "Upcoming"
-                      ? "bg-cyan-600"
-                      : "bg-green-600"}`}
+                    className={`text-[11px] px-3 py-1 rounded-full font-medium
+                      ${event.status === "Upcoming"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-accent text-accent-foreground"
+                      }`}
                   >
-                    {event.status === "Completed"
-                      ? "Completed"
-                      : "Upcoming"}
+                    {event.status}
                   </span>
 
-                  <h3 className="text-lg font-semibold mt-2">
+                  {/* Title */}
+                  <h3 className="text-lg sm:text-xl font-semibold mt-3 text-foreground">
                     {event.title}
                   </h3>
 
-                  <div className="text-muted-foreground text-xs mt-2">
+                  {/* Date + Location */}
+                  <div className="text-muted-foreground text-xs sm:text-sm mt-2">
                     📅 {event.date} &nbsp;&nbsp; | &nbsp;&nbsp; 📍 {event.location}
                   </div>
 
                 </div>
 
+                {/* View Button */}
                 <Link
                   to={`/event/${event._id}`}
-                  className="text-cyan-400 text-sm hover:underline"
+                  className="inline-block text-sm px-4 py-2 rounded-full 
+                             border border-primary/50 text-primary
+                             hover:bg-primary hover:text-primary-foreground
+                             transition-all duration-300"
                 >
-                  View →
+                  View Details →
                 </Link>
 
               </div>
@@ -91,7 +107,6 @@ const EventsSection = () => {
         </div>
 
       </div>
-
     </section>
   );
 };

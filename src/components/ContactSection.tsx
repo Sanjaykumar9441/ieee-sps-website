@@ -66,7 +66,7 @@ const ContactSection = () => {
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8 }}
       viewport={{ once: true }}
-      className="min-h-screen flex items-center justify-center bg-background px-6 py-24"
+      className="min-h-screen flex items-center justify-center bg-background px-4 sm:px-6 py-24"
     >
       <div className="relative p-[2px] rounded-2xl max-w-xl w-full mx-auto animate-rgb-border">
         <div className="bg-card border border-border p-10 rounded-2xl shadow-lg">

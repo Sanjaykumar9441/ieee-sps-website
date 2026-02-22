@@ -30,7 +30,7 @@ const HeroSection = () => {
   return (
     <section
       id="home"
-      className="relative min-h-screen flex items-start justify-center pt-40 overflow-hidden bg-background text-foreground"
+      className="relative min-h-screen flex items-start justify-center pt-28 md:pt-40 overflow-hidden bg-background text-foreground"
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,181,226,0.18),transparent_60%)]" />
 
@@ -48,7 +48,7 @@ const HeroSection = () => {
 
         {/* Main Heading */}
         <h1
-          className="text-6xl md:text-8xl font-bold tracking-tight mb-8"
+          className="text-4xl sm:text-5xl md:text-8xl font-bold tracking-tight mb-6"
           style={{ fontFamily: "Orbitron, sans-serif" }}
         >
           IEEE{" "}
@@ -59,7 +59,7 @@ const HeroSection = () => {
 
         {/* Instant Font Change */}
         <h2
-          className="text-3xl md:text-5xl font-semibold mb-8 text-foreground"
+          className="text-xl sm:text-2xl md:text-5xl font-semibold mb-6 text-foreground"
           style={{
             fontFamily: `${fonts[fontIndex]}, sans-serif`,
             letterSpacing: "2px"

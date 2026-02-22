@@ -108,7 +108,8 @@ const Navbar = () => {
       </nav>
 
       {/* Mobile Toggle Button */}
-      <div className="md:hidden fixed top-4 right-4 z-50">
+      <div className="md:hidden fixed top-4 right-4 z-50 flex items-center gap-3">
+  <ThemeToggle />
         <button
           onClick={() => setOpen(!open)}
           className="bg-card/80 backdrop-blur-md p-2 rounded-lg border border-border text-foreground"

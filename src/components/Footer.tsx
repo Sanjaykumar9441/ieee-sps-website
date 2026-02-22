@@ -2,7 +2,7 @@ import { Mail, Linkedin, Instagram, Facebook, Twitter, Phone } from "lucide-reac
 
 const Footer = () => {
   return (
-    <footer className="border-t border-border py-14 px-6 bg-background">
+    <footer className="border-t border-border py-12 px-4 sm:px-6 bg-background">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
 
         {/* Left Section */}
