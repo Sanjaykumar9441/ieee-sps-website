@@ -41,15 +41,15 @@ const Navbar = () => {
 
   return (
     <>
-      {/* Logos */}
-      <div className="absolute top-6 left-12 flex items-center z-50 gap-6">
+      {/* ================= LOGOS ================= */}
+      <div className="absolute top-6 left-0 right-0 flex justify-center md:justify-start md:left-12 z-50 gap-6">
         <a
           href="https://signalprocessingsociety.org/"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:scale-105 transition duration-300"
         >
-          <img src={spsLogo} alt="SPS" className="h-14 w-auto" />
+          <img src={spsLogo} alt="SPS" className="h-12 md:h-14 w-auto" />
         </a>
 
         <a
@@ -58,7 +58,7 @@ const Navbar = () => {
           rel="noopener noreferrer"
           className="hover:scale-105 transition duration-300"
         >
-          <img src={ieeeLogo} alt="IEEE" className="h-14 w-auto" />
+          <img src={ieeeLogo} alt="IEEE" className="h-12 md:h-14 w-auto" />
         </a>
 
         <a
@@ -67,17 +67,32 @@ const Navbar = () => {
           rel="noopener noreferrer"
           className="hover:scale-105 transition duration-300"
         >
-          <img src={uniLogo} alt="University" className="h-14 w-auto" />
+          <img src={uniLogo} alt="University" className="h-12 md:h-14 w-auto" />
         </a>
       </div>
 
-      {/* Desktop Navbar */}
-      <nav className="fixed top-8 right-10 z-50 hidden md:flex items-center gap-4">
+      {/* ================= MOBILE CONTROLS (Below Logos) ================= */}
+      <div className="md:hidden absolute top-24 left-0 right-0 flex justify-center gap-4 z-50">
 
-        {/* 🌙 Separate Theme Toggle */}
+        {/* Theme Toggle */}
         <ThemeToggle />
 
-        {/* Glass Navigation */}
+        {/* Hamburger */}
+        <button
+          onClick={() => setOpen(!open)}
+          className="bg-card/90 backdrop-blur-xl p-2.5 rounded-full 
+                     border border-border shadow-md
+                     transition-all duration-300"
+        >
+          {open ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </div>
+
+      {/* ================= DESKTOP NAV ================= */}
+      <nav className="fixed top-8 right-10 z-50 hidden md:flex items-center gap-4">
+
+        <ThemeToggle />
+
         <div className="bg-card/80 backdrop-blur-xl border border-border px-5 py-1.5 rounded-full shadow-md dark:shadow-[0_0_20px_rgba(6,182,212,0.3)] flex gap-2 text-sm font-medium items-center">
 
           {links.map((l) => {
@@ -107,74 +122,52 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* ================= MOBILE NAV ================= */}
-<div className="md:hidden fixed top-5 right-5 z-50 flex items-center gap-3">
+      {/* ================= MOBILE MENU ================= */}
+      {open && (
+        <div className="md:hidden fixed top-40 left-1/2 -translate-x-1/2 
+                        w-[90%] max-w-sm 
+                        bg-card/95 backdrop-blur-xl 
+                        border border-border 
+                        rounded-2xl 
+                        px-6 py-6 
+                        space-y-5 
+                        z-40 
+                        shadow-xl">
 
-  {/* Theme Toggle */}
-  <ThemeToggle />
+          {links.map((l) => {
+            const sectionId = l.href.replace("#", "");
 
-  {/* Hamburger */}
-  <button
-    onClick={() => setOpen(!open)}
-    className="bg-card/90 backdrop-blur-xl p-2.5 rounded-full 
-               border border-border shadow-md
-               transition-all duration-300"
-  >
-    {open ? <X size={20} /> : <Menu size={20} />}
-  </button>
-</div>
+            return (
+              <a
+                key={l.label}
+                href={l.href}
+                onClick={() => setOpen(false)}
+                className={`block text-center px-4 py-2 rounded-lg transition-all duration-300 ${
+                  active === sectionId
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground hover:bg-muted"
+                }`}
+              >
+                {l.label}
+              </a>
+            );
+          })}
 
+          <div className="h-px bg-border" />
 
-{/* ================= MOBILE MENU ================= */}
-{open && (
-  <div className="md:hidden fixed top-20 left-1/2 -translate-x-1/2 
-                  w-[90%] max-w-sm 
-                  bg-card/95 backdrop-blur-xl 
-                  border border-border 
-                  rounded-2xl 
-                  px-6 py-6 
-                  space-y-5 
-                  z-40 
-                  shadow-xl 
-                  animate-fadeIn">
+          <Link
+            to="/admin-login"
+            onClick={() => setOpen(false)}
+            className="block text-center border border-primary text-primary 
+                       px-4 py-2 rounded-lg 
+                       hover:bg-primary hover:text-primary-foreground 
+                       transition-all duration-300"
+          >
+            Admin
+          </Link>
 
-    {/* Links */}
-    {links.map((l) => {
-      const sectionId = l.href.replace("#", "");
-
-      return (
-        <a
-          key={l.label}
-          href={l.href}
-          onClick={() => setOpen(false)}
-          className={`block text-center px-4 py-2 rounded-lg transition-all duration-300 ${
-            active === sectionId
-              ? "bg-primary text-primary-foreground"
-              : "text-foreground hover:bg-muted"
-          }`}
-        >
-          {l.label}
-        </a>
-      );
-    })}
-
-    {/* Divider */}
-    <div className="h-px bg-border" />
-
-    {/* Admin */}
-    <Link
-      to="/admin-login"
-      onClick={() => setOpen(false)}
-      className="block text-center border border-primary text-primary 
-                 px-4 py-2 rounded-lg 
-                 hover:bg-primary hover:text-primary-foreground 
-                 transition-all duration-300"
-    >
-      Admin
-    </Link>
-
-  </div>
-)}
+        </div>
+      )}
     </>
   );
 };
