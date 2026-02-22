@@ -433,26 +433,7 @@ const Dashboard = () => {
 };
 
 
-app.put("/contact/:id", async (req, res) => {
-  try {
-    const token = req.headers.authorization;
 
-    if (!token) {
-      return res.status(401).json({ msg: "No token" });
-    }
-
-    jwt.verify(token, process.env.JWT_SECRET);
-
-    await Message.findByIdAndUpdate(req.params.id, {
-      read: true
-    });
-
-    res.json({ success: true });
-
-  } catch (error) {
-    res.status(401).json({ msg: "Invalid token" });
-  }
-});
 
 /* ================= EDITABLE EVENT ================= */
 

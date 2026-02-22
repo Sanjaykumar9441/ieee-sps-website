@@ -4,7 +4,7 @@ import StatsSection from "../components/StatsSection";
 import AboutSection from "../components/AboutSection";
 import EventsSection from "../components/EventsSection";
 import TeamSection from "../components/TeamSection";
-import ContactSection from "../components/contactsection";
+import ContactSection from "../components/ContactSection";
 import Footer from "../components/Footer";
 
 const Home = () => {
