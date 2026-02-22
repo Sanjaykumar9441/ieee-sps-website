@@ -54,11 +54,11 @@ const Dashboard = () => {
   };
 
   const fetchMessages = async () => {
-    const res = await axios.get("https://ieee-sps-website.onrender.com/messages", {
-      headers: { Authorization: token }
-    });
-    setMessages(res.data);
-  };
+  const res = await axios.get("https://ieee-sps-website.onrender.com/messages", {
+    headers: { Authorization: token }
+  });
+  setMessages(res.data);
+}; 
 
   /* ================= LOGOUT ================= */
 
@@ -431,6 +431,28 @@ const Dashboard = () => {
     </div>
   );
 };
+
+
+app.put("/contact/:id", async (req, res) => {
+  try {
+    const token = req.headers.authorization;
+
+    if (!token) {
+      return res.status(401).json({ msg: "No token" });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET);
+
+    await Message.findByIdAndUpdate(req.params.id, {
+      read: true
+    });
+
+    res.json({ success: true });
+
+  } catch (error) {
+    res.status(401).json({ msg: "Invalid token" });
+  }
+});
 
 /* ================= EDITABLE EVENT ================= */
 

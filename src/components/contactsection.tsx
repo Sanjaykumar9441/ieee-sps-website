@@ -22,7 +22,7 @@ const ContactSection = () => {
     setError("");
   };
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault();
 
   if (!validateEmail(form.email)) {
@@ -30,41 +30,34 @@ const ContactSection = () => {
     return;
   }
 
+  setLoading(true);
+  setError("");
+  setSuccess(false);
+
   try {
-    setLoading(true);
-    setError("");
-    setSuccess(false);
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/contact`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
 
-    const res = await fetch(
-      "https://ieee-sps-website.onrender.com/contact",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      }
-    );
+    const data = await res.json().catch(() => ({}));
 
-    const data = await res.json();   // ✅ read response
-
-    if (res.status === 200 || res.status === 201) {
-      setSuccess(true);
-      setForm({ name: "", email: "", message: "" });
-
-      setTimeout(() => {
-        setSuccess(false);
-      }, 3000);
-    } else {
-      setError(data?.msg || "Something went wrong.");
+    if (!res.ok || data?.success === false) {
+      throw new Error(data?.message || data?.msg || "Something went wrong.");
     }
 
+    setSuccess(true);
+    setForm({ name: "", email: "", message: "" });
+
+    setTimeout(() => setSuccess(false), 3000);
   } catch (err) {
-    setError("Server not connected.");
+    setError(err instanceof Error ? err.message : "Server not connected.");
   } finally {
     setLoading(false);
   }
 };
+
 
   return (
     <motion.section

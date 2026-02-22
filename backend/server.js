@@ -119,9 +119,10 @@ async function ensureAdmin() {
 ================================= */
 const messageSchema = new mongoose.Schema(
   {
-    name: String,
-    email: String,
-    message: String,
+    name: { type: String, required: true },
+    email: { type: String, required: true },
+    message: { type: String, required: true },
+    read: { type: Boolean, default: false }   // 🔥 IMPORTANT
   },
   { timestamps: true }
 );
@@ -136,38 +137,30 @@ app.post("/contact", async (req, res) => {
     const { name, email, message } = req.body;
 
     if (!name || !email || !message) {
-      return res.status(400).json({ msg: "All fields required" });
-    }
-
-    await Message.create({ name, email, message });
-
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
-
-      await transporter.sendMail({
-        from: `"IEEE SPS Website" <${process.env.EMAIL_USER}>`,
-        to: process.env.EMAIL_USER,
-        subject: `New Contact Message from ${name}`,
-        html: `
-          <h3>New Message</h3>
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Message:</strong> ${message}</p>
-        `,
+      return res.status(400).json({
+        success: false,
+        message: "All fields required"
       });
     }
 
-    res.json({ msg: "Message saved successfully" });
+    await Message.create({
+      name,
+      email,
+      message,
+      read: false
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Message sent successfully"
+    });
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 });
 
