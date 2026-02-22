@@ -1,4 +1,4 @@
-import { Mail, Globe, Linkedin, Instagram, Phone } from "lucide-react";
+import { Mail, Linkedin, Instagram, Facebook, Twitter, Phone } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -43,16 +43,7 @@ const Footer = () => {
             <Mail className="w-5 h-5" />
           </a>
 
-          {/* Website */}
-          <a
-            href="https://www.ieee.org/communities/societies/signal-processing.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="icon-hover"
-            aria-label="IEEE Website"
-          >
-            <Globe className="w-5 h-5" />
-          </a>
+          
 
           {/* LinkedIn */}
           <a
@@ -74,6 +65,28 @@ const Footer = () => {
             aria-label="Instagram"
           >
             <Instagram className="w-5 h-5" />
+          </a>
+
+          {/* Facebook */}
+          <a
+            href="https://www.facebook.com/ieee.sps.aus"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="icon-hover"
+            aria-label="Facebook"
+           >
+            <Facebook className="w-5 h-5" />
+          </a>
+
+          {/* Twitter / X */}
+          <a
+            href="https://x.com/ieee_sps_aus"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="icon-hover"
+            aria-label="Twitter"
+          >
+            <Twitter className="w-5 h-5" />
           </a>
 
         </div>
@@ -101,18 +114,18 @@ const Footer = () => {
 
 
       {/* Hover Glow Styles */}
-      <style jsx>{`
-        .icon-hover {
-          color: hsl(var(--muted-foreground));
-          transition: all 0.3s ease;
-        }
+      <style>{`
+  .icon-hover {
+    color: hsl(var(--muted-foreground));
+    transition: all 0.3s ease;
+  }
 
-        .icon-hover:hover {
-          color: hsl(var(--primary));
-          transform: translateY(-3px) scale(1.1);
-          filter: drop-shadow(0 0 6px hsl(var(--primary)));
-        }
-      `}</style>
+  .icon-hover:hover {
+    color: hsl(var(--primary));
+    transform: translateY(-3px) scale(1.1);
+    filter: drop-shadow(0 0 6px hsl(var(--primary)));
+  }
+`}</style>
 
     </footer>
   );
