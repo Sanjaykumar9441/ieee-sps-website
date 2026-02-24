@@ -15,31 +15,27 @@ const particlesInit = async (main: any) => {
 };
 
 const ArduinoDays = () => {
-
   const [active, setActive] = useState("home");
-  const [menuOpen, setMenuOpen] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
+const [menuOpen, setMenuOpen] = useState(false);
+const sidebarRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        menuOpen &&
-        sidebarRef.current &&
-        !sidebarRef.current.contains(event.target as Node)
-      ) {
-        setMenuOpen(false);
-      }
-    };
+useEffect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (
+      menuOpen &&
+      sidebarRef.current &&
+      !sidebarRef.current.contains(event.target as Node)
+    ) {
+      setMenuOpen(false);
+    }
+  };
 
-    document.addEventListener("mousedown", handleClickOutside);
+  document.addEventListener("mousedown", handleClickOutside);
 
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [menuOpen]);
-
-const ArduinoDays = () => {
-  const [active, setActive] = useState("home");
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, [menuOpen]);
 
   const studentCoordinators = [
     { name: "Student Name 1", designation: "Vice Chair", department: "ECE", roll: "23A91A0001", phone: "9876543210" },
@@ -137,71 +133,66 @@ const ArduinoDays = () => {
             className="w-full"
           >
 
-           {/* HOME */}
-<div className="flex-1 flex items-center justify-center z-30 relative overflow-y-auto">
-  {active === "home" && (
-    <div className="w-full max-w-6xl px-10 py-16 text-center space-y-8">
+           
 
-      {/* 🔹 Logos */}
-      <div className="flex justify-center items-center gap-10">
-        <img src="/logo1.png" alt="Logo 1" className="h-16 object-contain" />
-        <img src="/logo2.png" alt="Logo 2" className="h-16 object-contain" />
-        <img src="/logo3.png" alt="Logo 3" className="h-16 object-contain" />
-      </div>
+  {/* HOME */}
+{active === "home" && (
+  <div className="w-full max-w-6xl px-10 py-16 text-center space-y-8 mx-auto">
 
-      {/* 🔹 Department */}
-      <h2 className="text-lg md:text-xl tracking-widest text-gray-300">
-        ELECTRONICS AND COMMUNICATION ENGG
-      </h2>
-
-      <h3 className="text-sm tracking-widest text-gray-400">
-        IN ASSOCIATION WITH
-      </h3>
-
-      <h2 className="text-lg md:text-xl font-semibold text-cyan-400 tracking-widest">
-        IEEE SPS STUDENT BRANCH CHAPTER
-      </h2>
-
-      <h3 className="text-sm tracking-widest text-gray-400">
-        PRESENTS
-      </h3>
-
-      {/* 🔥 Main Title */}
-      <h1 className="text-6xl md:text-7xl font-extrabold tracking-widest bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
-        ARDUINO DAYS 2K26
-      </h1>
-
-      {/* 🔹 Tagline */}
-      <p className="text-gray-300 max-w-3xl mx-auto">
-        A 4-Day Technical Event focused on Arduino, IoT,
-        Embedded Systems, and Real-Time Project Development.
-      </p>
-
-      {/* 🔹 Date & Venue */}
-      <div className="flex justify-center gap-6 mt-4">
-        <div className="px-6 py-3 rounded-full bg-green-500/20 border border-green-400 text-green-300">
-          📅 March 23–26, 2026
-        </div>
-
-        <div className="px-6 py-3 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300">
-          📍 Aditya University
-        </div>
-      </div>
-
-      {/* 🔹 Small Poster Heading */}
-      <h3 className="text-md text-yellow-400 tracking-wide mt-6">
-        Innovation • Creativity • Real-Time Learning
-      </h3>
-
-      {/* 🔹 Poster Images */}
-      <div className="flex justify-center gap-10 mt-10 flex-wrap">
-        <img src="/poster1.jpeg" alt="Poster 1" className="w-72 rounded-xl shadow-lg border border-green-400/30" />
-        <img src="/poster2.jpeg" alt="Poster 2" className="w-72 rounded-xl shadow-lg border border-cyan-400/30" />
-      </div>
-
+    {/* 🔹 Logos */}
+    <div className="flex justify-center items-center gap-10">
+      <img src="/logo1.png" alt="Logo 1" className="h-16 object-contain" />
+      <img src="/logo2.png" alt="Logo 2" className="h-16 object-contain" />
+      <img src="/logo3.png" alt="Logo 3" className="h-16 object-contain" />
     </div>
-  )}
-</div>
+
+    {/* 🔹 Department */}
+    <h2 className="text-lg md:text-xl tracking-widest text-gray-300">
+      ELECTRONICS AND COMMUNICATION ENGG
+    </h2>
+
+    <h3 className="text-sm tracking-widest text-gray-400">
+      IN ASSOCIATION WITH
+    </h3>
+
+    <h2 className="text-lg md:text-xl font-semibold text-cyan-400 tracking-widest">
+      IEEE SPS STUDENT BRANCH CHAPTER
+    </h2>
+
+    <h3 className="text-sm tracking-widest text-gray-400">
+      PRESENTS
+    </h3>
+
+    <h1 className="text-6xl md:text-7xl font-extrabold tracking-widest bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
+      ARDUINO DAYS 2K26
+    </h1>
+
+    <p className="text-gray-300 max-w-3xl mx-auto">
+      A 4-Day Technical Event focused on Arduino, IoT,
+      Embedded Systems, and Real-Time Project Development.
+    </p>
+
+    <div className="flex justify-center gap-6 mt-4">
+      <div className="px-6 py-3 rounded-full bg-green-500/20 border border-green-400 text-green-300">
+        📅 March 23–26, 2026
+      </div>
+
+      <div className="px-6 py-3 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300">
+        📍 Aditya University
+      </div>
+    </div>
+
+    <h3 className="text-md text-yellow-400 tracking-wide mt-6">
+      Innovation • Creativity • Real-Time Learning
+    </h3>
+
+    <div className="flex justify-center gap-10 mt-10 flex-wrap">
+      <img src="/poster1.jpeg" alt="Poster 1" className="w-72 rounded-xl shadow-lg border border-green-400/30" />
+      <img src="/poster2.jpeg" alt="Poster 2" className="w-72 rounded-xl shadow-lg border border-cyan-400/30" />
+    </div>
+
+  </div>
+)}
 
             {/* EVENTS */}
             {active === "events" && (
