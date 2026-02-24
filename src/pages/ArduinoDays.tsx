@@ -97,33 +97,70 @@ const ArduinoDays = () => {
             className="w-full"
           >
 
-            {/* HOME */}
-<div className="flex-1 flex items-center justify-center z-30 relative">
+           {/* HOME */}
+<div className="flex-1 flex items-center justify-center z-30 relative overflow-y-auto">
   {active === "home" && (
-    <div className="text-center p-16 max-w-4xl relative z-30">
+    <div className="w-full max-w-6xl px-10 py-16 text-center space-y-8">
 
-      {/* Title */}
-      <h1 className="text-6xl md:text-7xl font-extrabold mb-6 tracking-widest bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent"> ARDUINO DAYS 2K26 </h1>
+      {/* 🔹 Logos */}
+      <div className="flex justify-center items-center gap-10">
+        <img src="/logo1.png" alt="Logo 1" className="h-16 object-contain" />
+        <img src="/logo2.png" alt="Logo 2" className="h-16 object-contain" />
+        <img src="/logo3.png" alt="Logo 3" className="h-16 object-contain" />
+      </div>
 
-      {/* Description */}
-      <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed"> A 4-Day Technical Event focused on Arduino, IoT, Embedded Systems, and Real-Time Project Development. </p>
+      {/* 🔹 Department */}
+      <h2 className="text-lg md:text-xl tracking-widest text-gray-300">
+        ELECTRONICS AND COMMUNICATION ENGG
+      </h2>
 
-      {/* Date & Location */}
-      <div className="flex justify-center gap-6 mt-6">
+      <h3 className="text-sm tracking-widest text-gray-400">
+        IN ASSOCIATION WITH
+      </h3>
 
+      <h2 className="text-lg md:text-xl font-semibold text-cyan-400 tracking-widest">
+        IEEE SPS STUDENT BRANCH CHAPTER
+      </h2>
+
+      <h3 className="text-sm tracking-widest text-gray-400">
+        PRESENTS
+      </h3>
+
+      {/* 🔥 Main Title */}
+      <h1 className="text-6xl md:text-7xl font-extrabold tracking-widest bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
+        ARDUINO DAYS 2K26
+      </h1>
+
+      {/* 🔹 Tagline */}
+      <p className="text-gray-300 max-w-3xl mx-auto">
+        A 4-Day Technical Event focused on Arduino, IoT,
+        Embedded Systems, and Real-Time Project Development.
+      </p>
+
+      {/* 🔹 Date & Venue */}
+      <div className="flex justify-center gap-6 mt-4">
         <div className="px-6 py-3 rounded-full bg-green-500/20 border border-green-400 text-green-300">
           📅 March 23–26, 2026
         </div>
 
-       <div className="px-6 py-3 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300">
+        <div className="px-6 py-3 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300">
           📍 Aditya University
         </div>
+      </div>
 
+      {/* 🔹 Small Poster Heading */}
+      <h3 className="text-md text-yellow-400 tracking-wide mt-6">
+        Innovation • Creativity • Real-Time Learning
+      </h3>
+
+      {/* 🔹 Poster Images */}
+      <div className="flex justify-center gap-10 mt-10 flex-wrap">
+        <img src="/poster1.jpeg" alt="Poster 1" className="w-72 rounded-xl shadow-lg border border-green-400/30" />
+        <img src="/poster2.jpeg" alt="Poster 2" className="w-72 rounded-xl shadow-lg border border-cyan-400/30" />
       </div>
 
     </div>
   )}
-
 </div>
 
             {/* EVENTS */}
@@ -264,6 +301,66 @@ const ArduinoDays = () => {
                 </div>
               </div>
             )}
+
+            {/* ABOUT SECTION */}
+            {active === "about" && (
+  <div className="w-full max-w-5xl px-10 py-16 mx-auto text-center">
+
+    <h1 className="text-5xl font-bold mb-16 bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
+      About Us
+    </h1>
+
+    <div className="bg-white/5 backdrop-blur-md border border-green-400/20 rounded-2xl p-10 space-y-8">
+
+      <p className="text-gray-300 leading-relaxed text-lg">
+        <span className="text-green-400 font-semibold">Arduino Days 2K26</span> 
+        is a 4-day technical event designed to inspire innovation, creativity,
+        and hands-on learning in the fields of Arduino, IoT, Embedded Systems,
+        and Real-Time Project Development.
+      </p>
+
+      <p className="text-gray-300 leading-relaxed text-lg">
+        This event brings together students from all branches to collaborate,
+        learn emerging technologies, and transform ideas into real-world
+        working prototypes. Through workshops, hackathons, and project expos,
+        participants gain practical exposure beyond classroom learning.
+      </p>
+
+      <p className="text-gray-300 leading-relaxed text-lg">
+        Our mission is to promote technical excellence, teamwork, and
+        problem-solving skills while building a strong community of
+        passionate innovators and future engineers.
+      </p>
+
+    </div>
+
+    {/* Website Info Section */}
+    <div className="mt-16">
+
+      <h2 className="text-3xl font-bold mb-8 text-cyan-400">
+        About This Website
+      </h2>
+
+      <div className="bg-white/5 backdrop-blur-md border border-cyan-400/20 rounded-2xl p-10 space-y-6">
+
+        <p className="text-gray-300 leading-relaxed">
+          This website serves as the official digital platform for Arduino Days 2K26.
+          It provides complete information about events, registration details,
+          coordinators, schedules, and announcements.
+        </p>
+
+        <p className="text-gray-300 leading-relaxed">
+          Built with modern web technologies, the platform ensures a smooth,
+          interactive, and responsive user experience across devices.
+          It reflects the innovative spirit and technical excellence
+          of the event itself.
+        </p>
+
+      </div>
+    </div>
+
+  </div>
+)}
 
           </motion.div>
         </AnimatePresence>
