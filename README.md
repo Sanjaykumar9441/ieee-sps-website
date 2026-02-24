@@ -1,73 +1,85 @@
-# Welcome to your Lovable project
+IEEE Signal Processing Society (SPS)
+Student Branch Chapter – Aditya University
 
-## Project info
+Official website of the IEEE Signal Processing Society (SPS) Student Branch Chapter at Aditya University.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+This platform is developed to manage:
 
-## How can I edit this code?
+📅 Events & Workshops
 
-There are several ways of editing your application.
+👥 Team Members
 
-**Use Lovable**
+📩 Contact Messages
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+📸 Event Galleries
 
-Changes made via Lovable will be committed automatically to this repo.
+🔐 Admin Dashboard
 
-**Use your preferred IDE**
+🌐 Live Website
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Deployed on Vercel
+(You can add your live link here)
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+🛠 Tech Stack
 
-Follow these steps:
+Frontend
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+React
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+TypeScript
 
-# Step 3: Install the necessary dependencies.
-npm i
+Vite
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Tailwind CSS
+
+Lucide Icons
+
+Backend
+
+Node.js
+
+Express.js
+
+MongoDB
+
+JWT Authentication
+
+Multer (File Upload)
+
+🚀 How to Run Locally
+1️⃣ Clone the Repository
+git clone <your-github-repo-url>
+2️⃣ Navigate to Project
+cd <project-folder-name>
+3️⃣ Install Dependencies
+npm install
+4️⃣ Start Development Server
 npm run dev
-```
+🔐 Environment Variables (Backend)
 
-**Edit a file directly in GitHub**
+Create a .env file inside backend folder:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+MONGO_URI=your_mongodb_connection_string
+PORT=5000
+JWT_SECRET=your_secret_key
+EMAIL_USER=your_email
+EMAIL_PASS=your_email_password
+📂 Features
 
-**Use GitHub Codespaces**
+Admin Login System
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Upload / Edit / Delete Events
 
-## What technologies are used for this project?
+Upload Event Images
 
-This project is built with:
+Manage Team Members
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Contact Form with Read/Unread Status
 
-## How can I deploy this project?
+Fully Responsive UI
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+👨‍💻 Developed By
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Sanjay Kumar
+Student, Aditya University
+IEEE SPS Vice Chair
