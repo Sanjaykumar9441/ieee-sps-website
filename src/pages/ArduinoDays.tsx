@@ -17,7 +17,7 @@ const ArduinoDays = () => {
   const [active, setActive] = useState("home");
 
   return (
-    <div className="min-h-screen flex bg-black text-white relative overflow-hidden">
+    <div className="min-h-screen flex text-white relative overflow-hidden">
 
       {/* 🔥 Background Video */}
       <video
@@ -25,16 +25,17 @@ const ArduinoDays = () => {
         loop
         muted
         playsInline
-        className="absolute inset-0 w-full h-full object-cover opacity-20 -z-20"
+        className="absolute inset-0 w-full h-full object-cover z-0"
       >
         <source src="/arduino-bg.mp4" type="video/mp4" />
       </video>
+      <div className="absolute inset-0 bg-black/60 z-10"></div>
 
       {/* 🌌 Particle Network */}
       <Particles
         id="tsparticles"
         init={particlesInit}
-        className="absolute inset-0 -z-10"
+        className="absolute inset-0 z-20"
         options={{
           background: { color: "transparent" },
           fpsLimit: 60,
@@ -59,7 +60,7 @@ const ArduinoDays = () => {
       />
 
       {/* Sidebar */}
-      <div className="w-64 bg-black/80 backdrop-blur-xl border-r border-green-500/20 p-6 flex flex-col gap-8 z-10">
+      <div className="w-64 bg-black/80 backdrop-blur-xl border-r border-green-500/20 p-6 flex flex-col gap-8 z-30">
         <div className="text-2xl font-bold text-green-400">
           Arduino Days
         </div>
@@ -86,7 +87,7 @@ const ArduinoDays = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center z-10">
+      <div className="flex-1 flex items-center justify-center z-30 relative">
         {active === "home" && (
           <div className="text-center bg-black/40 backdrop-blur-xl border border-green-500/30 p-16 rounded-3xl shadow-[0_0_60px_rgba(0,255,170,0.3)] max-w-4xl">
 
