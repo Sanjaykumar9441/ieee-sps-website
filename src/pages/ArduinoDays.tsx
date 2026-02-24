@@ -98,46 +98,118 @@ const ArduinoDays = () => {
           >
 
             {/* HOME */}
-            {active === "home" && (
-              <div className="text-center p-16 max-w-4xl mx-auto mt-32">
-                <h1 className="text-6xl font-extrabold mb-6 bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
-                  ARDUINO DAYS 2K26
-                </h1>
-                <p className="text-gray-300">
-                  A 4-Day Technical Event focused on Arduino, IoT,
-                  Embedded Systems, and Real-Time Project Development.
-                </p>
-              </div>
-            )}
+<div className="flex-1 flex items-center justify-center z-30 relative">
+  {active === "home" && (
+    <div className="text-center p-16 max-w-4xl relative z-30">
+
+      {/* Title */}
+      <h1 className="text-6xl md:text-7xl font-extrabold mb-6 tracking-widest bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent"> ARDUINO DAYS 2K26 </h1>
+
+      {/* Description */}
+      <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed"> A 4-Day Technical Event focused on Arduino, IoT, Embedded Systems, and Real-Time Project Development. </p>
+
+      {/* Date & Location */}
+      <div className="flex justify-center gap-6 mt-6">
+
+        <div className="px-6 py-3 rounded-full bg-green-500/20 border border-green-400 text-green-300">
+          📅 March 23–26, 2026
+        </div>
+
+       <div className="px-6 py-3 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300">
+          📍 Aditya University
+        </div>
+
+      </div>
+
+    </div>
+  )}
+
+</div>
 
             {/* EVENTS */}
             {active === "events" && (
-              <div className="w-full max-w-6xl px-10 py-16 mx-auto">
-                <h1 className="text-5xl font-bold text-center mb-16 bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
-                  Events
-                </h1>
+  <div className="w-full max-w-6xl px-4 md:px-10 py-16 mx-auto relative z-30">
 
-                <div className="grid md:grid-cols-3 gap-10">
-                  {[
-                    { title: "Two-Day Workshop", date: "23–24 March 2026" },
-                    { title: "Full-Day Hackathon", date: "25 March 2026" },
-                    { title: "Project Expo", date: "25 March 2026" }
-                  ].map((event, index) => (
-                    <div key={index} className="bg-white/5 backdrop-blur-md border border-green-400/20 rounded-2xl p-8 text-center">
-                      <h2 className="text-2xl font-bold mb-4">{event.title}</h2>
-                      <p className="text-gray-300 mb-2">📅 {event.date}</p>
-                      <p className="text-gray-300 mb-2">₹ 200</p>
-                      <p className="text-gray-400 text-sm mb-6">
-                        All students from any branch can participate.
-                      </p>
-                      <button className="bg-white text-black px-6 py-2 rounded-full hover:scale-105 transition">
-                        Register Now
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+    <h1 className="text-3xl md:text-5xl font-bold text-center mb-16 bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
+  Events
+</h1>
+
+    <div className="grid md:grid-cols-3 gap-10">
+
+      {/* Workshop */}
+      <div className="relative group">
+        <div className="absolute -inset-[2px] rounded-2xl bg-gradient-to-r from-green-400 via-cyan-400 via-purple-500 via-pink-500 to-yellow-400 blur opacity-70 group-hover:opacity-100 transition duration-500 animate-gradient"></div>
+
+        <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10">
+          <h2 className="text-2xl font-bold mb-4 text-white">
+            Two-Day Workshop
+          </h2>
+          <p className="text-gray-300 mb-2">📅 23–24 March 2026</p>
+          <p className="text-gray-300 mb-2">💰 Registration Fee: ₹200</p>
+          <p className="text-gray-400 text-sm mb-6">
+            All students from any branch can participate.
+          </p>
+          <a
+            href="https://your-workshop-link.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-white text-black font-semibold px-6 py-2 rounded-full hover:scale-105 transition"
+          >
+            Register Now
+          </a>
+        </div>
+      </div>
+
+    {/* ================= Hackathon ================= */}
+    <div className="relative group">
+        <div className="absolute -inset-[2px] rounded-2xl bg-gradient-to-r from-green-400 via-cyan-400 via-purple-500 via-pink-500 to-yellow-400 blur opacity-70 group-hover:opacity-100 transition duration-500 animate-gradient"></div>
+
+        <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10">
+          <h2 className="text-2xl font-bold mb-4 text-white">
+            Full-Day Hackathon
+          </h2>
+          <p className="text-gray-300 mb-2">📅 25 March 2026</p>
+          <p className="text-gray-300 mb-2">💰 Registration Fee: ₹200</p>
+          <p className="text-gray-400 text-sm mb-6">
+            All students from any branch can participate.
+          </p>
+          <a
+            href="https://your-hackathon-link.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-white text-black font-semibold px-6 py-2 rounded-full hover:scale-105 transition"
+          >
+            Register Now
+          </a>
+        </div>
+      </div>
+
+    {/* ================= Project Expo ================= */}
+    <div className="relative group">
+        <div className="absolute -inset-[2px] rounded-2xl bg-gradient-to-r from-green-400 via-cyan-400 via-purple-500 via-pink-500 to-yellow-400 blur opacity-70 group-hover:opacity-100 transition duration-500 animate-gradient"></div>
+
+        <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10">
+          <h2 className="text-2xl font-bold mb-4 text-white">
+            Project Expo
+          </h2>
+          <p className="text-gray-300 mb-2">📅 25 March 2026</p>
+          <p className="text-gray-300 mb-2">💰 Registration Fee: ₹200</p>
+          <p className="text-gray-400 text-sm mb-6">
+            All students from any branch can participate.
+          </p>
+          <a
+            href="https://your-hackathon-link.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-white text-black font-semibold px-6 py-2 rounded-full hover:scale-105 transition"
+          >
+            Register Now
+          </a>
+        </div>
+      </div>
+      </div>
+  </div>
+)}
 
             {/* HELP DESK */}
             {active === "help" && (
