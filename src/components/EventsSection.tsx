@@ -20,8 +20,20 @@ const EventsSection = () => {
     }
   };
 
-  const visibleEvents = events.slice(0, 4);
+//--------------------------------------------------------------------------------------
+const temporaryEvent = {
+  _id: "arduino-days-temp",
+  title: "Arduino Days 2026",
+  date: "23–26 March 2026",
+  location: "Aditya University, Surampalem",
+  status: "Upcoming",
+  isTemporary: true
+}; // i will delete later
+//----------------------------------------------------------------------------------------
 
+  //const visibleEvents = events.slice(0, 4);
+   const visibleEvents = [temporaryEvent, ...events].slice(0, 4); // i will delete later
+//----------------------------------------------------------------------------------------
   return (
     <section
       id="events"
@@ -89,13 +101,16 @@ const EventsSection = () => {
                 </div>
 
                 {/* View Button */}
+               {/*------------------------------------------------------------------------- i will delete later*/}  
                 <Link
-                  to={`/event/${event._id}`}
+                  //to={`/event/${event._id}`}
+                  to={event.isTemporary ? "/arduino-days" : `/event/${event._id}`} // i will delete later
                   className="inline-block text-sm px-4 py-2 rounded-full 
                              border border-primary/50 text-primary
                              hover:bg-primary hover:text-primary-foreground
                              transition-all duration-300"
                 >
+                {/*-------------------------------------------------------------------------*/}
                   View Details →
                 </Link>
 

@@ -6,6 +6,9 @@ import Dashboard from "./pages/Dashboard";
 import EventDetails from "./pages/EventDetails";
 import AllEvents from "./pages/AllEvents";
 import TeamDetails from "./pages/TeamDetails";
+//================================================================
+import ArduinoDays from "./pages/ArduinoDays"; // i will delete later
+//================================================================
 
 
 
@@ -20,7 +23,7 @@ function App() {
         <Route path="/event/:id" element={<EventDetails />} />
         <Route path="/All events" element={<AllEvents />} />
         <Route path="/team/:id" element={<TeamDetails />} />
-
+        <Route path="/arduino-days" element={<ArduinoDays />} /> {/* i will delete later */}
  
 
 
