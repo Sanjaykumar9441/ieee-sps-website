@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Home,
   Calendar,
@@ -13,6 +13,30 @@ import { motion, AnimatePresence } from "framer-motion";
 const particlesInit = async (main: any) => {
   await loadFull(main);
 };
+
+const ArduinoDays = () => {
+
+  const [active, setActive] = useState("home");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        menuOpen &&
+        sidebarRef.current &&
+        !sidebarRef.current.contains(event.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [menuOpen]);
 
 const ArduinoDays = () => {
   const [active, setActive] = useState("home");
@@ -60,7 +84,20 @@ const ArduinoDays = () => {
       />
 
       {/* Sidebar */}
-      <div className="w-64 bg-black/80 backdrop-blur-xl border-r border-green-500/20 p-6 flex flex-col gap-8 z-30">
+{/* Mobile Menu Button */}
+<button
+  className="md:hidden fixed top-4 left-4 z-50 bg-black/80 p-2 rounded-lg border border-green-400"
+  onClick={() => setMenuOpen(!menuOpen)}
+>
+  ☰
+</button>
+
+      <div
+  ref={sidebarRef}
+  className={`fixed md:static top-0 left-0 h-full w-64 bg-black/90 backdrop-blur-xl border-r border-green-500/20 p-6 flex flex-col gap-8 z-40 transform transition-transform duration-300
+  ${menuOpen ? "translate-x-0" : "-translate-x-full"}
+  md:translate-x-0`}
+>
         <div className="text-2xl font-bold text-green-400">Arduino Days</div>
 
         {[
@@ -72,7 +109,10 @@ const ArduinoDays = () => {
         ].map((item) => (
           <button
             key={item.id}
-            onClick={() => setActive(item.id)}
+            onClick={() => {
+  setActive(item.id);
+  setMenuOpen(false);
+}}
             className={`flex items-center gap-3 ${
               active === item.id
                 ? "text-green-400"
@@ -314,7 +354,7 @@ const ArduinoDays = () => {
 
       <p className="text-gray-300 leading-relaxed text-lg">
         <span className="text-green-400 font-semibold">Arduino Days 2K26</span> 
-        is a 4-day technical event designed to inspire innovation, creativity,
+         is a 4-day technical event designed to inspire innovation, creativity,
         and hands-on learning in the fields of Arduino, IoT, Embedded Systems,
         and Real-Time Project Development.
       </p>
