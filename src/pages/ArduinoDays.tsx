@@ -89,7 +89,7 @@ const ArduinoDays = () => {
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center z-30 relative">
         {active === "home" && (
-          <div className="text-center bg-black/40 backdrop-blur-xl border border-green-500/30 p-16 rounded-3xl shadow-[0_0_60px_rgba(0,255,170,0.3)] max-w-4xl">
+          <div className="text-center p-16 max-w-4xl relative z-30">
 
             <h1 className="text-6xl md:text-7xl font-extrabold mb-6 tracking-widest bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
               ARDUINO DAYS 2K26
