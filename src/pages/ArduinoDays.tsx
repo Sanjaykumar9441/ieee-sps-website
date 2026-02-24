@@ -52,7 +52,7 @@ useEffect(() => {
   ];
 
   return (
-    <div className="min-h-screen flex text-white relative overflow-hidden">
+    <div className="min-h-screen text-white relative overflow-x-hidden">
 
       {/* Background Video */}
       <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0">
@@ -183,8 +183,7 @@ useEffect(() => {
 
 
       {/* Main Content with Smooth Animation */}
-      <div className="flex-1 flex items-start justify-center z-30 relative overflow-y-auto">
-
+      <div className="relative z-30 overflow-y-auto md:ml-64">
         <AnimatePresence mode="wait">
           <motion.div
             key={active}
@@ -203,8 +202,7 @@ useEffect(() => {
     initial={{ opacity: 0, y: 40 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.8 }}
-    className="w-full min-h-screen flex flex-col items-center justify-center
-    px-4 md:px-10 py-16 text-center space-y-8"
+   className="relative w-full min-h-screen flex flex-col items-center justify-start pt-28 md:pt-20 pb-16 px-4 md:px-10 text-center space-y-6"
   >
 
     {/* 🛰️ IoT Radar Scanning Animation */}
@@ -212,7 +210,7 @@ useEffect(() => {
       <div className="relative w-[300px] h-[300px] md:w-[500px] md:h-[500px] opacity-20">
 
         {/* Outer Circle */}
-        <div className="absolute inset-0 border border-cyan-400 rounded-full animate-ping" />
+        <div className="absolute inset-0 border border-cyan-400 rounded-full animate-pulse opacity-40" />
 
         {/* Middle Circle */}
         <div className="absolute inset-6 border border-green-400 rounded-full animate-pulse" />
@@ -275,7 +273,7 @@ useEffect(() => {
 
 {/* Posters */}
 <div className="w-full flex justify-center">
-  <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 mt-10">
+  <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 mt-6">
     <img
       src="/poster1.jpeg"
       alt="Poster 1"
@@ -295,7 +293,7 @@ useEffect(() => {
 
             {/* EVENTS */}
             {active === "events" && (
-  <div className="w-full max-w-6xl px-4 md:px-10 py-16 mx-auto relative z-30">
+  <div className="w-full max-w-6xl px-4 md:px-10 pt-24 pb-16 mx-auto relative z-30">
 
     <h1 className="text-3xl md:text-5xl font-bold text-center mb-16 bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
   Events
@@ -440,7 +438,7 @@ useEffect(() => {
       About Us
     </h1>
 
-    <div className="bg-white/5 backdrop-blur-md border border-green-400/20 rounded-2xl p-10 space-y-8">
+    <div className="bg-white/5 backdrop-blur-md border border-green-400/20 rounded-2xl p-10 space-y-6">
 
       <p className="text-gray-300 leading-relaxed text-lg">
         <span className="text-green-400 font-semibold">Arduino Days 2K26</span> 
