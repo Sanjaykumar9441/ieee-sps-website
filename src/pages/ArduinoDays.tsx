@@ -91,12 +91,13 @@ useEffect(() => {
 
 <div
   ref={sidebarRef}
-  className={`fixed md:static top-0 left-0 h-full w-64
+  className={`fixed md:relative md:h-screen md:min-h-screen
+  top-0 left-0 h-full w-64
   bg-black/90 backdrop-blur-xl
   border-r border-green-500/20
   shadow-[0_0_40px_rgba(0,255,200,0.1)]
-  p-6 flex flex-col gap-8 z-40
-  transform transition-transform duration-300
+  p-6 flex flex-col gap-8
+  z-40 transform transition-transform duration-300
   relative overflow-hidden
   ${menuOpen ? "translate-x-0" : "-translate-x-full"}
   md:translate-x-0`}
@@ -202,7 +203,8 @@ useEffect(() => {
     initial={{ opacity: 0, y: 40 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.8 }}
-    className="relative w-full max-w-6xl px-4 md:px-10 py-10 md:py-16 text-center space-y-6 md:space-y-8 mx-auto overflow-hidden"
+    className="w-full min-h-screen flex flex-col items-center justify-center
+    px-4 md:px-10 py-16 text-center space-y-8"
   >
 
     {/* 🛰️ IoT Radar Scanning Animation */}
@@ -253,26 +255,40 @@ useEffect(() => {
         Embedded Systems, and Real-Time Project Development.
       </p>
 
-      <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-4">
-        <div className="px-4 md:px-6 py-2 md:py-3 rounded-full bg-green-500/20 border border-green-400 text-green-300 text-xs sm:text-sm md:text-base">
-          📅 March 23–26, 2026
-        </div>
-
-        <div className="px-4 md:px-6 py-2 md:py-3 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs sm:text-sm md:text-base">
-          📍 Aditya University
-        </div>
-      </div>
-
-      <h3 className="text-xs sm:text-sm md:text-md text-yellow-400 tracking-wide mt-6">
-        Innovation • Creativity • Real-Time Learning
-      </h3>
-
-      <div className="flex flex-wrap justify-center gap-6 md:gap-10 mt-8">
-        <img src="/poster1.jpeg" alt="Poster 1" className="w-52 sm:w-60 md:w-72 rounded-xl shadow-lg border border-green-400/30" />
-        <img src="/poster2.jpeg" alt="Poster 2" className="w-52 sm:w-60 md:w-72 rounded-xl shadow-lg border border-cyan-400/30" />
-      </div>
-
+      {/* Date & Venue */}
+<div className="w-full flex justify-center">
+  <div className="flex flex-col sm:flex-row items-center gap-4 mt-4">
+    <div className="px-4 md:px-6 py-2 md:py-3 rounded-full bg-green-500/20 border border-green-400 text-green-300 text-xs sm:text-sm md:text-base">
+      📅 March 23–26, 2026
     </div>
+
+    <div className="px-4 md:px-6 py-2 md:py-3 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs sm:text-sm md:text-base">
+      📍 Aditya University
+    </div>
+  </div>
+</div>
+
+{/* Tagline */}
+<h3 className="text-xs sm:text-sm md:text-md text-yellow-400 tracking-wide mt-6">
+  Innovation • Creativity • Real-Time Learning
+</h3>
+
+{/* Posters */}
+<div className="w-full flex justify-center">
+  <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 mt-10">
+    <img
+      src="/poster1.jpeg"
+      alt="Poster 1"
+      className="w-56 sm:w-64 md:w-72 rounded-xl shadow-lg border border-green-400/30"
+    />
+    <img
+      src="/poster2.jpeg"
+      alt="Poster 2"
+      className="w-56 sm:w-64 md:w-72 rounded-xl shadow-lg border border-cyan-400/30"
+    />
+  </div>
+</div>
+</div>
 
   </motion.div>
 )}
