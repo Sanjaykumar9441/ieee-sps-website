@@ -112,6 +112,96 @@ const ArduinoDays = () => {
 
           </div>
         )}
+
+        {active === "events" && (
+  <div className="w-full max-w-6xl px-10 py-16 grid md:grid-cols-3 gap-10 relative z-30">
+
+    {/* ================= Workshop ================= */}
+    <div className="relative group">
+      <div className="absolute -inset-[2px] rounded-2xl bg-gradient-to-r from-green-400 via-cyan-400 via-purple-500 via-pink-500 to-yellow-400 blur opacity-70 group-hover:opacity-100 transition duration-500 animate-gradient"></div>
+
+      <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10">
+
+        <h2 className="text-2xl font-bold mb-4 text-white">
+          Two-Day Workshop
+        </h2>
+
+        <p className="text-gray-300 mb-2">📅 23–24 March 2026</p>
+        <p className="text-gray-300 mb-2">💰 Registration Fee: ₹200</p>
+        <p className="text-gray-400 text-sm mb-6">
+          All students from any branch can participate.
+        </p>
+
+        <a
+          href="https://your-workshop-link.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block bg-white text-black font-semibold px-6 py-2 rounded-full hover:scale-105 transition"
+        >
+          Register Now
+        </a>
+
+      </div>
+    </div>
+
+    {/* ================= Hackathon ================= */}
+    <div className="relative group">
+      <div className="absolute -inset-[2px] rounded-2xl bg-gradient-to-r from-green-400 via-cyan-400 via-purple-500 via-pink-500 to-yellow-400 blur opacity-70 group-hover:opacity-100 transition duration-500 animate-gradient"></div>
+
+      <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10">
+
+        <h2 className="text-2xl font-bold mb-4 text-white">
+          Full-Day Hackathon
+        </h2>
+
+        <p className="text-gray-300 mb-2">📅 25 March 2026</p>
+        <p className="text-gray-300 mb-2">💰 Registration Fee: ₹200</p>
+        <p className="text-gray-400 text-sm mb-6">
+          All students from any branch can participate.
+        </p>
+
+        <a
+          href="https://your-hackathon-link.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block bg-white text-black font-semibold px-6 py-2 rounded-full hover:scale-105 transition"
+        >
+          Register Now
+        </a>
+
+      </div>
+    </div>
+
+    {/* ================= Project Expo ================= */}
+    <div className="relative group">
+      <div className="absolute -inset-[2px] rounded-2xl bg-gradient-to-r from-green-400 via-cyan-400 via-purple-500 via-pink-500 to-yellow-400 blur opacity-70 group-hover:opacity-100 transition duration-500 animate-gradient"></div>
+
+      <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10">
+
+        <h2 className="text-2xl font-bold mb-4 text-white">
+          Project Expo
+        </h2>
+
+        <p className="text-gray-300 mb-2">📅 25 March 2026</p>
+        <p className="text-gray-300 mb-2">💰 Registration Fee: ₹200</p>
+        <p className="text-gray-400 text-sm mb-6">
+          All students from any branch can participate.
+        </p>
+
+        <a
+          href="https://your-expo-link.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block bg-white text-black font-semibold px-6 py-2 rounded-full hover:scale-105 transition"
+        >
+          Register Now
+        </a>
+
+      </div>
+    </div>
+
+  </div>
+)}
       </div>
 
     </div>
