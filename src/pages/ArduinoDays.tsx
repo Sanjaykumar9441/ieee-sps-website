@@ -79,7 +79,8 @@ useEffect(() => {
         }}
       />
 
-      {/* Sidebar */}
+    
+{/* Sidebar */}
 {/* Mobile Menu Button */}
 <button
   className="md:hidden fixed top-4 left-4 z-50 bg-black/80 p-2 rounded-lg border border-green-400"
@@ -88,37 +89,97 @@ useEffect(() => {
   ☰
 </button>
 
-      <div
+<div
   ref={sidebarRef}
-  className={`fixed md:static top-0 left-0 h-full w-64 bg-black/90 backdrop-blur-xl border-r border-green-500/20 p-6 flex flex-col gap-8 z-40 transform transition-transform duration-300
+  className={`fixed md:static top-0 left-0 h-full w-64
+  bg-black/90 backdrop-blur-xl
+  border-r border-green-500/20
+  shadow-[0_0_40px_rgba(0,255,200,0.1)]
+  p-6 flex flex-col gap-8 z-40
+  transform transition-transform duration-300
+  relative overflow-hidden
   ${menuOpen ? "translate-x-0" : "-translate-x-full"}
   md:translate-x-0`}
 >
-        <div className="text-2xl font-bold text-green-400">Arduino Days</div>
 
-        {[
-          { id: "home", icon: <Home size={20} />, label: "Home" },
-          { id: "events", icon: <Calendar size={20} />, label: "Events" },
-          { id: "help", icon: <HelpCircle size={20} />, label: "Help Desk" },
-          { id: "about", icon: <Info size={20} />, label: "About" },
-          { id: "sponsors", icon: <Handshake size={20} />, label: "Sponsors" }
-        ].map((item) => (
-          <button
-            key={item.id}
-            onClick={() => {
-  setActive(item.id);
-  setMenuOpen(false);
-}}
-            className={`flex items-center gap-3 ${
-              active === item.id
-                ? "text-green-400"
-                : "text-gray-400 hover:text-green-400"
-            }`}
-          >
-            {item.icon} {item.label}
-          </button>
-        ))}
-      </div>
+  {/* ⚡ Subtle Circuit Overlay */}
+  <div className="absolute inset-0 opacity-10 pointer-events-none">
+    <svg
+      className="w-full h-full animate-pulse"
+      viewBox="0 0 200 600"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M20 0 V600 
+           M60 100 H160 
+           M100 200 V400 
+           M40 300 H140 
+           M80 500 H180"
+        stroke="#00ffcc"
+        strokeWidth="1"
+      />
+    </svg>
+  </div>
+
+  {/* Sidebar Content */}
+  <div className="relative z-10">
+
+    <div className="text-2xl font-bold text-green-400 mb-6">
+      Arduino Days
+    </div>
+
+    {[
+      { id: "home", icon: <Home size={20} />, label: "Home" },
+      { id: "events", icon: <Calendar size={20} />, label: "Events" },
+      { id: "help", icon: <HelpCircle size={20} />, label: "Help Desk" },
+      { id: "about", icon: <Info size={20} />, label: "About" },
+      { id: "sponsors", icon: <Handshake size={20} />, label: "Sponsors" }
+    ].map((item) => (
+      <button
+        key={item.id}
+        onClick={() => {
+          setActive(item.id);
+          setMenuOpen(false);
+        }}
+        className="relative flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group"
+      >
+
+        {/* Neon Active Bar */}
+        {active === item.id && (
+          <motion.div
+            layoutId="activeIndicator"
+            className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-green-400 to-cyan-400 rounded-r shadow-[0_0_12px_rgba(0,255,200,0.8)]"
+          />
+        )}
+
+        <span
+          className={`transition-all duration-300 ${
+            active === item.id
+              ? "text-green-400"
+              : "text-gray-400 group-hover:text-green-300"
+          }`}
+        >
+          {item.icon}
+        </span>
+
+        <span
+          className={`font-medium transition-all duration-300 ${
+            active === item.id
+              ? "text-green-400"
+              : "text-gray-400 group-hover:text-green-300"
+          }`}
+        >
+          {item.label}
+        </span>
+
+      </button>
+    ))}
+
+  </div>
+
+</div>
+
 
       {/* Main Content with Smooth Animation */}
       <div className="flex-1 flex items-start justify-center z-30 relative overflow-y-auto">
@@ -137,61 +198,83 @@ useEffect(() => {
 
   {/* HOME */}
 {active === "home" && (
-  <div className="w-full max-w-6xl px-10 py-16 text-center space-y-8 mx-auto">
+  <motion.div
+    initial={{ opacity: 0, y: 40 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.8 }}
+    className="relative w-full max-w-6xl px-4 md:px-10 py-10 md:py-16 text-center space-y-6 md:space-y-8 mx-auto overflow-hidden"
+  >
 
-    {/* 🔹 Logos */}
-    <div className="flex justify-center items-center gap-10">
-      <img src="/logo1.png" alt="Logo 1" className="h-16 object-contain" />
-      <img src="/logo2.png" alt="Logo 2" className="h-16 object-contain" />
-      <img src="/logo3.png" alt="Logo 3" className="h-16 object-contain" />
-    </div>
+    {/* 🛰️ IoT Radar Scanning Animation */}
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+      <div className="relative w-[300px] h-[300px] md:w-[500px] md:h-[500px] opacity-20">
 
-    {/* 🔹 Department */}
-    <h2 className="text-lg md:text-xl tracking-widest text-gray-300">
-      ELECTRONICS AND COMMUNICATION ENGG
-    </h2>
+        {/* Outer Circle */}
+        <div className="absolute inset-0 border border-cyan-400 rounded-full animate-ping" />
 
-    <h3 className="text-sm tracking-widest text-gray-400">
-      IN ASSOCIATION WITH
-    </h3>
+        {/* Middle Circle */}
+        <div className="absolute inset-6 border border-green-400 rounded-full animate-pulse" />
 
-    <h2 className="text-lg md:text-xl font-semibold text-cyan-400 tracking-widest">
-      IEEE SPS STUDENT BRANCH CHAPTER
-    </h2>
+        {/* Inner Circle */}
+        <div className="absolute inset-16 border border-cyan-300 rounded-full" />
 
-    <h3 className="text-sm tracking-widest text-gray-400">
-      PRESENTS
-    </h3>
+        {/* Rotating Scan Line */}
+        <div className="absolute inset-0 rounded-full border-t-2 border-green-400 animate-spin-slow" />
 
-    <h1 className="text-6xl md:text-7xl font-extrabold tracking-widest bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
-      ARDUINO DAYS 2K26
-    </h1>
-
-    <p className="text-gray-300 max-w-3xl mx-auto">
-      A 4-Day Technical Event focused on Arduino, IoT,
-      Embedded Systems, and Real-Time Project Development.
-    </p>
-
-    <div className="flex justify-center gap-6 mt-4">
-      <div className="px-6 py-3 rounded-full bg-green-500/20 border border-green-400 text-green-300">
-        📅 March 23–26, 2026
-      </div>
-
-      <div className="px-6 py-3 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300">
-        📍 Aditya University
       </div>
     </div>
 
-    <h3 className="text-md text-yellow-400 tracking-wide mt-6">
-      Innovation • Creativity • Real-Time Learning
-    </h3>
+    {/* 🔹 Content (above radar) */}
+    <div className="relative z-10">
 
-    <div className="flex justify-center gap-10 mt-10 flex-wrap">
-      <img src="/poster1.jpeg" alt="Poster 1" className="w-72 rounded-xl shadow-lg border border-green-400/30" />
-      <img src="/poster2.jpeg" alt="Poster 2" className="w-72 rounded-xl shadow-lg border border-cyan-400/30" />
+      {/* 🔹 Logos */}
+      <div className="flex flex-wrap justify-center items-center gap-6 md:gap-10">
+        <img src="/logo1.png" alt="Logo 1" className="h-10 md:h-16 object-contain" />
+        <img src="/logo2.png" alt="Logo 2" className="h-10 md:h-16 object-contain" />
+        <img src="/logo3.png" alt="Logo 3" className="h-10 md:h-16 object-contain" />
+      </div>
+
+      {/* here i need to add ece presents*/}
+
+      {/* 🔥 Auto-Scaling Title */}
+      <h1 className="
+        text-[9vw] sm:text-5xl md:text-7xl
+        font-extrabold
+        tracking-wide
+        leading-tight
+        bg-gradient-to-r from-green-400 via-cyan-400 to-green-300
+        bg-clip-text text-transparent
+      ">
+        ARDUINO DAYS 2K26
+      </h1>
+
+      <p className="text-xs sm:text-sm md:text-base text-gray-300 max-w-2xl mx-auto px-2">
+        A 4-Day Technical Event focused on Arduino, IoT,
+        Embedded Systems, and Real-Time Project Development.
+      </p>
+
+      <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-4">
+        <div className="px-4 md:px-6 py-2 md:py-3 rounded-full bg-green-500/20 border border-green-400 text-green-300 text-xs sm:text-sm md:text-base">
+          📅 March 23–26, 2026
+        </div>
+
+        <div className="px-4 md:px-6 py-2 md:py-3 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs sm:text-sm md:text-base">
+          📍 Aditya University
+        </div>
+      </div>
+
+      <h3 className="text-xs sm:text-sm md:text-md text-yellow-400 tracking-wide mt-6">
+        Innovation • Creativity • Real-Time Learning
+      </h3>
+
+      <div className="flex flex-wrap justify-center gap-6 md:gap-10 mt-8">
+        <img src="/poster1.jpeg" alt="Poster 1" className="w-52 sm:w-60 md:w-72 rounded-xl shadow-lg border border-green-400/30" />
+        <img src="/poster2.jpeg" alt="Poster 2" className="w-52 sm:w-60 md:w-72 rounded-xl shadow-lg border border-cyan-400/30" />
+      </div>
+
     </div>
 
-  </div>
+  </motion.div>
 )}
 
             {/* EVENTS */}
