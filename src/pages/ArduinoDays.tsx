@@ -16,6 +16,65 @@ const particlesInit = async (main: any) => {
 const ArduinoDays = () => {
   const [active, setActive] = useState("home");
 
+  const studentCoordinators = [
+  {
+    name: "Student Name 1",
+    designation: "Vice Chair",
+    department: "ECE",
+    roll: "23A91A0001",
+    phone: "9876543210",
+  },
+  {
+    name: "Student Name 2",
+    designation: "Secretary",
+    department: "CSE",
+    roll: "23A91A0002",
+    phone: "9876543211",
+  },
+  {
+    name: "Student Name 3",
+    designation: "Treasurer",
+    department: "IT",
+    roll: "23A91A0003",
+    phone: "9876543212",
+  },
+  {
+    name: "Student Name 4",
+    designation: "Coordinator",
+    department: "ECE",
+    roll: "23A91A0004",
+    phone: "9876543213",
+  },
+  {
+    name: "Student Name 5",
+    designation: "Coordinator",
+    department: "CSE",
+    roll: "23A91A0005",
+    phone: "9876543214",
+  },
+];
+
+const facultyCoordinators = [
+  {
+    name: "Faculty Name 1",
+    designation: "Associate Professor",
+    department: "ECE",
+    phone: "9876543220",
+  },
+  {
+    name: "Faculty Name 2",
+    designation: "Assistant Professor",
+    department: "CSE",
+    phone: "9876543221",
+  },
+  {
+    name: "Faculty Name 3",
+    designation: "Associate Professor",
+    department: "IT",
+    phone: "9876543222",
+  },
+];
+
   return (
     <div className="min-h-screen flex text-white relative overflow-hidden">
 
@@ -202,6 +261,96 @@ const ArduinoDays = () => {
 
   </div>
 )}
+
+    {active === "help" && (
+  <div className="w-full max-w-6xl px-10 py-16 space-y-16 relative z-30">
+
+    {/* ================= STUDENT COORDINATORS ================= */}
+    <div>
+      <h2 className="text-3xl font-bold mb-8 text-green-400">
+        Student Coordinators
+      </h2>
+
+      <div className="grid md:grid-cols-2 gap-8">
+
+        {studentCoordinators.map((member, index) => (
+          <div
+            key={index}
+            className="bg-white/5 backdrop-blur-md border border-green-400/20 rounded-xl p-6"
+          >
+
+            <h3 className="text-xl font-semibold text-white mb-2">
+              {member.name}
+            </h3>
+
+            <p className="text-gray-300">
+              Designation: {member.designation}
+            </p>
+
+            <p className="text-gray-300">
+              Department: {member.department}
+            </p>
+
+            <p className="text-gray-300">
+              Roll No: {member.roll}
+            </p>
+
+            <a
+              href={`tel:${member.phone}`}
+              className="text-green-400 font-semibold mt-3 block"
+            >
+              📞 Main Phone: {member.phone}
+            </a>
+
+          </div>
+        ))}
+
+      </div>
+    </div>
+
+
+    {/* ================= FACULTY COORDINATORS ================= */}
+    <div>
+      <h2 className="text-3xl font-bold mb-8 text-cyan-400">
+        Faculty Coordinators
+      </h2>
+
+      <div className="grid md:grid-cols-3 gap-8">
+
+        {facultyCoordinators.map((faculty, index) => (
+          <div
+            key={index}
+            className="bg-white/5 backdrop-blur-md border border-cyan-400/20 rounded-xl p-6"
+          >
+
+            <h3 className="text-xl font-semibold text-white mb-2">
+              {faculty.name}
+            </h3>
+
+            <p className="text-gray-300">
+              Designation: {faculty.designation}
+            </p>
+
+            <p className="text-gray-300">
+              Department: {faculty.department}
+            </p>
+
+            <a
+              href={`tel:${faculty.phone}`}
+              className="text-cyan-400 font-semibold mt-3 block"
+            >
+              📞 Main Phone: {faculty.phone}
+            </a>
+
+          </div>
+        ))}
+
+      </div>
+    </div>
+
+  </div>
+)}
+
       </div>
 
     </div>
