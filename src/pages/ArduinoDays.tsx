@@ -52,10 +52,16 @@ useEffect(() => {
   ];
 
   return (
-    <div className="min-h-screen text-white relative overflow-x-hidden">
+    <div className="min-h-screen text-white relative overflow-x-hidden overflow-y-auto">
 
       {/* Background Video */}
-      <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0">
+      <video
+  autoPlay
+  loop
+  muted
+  playsInline
+  className="fixed inset-0 w-full h-full object-cover z-0"
+>
         <source src="/arduino-bg.mp4" type="video/mp4" />
       </video>
       <div className="absolute inset-0 bg-black/60 z-10"></div>
@@ -64,7 +70,7 @@ useEffect(() => {
       <Particles
         id="tsparticles"
         init={particlesInit}
-        className="absolute inset-0 z-20"
+        className="fixed inset-0 z-20"
         options={{
           background: { color: "transparent" },
           fpsLimit: 60,
@@ -183,7 +189,7 @@ useEffect(() => {
 
 
       {/* Main Content with Smooth Animation */}
-      <div className="relative z-30 overflow-y-auto md:ml-64">
+      <div className="relative z-30 md:ml-64 min-h-screen">
         <AnimatePresence mode="wait">
           <motion.div
             key={active}
@@ -202,7 +208,7 @@ useEffect(() => {
     initial={{ opacity: 0, y: 40 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.8 }}
-   className="relative w-full min-h-screen flex flex-col items-center justify-start pt-28 md:pt-20 pb-16 px-4 md:px-10 text-center space-y-6"
+   className="relative w-full flex flex-col items-center justify-start pt-28 md:pt-20 pb-16 px-4 md:px-10 text-center space-y-6"
   >
 
     {/* 🛰️ IoT Radar Scanning Animation */}
