@@ -6,145 +6,113 @@ import {
   Info,
   Handshake
 } from "lucide-react";
+import Particles from "react-tsparticles";
+import { loadFull } from "tsparticles";
+
+const particlesInit = async (main: any) => {
+  await loadFull(main);
+};
 
 const ArduinoDays = () => {
   const [active, setActive] = useState("home");
 
-  const renderContent = () => {
-    switch (active) {
-      case "home":
-        return (
-          <div>
-            <h1 className="text-5xl font-bold mb-6">
-              ARDUINO DAYS 2K26
-            </h1>
-            <p className="text-lg text-gray-400 max-w-3xl">
-              A 4-Day Technical Event focused on Arduino, IoT, Embedded
-              Systems, and Real-Time Project Development.
-            </p>
-          </div>
-        );
-
-      case "events":
-        return (
-          <div>
-            <h2 className="text-4xl font-semibold mb-6">
-              Event Schedule
-            </h2>
-            <ul className="space-y-4 text-gray-300">
-              <li>📅 Day 1 – Arduino Basics & Setup</li>
-              <li>📅 Day 2 – Sensors & IoT Integration</li>
-              <li>📅 Day 3 – Mini Project Building</li>
-              <li>📅 Day 4 – Final Project & Showcase</li>
-            </ul>
-          </div>
-        );
-
-      case "help":
-        return (
-          <div>
-            <h2 className="text-4xl font-semibold mb-6">
-              Help Desk
-            </h2>
-            <p className="text-gray-300">
-              📞 Contact: +91 XXXXX XXXXX  
-              <br />
-              📧 Email: ieee@adityauniversity.in
-            </p>
-          </div>
-        );
-
-      case "about":
-        return (
-          <div>
-            <h2 className="text-4xl font-semibold mb-6">
-              About Arduino Days
-            </h2>
-            <p className="text-gray-300 max-w-3xl">
-              Arduino Days is a student-focused technical event designed
-              to introduce hands-on learning in microcontrollers, IoT,
-              and real-world hardware applications.
-            </p>
-          </div>
-        );
-
-      case "sponsors":
-        return (
-          <div>
-            <h2 className="text-4xl font-semibold mb-6">
-              Sponsors
-            </h2>
-            <p className="text-gray-400">
-              Sponsorship details coming soon.
-            </p>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
-
   return (
-    <div className="min-h-screen flex bg-black text-white">
+    <div className="min-h-screen flex bg-black text-white relative overflow-hidden">
+
+      {/* 🔥 Background Video */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover opacity-20 -z-20"
+      >
+        <source src="/arduino-bg.mp4" type="video/mp4" />
+      </video>
+
+      {/* 🌌 Particle Network */}
+      <Particles
+        id="tsparticles"
+        init={particlesInit}
+        className="absolute inset-0 -z-10"
+        options={{
+          background: { color: "transparent" },
+          fpsLimit: 60,
+          particles: {
+            number: { value: 60 },
+            color: { value: ["#00ff99", "#00ffff"] },
+            links: {
+              enable: true,
+              color: "#00ffcc",
+              distance: 150,
+              opacity: 0.4,
+              width: 1,
+            },
+            move: {
+              enable: true,
+              speed: 1.5,
+            },
+            opacity: { value: 0.5 },
+            size: { value: 2 },
+          },
+        }}
+      />
 
       {/* Sidebar */}
-      <div className="w-64 bg-black/90 backdrop-blur-xl border-r border-gray-800 p-6 flex flex-col gap-8">
-
-        <div className="text-2xl font-bold text-cyan-400">
+      <div className="w-64 bg-black/80 backdrop-blur-xl border-r border-green-500/20 p-6 flex flex-col gap-8 z-10">
+        <div className="text-2xl font-bold text-green-400">
           Arduino Days
         </div>
 
-        <button
-          onClick={() => setActive("home")}
-          className={`flex items-center gap-3 ${
-            active === "home" ? "text-cyan-400" : "text-gray-400"
-          }`}
-        >
+        <button onClick={() => setActive("home")} className="flex items-center gap-3 text-green-400">
           <Home size={20} /> Home
         </button>
 
-        <button
-          onClick={() => setActive("events")}
-          className={`flex items-center gap-3 ${
-            active === "events" ? "text-cyan-400" : "text-gray-400"
-          }`}
-        >
+        <button onClick={() => setActive("events")} className="flex items-center gap-3 text-gray-400 hover:text-green-400">
           <Calendar size={20} /> Events
         </button>
 
-        <button
-          onClick={() => setActive("help")}
-          className={`flex items-center gap-3 ${
-            active === "help" ? "text-cyan-400" : "text-gray-400"
-          }`}
-        >
+        <button onClick={() => setActive("help")} className="flex items-center gap-3 text-gray-400 hover:text-green-400">
           <HelpCircle size={20} /> Help Desk
         </button>
 
-        <button
-          onClick={() => setActive("about")}
-          className={`flex items-center gap-3 ${
-            active === "about" ? "text-cyan-400" : "text-gray-400"
-          }`}
-        >
+        <button onClick={() => setActive("about")} className="flex items-center gap-3 text-gray-400 hover:text-green-400">
           <Info size={20} /> About
         </button>
 
-        <button
-          onClick={() => setActive("sponsors")}
-          className={`flex items-center gap-3 ${
-            active === "sponsors" ? "text-cyan-400" : "text-gray-400"
-          }`}
-        >
+        <button onClick={() => setActive("sponsors")} className="flex items-center gap-3 text-gray-400 hover:text-green-400">
           <Handshake size={20} /> Sponsors
         </button>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-16 bg-gradient-to-br from-black via-gray-900 to-black">
-        {renderContent()}
+      <div className="flex-1 flex items-center justify-center z-10">
+        {active === "home" && (
+          <div className="text-center bg-black/40 backdrop-blur-xl border border-green-500/30 p-16 rounded-3xl shadow-[0_0_60px_rgba(0,255,170,0.3)] max-w-4xl">
+
+            <h1 className="text-6xl md:text-7xl font-extrabold mb-6 tracking-widest bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
+              ARDUINO DAYS 2K26
+            </h1>
+
+            <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
+              A 4-Day Technical Event focused on Arduino, IoT,
+              Embedded Systems, and Real-Time Project Development.
+            </p>
+
+            <div className="flex justify-center gap-6 mt-6">
+              <div className="px-6 py-3 rounded-full bg-green-500/20 border border-green-400 text-green-300">
+                📅 March 23–26, 2026
+              </div>
+
+              <div className="px-6 py-3 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300">
+                📍 Aditya University
+              </div>
+            </div>
+
+          </div>
+        )}
       </div>
+
     </div>
   );
 };
