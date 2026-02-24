@@ -97,16 +97,15 @@ useEffect(() => {
 
 <div
   ref={sidebarRef}
-  className={`fixed md:relative md:h-screen md:min-h-screen
-  top-0 left-0 h-full w-64
-  bg-black/90 backdrop-blur-xl
-  border-r border-green-500/20
-  shadow-[0_0_40px_rgba(0,255,200,0.1)]
-  p-6 flex flex-col gap-8
-  z-40 transform transition-transform duration-300
-  relative overflow-hidden
-  ${menuOpen ? "translate-x-0" : "-translate-x-full"}
-  md:translate-x-0`}
+  className={`fixed top-0 left-0 h-screen w-64
+bg-black/90 backdrop-blur-xl
+border-r border-green-500/20
+shadow-[0_0_40px_rgba(0,255,200,0.1)]
+p-6 flex flex-col gap-8
+z-40 transform transition-transform duration-300
+overflow-hidden
+${menuOpen ? "translate-x-0" : "-translate-x-full"}
+md:translate-x-0`}
 >
 
   {/* ⚡ Subtle Circuit Overlay */}
