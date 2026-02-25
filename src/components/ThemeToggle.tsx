@@ -5,28 +5,33 @@ export default function ThemeToggle() {
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
-  const savedTheme = localStorage.getItem("theme");
+    const savedTheme = localStorage.getItem("theme");
 
-  if (savedTheme) {
-    document.documentElement.classList.toggle("dark", savedTheme === "dark");
-  } else {
-    // ✅ Force dark mode by default
-    document.documentElement.classList.add("dark");
-    localStorage.setItem("theme", "dark");
-  }
-}, []);
+    if (savedTheme === "dark") {
+      document.documentElement.classList.add("dark");
+      setDark(true);
+    } else if (savedTheme === "light") {
+      document.documentElement.classList.remove("dark");
+      setDark(false);
+    } else {
+      // Default → Dark mode
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+      setDark(true);
+    }
+  }, []);
 
   const toggleTheme = () => {
-  const isDark = document.documentElement.classList.contains("dark");
-
-  if (isDark) {
-    document.documentElement.classList.remove("dark");
-    localStorage.setItem("theme", "light");
-  } else {
-    document.documentElement.classList.add("dark");
-    localStorage.setItem("theme", "dark");
-  }
-};
+    if (dark) {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+      setDark(false);
+    } else {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+      setDark(true);
+    }
+  };
 
   return (
     <button

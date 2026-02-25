@@ -2,21 +2,26 @@ import { motion } from "framer-motion";
 
 const StatsSection = () => {
   return (
-    <section className="relative py-24 bg-background text-foreground overflow-hidden">
+    <section className="relative pt-12 pb-16 bg-background text-foreground overflow-hidden">
 
       {/* Subtle divider glow */}
       <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent opacity-40" />
 
       <div className="max-w-6xl mx-auto px-6 text-center">
 
-        <motion.h2
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-3xl md:text-4xl font-semibold mb-16"
-        >
-          Chapter Impact
-        </motion.h2>
+        <motion.div
+  initial={{ opacity: 0, y: 30 }}
+  whileInView={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.8 }}
+  className="text-center mb-16"
+>
+  <h2 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">
+    Chapter Impact
+  </h2>
+
+  <div className="w-20 h-[2px] bg-primary mx-auto" />
+</motion.div>
+        
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
 

@@ -23,14 +23,14 @@ const EventDetails = () => {
 
   if (!event) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white">
+      <div className="min-h-screen bg-background flex items-center justify-center text-foreground">
         Loading...
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen bg-black overflow-hidden text-white">
+    <div className="relative min-h-screen bg-background overflow-hidden text-foreground">
 
       {/* ================= PARTICLES BACKGROUND ================= */}
       <Particles
@@ -77,8 +77,8 @@ const EventDetails = () => {
 
               <span className={`px-3 py-1 rounded-full text-xs font-medium
                 ${event.status === "Upcoming"
-                  ? "bg-cyan-600"
-                  : "bg-green-600"}`}>
+  ? "bg-primary text-primary-foreground"
+  : "bg-green-600 text-white dark:text-white"}`}>
                 {event.status}
               </span>
 
@@ -86,8 +86,8 @@ const EventDetails = () => {
               <span>📍 {event.location}</span>
             </div>
 
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-6 max-w-3xl">
-              <p className="text-gray-300 leading-relaxed">
+            <div className="bg-card border border-border rounded-xl p-6 max-w-3xl shadow-sm">
+                <p className="text-muted-foreground leading-relaxed">
                 {event.description}
               </p>
             </div>
@@ -110,7 +110,7 @@ const EventDetails = () => {
                hover:shadow-[0_0_30px_rgba(0,255,255,0.6)] 
                transition-all duration-500"
   >
-    <div className="overflow-hidden rounded-xl bg-black">
+    <div className="overflow-hidden rounded-xl bg-card">
       <img
         src={img}
         alt="Event"

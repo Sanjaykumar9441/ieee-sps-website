@@ -9,12 +9,15 @@ import {
 import Particles from "react-tsparticles";
 import { loadFull } from "tsparticles";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const particlesInit = async (main: any) => {
   await loadFull(main);
 };
 
+
 const ArduinoDays = () => {
+  const navigate = useNavigate();
   const [active, setActive] = useState("home");
 const [menuOpen, setMenuOpen] = useState(false);
 const sidebarRef = useRef<HTMLDivElement>(null);
@@ -132,7 +135,7 @@ md:translate-x-0`}
   <div className="relative z-10">
 
     <div className="text-2xl font-bold text-green-400 mb-6">
-      Arduino Days
+      Arduino Days 2K26
     </div>
 
     {[
@@ -140,14 +143,19 @@ md:translate-x-0`}
       { id: "events", icon: <Calendar size={20} />, label: "Events" },
       { id: "help", icon: <HelpCircle size={20} />, label: "Help Desk" },
       { id: "about", icon: <Info size={20} />, label: "About" },
-      { id: "sponsors", icon: <Handshake size={20} />, label: "Sponsors" }
+      { id: "sponsors", icon: <Handshake size={20} />, label: "Sponsors" },
+      { id: "main", icon: <Home size={20} />, label: "Main Website" }
     ].map((item) => (
       <button
         key={item.id}
         onClick={() => {
-          setActive(item.id);
-          setMenuOpen(false);
-        }}
+  if (item.id === "main") {
+  window.open("https://ieee-sps-website-seven.vercel.app/", "_blank");
+}else {
+    setActive(item.id);
+    setMenuOpen(false);
+  }
+}}
         className="relative flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group"
       >
 
@@ -241,17 +249,37 @@ md:translate-x-0`}
 
       {/* here i need to add ece presents*/}
 
-      {/* 🔥 Auto-Scaling Title */}
-      <h1 className="
-        text-[9vw] sm:text-5xl md:text-7xl
-        font-extrabold
-        tracking-wide
-        leading-tight
-        bg-gradient-to-r from-green-400 via-cyan-400 to-green-300
-        bg-clip-text text-transparent
-      ">
-        ARDUINO DAYS 2K26
-      </h1>
+      
+{/* Back Button */}
+<div className="fixed top-6 left-72 md:left-72 left-4 z-50">
+  <button
+    onClick={() => navigate(-1)}
+    className="
+      relative
+      px-4 py-2
+      rounded-full
+      text-white
+      bg-black/60
+      backdrop-blur-md
+      border border-cyan-400/60
+      shadow-[0_0_10px_rgba(0,255,255,0.6)]
+      hover:shadow-[0_0_20px_rgba(0,255,255,0.9)]
+      hover:scale-105
+      transition-all duration-300
+    "
+  >
+    ← Back
+  </button>
+</div>
+
+    {/* Event Logo */}
+<div className="flex justify-center mt-4">
+  <img
+    src="/titlelogo.png"
+    alt="Arduino Days Logo"
+    className="w-[70vw] sm:w-[500px] md:w-[700px] object-contain drop-shadow-[0_0_25px_rgba(96,145,255,0.4)]"
+  />
+</div>
 
       <p className="text-xs sm:text-sm md:text-base text-gray-300 max-w-2xl mx-auto px-2">
         A 4-Day Technical Event focused on Arduino, IoT,
@@ -368,7 +396,7 @@ md:translate-x-0`}
             All students from any branch can participate.
           </p>
           <a
-            href="https://your-hackathon-link.com"
+            href="https://your-expo-link.com"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block bg-white text-black font-semibold px-6 py-2 rounded-full hover:scale-105 transition"

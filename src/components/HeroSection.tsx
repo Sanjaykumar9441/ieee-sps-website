@@ -3,26 +3,40 @@ import { useEffect, useState } from "react";
 
 const HeroSection = () => {
   const fonts = [
-    "Orbitron",
-    "Audiowide",
-    "Bebas Neue",
-    "Cinzel",
-    "Playfair Display",
-    "Oswald",
-    "Righteous",
-    "Anton",
-    "Exo 2",
-    "Rajdhani",
-  ];
+  "Orbitron",
+  "Audiowide",
+  "Bebas Neue",
+  "Cinzel",
+  "Playfair Display",
+  "Oswald",
+  "Righteous",
+  "Anton",
+  "Exo 2",
+  "Rajdhani",
+];
 
-  const [fontIndex, setFontIndex] = useState(0);
+const [fontIndex, setFontIndex] = useState(0);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setFontIndex(Math.floor(Math.random() * fonts.length));
-    }, 200);
-    return () => clearInterval(interval);
-  }, []);
+useEffect(() => {
+  let lastChange = 0;
+
+  const handleScroll = () => {
+    const now = Date.now();
+
+    if (now - lastChange > 500) {
+      setFontIndex(prev => (prev + 1) % fonts.length);
+      lastChange = now;
+    }
+  };
+
+  window.addEventListener("wheel", handleScroll);      // Desktop
+  window.addEventListener("touchmove", handleScroll);  // Mobile
+
+  return () => {
+    window.removeEventListener("wheel", handleScroll);
+    window.removeEventListener("touchmove", handleScroll);
+  };
+}, []);
 
   return (
     <section
