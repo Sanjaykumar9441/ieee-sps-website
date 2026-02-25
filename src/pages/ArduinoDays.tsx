@@ -38,15 +38,15 @@ useEffect(() => {
 }, [menuOpen]);
 
   const studentCoordinators = [
-    { name: "Student Name 1", designation: "Vice Chair", department: "ECE", roll: "23A91A0001", phone: "9876543210" },
-    { name: "Student Name 2", designation: "Secretary", department: "CSE", roll: "23A91A0002", phone: "9876543211" },
-    { name: "Student Name 3", designation: "Treasurer", department: "IT", roll: "23A91A0003", phone: "9876543212" },
+    { name: "Ch. Sanjay Kumar", designation: "Vice Chair", department: "ECE", roll: "24B11EC057", phone: "7095009441" },
+    { name: "B. Navya", designation: "Chair", department: "ECE", roll: "24B11EC037", phone: " 6301443410" },
+    { name: "S. Veneela", designation: "Secretary", department: "ECE", roll: "24B11EC279", phone: "7995971239" },
+    { name: "J. Rakesh", designation: "Treasurer", department: "ECE", roll: "24B11EC115", phone: "8309873938" },
     { name: "Student Name 4", designation: "Coordinator", department: "ECE", roll: "23A91A0004", phone: "9876543213" },
-    { name: "Student Name 5", designation: "Coordinator", department: "CSE", roll: "23A91A0005", phone: "9876543214" }
   ];
 
   const facultyCoordinators = [
-    { name: "Faculty Name 1", designation: "Associate Professor", department: "ECE", phone: "9876543220" },
+    { name: "Mr. S. Jagadeesh", designation: "Assistant Professor", department: "ECE", phone: "9440722720" },
     { name: "Faculty Name 2", designation: "Assistant Professor", department: "CSE", phone: "9876543221" },
     { name: "Faculty Name 3", designation: "Associate Professor", department: "IT", phone: "9876543222" }
   ];
@@ -64,7 +64,7 @@ useEffect(() => {
 >
         <source src="/arduino-bg.mp4" type="video/mp4" />
       </video>
-      <div className="absolute inset-0 bg-black/60 z-10"></div>
+      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/40 z-10"></div>
 
       {/* Particles */}
       <Particles
@@ -312,10 +312,10 @@ md:translate-x-0`}
 
         <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10">
           <h2 className="text-2xl font-bold mb-4 text-white">
-            Two-Day Workshop
+            Two-Day Workshop on Arduino and IoT Fundamentals
           </h2>
           <p className="text-gray-300 mb-2">📅 23–24 March 2026</p>
-          <p className="text-gray-300 mb-2">💰 Registration Fee: ₹200</p>
+          <p className="text-gray-300 mb-2">💰 Registration Fee: ₹000</p>
           <p className="text-gray-400 text-sm mb-6">
             All students from any branch can participate.
           </p>
@@ -336,10 +336,10 @@ md:translate-x-0`}
 
         <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10">
           <h2 className="text-2xl font-bold mb-4 text-white">
-            Full-Day Hackathon
+            Full-Day Hackathon on Embedded/IoT Solutions
           </h2>
           <p className="text-gray-300 mb-2">📅 25 March 2026</p>
-          <p className="text-gray-300 mb-2">💰 Registration Fee: ₹200</p>
+          <p className="text-gray-300 mb-2">💰 Registration Fee: ₹000</p>
           <p className="text-gray-400 text-sm mb-6">
             All students from any branch can participate.
           </p>
@@ -360,10 +360,10 @@ md:translate-x-0`}
 
         <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10">
           <h2 className="text-2xl font-bold mb-4 text-white">
-            Project Expo
+            Project Expo showcasing hackathon outcomes
           </h2>
           <p className="text-gray-300 mb-2">📅 25 March 2026</p>
-          <p className="text-gray-300 mb-2">💰 Registration Fee: ₹200</p>
+          <p className="text-gray-300 mb-2">💰 Registration Fee: ₹000</p>
           <p className="text-gray-400 text-sm mb-6">
             All students from any branch can participate.
           </p>
