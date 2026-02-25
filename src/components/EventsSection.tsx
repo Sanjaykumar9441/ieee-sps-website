@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 
 const EventsSection = () => {
   const [events, setEvents] = useState<any[]>([]);
@@ -41,13 +42,19 @@ const temporaryEvent = {
     >
       <div className="max-w-3xl mx-auto">
 
-        {/* Header */}
-        <div className="text-center mb-12">
+       {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
           <h2 className="text-4xl md:text-5xl font-semibold tracking-tight mb-6">
             Events
           </h2>
-          <div className="w-16 h-[2px] bg-primary mx-auto" />
-        </div>
+
+          <div className="w-20 h-[2px] bg-primary mx-auto mb-6" />
+        </motion.div>
 
         {/* Events List */}
         <div className="space-y-6">
