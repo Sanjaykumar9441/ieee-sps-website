@@ -32,7 +32,7 @@ if (!fs.existsSync(uploadDir)) {
 const allowedOrigins = [
   "http://localhost:8080",
   "http://localhost:5173",
-  "https://ieee-sps-website-seven.vercel.app"
+  "https://ieeespsaditya.vercel.app"
 ];
 
 app.use(cors());
