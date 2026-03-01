@@ -16,6 +16,7 @@ const Admin = require("./models/admin");
 
 const app = express();
 
+
 const fs = require("fs");
 const path = require("path");
 
@@ -43,6 +44,13 @@ app.use(express.json());
 ================================= */
 app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
+});
+
+/* ===============================
+   ❤️ HEALTH CHECK ROUTE
+================================= */
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "Server Running" });
 });
 
 app.get("/test-events", (req, res) => {
