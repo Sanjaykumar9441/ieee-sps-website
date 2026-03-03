@@ -7,6 +7,7 @@ import EventDetails from "./pages/EventDetails";
 import AllEvents from "./pages/AllEvents";
 import TeamDetails from "./pages/TeamDetails";
 import ArduinoDays from "./pages/ArduinoDays"; // temporary
+import Register from "./pages/Register"; // temporary
 import { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import LoadingScreen from "./components/LoadingScreen";
@@ -62,6 +63,7 @@ function App() {
             <Route path="/all-events" element={<AllEvents />} />
             <Route path="/team/:id" element={<TeamDetails />} />
             <Route path="/arduino-days" element={<ArduinoDays />} />
+            <Route path="/register" element={<Register />} />
           </Routes>
         </div>
 
