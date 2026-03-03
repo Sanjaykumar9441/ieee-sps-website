@@ -23,6 +23,7 @@ useEffect(() => {
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState("Upcoming");
   const [images, setImages] = useState<FileList | null>(null);
+  const [editingEvent, setEditingEvent] = useState<any>(null);
 
   /* ================= TEAM ================= */
   const [members, setMembers] = useState<any[]>([]);
@@ -59,10 +60,15 @@ useEffect(() => {
     setEvents(res.data);
   };
 
-  const fetchMembers = async () => {
-    const res = await axios.get("https://ieee-sps-website.onrender.com/team");
-    setMembers(res.data);
-  };
+ const fetchMembers = async () => {
+  const res = await axios.get("https://ieee-sps-website.onrender.com/team");
+
+  const sortedMembers = res.data.sort(
+    (a: any, b: any) => Number(a.priority) - Number(b.priority)
+  );
+
+  setMembers(sortedMembers);
+};
 
   const fetchMessages = async () => {
   try {
@@ -146,11 +152,11 @@ const deleteMessage = async (id: string) => {
     formData.append("status", newData.status);
 
     // Append images only if new images are selected
-    if (newData.images && newData.images.length > 0) {
-      for (let i = 0; i < newData.images.length; i++) {
-        formData.append("images", newData.images[i]);
-      }
-    }
+    if (newData.newImages && newData.newImages.length > 0) {
+  for (let i = 0; i < newData.newImages.length; i++) {
+    formData.append("images", newData.newImages[i]);
+  }
+}
 
     await axios.put(
       `https://ieee-sps-website.onrender.com/events/${event._id}`,
@@ -320,18 +326,155 @@ const deleteMessage = async (id: string) => {
 
           {/* MANAGE EVENTS */}
           {activeTab === "events" && (
-            <div>
-              <h2 className="text-2xl text-cyan-400 mb-6">Manage Events</h2>
-              {events.map((event)=>(
-                <EditableEvent
-                  key={event._id}
-                  event={event}
-                  onUpdate={handleUpdate}
-                  onDelete={deleteEvent}
-                />
-              ))}
-            </div>
-          )}
+  <div>
+    <h2 className="text-2xl text-cyan-400 mb-6">Manage Events</h2>
+
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse bg-zinc-900 rounded-lg overflow-hidden">
+        
+        {/* Table Header */}
+        <thead className="bg-zinc-800 text-cyan-400 text-left">
+          <tr>
+            <th className="p-4 border-b border-cyan-500/20">Event Name</th>
+            <th className="p-4 border-b border-cyan-500/20">Status</th>
+            <th className="p-4 border-b border-cyan-500/20 text-center">Actions</th>
+          </tr>
+        </thead>
+
+        {/* Table Body */}
+        <tbody>
+          {events.map((event) => (
+            <tr
+              key={event._id}
+              className="hover:bg-zinc-800 transition border-b border-zinc-700"
+            >
+              <td className="p-4">{event.title}</td>
+
+              <td className="p-4">
+                <span
+                  className={`px-3 py-1 text-sm rounded-full ${
+                    event.status === "Upcoming"
+                      ? "bg-green-500/20 text-green-400"
+                      : "bg-blue-500/20 text-blue-400"
+                  }`}
+                >
+                  {event.status}
+                </span>
+              </td>
+
+              <td className="p-4">
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={() => setEditingEvent(event)}
+                    className="bg-cyan-500 hover:bg-cyan-400 text-black px-4 py-1 rounded"
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    onClick={() => deleteEvent(event._id)}
+                    className="bg-red-500 hover:bg-red-600 px-4 py-1 rounded"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+
+      </table>
+    </div>
+  </div>
+)}
+{editingEvent && (
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div className="bg-zinc-900 p-8 rounded w-[500px] space-y-3">
+
+      <h3 className="text-xl text-cyan-400">Edit Event</h3>
+
+      <input
+        value={editingEvent.title}
+        onChange={e =>
+          setEditingEvent({...editingEvent, title: e.target.value})
+        }
+        className="w-full p-2 bg-zinc-800 rounded"
+      />
+
+     <textarea
+        value={editingEvent.description}
+        onChange={e =>
+          setEditingEvent({...editingEvent, description: e.target.value})
+        }
+        className="w-full p-2 bg-zinc-800 rounded"
+      />
+
+      <input
+        value={editingEvent.date}
+        onChange={e =>
+          setEditingEvent({...editingEvent, date: e.target.value})
+        }
+        className="w-full p-2 bg-zinc-800 rounded"
+      />
+
+      <input
+        value={editingEvent.location}
+        onChange={e =>
+          setEditingEvent({...editingEvent, location: e.target.value})
+        }
+        className="w-full p-2 bg-zinc-800 rounded"
+      />
+
+      <select
+        value={editingEvent.status}
+        onChange={e =>
+          setEditingEvent({...editingEvent, status: e.target.value})
+        }
+        className="w-full p-2 bg-zinc-800 rounded"
+      >
+        <option value="Upcoming">Upcoming</option>
+        <option value="Completed">Completed</option>
+      </select>
+      
+    {editingEvent.status === "Completed" && (
+  <input
+    type="file"
+    multiple
+    onChange={(e: any) =>
+      setEditingEvent({
+        ...editingEvent,
+        newImages: e.target.files
+      })
+    }
+    className="w-full p-2 bg-zinc-800 rounded"
+  />
+)}
+
+      
+
+      <div className="flex gap-3">
+        <button
+          onClick={() => {
+            handleUpdate(editingEvent, editingEvent);
+            setEditingEvent(null);
+          }}
+          className="bg-green-500 px-4 py-1 rounded"
+        >
+          Save
+        </button>
+
+        <button
+          onClick={() => setEditingEvent(null)}
+          className="bg-gray-500 px-4 py-1 rounded"
+        >
+          Cancel
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
+
 
           {/* TEAM */}
 {activeTab === "team" && (
@@ -380,32 +523,52 @@ const deleteMessage = async (id: string) => {
 
     {/* ===== MANAGE TEAM ===== */}
     {teamView === "manage" && (
-      <div className="grid md:grid-cols-3 gap-6">
-        {members.map((m)=>(
-          <div key={m._id} className="bg-zinc-800 p-6 rounded text-center">
-            <img src={`https://ieee-sps-website.onrender.com/uploads/${m.photo}`} className="w-28 h-28 rounded-full mx-auto mb-4 object-cover"/>
-            <h3>{m.name}</h3>
-            <p className="text-cyan-400">{m.role}</p>
+  <div className="overflow-x-auto">
+    <table className="w-full border-collapse bg-zinc-900 rounded-lg overflow-hidden">
 
-            <div className="flex gap-2 justify-center mt-3">
-              <button
-                onClick={()=>setEditMember(m)}
-                className="bg-cyan-500 px-3 py-1 rounded"
-              >
-                Edit
-              </button>
+      <thead className="bg-zinc-800 text-cyan-400 text-left">
+        <tr>
+          <th className="p-4 border-b border-cyan-500/20">Priority</th>
+          <th className="p-4 border-b border-cyan-500/20">Name</th>
+          <th className="p-4 border-b border-cyan-500/20">Role</th>
+          <th className="p-4 border-b border-cyan-500/20 text-center">Actions</th>
+        </tr>
+      </thead>
 
-              <button
-                onClick={()=>deleteMember(m._id)}
-                className="bg-red-500 px-3 py-1 rounded"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
+      <tbody>
+        {members.map((m) => (
+          <tr
+            key={m._id}
+            className="hover:bg-zinc-800 transition border-b border-zinc-700"
+          >
+            <td className="p-4">{m.priority}</td>
+            <td className="p-4">{m.name}</td>
+            <td className="p-4 text-cyan-400">{m.role}</td>
+
+            <td className="p-4">
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={() => setEditMember(m)}
+                  className="bg-cyan-500 hover:bg-cyan-400 text-black px-4 py-1 rounded"
+                >
+                  Edit
+                </button>
+
+                <button
+                  onClick={() => deleteMember(m._id)}
+                  className="bg-red-500 hover:bg-red-600 px-4 py-1 rounded"
+                >
+                  Delete
+                </button>
+              </div>
+            </td>
+          </tr>
         ))}
-      </div>
-    )}
+      </tbody>
+
+    </table>
+  </div>
+)}
 
     {/* ===== EDIT MEMBER MODAL ===== */}
     {editMember && (

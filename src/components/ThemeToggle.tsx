@@ -36,9 +36,20 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-full border border-border bg-card hover:bg-muted transition"
+      className="
+  p-0 md:p-2
+  bg-transparent md:bg-card
+  border-0 md:border md:border-border
+  rounded-none md:rounded-full
+  hover:bg-transparent md:hover:bg-muted
+  transition
+"
     >
-      {dark ? <Sun size={18} /> : <Moon size={18} />}
+      {dark ? (
+  <Sun className="w-4 h-4 md:w-5 md:h-5" />
+) : (
+  <Moon className="w-4 h-4 md:w-5 md:h-5" />
+)}
     </button>
   );
 }

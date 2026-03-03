@@ -47,9 +47,9 @@ const temporaryEvent = {
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="text-center mb-12 sm:mb-16 lg:mb-20"
         >
-          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight mb-6">
+          <h2 className="text-2xl sm:text-3xl md:text-5xl font-semibold tracking-tight mb-4 sm:mb-6">
             Events
           </h2>
 
@@ -60,71 +60,93 @@ const temporaryEvent = {
         <div className="space-y-6">
 
           {visibleEvents.map((event) => (
+  <motion.div
+    key={event._id}
+    initial={{ opacity: 0, y: 40 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5 }}
+    whileHover={{ scale: 1.02 }}
+    className="group relative"
+  >
 
-            <div
-              key={event._id}
-              className="group relative rounded-xl transition-all duration-300"
-            >
+    {/* Glow Background */}
+    <div className="absolute -inset-1 rounded-2xl 
+                    bg-gradient-to-r 
+                    from-cyan-500/30 
+                    via-blue-500/30 
+                    to-purple-500/30
+                    blur-xl opacity-0 
+                    group-hover:opacity-100 
+                    transition duration-500" />
 
-              {/* Soft RGB Glow (Subtle in Light Mode) */}
-              <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-40 
-                              blur-xl transition duration-500
-                              bg-gradient-to-r from-primary via-secondary to-accent" />
+    {/* Glass Card */}
+    <div className="relative 
+                    backdrop-blur-xl 
+                    bg-white/5 dark:bg-white/5
+                    border border-white/20
+                    rounded-2xl 
+                    p-4 sm:p-6
+                    shadow-lg
+                    transition-all duration-500">
 
-              {/* Card */}
-              <div
-                className="relative bg-card border border-border 
-                           rounded-xl p-5 sm:p-6
-                           flex flex-col sm:flex-row 
-                           justify-between sm:items-center 
-                           gap-4
-                           hover:border-primary/60
-                           transition-all duration-300"
-              >
+      {/* Top Section */}
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
 
-                <div>
+        <div className="flex flex-col gap-3">
 
-                  {/* Status Badge */}
-                  <span
-                    className={`text-[11px] px-3 py-1 rounded-full font-medium
-                      ${event.status === "Upcoming"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-accent text-accent-foreground"
-                      }`}
-                  >
-                    {event.status}
-                  </span>
+  {/* Status Badge */}
+  <div>
+    <span
+      className={`inline-block text-[10px] px-3 py-1 sm:text-xs sm:px-4 sm:py-1.5 rounded-full font-semibold tracking-wide
+        ${event.status === "Upcoming"
+          ? "bg-cyan-500/20 text-cyan-400 border border-cyan-400/40"
+          : "bg-green-500/20 text-green-400 border border-green-400/40"
+        }`}
+    >
+      {event.status}
+    </span>
+  </div>
 
-                  {/* Title */}
-                  <h3 className="text-lg sm:text-xl font-semibold mt-3 text-foreground">
-                    {event.title}
-                  </h3>
+  {/* Title */}
+  <h3 className="font-heading text-base sm:text-xl md:text-2xl font-semibold tracking-tight leading-snug">
+    {event.title}
+  </h3>
 
-                  {/* Date + Location */}
-                  <div className="text-muted-foreground text-xs sm:text-sm mt-2">
-                    📅 {event.date} &nbsp;&nbsp; | &nbsp;&nbsp; 📍 {event.location}
-                  </div>
+          {/* Date & Location */}
+          <div className="text-xs sm:text-sm mt-2
+                text-gray-600 
+                dark:text-white/60 
+                flex items-center gap-4 flex-wrap">
+  <span className="flex items-center gap-1">
+    📅 <span>{event.date}</span>
+  </span>
 
-                </div>
+  <span className="flex items-center gap-1">
+    📍 <span>{event.location}</span>
+  </span>
+</div>
 
-                {/* View Button */}
-               {/*------------------------------------------------------------------------- i will delete later*/}  
-                <Link
-                  //to={`/event/${event._id}`}
-                  to={event.isTemporary ? "/arduino-days" : `/event/${event._id}`} // i will delete later
-                  className="inline-block text-sm px-4 py-2 rounded-full 
-                             border border-primary/50 text-primary
-                             hover:bg-primary hover:text-primary-foreground
-                             transition-all duration-300"
-                >
-                {/*-------------------------------------------------------------------------*/}
-                  View Details →
-                </Link>
+        </div>
 
-              </div>
-            </div>
+        {/* View Button */}
+        <Link
+          to={event.isTemporary ? "/arduino-days" : `/event/${event._id}`}
+          className="inline-flex items-center justify-center 
+                     px-4 py-2 sm:px-5 sm:py-2.5 rounded-full 
+                     text-sm font-medium
+                     bg-gradient-to-r from-cyan-500 to-blue-600
+                     text-white
+                     shadow-lg shadow-cyan-500/30
+                     hover:scale-105 hover:shadow-cyan-400/50
+                     transition-all duration-300"
+        >
+          View Details →
+        </Link>
 
-          ))}
+      </div>
+    </div>
+  </motion.div>
+))}
 
         </div>
 

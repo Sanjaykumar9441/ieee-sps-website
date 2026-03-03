@@ -7,12 +7,13 @@ const Footer = () => {
 
         {/* Left Section */}
         <div className="text-center md:text-left">
-          <h3
-            className="font-bold text-lg text-foreground animate-rgb-text"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
+          
+<h3 className="font-bold text-foreground animate-rgb-text" style={{ fontFamily: "var(--font-display)" }}>
             IEEE SPS — Aditya University
           </h3>
+
+
+
           <p className="text-sm text-muted-foreground mt-2">
             Signal Processing Society Student Branch Chapter
           </p>
@@ -37,7 +38,7 @@ const Footer = () => {
             href="https://mail.google.com/mail/?view=cm&fs=1&to=ieee.aus.club@gmail.com&su=IEEE%20SPS%20Inquiry"
             target="_blank"
             rel="noopener noreferrer"
-            className="icon-hover"
+            className="icon-neon-animate"
             aria-label="Send Email"
           >
             <Mail className="w-5 h-5" />
@@ -50,7 +51,7 @@ const Footer = () => {
             href="https://www.linkedin.com/company/ieee-student-chapter-aditya-university/"
             target="_blank"
             rel="noopener noreferrer"
-            className="icon-hover"
+            className="icon-neon-animate"
             aria-label="LinkedIn"
           >
             <Linkedin className="w-5 h-5" />
@@ -61,7 +62,7 @@ const Footer = () => {
             href="https://www.instagram.com/ieee.sps.aus?igsh=MXc0b3ViYjN6OGJ6bA=="
             target="_blank"
             rel="noopener noreferrer"
-            className="icon-hover"
+            className="icon-neon-animate"
             aria-label="Instagram"
           >
             <Instagram className="w-5 h-5" />
@@ -72,7 +73,7 @@ const Footer = () => {
             href="https://www.facebook.com/ieee.sps.aus"
             target="_blank"
             rel="noopener noreferrer"
-            className="icon-hover"
+            className="icon-neon-animate"
             aria-label="Facebook"
            >
             <Facebook className="w-5 h-5" />
@@ -83,7 +84,7 @@ const Footer = () => {
             href="https://x.com/ieee_sps_aus"
             target="_blank"
             rel="noopener noreferrer"
-            className="icon-hover"
+            className="icon-neon-animate"
             aria-label="Twitter"
           >
             <Twitter className="w-5 h-5" />
@@ -115,15 +116,58 @@ const Footer = () => {
 
       {/* Hover Glow Styles */}
       <style>{`
-  .icon-hover {
-    color: hsl(var(--muted-foreground));
-    transition: all 0.3s ease;
+  /* ================= TITLE CONTINUOUS NEON ================= */
+
+  @keyframes neonBorderShift {
+    0% { 
+      border-color: #00ffff;
+      box-shadow: 0 0 8px #00ffff;
+    }
+    50% { 
+      border-color: #3b82f6;
+      box-shadow: 0 0 12px #3b82f6;
+    }
+    100% { 
+      border-color: #00ffff;
+      box-shadow: 0 0 8px #00ffff;
+    }
   }
 
-  .icon-hover:hover {
+  .neon-title-animate {
+    border: 1px solid #00ffff;
+    animation: neonBorderShift 4s ease-in-out infinite;
+  }
+
+
+  /* ================= ICON CONTINUOUS NEON ================= */
+
+  @keyframes neonIconGlow {
+    0% {
+      box-shadow: 0 0 6px #00ffff;
+      border-color: #00ffff;
+    }
+    50% {
+      box-shadow: 0 0 12px #3b82f6;
+      border-color: #3b82f6;
+    }
+    100% {
+      box-shadow: 0 0 6px #00ffff;
+      border-color: #00ffff;
+    }
+  }
+
+  .icon-neon-animate {
+    color: hsl(var(--muted-foreground));
+    padding: 8px;
+    border-radius: 9999px;
+    border: 1px solid #00ffff;
+    animation: neonIconGlow 4s ease-in-out infinite;
+    transition: transform 0.3s ease;
+  }
+
+  .icon-neon-animate:hover {
+    transform: scale(1.15);
     color: hsl(var(--primary));
-    transform: translateY(-3px) scale(1.1);
-    filter: drop-shadow(0 0 6px hsl(var(--primary)));
   }
 `}</style>
 

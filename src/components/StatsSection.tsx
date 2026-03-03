@@ -15,10 +15,9 @@ const StatsSection = () => {
   transition={{ duration: 0.8 }}
   className="text-center mb-16"
 >
-  <h2 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">
-    Chapter Impact
-  </h2>
-
+<h2 className="text-2xl sm:text-3xl md:text-5xl font-semibold tracking-tight mb-4 sm:mb-6">
+            Chapter Impact
+          </h2>
   <div className="w-20 h-[2px] bg-primary mx-auto" />
 </motion.div>
         

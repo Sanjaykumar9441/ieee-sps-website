@@ -71,56 +71,89 @@ const Navbar = () => {
         </a>
       </div>
 
-      {/* ================= MOBILE CONTROLS (Below Logos) ================= */}
-      <div className="md:hidden absolute top-24 left-0 right-0 flex justify-center gap-4 z-50">
+      
+      {/* ================= MOBILE CONTROLS (Combined) ================= */}
+<div className="md:hidden absolute top-24 left-0 right-0 flex justify-center z-50">
 
-        {/* Theme Toggle */}
-        <ThemeToggle />
+  <div className="flex items-center gap-3
+                px-4 py-1.5
+                rounded-full
+                backdrop-blur-md
+                bg-white/10
+                border border-white/20
+                shadow-md">
 
-        {/* Hamburger */}
-        <button
-          onClick={() => setOpen(!open)}
-          className="bg-card/90 backdrop-blur-xl p-2.5 rounded-full 
-                     border border-border shadow-md
-                     transition-all duration-300"
-        >
-          {open ? <X size={20} /> : <Menu size={20} />}
+    {/* Theme Toggle */}
+    <ThemeToggle />
+
+    {/* Divider */}
+    <div className="w-px h-5 bg-white/30" />
+
+    {/* Hamburger */}
+    <button
+      onClick={() => setOpen(!open)}
+      className="transition-all duration-300"
+    >
+      {open ? <X size={18} /> : <Menu size={18} />}
+    </button>
+
+  </div>
+</div>
+
+    
+      {/* ================= PREMIUM DESKTOP NAV ================= */}
+<nav className="fixed top-6 right-12 z-50 hidden md:flex items-center gap-4">
+
+  <div className="flex items-center gap-4 
+                px-6 py-2.5 
+                rounded-full 
+                backdrop-blur-2xl 
+                
+                /* Light Mode */
+                bg-white/80 border border-gray-200 shadow-lg
+                
+                /* Dark Mode */
+                dark:bg-white/5 dark:border-white/20 
+                dark:shadow-[0_0_40px_rgba(6,182,212,0.25)]
+                
+                transition-all duration-500">
+
+    <ThemeToggle />
+
+    <div className="flex gap-2 text-sm font-semibold tracking-wide items-center">
+
+      {links.map((l) => {
+        const sectionId = l.href.replace("#", "");
+
+        return (
+          <a
+            key={l.label}
+            href={l.href}
+            className={`relative px-4 py-1.5 rounded-full transition-all duration-300 ${
+              active === sectionId
+  ? "text-white bg-cyan-500 shadow-lg"
+  : "text-black dark:text-white/80 hover:text-black dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10"
+            }`}
+          >
+            {l.label}
+          </a>
+        );
+      })}
+
+      <Link to="/admin-login" className="ml-3">
+        <button className="px-4 py-1.5 text-xs font-semibold tracking-wider
+                           bg-gradient-to-r from-cyan-500 to-blue-600
+                           text-white rounded-full
+                           hover:scale-105
+                           transition-all duration-300
+                           shadow-lg shadow-cyan-500/30">
+          Admin
         </button>
-      </div>
+      </Link>
 
-      {/* ================= DESKTOP NAV ================= */}
-      <nav className="fixed top-8 right-10 z-50 hidden md:flex items-center gap-4">
-
-        <ThemeToggle />
-
-        <div className="bg-card/80 backdrop-blur-xl border border-border px-5 py-1.5 rounded-full shadow-md dark:shadow-[0_0_20px_rgba(6,182,212,0.3)] flex gap-2 text-sm font-medium items-center">
-
-          {links.map((l) => {
-            const sectionId = l.href.replace("#", "");
-
-            return (
-              <a
-                key={l.label}
-                href={l.href}
-                className={`px-4 py-1 rounded-full transition-all duration-300 ${
-                  active === sectionId
-                    ? "bg-primary text-primary-foreground shadow-[0_0_15px_hsl(var(--primary))]"
-                    : "text-foreground hover:text-primary hover:bg-muted"
-                }`}
-              >
-                {l.label}
-              </a>
-            );
-          })}
-
-          <Link to="/admin-login" className="ml-2">
-            <button className="px-3 py-1 text-xs tracking-wide text-primary border border-primary rounded-full hover:bg-primary hover:text-primary-foreground transition">
-              Admin
-            </button>
-          </Link>
-
-        </div>
-      </nav>
+    </div>
+  </div>
+</nav>
 
       {/* ================= MOBILE MENU ================= */}
       {open && (

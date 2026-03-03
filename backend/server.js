@@ -13,6 +13,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const Admin = require("./models/admin");
+const registrationRoutes = require("./routes/registrationRoutes");
 
 const app = express();
 
@@ -64,6 +65,7 @@ app.use("/admin", adminRoutes);
 app.use("/events", eventRoutes);
 app.use("/contact", contactRoutes);
 app.use("/team", teamRoutes);
+app.use("/api", registrationRoutes);
 
 /* ===============================
    📂 Serve Uploaded Images

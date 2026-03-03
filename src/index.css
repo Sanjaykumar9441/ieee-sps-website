@@ -66,16 +66,12 @@
   }
 
   body {
-    @apply bg-background text-foreground;
-    font-family: var(--font-body);
+  @apply bg-background text-foreground;
+  font-family: var(--font-body);
+}
 
-    /* Soft RGB hero glow only in light */
-    background-image: radial-gradient(
-      circle at 50% 0%,
-      hsl(190 100% 50% / 0.08),
-      transparent 60%
-    );
-  }
+
+
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
@@ -190,4 +186,65 @@
 
 .animate-spin-slow {
   animation: spin-slow 6s linear infinite;
+}
+
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradientMove {
+  background-size: 300% 300%;
+  animation: gradientMove 15s ease infinite;
+}
+
+@keyframes textGlow {
+  0%, 100% { text-shadow: 0 0 10px rgba(6,182,212,0.6); }
+  50% { text-shadow: 0 0 25px rgba(6,182,212,1); }
+}
+
+.animate-textGlow {
+  animation: textGlow 3s ease-in-out infinite;
+}
+
+@keyframes globalGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-globalGradient {
+  background-size: 400% 400%;
+  animation: globalGradient 25s ease infinite;
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-40px); }
+}
+
+.animate-floatSlow {
+  animation: floatSlow 18s ease-in-out infinite;
+}
+/* =========================
+   MOBILE HERO BACKGROUND ONLY
+========================= */
+
+
+@media (max-width: 768px) {
+
+  html.dark body {
+    background: #020617; /* deep navy */
+
+    background-image: radial-gradient(
+      circle at 50% 35%,
+      rgba(0, 180, 255, 0.25),
+      rgba(0, 0, 0, 0) 65%
+    );
+
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
+
 }

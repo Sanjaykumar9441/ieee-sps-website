@@ -48,9 +48,9 @@ const TeamSection = () => {
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="text-center mb-12 sm:mb-16 lg:mb-20"
         >
-          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight mb-6">
+          <h2 className="text-2xl sm:text-3xl md:text-5xl font-semibold tracking-tight mb-4 sm:mb-6">
             Team
           </h2>
 
@@ -58,55 +58,67 @@ const TeamSection = () => {
         </motion.div>
 
         {/* Team Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 items-stretch">
 
-          {(showAll
-            ? members
-            : members.slice(0, initialLimit)
-          ).map((member) => (
+          {(showAll ? members : members.slice(0, initialLimit)).map((member) => (
 
-            <div
-              key={member._id}
-              className="group bg-card backdrop-blur-md
-                         border border-border
-                         rounded-xl p-5 sm:p-6 text-center
-                         hover:border-primary/50
-                         hover:shadow-[0_0_25px_hsl(var(--primary)/0.25)]
-                         transition-all duration-300"
-            >
+  <motion.div
+    key={member._id}
+    initial={{ opacity: 0, y: 40 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5 }}
+    whileHover={{ scale: 1.03 }}
+    viewport={{ once: true }}
+    className="group"
+  >
 
-              <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-4">
-                <img
-                  src={member.photo}
-                  className="w-full h-full object-cover rounded-full border-2 border-primary/40
-                             group-hover:border-primary transition-all duration-300"
-                />
-              </div>
+    <div
+      className="bg-card backdrop-blur-md
+           border border-border
+           rounded-xl p-5 sm:p-6
+           text-center
+           flex flex-col
+           justify-between
+           h-full
+           transition-all duration-300"
+    >
 
-              <h3 className="text-base sm:text-lg font-semibold tracking-wide mb-1">
-                {member.name}
-              </h3>
+      <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-4">
+        <img
+          src={member.photo}
+          alt={member.name}
+          className="w-full h-full object-cover rounded-full 
+                     border-2 border-primary/40
+                     group-hover:border-primary 
+                     transition-all duration-300"
+        />
+      </div>
 
-              <p className="text-primary text-xs sm:text-sm mb-3 tracking-wide">
-                {member.role}
-              </p>
+      <h3 className="text-base sm:text-lg font-semibold tracking-wide mb-1 min-h-[48px] flex items-center justify-center text-center">
+  {member.name}
+</h3>
 
-              <Link
-                to={`/team/${member._id}`}
-                className="inline-block text-xs px-3 py-1.5
-                           border border-primary/50
-                           rounded-full text-primary
-                           hover:bg-primary hover:text-primary-foreground
-                           transition-all duration-300"
-              >
-                View Details
-              </Link>
+      <p className="text-primary text-xs sm:text-sm mb-3 tracking-wide">
+        {member.role}
+      </p>
 
-            </div>
-          ))}
+      <Link
+        to={`/team/${member._id}`}
+        className="inline-block text-xs px-3 py-1.5
+                   border border-primary/50
+                   rounded-full text-primary
+                   hover:bg-primary hover:text-primary-foreground
+                   transition-all duration-300"
+      >
+        View Details
+      </Link>
+
+    </div>
+
+  </motion.div>
+))}
 
         </div>
-
         {/* View All Button */}
         {members.length > initialLimit && (
           <div className="text-center mt-10">
