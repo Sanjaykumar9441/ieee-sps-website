@@ -1,35 +1,49 @@
 const mongoose = require("mongoose");
 
+const memberSchema = new mongoose.Schema({
+  fullName: String,
+  email: String,
+  phone: String,
+  department: String,
+  year: String,
+  college: String
+});
+
 const registrationSchema = new mongoose.Schema({
   eventName: {
     type: String,
-    required: true,
+    required: true
   },
-  name: {
+
+  teamName: {
     type: String,
-    required: true,
+    required: true
   },
-  email: {
-    type: String,
-    required: true,
-  },
-  phone: {
-    type: String,
-    required: true,
-  },
+
   teamSize: {
     type: Number,
+    required: true
   },
-  utrNumber: {
+
+  teamMembers: [memberSchema],
+
+  accommodationRequired: {
+    type: Boolean,
+    default: false
+  },
+
+  accommodationMembers: [String],
+
+  paymentStatus: {
     type: String,
+    default: "Pending"
   },
-  screenshot: {
-    type: String, // we will store image path later
-  },
-  status: {
+
+  registrationStatus: {
     type: String,
-    default: "Pending", // Pending / Approved / Rejected
+    default: "Pending"
   }
+
 }, { timestamps: true });
 
 module.exports = mongoose.model("Registration", registrationSchema);
