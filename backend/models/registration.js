@@ -67,12 +67,11 @@ const registrationSchema = new mongoose.Schema(
 );
 
 // ✅ Generate Registration ID automatically
-registrationSchema.pre("save", function (next) {
+registrationSchema.pre("save", function () {
   if (!this.registrationId) {
     const random = Math.floor(1000 + Math.random() * 9000);
     this.registrationId = "SPS" + random;
   }
-  next();
 });
 
 module.exports = mongoose.model("Registration", registrationSchema);
