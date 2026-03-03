@@ -1,5 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { useState } from "react";
+import axios from "axios";
+import { motion, AnimatePresence } from "framer-motion";
 
 type Member = {
   fullName: string;
@@ -33,6 +35,9 @@ const Register = () => {
   const [accommodationRequired, setAccommodationRequired] = useState(false);
   const [accommodationMembers, setAccommodationMembers] = useState<number[]>([]);
   const [showSummary, setShowSummary] = useState(false);
+const [agreedRules, setAgreedRules] = useState(false);
+const [showRulesModal, setShowRulesModal] = useState(false);
+const [rulesError, setRulesError] = useState(false);
 
   const [members, setMembers] = useState<Member[]>([
     createEmptyMember(),
@@ -403,6 +408,36 @@ const [paymentSubmitted, setPaymentSubmitted] = useState(false);
         ))}
       </div>
     )}
+    {/* Rules Agreement */}
+<div className="mt-6 p-4 border border-cyan-400/30 rounded bg-cyan-900/10">
+  <label className="flex items-center gap-3 cursor-pointer">
+    <input
+      type="checkbox"
+      checked={agreedRules}
+      onChange={(e) => {
+        setAgreedRules(e.target.checked);
+        if (e.target.checked) setRulesError(false);
+      }}
+      className="w-4 h-4"
+    />
+    <span className="text-sm text-cyan-300">
+      I agree to the{" "}
+      <span
+        className="underline cursor-pointer text-cyan-400"
+        onClick={() => setShowRulesModal(true)}
+      >
+        Event Rules & Regulations
+      </span>
+    </span>
+  </label>
+
+  {/* 🔴 Error Message */}
+  {rulesError && (
+    <p className="text-red-400 text-sm mt-2">
+      You must agree to the Rules & Regulations before proceeding.
+    </p>
+  )}
+</div>
 
     <div className="flex gap-4 mt-6">
       <button
@@ -413,11 +448,17 @@ const [paymentSubmitted, setPaymentSubmitted] = useState(false);
       </button>
 
       <button
-        className="flex-1 bg-green-400 text-black font-bold py-3 rounded"
-        onClick={() => setShowPayment(true)}
-      >
-        Confirm & Proceed to Payment
-      </button>
+  className="flex-1 bg-green-400 text-black font-bold py-3 rounded hover:scale-105 transition"
+  onClick={() => {
+    if (!agreedRules) {
+      setRulesError(true);
+      return;
+    }
+    setShowPayment(true);
+  }}
+>
+  Confirm & Proceed to Payment
+</button>
     </div>
   </div>
 )}
@@ -494,17 +535,67 @@ const [paymentSubmitted, setPaymentSubmitted] = useState(false);
       />
 
       <button
-        className="w-full bg-green-400 text-black font-bold py-3 rounded hover:scale-105 transition"
-        onClick={() => {
-          if (!transactionId || !screenshot) {
-            alert("Please enter transaction ID and upload screenshot.");
-            return;
-          }
+  disabled={loading}
+  className={`w-full font-bold py-3 rounded transition ${
+    loading
+      ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+      : "bg-green-400 text-black hover:scale-105"
+  }`}
+  onClick={async () => {
+  if (!transactionId || !screenshot) {
+    alert("Please enter transaction ID and upload screenshot.");
+    return;
+  }
 
-          setPaymentSubmitted(true);
-        }}
+  try {
+    setLoading(true);
+
+    // 1️⃣ Upload Screenshot to Cloudinary
+    const formData = new FormData();
+    formData.append("image", screenshot);
+
+    const uploadRes = await axios.post(
+      "https://ieee-sps-website.onrender.com/upload",
+      formData
+    );
+
+    const screenshotUrl = uploadRes.data.url;
+
+    // 2️⃣ Prepare hostel members
+    const selectedHostelMembers = accommodationMembers.map(
+      (index) => members[index]
+    );
+
+    // 3️⃣ Send registration data to backend
+    await axios.post(
+      "https://ieee-sps-website.onrender.com/api/register",
+      {
+        eventType: event,
+        eventName:
+          event === "combo"
+            ? "Skill Forze + Buildathon"
+            : "Buildathon",
+        teamName,
+        teamSize,
+        teamMembers: members,
+        accommodationRequired,
+        hostelMembers: selectedHostelMembers,
+        userTransactionId: transactionId,
+        screenshotUrl
+      }
+    );
+
+    setPaymentSubmitted(true);
+    setLoading(false);
+
+  } catch (error) {
+    console.error("REGISTRATION ERROR:", error);
+    alert("Something went wrong. Please try again.");
+    setLoading(false);
+  }
+}}
       >
-        Payment Done
+        {loading ? "Processing..." : "Payment Done"}
       </button>
     </div>
   </>
@@ -522,6 +613,86 @@ const [paymentSubmitted, setPaymentSubmitted] = useState(false);
     </p>
   </div>
 )}
+
+<AnimatePresence>
+  {showRulesModal && (
+    <motion.div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      onClick={() => setShowRulesModal(false)}
+    >
+      <motion.div
+        className="bg-[#0b1622] max-w-3xl w-full p-8 rounded-xl border border-cyan-400/30 overflow-y-auto max-h-[80vh]"
+        initial={{ scale: 0.9, opacity: 0, y: 30 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 30 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-2xl font-bold text-cyan-400 mb-6 text-center">
+          Event Rules & Regulations
+        </h2>
+
+        <div className="space-y-6 text-gray-300 text-sm leading-relaxed">
+
+          <div>
+            <h3 className="text-lg text-green-400 font-semibold mb-2">
+              Event Rules & Guidelines
+            </h3>
+            <ul className="list-disc list-inside space-y-1">
+              <li>The event is open to all branches and all years.</li>
+              <li>Participants must carry a valid student ID card.</li>
+              <li>A working laptop with latest Arduino IDE must be installed before the event.</li>
+              <li>Participation certificates will be provided.</li>
+              <li>Accommodation will be provided as per norms.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-lg text-cyan-400 font-semibold mb-2">
+              Skill Forze (23rd & 24th March) – Workshop Guidelines
+            </h3>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Team registration is compulsory.</li>
+              <li>Team size: 2–4 members.</li>
+              <li>The workshop covers Arduino and IoT Fundamentals.</li>
+              <li>Active participation on both days is required.</li>
+              <li>Teams are encouraged to participate in the Buildathon.</li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-lg text-yellow-400 font-semibold mb-2">
+              Buildathon (25th March) – Hackathon Guidelines
+            </h3>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Team size: 2–4 members.</li>
+              <li>Problem statements will be provided by the organizers.</li>
+              <li>Projects must be original and developed during the event.</li>
+              <li>Minimum one working laptop per team is mandatory.</li>
+              <li>Participants may choose to attend only Buildathon if preferred.</li>
+              <li>Teams must present a working prototype.</li>
+              <li>Winners will receive prizes and merit certificates.</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <div className="text-center mt-8">
+          <button
+            onClick={() => setShowRulesModal(false)}
+            className="bg-cyan-400 text-black px-6 py-2 rounded font-semibold hover:scale-105 transition"
+          >
+            Close
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
 
       </div>
     </div>
