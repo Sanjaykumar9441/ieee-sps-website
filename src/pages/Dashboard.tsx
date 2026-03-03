@@ -77,13 +77,14 @@ useEffect(() => {
 const fetchRegistrations = async () => {
   try {
     const res = await axios.get(
-      "https://ieee-sps-website.onrender.com/api/pending",
+      "https://ieee-sps-website.onrender.com/api/registration",
       {
         headers: { Authorization: `Bearer ${token}` }
       }
     );
 
     setRegistrations(res.data);
+
   } catch (error) {
     console.error("Registration Fetch Error:", error);
   }
