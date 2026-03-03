@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const memberSchema = new mongoose.Schema({
   fullName: String,
+  rollNo: String,
   email: String,
   phone: String,
   department: String,
@@ -9,41 +10,69 @@ const memberSchema = new mongoose.Schema({
   college: String
 });
 
-const registrationSchema = new mongoose.Schema({
-  eventName: {
-    type: String,
-    required: true
+const registrationSchema = new mongoose.Schema(
+  {
+    // combo | buildathon
+    eventType: {
+      type: String,
+      required: true
+    },
+
+    eventName: {
+      type: String,
+      required: true
+    },
+
+    // Generated automatically
+    registrationId: {
+      type: String,
+      unique: true
+    },
+
+    teamName: {
+      type: String,
+      required: true
+    },
+
+    teamSize: {
+      type: Number,
+      required: true
+    },
+
+    teamMembers: [memberSchema],
+
+    accommodationRequired: {
+      type: Boolean,
+      default: false
+    },
+
+    hostelMembers: [memberSchema],
+
+    payment: {
+      userTransactionId: String,
+      screenshotUrl: String,
+      verified: {
+        type: Boolean,
+        default: false
+      }
+    },
+
+    registrationStatus: {
+      type: String,
+      enum: ["Pending", "Confirmed"],
+      default: "Pending"
+    }
   },
+  { timestamps: true }
+);
 
-  teamName: {
-    type: String,
-    required: true
-  },
-
-  teamSize: {
-    type: Number,
-    required: true
-  },
-
-  teamMembers: [memberSchema],
-
-  accommodationRequired: {
-    type: Boolean,
-    default: false
-  },
-
-  accommodationMembers: [String],
-
-  paymentStatus: {
-    type: String,
-    default: "Pending"
-  },
-
-  registrationStatus: {
-    type: String,
-    default: "Pending"
+// ✅ Generate Registration ID automatically
+registrationSchema.pre("save", function (next) {
+  if (!this.registrationId) {
+    const random = Math.floor(1000 + Math.random() * 9000);
+    this.registrationId = "SPS" + random;
   }
-
-}, { timestamps: true });
+  next();
+});
 
 module.exports = mongoose.model("Registration", registrationSchema);

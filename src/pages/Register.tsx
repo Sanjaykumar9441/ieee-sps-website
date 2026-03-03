@@ -8,7 +8,8 @@ type Member = {
   phone: string;
   department: string;
   year: string;
-  college: string;
+  college: string;          // Final college value
+  selectedCollege: string;  // AUS / ACET / OTHER
 };
 
 const createEmptyMember = (): Member => ({
@@ -19,6 +20,7 @@ const createEmptyMember = (): Member => ({
   department: "",
   year: "",
   college: "",
+  selectedCollege: ""
 });
 
 const Register = () => {
@@ -30,6 +32,7 @@ const Register = () => {
   const [teamName, setTeamName] = useState("");
   const [accommodationRequired, setAccommodationRequired] = useState(false);
   const [accommodationMembers, setAccommodationMembers] = useState<number[]>([]);
+  const [showSummary, setShowSummary] = useState(false);
 
   const [members, setMembers] = useState<Member[]>([
     createEmptyMember(),
@@ -53,19 +56,77 @@ const Register = () => {
 };
 
   const handleMemberChange = (
-    index: number,
-    field: keyof Member,
-    value: string
-  ) => {
-    setMembers((prev) =>
-      prev.map((member, i) =>
-        i === index ? { ...member, [field]: value } : member
-      )
-    );
-  };
+  index: number,
+  field: keyof Member,
+  value: string
+) => {
+
+  // 🔥 AUTO FILL FOR AUS / ACET
+  if (field === "selectedCollege") {
+
+    if (value === "AUS" || value === "ACET") {
+      setMembers((prev) =>
+        prev.map((member, i) =>
+          i === index
+            ? {
+                ...member,
+                selectedCollege: value,
+                college: value // auto fill final college
+              }
+            : member
+        )
+      );
+      return;
+    }
+
+    // If OTHER selected
+    if (value === "OTHER") {
+      setMembers((prev) =>
+        prev.map((member, i) =>
+          i === index
+            ? {
+                ...member,
+                selectedCollege: value,
+                college: ""
+              }
+            : member
+        )
+      );
+      return;
+    }
+  }
+
+  // Fields that MUST be uppercase
+  const forceUppercase: (keyof Member)[] = [
+    "fullName",
+    "RollNo",
+    "department",
+    "college"
+  ];
+
+  let updatedValue = value;
+
+  if (forceUppercase.includes(field)) {
+    updatedValue = value.toUpperCase();
+  }
+
+  // Phone → numbers only
+  if (field === "phone") {
+    updatedValue = value.replace(/\D/g, "");
+  }
+
+  setMembers((prev) =>
+    prev.map((member, i) =>
+      i === index ? { ...member, [field]: updatedValue } : member
+    )
+  );
+};
 
   const validateForm = () => {
-  if (!teamName.trim()) return false;
+  if (!teamName.trim()) {
+    alert("Team name is required.");
+    return false;
+  }
 
   for (let member of members) {
     if (
@@ -75,8 +136,16 @@ const Register = () => {
       !member.phone.trim() ||
       !member.department.trim() ||
       !member.year.trim() ||
+      !member.selectedCollege.trim() || 
       !member.college.trim()
     ) {
+      alert("Please fill all required fields.");
+      return false;
+    }
+
+    // 🔥 10 Digit Phone Check
+    if (!/^\d{10}$/.test(member.phone)) {
+      alert("Phone number must be exactly 10 digits.");
       return false;
     }
   }
@@ -85,21 +154,30 @@ const Register = () => {
 };
 
   const handleNext = async () => {
-  if (!validateForm()) {
-    alert("Please fill all required fields.");
-    return;
-  }
+  if (!validateForm()) return;
+ const selectedHostelMembers = accommodationMembers.map(
+    (index) => members[index]
+  );
+
+  console.log("Registration Data:", {
+    teamName,
+    members,
+    accommodationRequired,
+    hostelMembers: selectedHostelMembers
+  });
 
   setLoading(true);
   await new Promise((resolve) => setTimeout(resolve, 1000));
   setLoading(false);
 
-  setShowPayment(true);
+  setShowSummary(true);
 };
 
 const baseFee = event === "combo" ? 400 : 200;
-const accommodationCost = accommodationMembers.length * 150;
-const totalAmount = baseFee + accommodationCost;
+
+
+
+const totalAmount = baseFee;
 
 const [transactionId, setTransactionId] = useState("");
 const [screenshot, setScreenshot] = useState<File | null>(null);
@@ -108,7 +186,7 @@ const [paymentSubmitted, setPaymentSubmitted] = useState(false);
   return (
     <div className="min-h-screen bg-[#050a12] text-white px-6 py-12">
       <div className="max-w-4xl mx-auto">
-        {!showPayment && (
+       {!showSummary && !showPayment && (
   <>
 
         <h1 className="text-3xl font-bold mb-8 text-center text-cyan-400">
@@ -122,11 +200,11 @@ const [paymentSubmitted, setPaymentSubmitted] = useState(false);
         <div className="mb-6">
           <label className="block mb-2">Team Name</label>
           <input
-            type="text"
-            className="w-full p-3 bg-black border border-gray-600 rounded"
-            value={teamName}
-            onChange={(e) => setTeamName(e.target.value)}
-          />
+  type="text"
+  className="w-full p-3 bg-black border border-gray-600 rounded"
+  value={teamName}
+  onChange={(e) => setTeamName(e.target.value.toUpperCase())}
+/>
         </div>
 
         {/* Team Size */}
@@ -218,19 +296,29 @@ const [paymentSubmitted, setPaymentSubmitted] = useState(false);
                 <option>3rd</option>
                 <option>4th</option>
               </select>
-
-              <select
-                className="p-3 bg-black border border-gray-600 rounded"
-                value={member.college}
-                onChange={(e) =>
-                  handleMemberChange(index, "college", e.target.value)
-                }
-              >
-                <option value="">Select College</option>
-                <option>AUS</option>
-                <option>ACET</option>
-                <option>Other</option>
-              </select>
+  <select
+  className="p-3 bg-black border border-gray-600 rounded"
+  value={member.selectedCollege}
+  onChange={(e) =>
+    handleMemberChange(index, "selectedCollege", e.target.value)
+  }
+>
+  <option value="">Select College</option>
+  <option value="AUS">AUS</option>
+  <option value="ACET">ACET</option>
+  <option value="OTHER">OTHER</option>
+</select>
+{member.selectedCollege === "OTHER" && (
+  <input
+    type="text"
+    placeholder="Enter College Name"
+    className="p-3 bg-black border border-gray-600 rounded mt-3"
+    value={member.college}
+    onChange={(e) =>
+      handleMemberChange(index, "college", e.target.value)
+    }
+  />
+)}
 
             </div>
           </div>
@@ -272,11 +360,7 @@ const [paymentSubmitted, setPaymentSubmitted] = useState(false);
     ))}
   </div>
 )}
-{accommodationRequired && (
-  <div className="mb-6 text-yellow-400 font-semibold">
-    Accommodation Cost: ₹{accommodationMembers.length * 150}
-  </div>
-)}
+
         </div>
 
         <button
@@ -286,6 +370,56 @@ const [paymentSubmitted, setPaymentSubmitted] = useState(false);
           {loading ? "Loading..." : "Go to Payment"}
         </button>
           </>
+)}
+
+{showSummary && !showPayment && (
+  <div className="mt-10 p-8 border border-blue-400/30 rounded-lg">
+    <h2 className="text-2xl font-bold text-blue-400 mb-6 text-center">
+      Registration Summary
+    </h2>
+
+    <p className="mb-4"><strong>Team Name:</strong> {teamName}</p>
+
+    {members.map((member, index) => (
+      <div key={index} className="mb-6 p-4 border border-gray-600 rounded">
+        <p><strong>Member {index + 1}</strong></p>
+        <p>Name: {member.fullName}</p>
+        <p>Roll No: {member.RollNo}</p>
+        <p>Email: {member.email}</p>
+        <p>Phone: {member.phone}</p>
+        <p>Department: {member.department}</p>
+        <p>Year: {member.year}</p>
+        <p>College: {member.college}</p>
+      </div>
+    ))}
+
+    {accommodationRequired && accommodationMembers.length > 0 && (
+      <div className="mb-6 p-4 border border-yellow-400/30 rounded">
+        <p className="font-semibold text-yellow-400">
+          Hostel Selected For:
+        </p>
+        {accommodationMembers.map((index) => (
+          <p key={index}>{members[index].fullName}</p>
+        ))}
+      </div>
+    )}
+
+    <div className="flex gap-4 mt-6">
+      <button
+        className="flex-1 bg-red-400 text-black font-bold py-3 rounded"
+        onClick={() => setShowSummary(false)}
+      >
+        Edit Details
+      </button>
+
+      <button
+        className="flex-1 bg-green-400 text-black font-bold py-3 rounded"
+        onClick={() => setShowPayment(true)}
+      >
+        Confirm & Proceed to Payment
+      </button>
+    </div>
+  </div>
 )}
 
 {showPayment && !paymentSubmitted && (
@@ -311,15 +445,18 @@ const [paymentSubmitted, setPaymentSubmitted] = useState(false);
 
         <p>Event Fee: ₹{baseFee}</p>
 
-        {accommodationRequired && (
-          <p>Accommodation: ₹{accommodationCost}</p>
-        )}
+       
 
         <hr className="my-3 border-gray-600" />
 
         <p className="text-xl font-bold text-yellow-400">
           Total Amount: ₹{totalAmount}
         </p>
+        {accommodationRequired && accommodationMembers.length > 0 && (
+  <div className="mt-4 p-4 border border-yellow-400/40 rounded-lg bg-yellow-900/10 text-yellow-300 text-sm">
+    For hostel accommodation, our team will personally contact the selected members after registration.
+  </div>
+)}
       </div>
 
       <p className="mb-4 text-center">

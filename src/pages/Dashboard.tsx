@@ -39,12 +39,18 @@ useEffect(() => {
   const [priority, setPriority] = useState(5);
   const [photo, setPhoto] = useState<File | null>(null);
 
+ /* ================= REGISTRATIONS ================= */
+  const [registrations, setRegistrations] = useState<any[]>([]);
+  const [registrationView, setRegistrationView] = useState("pending");
+  const [registrationFilter, setRegistrationFilter] = useState("all");
+
   /* ================= MESSAGES ================= */
   const [messages, setMessages] = useState<any[]>([]);
 
  useEffect(() => {
   fetchEvents();
   fetchMembers();
+  fetchRegistrations();  // ✅ add this line 
 }, []);
 
 useEffect(() => {
@@ -66,8 +72,59 @@ useEffect(() => {
   const sortedMembers = res.data.sort(
     (a: any, b: any) => Number(a.priority) - Number(b.priority)
   );
-
   setMembers(sortedMembers);
+};
+const fetchRegistrations = async () => {
+  try {
+    const res = await axios.get(
+      "https://ieee-sps-website.onrender.com/api/pending",
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+
+    setRegistrations(res.data);
+  } catch (error) {
+    console.error("Registration Fetch Error:", error);
+  }
+};
+
+    const confirmRegistration = async (id: string) => {
+  if (!confirm("Confirm this registration?")) return;
+
+  await axios.put(
+    `https://ieee-sps-website.onrender.com/api/confirm/${id}`,
+    {},
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  fetchRegistrations();
+};
+
+const deleteRegistration = async (id: string) => {
+  if (!confirm("Delete this registration?")) return;
+
+  await axios.delete(
+    `https://ieee-sps-website.onrender.com/api/${id}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  fetchRegistrations();
+};
+
+const fetchConfirmedRegistrations = async () => {
+  try {
+    const res = await axios.get(
+      "https://ieee-sps-website.onrender.com/api/confirmed",
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+
+    setRegistrations(res.data);
+  } catch (error) {
+    console.error(error);
+  }
 };
 
   const fetchMessages = async () => {
@@ -260,7 +317,8 @@ const deleteMessage = async (id: string) => {
     { id: "upload", label: "Upload Event", icon: Upload },
     { id: "events", label: "Manage Events", icon: Calendar },
     { id: "team", label: "Team Management", icon: Users },
-    { id: "messages", label: "Messages", icon: Mail }
+    { id: "messages", label: "Messages", icon: Mail },
+    { id: "registrations", label: "Registrations", icon: Users },
   ];
 
   return (
@@ -625,6 +683,97 @@ const deleteMessage = async (id: string) => {
             Delete
           </button>
 
+        </div>
+      </div>
+    ))}
+  </div>
+)}
+
+{/* REGISTRATIONS */}
+{activeTab === "registrations" && (
+  <div>
+    <h2 className="text-2xl text-cyan-400 mb-6">Registrations</h2>
+
+    {registrations.length === 0 && (
+      <p className="text-gray-400">No registrations found.</p>
+    )}
+
+    {registrations.map((reg) => (
+      <div
+        key={reg._id}
+        className="bg-zinc-900 border border-cyan-500/20 p-6 rounded mb-6"
+      >
+        <div className="flex justify-between items-center mb-3">
+          <div>
+            <h3 className="text-lg font-semibold text-cyan-300">
+              {reg.teamName}
+            </h3>
+            <p className="text-sm text-gray-400">
+              Event: {reg.eventName}
+            </p>
+          </div>
+
+          <span
+            className={`px-3 py-1 text-sm rounded-full ${
+              reg.registrationStatus === "Pending"
+                ? "bg-yellow-500/20 text-yellow-400"
+                : "bg-green-500/20 text-green-400"
+            }`}
+          >
+            {reg.registrationStatus}
+          </span>
+        </div>
+
+        <p className="mb-2">Team Size: {reg.teamSize}</p>
+
+        <div className="mb-3">
+          <p className="font-semibold mb-1">Members:</p>
+          {reg.teamMembers.map((member: any, index: number) => (
+            <p key={index} className="text-sm text-gray-300">
+              {index + 1}. {member.fullName} ({member.rollNo})
+            </p>
+          ))}
+        </div>
+
+        {reg.accommodationRequired && (
+          <div className="mb-3">
+            <p className="font-semibold text-yellow-400">
+              Hostel Members:
+            </p>
+            {reg.hostelMembers.map((member: any, index: number) => (
+              <p key={index} className="text-sm text-gray-300">
+                {index + 1}. {member.fullName}
+              </p>
+            ))}
+          </div>
+        )}
+
+        <div className="flex gap-3 mt-4">
+          {reg.registrationStatus === "Pending" && (
+            <button
+              onClick={() => confirmRegistration(reg._id)}
+              className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded"
+            >
+              Confirm
+            </button>
+          )}
+
+          <button
+            onClick={() => deleteRegistration(reg._id)}
+            className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded"
+          >
+            Delete
+          </button>
+
+          {reg.registrationStatus === "Confirmed" && (
+            <a
+              href={`https://ieee-sps-website.onrender.com/api/pdf/${reg._id}`}
+              target="_blank"
+              className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded"
+            >
+              Download PDF
+            </a>
+          )}
         </div>
       </div>
     ))}
