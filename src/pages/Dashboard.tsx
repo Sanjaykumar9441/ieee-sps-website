@@ -1065,7 +1065,7 @@ const deleteMessage = async (id: string) => {
   >
     <div
       className="bg-zinc-900 p-6 rounded max-w-3xl"
-      onClick={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()} 
     >
       <img
         src={selectedScreenshot}
