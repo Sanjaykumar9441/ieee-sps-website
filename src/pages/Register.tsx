@@ -555,9 +555,9 @@ const [paymentSubmitted, setPaymentSubmitted] = useState(false);
     formData.append("image", screenshot);
 
     const uploadRes = await axios.post(
-      "https://ieee-sps-website.onrender.com/upload",
-      formData
-    );
+  "https://ieee-sps-website.onrender.com/api/upload",
+  formData
+);
 
     const screenshotUrl = uploadRes.data.url;
 
