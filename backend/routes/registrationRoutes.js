@@ -3,9 +3,9 @@ const router = express.Router();
 const Registration = require("../models/registration");
 const PDFDocument = require("pdfkit");
 
-/* ================================
+/* =====================================
    1️⃣ CREATE REGISTRATION
-================================ */
+===================================== */
 router.post("/register", async (req, res) => {
   try {
     const {
@@ -44,47 +44,32 @@ router.post("/register", async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("CREATE ERROR:", error);
     res.status(500).json({ message: "Error submitting registration" });
   }
 });
 
 
-/* ================================
-   2️⃣ GET PENDING REGISTRATIONS
-================================ */
-router.get("/pending", async (req, res) => {
+/* =====================================
+   2️⃣ GET ALL REGISTRATIONS
+===================================== */
+router.get("/registration", async (req, res) => {
   try {
-    const registrations = await Registration.find({
-      registrationStatus: "Pending"
-    }).sort({ createdAt: -1 });
+    const registrations = await Registration.find()
+      .sort({ createdAt: -1 });
 
     res.json(registrations);
+
   } catch (error) {
-    res.status(500).json({ message: "Error fetching pending registrations" });
+    console.error("FETCH ERROR:", error);
+    res.status(500).json({ message: "Error fetching registrations" });
   }
 });
 
 
-/* ================================
-   3️⃣ GET CONFIRMED REGISTRATIONS
-================================ */
-router.get("/confirmed", async (req, res) => {
-  try {
-    const registrations = await Registration.find({
-      registrationStatus: "Confirmed"
-    }).sort({ createdAt: -1 });
-
-    res.json(registrations);
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching confirmed registrations" });
-  }
-});
-
-
-/* ================================
-   4️⃣ CONFIRM REGISTRATION
-================================ */
+/* =====================================
+   3️⃣ CONFIRM REGISTRATION
+===================================== */
 router.put("/confirm/:id", async (req, res) => {
   try {
     const registration = await Registration.findById(req.params.id);
@@ -93,7 +78,15 @@ router.put("/confirm/:id", async (req, res) => {
       return res.status(404).json({ message: "Registration not found" });
     }
 
-    // Generate Registration ID
+    // Already confirmed safeguard
+    if (registration.registrationStatus === "Confirmed") {
+      return res.json({
+        message: "Already confirmed",
+        data: registration
+      });
+    }
+
+    // Count already confirmed for same event type
     const count = await Registration.countDocuments({
       eventType: registration.eventType,
       registrationStatus: "Confirmed"
@@ -104,11 +97,15 @@ router.put("/confirm/:id", async (req, res) => {
         ? "SPS-COMBO"
         : "SPS-BUILD";
 
-    const registrationId = `${prefix}-2026-${String(count + 1).padStart(3, "0")}`;
+    const registrationId =
+      `${prefix}-2026-${String(count + 1).padStart(3, "0")}`;
 
     registration.registrationId = registrationId;
     registration.registrationStatus = "Confirmed";
-    registration.payment.verified = true;
+
+    if (registration.payment) {
+      registration.payment.verified = true;
+    }
 
     await registration.save();
 
@@ -118,34 +115,49 @@ router.put("/confirm/:id", async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("CONFIRM ERROR:", error);
     res.status(500).json({ message: "Error confirming registration" });
   }
 });
 
 
-/* ================================
-   5️⃣ DELETE REGISTRATION
-================================ */
+/* =====================================
+   4️⃣ DELETE REGISTRATION
+===================================== */
 router.delete("/:id", async (req, res) => {
   try {
+    const registration = await Registration.findById(req.params.id);
+
+    if (!registration) {
+      return res.status(404).json({ message: "Registration not found" });
+    }
+
     await Registration.findByIdAndDelete(req.params.id);
+
     res.json({ message: "Registration deleted successfully" });
+
   } catch (error) {
+    console.error("DELETE ERROR:", error);
     res.status(500).json({ message: "Error deleting registration" });
   }
 });
 
 
-/* ================================
-   6️⃣ DOWNLOAD PDF
-================================ */
+/* =====================================
+   5️⃣ DOWNLOAD PDF
+===================================== */
 router.get("/pdf/:id", async (req, res) => {
   try {
     const registration = await Registration.findById(req.params.id);
 
     if (!registration) {
-      return res.status(404).json({ message: "Not found" });
+      return res.status(404).json({ message: "Registration not found" });
+    }
+
+    if (!registration.registrationId) {
+      return res.status(400).json({
+        message: "Registration not confirmed yet"
+      });
     }
 
     const doc = new PDFDocument();
@@ -158,8 +170,12 @@ router.get("/pdf/:id", async (req, res) => {
 
     doc.pipe(res);
 
-    doc.fontSize(18).text("IEEE SPS Registration Confirmation", { align: "center" });
+    doc.fontSize(18).text("IEEE SPS Registration Confirmation", {
+      align: "center"
+    });
+
     doc.moveDown();
+    doc.fontSize(12);
 
     doc.text(`Registration ID: ${registration.registrationId}`);
     doc.text(`Event: ${registration.eventName}`);
@@ -172,7 +188,11 @@ router.get("/pdf/:id", async (req, res) => {
       doc.text(`${index + 1}. ${member.fullName} - ${member.rollNo}`);
     });
 
-    if (registration.accommodationRequired) {
+    if (
+      registration.accommodationRequired &&
+      registration.hostelMembers &&
+      registration.hostelMembers.length > 0
+    ) {
       doc.moveDown();
       doc.text("Hostel Members:");
       registration.hostelMembers.forEach((member, index) => {
@@ -183,9 +203,9 @@ router.get("/pdf/:id", async (req, res) => {
     doc.end();
 
   } catch (error) {
+    console.error("PDF ERROR:", error);
     res.status(500).json({ message: "Error generating PDF" });
   }
 });
-
 
 module.exports = router;
