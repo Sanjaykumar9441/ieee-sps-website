@@ -59,7 +59,48 @@ useEffect(() => {
 }, [active]);
 
  
+const [showForm, setShowForm] = useState(false);
+const [selectedEvent, setSelectedEvent] = useState("");
+const [formData, setFormData] = useState({
+  name: "",
+  email: "",
+  phone: "",
+  teamSize: "",
+});
 
+const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  setFormData({
+    ...formData,
+    [e.target.name]: e.target.value,
+  });
+};
+
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  try {
+    const response = await fetch(
+      "https://ieee-sps-website.onrender.com/api/register",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          eventName: selectedEvent,
+          ...formData,
+        }),
+      }
+    );
+
+    const result = await response.json();
+    alert(result.message);
+
+    setShowForm(false);
+  } catch (error) {
+    alert("Registration failed");
+  }
+};
   
 
   const studentCoordinators = [
@@ -384,14 +425,15 @@ md:translate-x-0`}
             All students from any branch can participate.
           </p>
           <div className="mt-auto">
-  <a
-    href="..."
-    target="_blank"
-    rel="noopener noreferrer"
-    className="inline-block bg-white text-black font-semibold px-6 py-2 rounded-full hover:scale-105 transition"
-  >
-    Register Now
-  </a>
+  <button
+  onClick={() => {
+    setSelectedEvent("Skill Forze + Buildathon");
+    setShowForm(true);
+  }}
+  className="inline-block bg-white text-black font-semibold px-6 py-2 rounded-full hover:scale-105 transition"
+>
+  Register Now
+</button>
 </div>
         </div>
       </div>
@@ -428,14 +470,15 @@ md:translate-x-0`}
             All students from any branch can participate.
           </p>
           <div className="mt-auto">
-  <a
-    href="..."
-    target="_blank"
-    rel="noopener noreferrer"
-    className="inline-block bg-white text-black font-semibold px-6 py-2 rounded-full hover:scale-105 transition"
-  >
-    Register Now
-  </a>
+ <button
+  onClick={() => {
+    setSelectedEvent("Buildathon");
+    setShowForm(true);
+  }}
+  className="inline-block bg-white text-black font-semibold px-6 py-2 rounded-full hover:scale-105 transition"
+>
+  Register Now
+</button>
 </div>
         </div>
       </div>
@@ -678,6 +721,73 @@ md:translate-x-0`}
         {Math.round(scrollProgress)}%
       </div>
 
+    </div>
+  </div>
+)}
+
+{showForm && (
+  <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-[#0b1623] p-8 rounded-xl w-[90%] max-w-md border border-cyan-400">
+      <h2 className="text-xl font-bold mb-4 text-cyan-400">
+        Register for {selectedEvent}
+      </h2>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input
+          type="text"
+          name="name"
+          placeholder="Full Name"
+          required
+          onChange={handleChange}
+          className="w-full p-2 rounded bg-black border border-gray-600 text-white"
+        />
+
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          required
+          onChange={handleChange}
+          className="w-full p-2 rounded bg-black border border-gray-600 text-white"
+        />
+
+        <input
+          type="text"
+          name="phone"
+          placeholder="Phone Number"
+          required
+          onChange={handleChange}
+          className="w-full p-2 rounded bg-black border border-gray-600 text-white"
+        />
+
+        <input
+          type="number"
+          name="teamSize"
+          placeholder="Team Size (2-4)"
+          required
+          min="2"
+          max="4"
+          onChange={handleChange}
+          className="w-full p-2 rounded bg-black border border-gray-600 text-white"
+        />
+
+        <div className="flex justify-between">
+          <button
+            type="button"
+            onClick={() => setShowForm(false)}
+            className="px-4 py-2 bg-gray-600 rounded"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            className="px-4 py-2 bg-cyan-400 text-black rounded font-semibold"
+          >
+            Submit
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 )}
