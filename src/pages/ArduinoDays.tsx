@@ -11,13 +11,14 @@ import { loadFull } from "tsparticles";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-const navigate = useNavigate();
+
 const particlesInit = async (main: any) => {
   await loadFull(main);
 };
 
 
 const ArduinoDays = () => {
+  const navigate = useNavigate();
   const [active, setActive] = useState("home");
 const [menuOpen, setMenuOpen] = useState(false);
 const [scrollProgress, setScrollProgress] = useState(0);
