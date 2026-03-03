@@ -3,15 +3,73 @@ import axios from "axios";
 import { Calendar, Mail, Upload, LogOut, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+/* ================= EDITABLE EVENT ================= */
+
+const EditableEvent = ({ event, onUpdate, onDelete }: any) => {
+  const [edit, setEdit] = useState(false);
+  const [data, setData] = useState({
+    title: event.title,
+    description: event.description,
+    date: event.date,
+    location: event.location,
+    status: event.status,
+    images: null
+  });
+
+  return (
+    <div className="bg-zinc-800 p-6 rounded mb-6">
+      {!edit ? (
+        <>
+          <h3 className="text-xl">{event.title}</h3>
+          <p>{event.description}</p>
+          <p>{event.date}</p>
+          <p>{event.location}</p>
+          <p>Status: {event.status}</p>
+          <div className="flex gap-3 mt-3">
+            <button onClick={()=>setEdit(true)} className="bg-cyan-500 px-4 py-1 rounded">Edit</button>
+            <button onClick={()=>onDelete(event._id)} className="bg-red-500 px-4 py-1 rounded">Delete</button>
+          </div>
+        </>
+      ) : (
+        <div className="space-y-3">
+          <input value={data.title} onChange={e=>setData({...data,title:e.target.value})} className="w-full p-2 bg-zinc-700 rounded"/>
+          <textarea value={data.description} onChange={e=>setData({...data,description:e.target.value})} className="w-full p-2 bg-zinc-700 rounded"/>
+          <input value={data.date} onChange={e=>setData({...data,date:e.target.value})} className="w-full p-2 bg-zinc-700 rounded"/>
+          <input value={data.location} onChange={e=>setData({...data,location:e.target.value})} className="w-full p-2 bg-zinc-700 rounded"/>
+          <select value={data.status} onChange={e=>setData({...data,status:e.target.value})} className="w-full p-2 bg-zinc-700 rounded">
+            <option value="Upcoming">Upcoming</option>
+            <option value="Completed">Completed</option>
+          </select>
+
+          {data.status === "Completed" && (
+            <input
+  type="file"
+  multiple
+  onChange={(e: any) =>
+    setData({ ...data, images: e.target.files })
+  }
+/>
+          )}
+
+          <div className="flex gap-3">
+            <button onClick={()=>{onUpdate(event,data); setEdit(false);}} className="bg-green-500 px-4 py-1 rounded">Save</button>
+            <button onClick={()=>setEdit(false)} className="bg-gray-500 px-4 py-1 rounded">Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Dashboard = () => {
+    const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
 useEffect(() => {
   if (!token) {
     navigate("/");
   }
-}, [token]);
-  const navigate = useNavigate();
+}, [token, navigate]);
 
   const [activeTab, setActiveTab] = useState("upload");
 
@@ -39,6 +97,7 @@ useEffect(() => {
   const [priority, setPriority] = useState(5);
   const [photo, setPhoto] = useState<File | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
 
  /* ================= REGISTRATIONS ================= */
   const [registrations, setRegistrations] = useState<any[]>([]);
@@ -67,11 +126,13 @@ const buildathonCount = registrations.filter(
   /* ================= MESSAGES ================= */
   const [messages, setMessages] = useState<any[]>([]);
 
- useEffect(() => {
-  fetchEvents();
-  fetchMembers();
-  fetchRegistrations();  // ✅ add this line 
-}, []);
+useEffect(() => {
+  if (token) {
+    fetchEvents();
+    fetchMembers();
+    fetchRegistrations();
+  }
+}, [token]);
 
 useEffect(() => {
   if (activeTab === "messages") {
@@ -671,7 +732,7 @@ const deleteMessage = async (id: string) => {
           <input value={editMember.rollNumber} onChange={e=>setEditMember({...editMember,rollNumber:e.target.value})} className="w-full p-2 bg-zinc-800 rounded"/>
           <input value={editMember.registrationNumber} onChange={e=>setEditMember({...editMember,registrationNumber:e.target.value})} className="w-full p-2 bg-zinc-800 rounded"/>
           <input value={editMember.email} onChange={e=>setEditMember({...editMember,email:e.target.value})} className="w-full p-2 bg-zinc-800 rounded"/>
-          <input type="number" value={editMember.priority} onChange={e => setEditMember({...editMember, priority: e.target.value})} placeholder="Priority" className="w-full p-2 bg-zinc-800 rounded" />
+          <input type="number" value={editMember.priority} onChange={e => setEditMember({...editMember, priority: Number(e.target.value)})} placeholder="Priority" className="w-full p-2 bg-zinc-800 rounded" />
 
           <input type="file" onChange={(e:any)=>setEditMember({...editMember,newPhoto:e.target.files[0]})}/>
 
@@ -750,75 +811,84 @@ const deleteMessage = async (id: string) => {
     <p className="text-gray-400 text-sm">Buildathon</p>
     <p className="text-2xl font-bold text-purple-400">{buildathonCount}</p>
   </div>
-{/* SEARCH BAR */}
-<div className="mb-6">
-  <input
-    type="text"
-    placeholder="Search by Team Name..."
-    value={searchTerm}
-    onChange={(e) => setSearchTerm(e.target.value)}
-    className="w-full md:w-1/3 p-3 bg-zinc-900 border border-cyan-500/30 rounded focus:outline-none focus:border-cyan-400"
-  />
-</div>
-</div>
-    {/* FILTER BUTTONS */}
-    <div className="flex gap-4 mb-6">
-      <button
-        onClick={() => setRegistrationFilter("all")}
-        className={`px-4 py-2 rounded ${
-          registrationFilter === "all"
-            ? "bg-cyan-500 text-black"
-            : "bg-zinc-800"
-        }`}
-      >
-        All
-      </button>
 
-      <button
-        onClick={() => setRegistrationFilter("combo")}
-        className={`px-4 py-2 rounded ${
-          registrationFilter === "combo"
-            ? "bg-cyan-500 text-black"
-            : "bg-zinc-800"
-        }`}
-      >
-        Combo
-      </button>
+</div> {/* ✅ CLOSE GRID PROPERLY */}
 
-      <button
-        onClick={() => setRegistrationFilter("buildathon")}
-        className={`px-4 py-2 rounded ${
-          registrationFilter === "buildathon"
-            ? "bg-cyan-500 text-black"
-            : "bg-zinc-800"
-        }`}
-      >
-        Buildathon
-      </button>
-    </div>
 
-    <div className="flex gap-4 mb-6">
-  <button
-    onClick={() => setRegistrationView("pending")}
-    className={`px-4 py-2 rounded ${
-      registrationView === "pending"
-        ? "bg-yellow-500 text-black"
-        : "bg-zinc-800"
-    }`}
-  >
-    Pending
-  </button>
+{/* SEARCH + FILTER SECTION */}
+<div>
 
-  <button
-    onClick={() => setRegistrationView("confirmed")}
-    className={`px-4 py-2 rounded ${
-      registrationView === "confirmed"
-        ? "bg-green-500 text-black"
-        : "bg-zinc-800"
-    }`}
-  >
-    Confirmed
-  </button>
+  {/* SEARCH BAR */}
+  <div className="mb-6">
+    <input
+      type="text"
+      placeholder="Search by Team Name..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="w-full md:w-1/3 p-3 bg-zinc-900 border border-cyan-500/30 rounded focus:outline-none focus:border-cyan-400"
+    />
+  </div>
+
+  {/* FILTER BUTTONS */}
+  <div className="flex gap-4 mb-6">
+    <button
+      onClick={() => setRegistrationFilter("all")}
+      className={`px-4 py-2 rounded ${
+        registrationFilter === "all"
+          ? "bg-cyan-500 text-black"
+          : "bg-zinc-800"
+      }`}
+    >
+      All
+    </button>
+
+    <button
+      onClick={() => setRegistrationFilter("combo")}
+      className={`px-4 py-2 rounded ${
+        registrationFilter === "combo"
+          ? "bg-cyan-500 text-black"
+          : "bg-zinc-800"
+      }`}
+    >
+      Combo
+    </button>
+
+    <button
+      onClick={() => setRegistrationFilter("buildathon")}
+      className={`px-4 py-2 rounded ${
+        registrationFilter === "buildathon"
+          ? "bg-cyan-500 text-black"
+          : "bg-zinc-800"
+      }`}
+    >
+      Buildathon
+    </button>
+  </div>
+
+  <div className="flex gap-4 mb-6">
+    <button
+      onClick={() => setRegistrationView("pending")}
+      className={`px-4 py-2 rounded ${
+        registrationView === "pending"
+          ? "bg-yellow-500 text-black"
+          : "bg-zinc-800"
+      }`}
+    >
+      Pending
+    </button>
+
+    <button
+      onClick={() => setRegistrationView("confirmed")}
+      className={`px-4 py-2 rounded ${
+        registrationView === "confirmed"
+          ? "bg-green-500 text-black"
+          : "bg-zinc-800"
+      }`}
+    >
+      Confirmed
+    </button>
+  </div>
+
 </div>
 
     {/* TOTAL COUNTER */}
@@ -835,224 +905,181 @@ const deleteMessage = async (id: string) => {
     <h2 className="text-2xl text-cyan-400 mb-6">Registrations</h2>
 
     {/* FILTERED MAP */}
-    {registrations
-  .filter((reg) =>
-    registrationFilter === "all"
-      ? true
-      : reg.eventType === registrationFilter
-  )
-  .filter((reg) =>
-    registrationView === "pending"
-      ? reg.registrationStatus === "Pending"
-      : reg.registrationStatus === "Confirmed"
-  )
-  .filter((reg) =>
-    reg.teamName.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-  .map((reg) => (
-        <div
-          key={reg._id}
-          className="bg-zinc-900 border border-cyan-500/20 p-6 rounded mb-6"
-        >
-          {/* Your existing registration card content stays SAME */}
-        <div className="flex justify-between items-center mb-3">
-          <div>
-            <h3 className="text-lg font-semibold text-cyan-300">
-              {reg.teamName}
-            </h3>
-            {reg.registrationId && (
-  <p className="text-sm text-gray-400">
-    Registration ID:
-    <span className="text-green-400 ml-2 font-semibold">
-      {reg.registrationId}
-    </span>
-  </p>
-)}
-            <p className="text-sm text-gray-400">
-              Event: {reg.eventName}
-            </p>
-          </div>
+    {registrationView === "pending" ? (
 
-         <div className="flex gap-2 items-center">
-
-  <span
-    className={`px-3 py-1 text-sm rounded-full ${
-      reg.registrationStatus === "Pending"
-        ? "bg-yellow-500/20 text-yellow-400"
-        : "bg-green-500/20 text-green-400"
-    }`}
+  /* ================= PENDING CARDS (KEEP YOUR EXISTING CARD CODE) ================= */
+  registrations
+    .filter((reg) =>
+      registrationFilter === "all"
+        ? true
+        : reg.eventType === registrationFilter
+    )
+    .filter((reg) => reg.registrationStatus === "Pending")
+    .filter((reg) =>
+      reg.teamName.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .map((reg) => (
+  <div
+    key={reg._id}
+    className="bg-zinc-900 border border-cyan-500/20 p-6 rounded mb-6"
   >
-    {reg.registrationStatus}
-  </span>
-
-  {reg.payment?.verified && (
-    <span className="px-3 py-1 text-sm rounded-full bg-blue-500/20 text-blue-400">
-      Payment Verified
-    </span>
-  )}
-
-</div>
-        </div>
-
-        <p className="mb-2">Team Size: {reg.teamSize}</p>
-
-        <div className="mb-3">
-          <p className="font-semibold mb-1">Members:</p>
-          {reg.teamMembers.map((member: any, index: number) => (
-            <p key={index} className="text-sm text-gray-300">
-              {index + 1}. {member.fullName} ({member.rollNo})
-            </p>
-          ))}
-        </div>
-        
-        {/* Payment Screenshot */}
-{reg.payment?.screenshotUrl && (
-  <div className="mt-4">
-    <p className="font-semibold text-cyan-400 mb-2">
-      Payment Screenshot:
-    </p>
-
-    <a
-      href={reg.payment.screenshotUrl}
-      target="_blank"
-      rel="noreferrer"
-    >
-      <img
-        src={reg.payment.screenshotUrl}
-        alt="Payment Screenshot"
-        className="w-48 rounded border border-cyan-400/40 hover:scale-105 transition"
-      />
-    </a>
-  </div>
-)}
-
-        {reg.accommodationRequired && (
-          <div className="mb-3">
-            <p className="font-semibold text-yellow-400">
-              Hostel Members:
-            </p>
-            {reg.hostelMembers.map((member: any, index: number) => (
-              <p key={index} className="text-sm text-gray-300">
-                {index + 1}. {member.fullName}
-              </p>
-            ))}
-          </div>
-        )}
-
-        <div className="flex gap-3 mt-4">
-          {reg.registrationStatus === "Pending" && (
-          
-
-            <button
-              onClick={() => confirmRegistration(reg._id)}
-              className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded"
-            >
-              Confirm
-            </button>
-          )}
-
-          <button
-            onClick={() => deleteRegistration(reg._id)}
-            className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded"
-          >
-            Delete
-          </button>
-
-          <button
-  onClick={() => togglePaymentVerification(reg._id)}
-  className={`px-4 py-2 rounded ${
-    reg.payment?.verified
-      ? "bg-blue-500 hover:bg-blue-600"
-      : "bg-yellow-500 hover:bg-yellow-600"
-  }`}
->
-  {reg.payment?.verified
-    ? "Mark Unverified"
-    : "Verify Payment"}
-</button>
-
-          {reg.registrationStatus === "Confirmed" && (
-            <a
-              href={`https://ieee-sps-website.onrender.com/api/pdf/${reg._id}`}
-              target="_blank"
-              className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded"
-            >
-              Download PDF
-            </a>
-          )}
-        </div>
-      </div>
-    ))}
-  </div>
-)}
-
-        </div>
-      </div>
+    <div className="flex justify-between items-center mb-3">
+      <h3 className="text-xl text-cyan-400">{reg.teamName}</h3>
+      <span className="text-yellow-400 font-semibold">
+        {reg.registrationId}
+      </span>
     </div>
-  );
-};
 
+    <p><b>Event:</b> {reg.eventName}</p>
 
+    <div className="mt-3">
+      <b>Members:</b>
+      {reg.teamMembers.map((m: any, i: number) => (
+        <div key={i}>{m.fullName}</div>
+      ))}
+    </div>
 
+    <div className="mt-4 flex gap-3">
+      <button
+        onClick={() => confirmRegistration(reg._id)}
+        className="bg-green-500 px-3 py-1 rounded"
+      >
+        Confirm
+      </button>
 
-/* ================= EDITABLE EVENT ================= */
+      <button
+        onClick={() => deleteRegistration(reg._id)}
+        className="bg-red-500 px-3 py-1 rounded"
+      >
+        Delete
+      </button>
 
-const EditableEvent = ({ event, onUpdate, onDelete }: any) => {
-  const [edit, setEdit] = useState(false);
-  const [data, setData] = useState({
-    title: event.title,
-    description: event.description,
-    date: event.date,
-    location: event.location,
-    status: event.status,
-    images: null
-  });
-
-  return (
-    <div className="bg-zinc-800 p-6 rounded mb-6">
-      {!edit ? (
-        <>
-          <h3 className="text-xl">{event.title}</h3>
-          <p>{event.description}</p>
-          <p>{event.date}</p>
-          <p>{event.location}</p>
-          <p>Status: {event.status}</p>
-          <div className="flex gap-3 mt-3">
-            <button onClick={()=>setEdit(true)} className="bg-cyan-500 px-4 py-1 rounded">Edit</button>
-            <button onClick={()=>onDelete(event._id)} className="bg-red-500 px-4 py-1 rounded">Delete</button>
-          </div>
-        </>
-      ) : (
-        <div className="space-y-3">
-          <input value={data.title} onChange={e=>setData({...data,title:e.target.value})} className="w-full p-2 bg-zinc-700 rounded"/>
-          <textarea value={data.description} onChange={e=>setData({...data,description:e.target.value})} className="w-full p-2 bg-zinc-700 rounded"/>
-          <input value={data.date} onChange={e=>setData({...data,date:e.target.value})} className="w-full p-2 bg-zinc-700 rounded"/>
-          <input value={data.location} onChange={e=>setData({...data,location:e.target.value})} className="w-full p-2 bg-zinc-700 rounded"/>
-          <select value={data.status} onChange={e=>setData({...data,status:e.target.value})} className="w-full p-2 bg-zinc-700 rounded">
-            <option value="Upcoming">Upcoming</option>
-            <option value="Completed">Completed</option>
-          </select>
-
-          {data.status === "Completed" && (
-            <input
-  type="file"
-  multiple
-  onChange={(e: any) =>
-    setData({ ...data, images: e.target.files })
-  }
-/>
-          )}
-
-          <div className="flex gap-3">
-            <button onClick={()=>{onUpdate(event,data); setEdit(false);}} className="bg-green-500 px-4 py-1 rounded">Save</button>
-            <button onClick={()=>setEdit(false)} className="bg-gray-500 px-4 py-1 rounded">Cancel</button>
-          </div>
-        </div>
+      {reg.payment?.screenshotUrl && (
+        <button
+          onClick={() =>
+            setSelectedScreenshot(reg.payment.screenshotUrl)
+          }
+          className="bg-blue-500 px-3 py-1 rounded"
+        >
+          View Payment
+        </button>
       )}
     </div>
+  </div>
+))
+
+) : (
+
+  /* ================= CONFIRMED TABLE ================= */
+  <div className="overflow-x-auto">
+    <table className="w-full bg-zinc-900 rounded-lg overflow-hidden">
+      <thead className="bg-zinc-800 text-cyan-400">
+        <tr>
+          <th className="p-3 text-left">Reg ID</th>
+          <th className="p-3 text-left">Team</th>
+          <th className="p-3 text-left">Members</th>
+          <th className="p-3 text-left">Event</th>
+          <th className="p-3 text-left">Hostel</th>
+          <th className="p-3 text-left">Payment</th>
+          <th className="p-3 text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {registrations
+          .filter((reg) =>
+            registrationFilter === "all"
+              ? true
+              : reg.eventType === registrationFilter
+          )
+          .filter((reg) => reg.registrationStatus === "Confirmed")
+          .filter((reg) =>
+            reg.teamName.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+          .map((reg) => (
+            <tr key={reg._id} className="border-t border-zinc-700">
+              <td className="p-3 text-green-400 font-semibold">
+                {reg.registrationId}
+              </td>
+
+              <td className="p-3">{reg.teamName}</td>
+
+              <td className="p-3 text-sm">
+                {reg.teamMembers.map((m: any, i: number) => (
+                  <div key={i}>{m.fullName}</div>
+                ))}
+              </td>
+
+              <td className="p-3">{reg.eventName}</td>
+
+              <td className="p-3">
+                {reg.accommodationRequired ? "Yes" : "No"}
+              </td>
+
+              <td className="p-3">
+  {reg.payment?.verified ? (
+    <span className="text-blue-400">Verified</span>
+  ) : (
+    <span className="text-red-400">Not Verified</span>
+  )}
+</td>
+
+              <td className="p-3 flex gap-2 justify-center">
+                {reg.payment?.screenshotUrl && (
+                  <button
+                    onClick={() =>
+                      setSelectedScreenshot(reg.payment.screenshotUrl)
+                    }
+                    className="bg-blue-500 px-3 py-1 rounded"
+                  >
+                    View
+                  </button>
+                )}
+
+                <button
+                  onClick={() => togglePaymentVerification(reg._id)}
+                  className="bg-yellow-500 px-3 py-1 rounded"
+                >
+                  Mark Unverified
+                </button>
+
+                <a
+                  href={`https://ieee-sps-website.onrender.com/api/pdf/${reg._id}`}
+                  target="_blank"
+                  className="bg-purple-500 px-3 py-1 rounded"
+                >
+                  PDF
+                </a>
+              </td>
+            </tr>
+          ))}
+      </tbody>
+    </table>
+  </div>
+)}
+
+{/* SCREENSHOT MODAL */}
+{selectedScreenshot && (
+  <div
+    className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+    onClick={() => setSelectedScreenshot(null)}
+  >
+    <div
+      className="bg-zinc-900 p-6 rounded max-w-3xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <img
+        src={selectedScreenshot}
+        alt="Screenshot"
+        className="max-h-[80vh] rounded"
+      />
+    </div>
+  </div>
+)}
+      </div>
+)}
+        </div>
+      </div>
+    </div>
   );
 };
-
-
-
 export default Dashboard;
