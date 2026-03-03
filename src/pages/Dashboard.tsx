@@ -38,9 +38,29 @@ useEffect(() => {
   const [phone, setPhone] = useState("");
   const [priority, setPriority] = useState(5);
   const [photo, setPhoto] = useState<File | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
  /* ================= REGISTRATIONS ================= */
   const [registrations, setRegistrations] = useState<any[]>([]);
+  // ================= ANALYTICS =================
+
+const totalCount = registrations.length;
+
+const pendingCount = registrations.filter(
+  (r) => r.registrationStatus === "Pending"
+).length;
+
+const confirmedCount = registrations.filter(
+  (r) => r.registrationStatus === "Confirmed"
+).length;
+
+const comboCount = registrations.filter(
+  (r) => r.eventType === "combo"
+).length;
+
+const buildathonCount = registrations.filter(
+  (r) => r.eventType === "buildathon"
+).length;
   const [registrationView, setRegistrationView] = useState("pending");
   const [registrationFilter, setRegistrationFilter] = useState("all");
 
@@ -107,6 +127,16 @@ const deleteRegistration = async (id: string) => {
 
   await axios.delete(
     `https://ieee-sps-website.onrender.com/api/${id}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  fetchRegistrations();
+};
+
+const togglePaymentVerification = async (id: string) => {
+  await axios.put(
+    `https://ieee-sps-website.onrender.com/api/verify-payment/${id}`,
+    {},
     { headers: { Authorization: `Bearer ${token}` } }
   );
 
@@ -693,36 +723,175 @@ const deleteMessage = async (id: string) => {
 {/* REGISTRATIONS */}
 {activeTab === "registrations" && (
   <div>
+{/* ANALYTICS CARDS */}
+<div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+
+  <div className="bg-zinc-900 p-4 rounded border border-cyan-500/20">
+    <p className="text-gray-400 text-sm">Total</p>
+    <p className="text-2xl font-bold text-cyan-400">{totalCount}</p>
+  </div>
+
+  <div className="bg-zinc-900 p-4 rounded border border-yellow-500/20">
+    <p className="text-gray-400 text-sm">Pending</p>
+    <p className="text-2xl font-bold text-yellow-400">{pendingCount}</p>
+  </div>
+
+  <div className="bg-zinc-900 p-4 rounded border border-green-500/20">
+    <p className="text-gray-400 text-sm">Confirmed</p>
+    <p className="text-2xl font-bold text-green-400">{confirmedCount}</p>
+  </div>
+
+  <div className="bg-zinc-900 p-4 rounded border border-blue-500/20">
+    <p className="text-gray-400 text-sm">Combo</p>
+    <p className="text-2xl font-bold text-blue-400">{comboCount}</p>
+  </div>
+
+  <div className="bg-zinc-900 p-4 rounded border border-purple-500/20">
+    <p className="text-gray-400 text-sm">Buildathon</p>
+    <p className="text-2xl font-bold text-purple-400">{buildathonCount}</p>
+  </div>
+{/* SEARCH BAR */}
+<div className="mb-6">
+  <input
+    type="text"
+    placeholder="Search by Team Name..."
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+    className="w-full md:w-1/3 p-3 bg-zinc-900 border border-cyan-500/30 rounded focus:outline-none focus:border-cyan-400"
+  />
+</div>
+</div>
+    {/* FILTER BUTTONS */}
+    <div className="flex gap-4 mb-6">
+      <button
+        onClick={() => setRegistrationFilter("all")}
+        className={`px-4 py-2 rounded ${
+          registrationFilter === "all"
+            ? "bg-cyan-500 text-black"
+            : "bg-zinc-800"
+        }`}
+      >
+        All
+      </button>
+
+      <button
+        onClick={() => setRegistrationFilter("combo")}
+        className={`px-4 py-2 rounded ${
+          registrationFilter === "combo"
+            ? "bg-cyan-500 text-black"
+            : "bg-zinc-800"
+        }`}
+      >
+        Combo
+      </button>
+
+      <button
+        onClick={() => setRegistrationFilter("buildathon")}
+        className={`px-4 py-2 rounded ${
+          registrationFilter === "buildathon"
+            ? "bg-cyan-500 text-black"
+            : "bg-zinc-800"
+        }`}
+      >
+        Buildathon
+      </button>
+    </div>
+
+    <div className="flex gap-4 mb-6">
+  <button
+    onClick={() => setRegistrationView("pending")}
+    className={`px-4 py-2 rounded ${
+      registrationView === "pending"
+        ? "bg-yellow-500 text-black"
+        : "bg-zinc-800"
+    }`}
+  >
+    Pending
+  </button>
+
+  <button
+    onClick={() => setRegistrationView("confirmed")}
+    className={`px-4 py-2 rounded ${
+      registrationView === "confirmed"
+        ? "bg-green-500 text-black"
+        : "bg-zinc-800"
+    }`}
+  >
+    Confirmed
+  </button>
+</div>
+
+    {/* TOTAL COUNTER */}
+    <p className="mb-4 text-yellow-400 font-semibold">
+      Total: {
+        registrations.filter((reg) =>
+          registrationFilter === "all"
+            ? true
+            : reg.eventType === registrationFilter
+        ).length
+      }
+    </p>
+
     <h2 className="text-2xl text-cyan-400 mb-6">Registrations</h2>
 
-    {registrations.length === 0 && (
-      <p className="text-gray-400">No registrations found.</p>
-    )}
-
-    {registrations.map((reg) => (
-      <div
-        key={reg._id}
-        className="bg-zinc-900 border border-cyan-500/20 p-6 rounded mb-6"
-      >
+    {/* FILTERED MAP */}
+    {registrations
+  .filter((reg) =>
+    registrationFilter === "all"
+      ? true
+      : reg.eventType === registrationFilter
+  )
+  .filter((reg) =>
+    registrationView === "pending"
+      ? reg.registrationStatus === "Pending"
+      : reg.registrationStatus === "Confirmed"
+  )
+  .filter((reg) =>
+    reg.teamName.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+  .map((reg) => (
+        <div
+          key={reg._id}
+          className="bg-zinc-900 border border-cyan-500/20 p-6 rounded mb-6"
+        >
+          {/* Your existing registration card content stays SAME */}
         <div className="flex justify-between items-center mb-3">
           <div>
             <h3 className="text-lg font-semibold text-cyan-300">
               {reg.teamName}
             </h3>
+            {reg.registrationId && (
+  <p className="text-sm text-gray-400">
+    Registration ID:
+    <span className="text-green-400 ml-2 font-semibold">
+      {reg.registrationId}
+    </span>
+  </p>
+)}
             <p className="text-sm text-gray-400">
               Event: {reg.eventName}
             </p>
           </div>
 
-          <span
-            className={`px-3 py-1 text-sm rounded-full ${
-              reg.registrationStatus === "Pending"
-                ? "bg-yellow-500/20 text-yellow-400"
-                : "bg-green-500/20 text-green-400"
-            }`}
-          >
-            {reg.registrationStatus}
-          </span>
+         <div className="flex gap-2 items-center">
+
+  <span
+    className={`px-3 py-1 text-sm rounded-full ${
+      reg.registrationStatus === "Pending"
+        ? "bg-yellow-500/20 text-yellow-400"
+        : "bg-green-500/20 text-green-400"
+    }`}
+  >
+    {reg.registrationStatus}
+  </span>
+
+  {reg.payment?.verified && (
+    <span className="px-3 py-1 text-sm rounded-full bg-blue-500/20 text-blue-400">
+      Payment Verified
+    </span>
+  )}
+
+</div>
         </div>
 
         <p className="mb-2">Team Size: {reg.teamSize}</p>
@@ -735,6 +904,27 @@ const deleteMessage = async (id: string) => {
             </p>
           ))}
         </div>
+        
+        {/* Payment Screenshot */}
+{reg.payment?.screenshotUrl && (
+  <div className="mt-4">
+    <p className="font-semibold text-cyan-400 mb-2">
+      Payment Screenshot:
+    </p>
+
+    <a
+      href={reg.payment.screenshotUrl}
+      target="_blank"
+      rel="noreferrer"
+    >
+      <img
+        src={reg.payment.screenshotUrl}
+        alt="Payment Screenshot"
+        className="w-48 rounded border border-cyan-400/40 hover:scale-105 transition"
+      />
+    </a>
+  </div>
+)}
 
         {reg.accommodationRequired && (
           <div className="mb-3">
@@ -751,6 +941,8 @@ const deleteMessage = async (id: string) => {
 
         <div className="flex gap-3 mt-4">
           {reg.registrationStatus === "Pending" && (
+          
+
             <button
               onClick={() => confirmRegistration(reg._id)}
               className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded"
@@ -765,6 +957,19 @@ const deleteMessage = async (id: string) => {
           >
             Delete
           </button>
+
+          <button
+  onClick={() => togglePaymentVerification(reg._id)}
+  className={`px-4 py-2 rounded ${
+    reg.payment?.verified
+      ? "bg-blue-500 hover:bg-blue-600"
+      : "bg-yellow-500 hover:bg-yellow-600"
+  }`}
+>
+  {reg.payment?.verified
+    ? "Mark Unverified"
+    : "Verify Payment"}
+</button>
 
           {reg.registrationStatus === "Confirmed" && (
             <a

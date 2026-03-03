@@ -1,7 +1,19 @@
 const express = require("express");
 const router = express.Router();
 const Registration = require("../models/registration");
+const Event = require("../models/event"); // adjust path if needed
 const PDFDocument = require("pdfkit");
+
+const nodemailer = require("nodemailer");
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
 
 /* =====================================
    1️⃣ CREATE REGISTRATION
@@ -78,15 +90,7 @@ router.put("/confirm/:id", async (req, res) => {
       return res.status(404).json({ message: "Registration not found" });
     }
 
-    // Already confirmed safeguard
-    if (registration.registrationStatus === "Confirmed") {
-      return res.json({
-        message: "Already confirmed",
-        data: registration
-      });
-    }
-
-    // Count already confirmed for same event type
+    // Generate Registration ID
     const count = await Registration.countDocuments({
       eventType: registration.eventType,
       registrationStatus: "Confirmed"
@@ -102,15 +106,73 @@ router.put("/confirm/:id", async (req, res) => {
 
     registration.registrationId = registrationId;
     registration.registrationStatus = "Confirmed";
-
-    if (registration.payment) {
-      registration.payment.verified = true;
-    }
+    registration.payment.verified = true;
 
     await registration.save();
 
+    /* ================= SEND EMAIL TO ALL TEAM MEMBERS ================= */
+
+// Fetch event details from Events collection
+const eventDetails = await Event.findOne({
+  title: registration.eventName
+});
+
+const eventDate = eventDetails?.date || "To be announced";
+const eventVenue = eventDetails?.location || "To be announced";
+
+// Collect all emails
+const allEmails = registration.teamMembers
+  .map(member => member.email)
+  .filter(email => email);
+
+const mailOptions = {
+  from: process.env.EMAIL_USER,
+  to: allEmails, // send to all
+  subject: `Registration Confirmed - ${registration.eventName}`,
+  html: `
+    <p>Dear Participant,</p>
+
+    <p>Greetings from <b>IEEE SPS Student Branch</b>!</p>
+
+    <p>Your registration has been successfully confirmed.</p>
+
+    <h3>Event Details:</h3>
+    <ul>
+      <li><b>Event:</b> ${registration.eventName}</li>
+      <li><b>Date:</b> ${eventDate}</li>
+      <li><b>Venue:</b> ${eventVenue}</li>
+    </ul>
+
+    <h3>Registration Details:</h3>
+    <ul>
+      <li><b>Registration ID:</b> ${registrationId}</li>
+      <li><b>Team Name:</b> ${registration.teamName}</li>
+      <li><b>Team Size:</b> ${registration.teamSize}</li>
+    </ul>
+
+    <p>Please keep this email for future reference.</p>
+
+    <p>We look forward to your participation!</p>
+
+    <br/>
+    <p>
+      Best Regards,<br/>
+      IEEE SPS Student Branch
+    </p>
+  `
+};
+
+try {
+  await transporter.sendMail(mailOptions);
+  console.log("✅ Email sent successfully");
+} catch (emailError) {
+  console.error("❌ EMAIL ERROR:", emailError.message);
+}
+
+
+// ✅ THIS WAS MISSING
     res.json({
-      message: "Registration confirmed successfully",
+      message: "Registration confirmed and Email sent",
       data: registration
     });
 
@@ -141,6 +203,7 @@ router.delete("/:id", async (req, res) => {
     res.status(500).json({ message: "Error deleting registration" });
   }
 });
+
 
 
 /* =====================================
@@ -205,6 +268,27 @@ router.get("/pdf/:id", async (req, res) => {
   } catch (error) {
     console.error("PDF ERROR:", error);
     res.status(500).json({ message: "Error generating PDF" });
+  }
+});
+
+router.put("/verify-payment/:id", async (req, res) => {
+  try {
+    const registration = await Registration.findById(req.params.id);
+
+    if (!registration) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    registration.payment.verified = !registration.payment.verified;
+    await registration.save();
+
+    res.json({
+      message: "Payment status updated",
+      data: registration
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Error updating payment" });
   }
 });
 
