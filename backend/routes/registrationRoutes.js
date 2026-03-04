@@ -158,6 +158,7 @@ const mailOptions = {
     <p>
       Best Regards,<br/>
       IEEE SPS Student Branch
+      Aditya University
     </p>
   `
 };
