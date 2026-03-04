@@ -14,16 +14,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const existingTransaction = await Registration.findOne({
-  "payment.userTransactionId": req.body.userTransactionId,
-});
-
-if (existingTransaction) {
-  return res.status(400).json({
-    message: "This transaction ID has already been used.",
-  });
-}
-
 /* =====================================
    1️⃣ CREATE REGISTRATION
 ===================================== */
@@ -40,6 +30,17 @@ router.post("/register", async (req, res) => {
       userTransactionId,
       screenshotUrl,
     } = req.body;
+
+    // 🚫 Check if transaction already used
+    const existingTransaction = await Registration.findOne({
+      "payment.userTransactionId": userTransactionId,
+    });
+
+    if (existingTransaction) {
+      return res.status(400).json({
+        message: "This transaction ID has already been used.",
+      });
+    }
 
     const registration = new Registration({
       eventType,
@@ -72,24 +73,69 @@ router.post("/register", async (req, res) => {
 /* =====================================
    2️⃣ GET ALL REGISTRATIONS
 ===================================== */
-router.get("/registration", async (req, res) => {
+router.post("/register", async (req, res) => {
   try {
-    // 🚫 Prevent duplicate team name
+    const {
+      eventType,
+      eventName,
+      teamName,
+      teamSize,
+      teamMembers,
+      accommodationRequired,
+      hostelMembers,
+      userTransactionId,
+      screenshotUrl,
+    } = req.body;
+
+    /* 🚫 Prevent duplicate transaction ID */
+    const existingTransaction = await Registration.findOne({
+      "payment.userTransactionId": userTransactionId,
+    });
+
+    if (existingTransaction) {
+      return res.status(400).json({
+        message: "This transaction ID has already been used.",
+      });
+    }
+
+    /* 🚫 Prevent duplicate team name */
     const existingTeam = await Registration.findOne({
-      teamName: req.body.teamName,
+      teamName: teamName,
+      eventName: eventName,
     });
 
     if (existingTeam) {
       return res.status(400).json({
-        message: "This team name has already been registered.",
+        message: "This team name has already registered for this event.",
       });
     }
-    const registrations = await Registration.find().sort({ createdAt: -1 });
 
-    res.json(registrations);
+    const registration = new Registration({
+      eventType,
+      eventName,
+      teamName,
+      teamSize,
+      teamMembers,
+      accommodationRequired,
+      hostelMembers,
+      payment: {
+        userTransactionId,
+        screenshotUrl,
+        verified: false,
+      },
+      registrationStatus: "Pending",
+    });
+
+    await registration.save();
+
+    res.status(201).json({
+      message: "Registration submitted successfully",
+      data: registration,
+    });
+
   } catch (error) {
-    console.error("FETCH ERROR:", error);
-    res.status(500).json({ message: "Error fetching registrations" });
+    console.error("CREATE ERROR:", error);
+    res.status(500).json({ message: "Error submitting registration" });
   }
 });
 

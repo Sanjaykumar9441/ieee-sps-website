@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const Counter = require("./counter");
 
 const memberSchema = new mongoose.Schema({
   fullName: String,
@@ -51,6 +52,7 @@ const registrationSchema = new mongoose.Schema(
     payment: {
       userTransactionId: {
         type: String,
+        required: true,
         unique: true,
       },
       screenshotUrl: String,
@@ -74,25 +76,19 @@ registrationSchema.pre("save", async function (next) {
   if (!this.registrationId) {
     const year = new Date().getFullYear();
 
-    const lastRegistration = await this.constructor
-      .findOne({ registrationId: new RegExp(`SPS${year}`) })
-      .sort({ createdAt: -1 });
+    const counter = await Counter.findOneAndUpdate(
+      { name: `registration_${year}` },
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true },
+    );
 
-    let number = 1;
-
-    if (lastRegistration) {
-      const lastNumber = parseInt(
-        lastRegistration.registrationId.split("-")[1],
-      );
-      number = lastNumber + 1;
-    }
-
-    const formattedNumber = String(number).padStart(3, "0");
+    const formattedNumber = String(counter.seq).padStart(3, "0");
 
     this.registrationId = `SPS${year}-${formattedNumber}`;
   }
 
   next();
 });
+registrationSchema.index({ "payment.userTransactionId": 1 });
 
 module.exports = mongoose.model("Registration", registrationSchema);
