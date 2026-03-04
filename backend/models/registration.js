@@ -75,32 +75,26 @@ const registrationSchema = new mongoose.Schema(
 );
 
 // ✅ Generate Registration ID automatically
-registrationSchema.pre("save", async function (next) {
-  try {
-    if (!this.registrationId) {
-      const year = new Date().getFullYear();
+registrationSchema.pre("save", async function () {
+  if (!this.registrationId) {
+    const year = new Date().getFullYear();
 
-      const lastRegistration = await this.constructor
-        .findOne({ registrationId: new RegExp(`SPS${year}`) })
-        .sort({ createdAt: -1 });
+    const lastRegistration = await this.constructor
+      .findOne({ registrationId: new RegExp(`SPS${year}`) })
+      .sort({ createdAt: -1 });
 
-      let number = 1;
+    let number = 1;
 
-      if (lastRegistration) {
-        const lastNumber = parseInt(
-          lastRegistration.registrationId.split("-")[1],
-        );
-        number = lastNumber + 1;
-      }
-
-      const formattedNumber = String(number).padStart(3, "0");
-
-      this.registrationId = `SPS${year}-${formattedNumber}`;
+    if (lastRegistration) {
+      const lastNumber = parseInt(
+        lastRegistration.registrationId.split("-")[1]
+      );
+      number = lastNumber + 1;
     }
 
-    next();
-  } catch (error) {
-    next(error);
+    const formattedNumber = String(number).padStart(3, "0");
+
+    this.registrationId = `SPS${year}-${formattedNumber}`;
   }
 });
 
