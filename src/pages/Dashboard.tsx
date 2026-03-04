@@ -225,7 +225,7 @@ const Dashboard = () => {
   const fetchRegistrations = async () => {
     try {
       const res = await axios.get(
-        "https://ieee-sps-website.onrender.com/api/registration",
+        "https://ieee-sps-website.onrender.com/api/registrations",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -1519,7 +1519,7 @@ const Dashboard = () => {
                             <p>Name: {m.fullName}</p>
                             <p>Email: {m.email}</p>
                             <p>Phone: {m.phone}</p>
-                            <p>College: {m.collegeName}</p>
+                            <p>College: {m.college}</p>
                           </div>
                         ),
                       )}

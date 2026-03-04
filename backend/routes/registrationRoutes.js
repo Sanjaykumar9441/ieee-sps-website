@@ -15,7 +15,23 @@ const transporter = nodemailer.createTransport({
 });
 
 /* =====================================
-   2️⃣ GET ALL REGISTRATIONS
+   1️⃣ GET ALL REGISTRATIONS
+===================================== */
+router.get("/registrations", async (req, res) => {
+  try {
+    const registrations = await Registration.find()
+      .sort({ createdAt: -1 })
+      .lean({ virtuals: true });
+
+    res.json(registrations);
+  } catch (error) {
+    console.error("FETCH ERROR:", error);
+    res.status(500).json({ message: "Error fetching registrations" });
+  }
+});
+
+/* =====================================
+   2️⃣ CREATE REGISTRATION
 ===================================== */
 router.post("/register", async (req, res) => {
   try {
@@ -50,7 +66,7 @@ router.post("/register", async (req, res) => {
 
     /* 🚫 Prevent duplicate team name */
     const existingTeam = await Registration.findOne({
-      teamName: teamName,
+      teamName: teamName.toUpperCase(),
       eventName: eventName,
     });
 
@@ -63,7 +79,7 @@ router.post("/register", async (req, res) => {
     const registration = new Registration({
       eventType,
       eventName,
-      teamName,
+      teamName: teamName.toUpperCase(),
       teamSize,
       teamMembers,
       accommodationRequired,
