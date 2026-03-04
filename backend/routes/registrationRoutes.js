@@ -15,62 +15,6 @@ const transporter = nodemailer.createTransport({
 });
 
 /* =====================================
-   1️⃣ CREATE REGISTRATION
-===================================== */
-router.post("/register", async (req, res) => {
-  try {
-    const {
-      eventType,
-      eventName,
-      teamName,
-      teamSize,
-      teamMembers,
-      accommodationRequired,
-      hostelMembers,
-      userTransactionId,
-      screenshotUrl,
-    } = req.body;
-
-    // 🚫 Check if transaction already used
-    const existingTransaction = await Registration.findOne({
-      "payment.userTransactionId": userTransactionId,
-    });
-
-    if (existingTransaction) {
-      return res.status(400).json({
-        message: "This transaction ID has already been used.",
-      });
-    }
-
-    const registration = new Registration({
-      eventType,
-      eventName,
-      teamName,
-      teamSize,
-      teamMembers,
-      accommodationRequired,
-      hostelMembers,
-      payment: {
-        userTransactionId,
-        screenshotUrl,
-        verified: false,
-      },
-      registrationStatus: "Pending",
-    });
-
-    await registration.save();
-
-    res.status(201).json({
-      message: "Registration submitted successfully",
-      data: registration,
-    });
-  } catch (error) {
-    console.error("CREATE ERROR:", error);
-    res.status(500).json({ message: "Error submitting registration" });
-  }
-});
-
-/* =====================================
    2️⃣ GET ALL REGISTRATIONS
 ===================================== */
 router.post("/register", async (req, res) => {
@@ -86,6 +30,12 @@ router.post("/register", async (req, res) => {
       userTransactionId,
       screenshotUrl,
     } = req.body;
+    // 🚫 Prevent empty payment submission
+    if (!userTransactionId || !screenshotUrl) {
+      return res.status(400).json({
+        message: "Transaction ID and screenshot are required",
+      });
+    }
 
     /* 🚫 Prevent duplicate transaction ID */
     const existingTransaction = await Registration.findOne({
@@ -132,7 +82,6 @@ router.post("/register", async (req, res) => {
       message: "Registration submitted successfully",
       data: registration,
     });
-
   } catch (error) {
     console.error("CREATE ERROR:", error);
     res.status(500).json({ message: "Error submitting registration" });
