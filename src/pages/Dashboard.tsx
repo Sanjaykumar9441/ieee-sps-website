@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Calendar, Mail, Upload, LogOut, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import {
   PieChart,
   Pie,
@@ -459,86 +461,90 @@ const Dashboard = () => {
     setEditMember(null);
     fetchMembers();
   };
-  const exportRegistrations = (type) => {
-    let filtered = registrations.filter(
+
+  const exportRegistrations = () => {
+    const confirmed = registrations.filter(
       (r) => r.registrationStatus === "Confirmed",
     );
 
-    if (type === "combo") {
-      filtered = filtered.filter((r) => r.eventType === "combo");
-    }
+    const combo = confirmed.filter((r) => r.eventType === "combo");
+    const buildathon = confirmed.filter((r) => r.eventType === "buildathon");
+    const hostel = confirmed.filter((r) => r.accommodationRequired === true);
 
-    if (type === "buildathon") {
-      filtered = filtered.filter((r) => r.eventType === "buildathon");
-    }
-
-    if (type === "hostel") {
-      filtered = filtered.filter((r) => r.accommodationRequired === true);
-    }
-
-    const rows = [];
-
-    rows.push([
-      "Registration ID",
-      "Team Name",
-      "Event",
-      "Accommodation",
-      "Member1 Name",
-      "Member1 Email",
-      "Member1 Phone",
-      "Member2 Name",
-      "Member2 Email",
-      "Member2 Phone",
-      "Member3 Name",
-      "Member3 Email",
-      "Member3 Phone",
-      "Member4 Name",
-      "Member4 Email",
-      "Member4 Phone",
-    ]);
-
-    filtered.forEach((reg) => {
-      const m = reg.teamMembers;
+    const createRows = (data: any[]) => {
+      const rows: any[] = [];
 
       rows.push([
-        reg.registrationId,
-        reg.teamName,
-        reg.eventName,
-        reg.accommodationRequired ? "Yes" : "No",
-
-        m[0]?.fullName || "",
-        m[0]?.email || "",
-        m[0]?.phone || "",
-
-        m[1]?.fullName || "",
-        m[1]?.email || "",
-        m[1]?.phone || "",
-
-        m[2]?.fullName || "",
-        m[2]?.email || "",
-        m[2]?.phone || "",
-
-        m[3]?.fullName || "",
-        m[3]?.email || "",
-        m[3]?.phone || "",
+        "Registration ID",
+        "Team Name",
+        "Event",
+        "Accommodation",
+        "Member1 Name",
+        "Member1 Email",
+        "Member1 Phone",
+        "Member2 Name",
+        "Member2 Email",
+        "Member2 Phone",
+        "Member3 Name",
+        "Member3 Email",
+        "Member3 Phone",
+        "Member4 Name",
+        "Member4 Email",
+        "Member4 Phone",
       ]);
+
+      data.forEach((reg) => {
+        const m = reg.teamMembers;
+
+        rows.push([
+          reg.registrationId,
+          reg.teamName,
+          reg.eventName,
+          reg.accommodationRequired ? "Yes" : "No",
+
+          m[0]?.fullName || "",
+          m[0]?.email || "",
+          m[0]?.phone || "",
+
+          m[1]?.fullName || "",
+          m[1]?.email || "",
+          m[1]?.phone || "",
+
+          m[2]?.fullName || "",
+          m[2]?.email || "",
+          m[2]?.phone || "",
+
+          m[3]?.fullName || "",
+          m[3]?.email || "",
+          m[3]?.phone || "",
+        ]);
+      });
+
+      return rows;
+    };
+
+    const workbook = XLSX.utils.book_new();
+
+    const comboSheet = XLSX.utils.aoa_to_sheet(createRows(combo));
+    const buildathonSheet = XLSX.utils.aoa_to_sheet(createRows(buildathon));
+    const hostelSheet = XLSX.utils.aoa_to_sheet(createRows(hostel));
+
+    XLSX.utils.book_append_sheet(workbook, comboSheet, "Combo");
+    XLSX.utils.book_append_sheet(workbook, buildathonSheet, "Buildathon");
+    XLSX.utils.book_append_sheet(workbook, hostelSheet, "Hostel");
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
     });
 
-    const csvContent =
-      "data:text/csv;charset=utf-8," + rows.map((e) => e.join(",")).join("\n");
+    const blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
 
-    const encodedUri = encodeURI(csvContent);
-
-    const link = document.createElement("a");
-
-    link.setAttribute("href", encodedUri);
-
-    link.setAttribute("download", `${type}_registrations.csv`);
-
-    document.body.appendChild(link);
-
-    link.click();
+    saveAs(blob, "registrations.xlsx");
   };
+
   /* ================= MENU ================= */
 
   const menu = [
@@ -1067,46 +1073,49 @@ const Dashboard = () => {
           {activeTab === "registrations" && (
             <>
               {/* ANALYTICS CARDS */}
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
-                <div className="bg-zinc-900 p-4 rounded border border-cyan-500/20">
-                  <p className="text-gray-400 text-sm">Total</p>
-                  <p className="text-2xl font-bold text-cyan-400">
-                    {totalCount}
-                  </p>
-                </div>
+              <div>
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+                  <div className="bg-zinc-900 p-4 rounded border border-cyan-500/20">
+                    <p className="text-gray-400 text-sm">Total</p>
+                    <p className="text-2xl font-bold text-cyan-400">
+                      {totalCount}
+                    </p>
+                  </div>
 
-                <div className="bg-zinc-900 p-4 rounded border border-yellow-500/20">
-                  <p className="text-gray-400 text-sm">Pending</p>
-                  <p className="text-2xl font-bold text-yellow-400">
-                    {pendingCount}
-                  </p>
-                </div>
+                  <div className="bg-zinc-900 p-4 rounded border border-yellow-500/20">
+                    <p className="text-gray-400 text-sm">Pending</p>
+                    <p className="text-2xl font-bold text-yellow-400">
+                      {pendingCount}
+                    </p>
+                  </div>
 
-                <div className="bg-zinc-900 p-4 rounded border border-green-500/20">
-                  <p className="text-gray-400 text-sm">Confirmed</p>
-                  <p className="text-2xl font-bold text-green-400">
-                    {confirmedCount}
-                  </p>
-                </div>
+                  <div className="bg-zinc-900 p-4 rounded border border-green-500/20">
+                    <p className="text-gray-400 text-sm">Confirmed</p>
+                    <p className="text-2xl font-bold text-green-400">
+                      {confirmedCount}
+                    </p>
+                  </div>
 
-                <div className="bg-zinc-900 p-4 rounded border border-blue-500/20">
-                  <p className="text-gray-400 text-sm">Combo</p>
-                  <p className="text-2xl font-bold text-blue-400">
-                    {comboCount}
-                  </p>
-                </div>
+                  <div className="bg-zinc-900 p-4 rounded border border-blue-500/20">
+                    <p className="text-gray-400 text-sm">Combo</p>
+                    <p className="text-2xl font-bold text-blue-400">
+                      {comboCount}
+                    </p>
+                  </div>
 
-                <div className="bg-zinc-900 p-4 rounded border border-purple-500/20">
-                  <p className="text-gray-400 text-sm">Buildathon</p>
-                  <p className="text-2xl font-bold text-purple-400">
-                    {buildathonCount}
-                  </p>
-                </div>
-                <div className="bg-zinc-900 p-4 rounded border border-orange-500/20">
-                  <p className="text-gray-400 text-sm">Hostel</p>
-                  <p className="text-2xl font-bold text-orange-400">
-                    {hostelCount}
-                  </p>
+                  <div className="bg-zinc-900 p-4 rounded border border-purple-500/20">
+                    <p className="text-gray-400 text-sm">Buildathon</p>
+                    <p className="text-2xl font-bold text-purple-400">
+                      {buildathonCount}
+                    </p>
+                  </div>
+
+                  <div className="bg-zinc-900 p-4 rounded border border-orange-500/20">
+                    <p className="text-gray-400 text-sm">Hostel</p>
+                    <p className="text-2xl font-bold text-orange-400">
+                      {hostelCount}
+                    </p>
+                  </div>
                 </div>
                 {/* CHARTS */}
                 <div className="grid md:grid-cols-2 gap-8 mb-10">
@@ -1332,24 +1341,10 @@ const Dashboard = () => {
                   <div className="flex gap-4 mb-4">
                     <div className="flex gap-4 mb-4">
                       <button
-                        onClick={() => exportRegistrations("combo")}
-                        className="bg-blue-500 px-4 py-2 rounded"
+                        onClick={exportRegistrations}
+                        className="bg-green-500 px-4 py-2 rounded"
                       >
-                        Export Combo CSV
-                      </button>
-
-                      <button
-                        onClick={() => exportRegistrations("buildathon")}
-                        className="bg-purple-500 px-4 py-2 rounded"
-                      >
-                        Export Buildathon CSV
-                      </button>
-
-                      <button
-                        onClick={() => exportRegistrations("hostel")}
-                        className="bg-orange-500 px-4 py-2 rounded"
-                      >
-                        Export Hostel CSV
+                        Export Excel
                       </button>
                     </div>
                   </div>

@@ -73,21 +73,32 @@ const registrationSchema = new mongoose.Schema(
 
 // ✅ Generate Registration ID automatically
 registrationSchema.pre("save", async function (next) {
-  if (!this.registrationId) {
-    const year = new Date().getFullYear();
+  try {
+    if (!this.registrationId) {
+      const year = new Date().getFullYear();
 
-    const counter = await Counter.findOneAndUpdate(
-      { name: `registration_${year}` },
-      { $inc: { seq: 1 } },
-      { new: true, upsert: true },
-    );
+      const lastRegistration = await this.constructor
+        .findOne({ registrationId: new RegExp(`SPS${year}`) })
+        .sort({ createdAt: -1 });
 
-    const formattedNumber = String(counter.seq).padStart(3, "0");
+      let number = 1;
 
-    this.registrationId = `SPS${year}-${formattedNumber}`;
+      if (lastRegistration) {
+        const lastNumber = parseInt(
+          lastRegistration.registrationId.split("-")[1]
+        );
+        number = lastNumber + 1;
+      }
+
+      const formattedNumber = String(number).padStart(3, "0");
+
+      this.registrationId = `SPS${year}-${formattedNumber}`;
+    }
+
+    next();
+  } catch (error) {
+    next(error);
   }
-
-  next();
 });
 
 module.exports = mongoose.model("Registration", registrationSchema);
