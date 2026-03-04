@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 type Member = {
   fullName: string;
-  RollNo: string;
+  rollNo: string;
   email: string;
   phone: string;
   department: string;
@@ -16,7 +16,7 @@ type Member = {
 
 const createEmptyMember = (): Member => ({
   fullName: "",
-  RollNo: "",
+  rollNo: "",
   email: "",
   phone: "",
   department: "",
@@ -102,7 +102,7 @@ const Register = () => {
     // Fields that MUST be uppercase
     const forceUppercase: (keyof Member)[] = [
       "fullName",
-      "RollNo",
+      "rollNo",
       "department",
       "college",
     ];
@@ -134,7 +134,7 @@ const Register = () => {
     for (let member of members) {
       if (
         !member.fullName.trim() ||
-        !member.RollNo.trim() ||
+        !member.rollNo.trim() ||
         !member.email.trim() ||
         !member.phone.trim() ||
         !member.department.trim() ||
@@ -244,9 +244,9 @@ const Register = () => {
                     type="text"
                     placeholder="Roll Number"
                     className="p-3 bg-black border border-gray-600 rounded"
-                    value={member.RollNo}
+                    value={member.rollNo}
                     onChange={(e) =>
-                      handleMemberChange(index, "RollNo", e.target.value)
+                      handleMemberChange(index, "rollNo", e.target.value)
                     }
                   />
 
@@ -390,7 +390,7 @@ const Register = () => {
                   <strong>Member {index + 1}</strong>
                 </p>
                 <p>Name: {member.fullName}</p>
-                <p>Roll No: {member.RollNo}</p>
+                <p>Roll No: {member.rollNo}</p>
                 <p>Email: {member.email}</p>
                 <p>Phone: {member.phone}</p>
                 <p>Department: {member.department}</p>
