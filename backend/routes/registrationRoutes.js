@@ -10,10 +10,19 @@ const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
+const existingTransaction = await Registration.findOne({
+  "payment.userTransactionId": req.body.userTransactionId,
+});
+
+if (existingTransaction) {
+  return res.status(400).json({
+    message: "This transaction ID has already been used.",
+  });
+}
 
 /* =====================================
    1️⃣ CREATE REGISTRATION
@@ -29,7 +38,7 @@ router.post("/register", async (req, res) => {
       accommodationRequired,
       hostelMembers,
       userTransactionId,
-      screenshotUrl
+      screenshotUrl,
     } = req.body;
 
     const registration = new Registration({
@@ -43,41 +52,46 @@ router.post("/register", async (req, res) => {
       payment: {
         userTransactionId,
         screenshotUrl,
-        verified: false
+        verified: false,
       },
-      registrationStatus: "Pending"
+      registrationStatus: "Pending",
     });
 
     await registration.save();
 
     res.status(201).json({
       message: "Registration submitted successfully",
-      data: registration
+      data: registration,
     });
-
   } catch (error) {
     console.error("CREATE ERROR:", error);
     res.status(500).json({ message: "Error submitting registration" });
   }
 });
 
-
 /* =====================================
    2️⃣ GET ALL REGISTRATIONS
 ===================================== */
 router.get("/registration", async (req, res) => {
   try {
-    const registrations = await Registration.find()
-      .sort({ createdAt: -1 });
+    // 🚫 Prevent duplicate team name
+    const existingTeam = await Registration.findOne({
+      teamName: req.body.teamName,
+    });
+
+    if (existingTeam) {
+      return res.status(400).json({
+        message: "This team name has already been registered.",
+      });
+    }
+    const registrations = await Registration.find().sort({ createdAt: -1 });
 
     res.json(registrations);
-
   } catch (error) {
     console.error("FETCH ERROR:", error);
     res.status(500).json({ message: "Error fetching registrations" });
   }
 });
-
 
 /* =====================================
    3️⃣ CONFIRM REGISTRATION
@@ -93,16 +107,13 @@ router.put("/confirm/:id", async (req, res) => {
     // Generate Registration ID
     const count = await Registration.countDocuments({
       eventType: registration.eventType,
-      registrationStatus: "Confirmed"
+      registrationStatus: "Confirmed",
     });
 
     const prefix =
-      registration.eventType === "combo"
-        ? "SPS-COMBO"
-        : "SPS-BUILD";
+      registration.eventType === "combo" ? "SPS-COMBO" : "SPS-BUILD";
 
-    const registrationId =
-      `${prefix}-2026-${String(count + 1).padStart(3, "0")}`;
+    const registrationId = `${prefix}-2026-${String(count + 1).padStart(3, "0")}`;
 
     registration.registrationId = registrationId;
     registration.registrationStatus = "Confirmed";
@@ -112,24 +123,24 @@ router.put("/confirm/:id", async (req, res) => {
 
     /* ================= SEND EMAIL TO ALL TEAM MEMBERS ================= */
 
-// Fetch event details from Events collection
-const eventDetails = await Event.findOne({
-  title: registration.eventName
-});
+    // Fetch event details from Events collection
+    const eventDetails = await Event.findOne({
+      title: registration.eventName,
+    });
 
-const eventDate = eventDetails?.date || "To be announced";
-const eventVenue = eventDetails?.location || "To be announced";
+    const eventDate = eventDetails?.date || "To be announced";
+    const eventVenue = eventDetails?.location || "To be announced";
 
-// Collect all emails
-const allEmails = registration.teamMembers
-  .map(member => member.email)
-  .filter(email => email);
+    // Collect all emails
+    const allEmails = registration.teamMembers
+      .map((member) => member.email)
+      .filter((email) => email);
 
-const mailOptions = {
-  from: process.env.EMAIL_USER,
-  to: allEmails, // send to all
-  subject: `Registration Confirmed - ${registration.eventName}`,
-  html: `
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: allEmails, // send to all
+      subject: `Registration Confirmed - ${registration.eventName}`,
+      html: `
     <p>Dear Participant,</p>
 
     <p>Greetings from <b>IEEE SPS Student Branch</b>!</p>
@@ -160,29 +171,26 @@ const mailOptions = {
       IEEE SPS Student Branch
       Aditya University
     </p>
-  `
-};
+  `,
+    };
 
-try {
-  await transporter.sendMail(mailOptions);
-  console.log("✅ Email sent successfully");
-} catch (emailError) {
-  console.error("❌ EMAIL ERROR:", emailError.message);
-}
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log("✅ Email sent successfully");
+    } catch (emailError) {
+      console.error("❌ EMAIL ERROR:", emailError.message);
+    }
 
-
-// ✅ THIS WAS MISSING
+    // ✅ THIS WAS MISSING
     res.json({
       message: "Registration confirmed and Email sent",
-      data: registration
+      data: registration,
     });
-
   } catch (error) {
     console.error("CONFIRM ERROR:", error);
     res.status(500).json({ message: "Error confirming registration" });
   }
 });
-
 
 /* =====================================
    4️⃣ DELETE REGISTRATION
@@ -198,14 +206,11 @@ router.delete("/:id", async (req, res) => {
     await Registration.findByIdAndDelete(req.params.id);
 
     res.json({ message: "Registration deleted successfully" });
-
   } catch (error) {
     console.error("DELETE ERROR:", error);
     res.status(500).json({ message: "Error deleting registration" });
   }
 });
-
-
 
 /* =====================================
    5️⃣ DOWNLOAD PDF
@@ -220,7 +225,7 @@ router.get("/pdf/:id", async (req, res) => {
 
     if (!registration.registrationId) {
       return res.status(400).json({
-        message: "Registration not confirmed yet"
+        message: "Registration not confirmed yet",
       });
     }
 
@@ -229,13 +234,13 @@ router.get("/pdf/:id", async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=${registration.registrationId}.pdf`
+      `attachment; filename=${registration.registrationId}.pdf`,
     );
 
     doc.pipe(res);
 
     doc.fontSize(18).text("IEEE SPS Registration Confirmation", {
-      align: "center"
+      align: "center",
     });
 
     doc.moveDown();
@@ -265,7 +270,6 @@ router.get("/pdf/:id", async (req, res) => {
     }
 
     doc.end();
-
   } catch (error) {
     console.error("PDF ERROR:", error);
     res.status(500).json({ message: "Error generating PDF" });
@@ -285,9 +289,8 @@ router.put("/verify-payment/:id", async (req, res) => {
 
     res.json({
       message: "Payment status updated",
-      data: registration
+      data: registration,
     });
-
   } catch (error) {
     res.status(500).json({ message: "Error updating payment" });
   }

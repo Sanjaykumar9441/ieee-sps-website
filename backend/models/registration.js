@@ -7,7 +7,7 @@ const memberSchema = new mongoose.Schema({
   phone: String,
   department: String,
   year: String,
-  college: String
+  college: String,
 });
 
 const registrationSchema = new mongoose.Schema(
@@ -15,63 +15,84 @@ const registrationSchema = new mongoose.Schema(
     // combo | buildathon
     eventType: {
       type: String,
-      required: true
+      required: true,
     },
 
     eventName: {
       type: String,
-      required: true
+      required: true,
     },
 
     // Generated automatically
     registrationId: {
       type: String,
-      unique: true
+      unique: true,
     },
 
     teamName: {
       type: String,
-      required: true
+      required: true,
     },
 
     teamSize: {
       type: Number,
-      required: true
+      required: true,
     },
 
     teamMembers: [memberSchema],
 
     accommodationRequired: {
       type: Boolean,
-      default: false
+      default: false,
     },
 
     hostelMembers: [memberSchema],
 
     payment: {
-      userTransactionId: String,
+      userTransactionId: {
+        type: String,
+        unique: true,
+      },
       screenshotUrl: String,
       verified: {
         type: Boolean,
-        default: false
-      }
+        default: false,
+      },
     },
 
     registrationStatus: {
       type: String,
       enum: ["Pending", "Confirmed"],
-      default: "Pending"
-    }
+      default: "Pending",
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // ✅ Generate Registration ID automatically
-registrationSchema.pre("save", function () {
+registrationSchema.pre("save", async function (next) {
   if (!this.registrationId) {
-    const random = Math.floor(1000 + Math.random() * 9000);
-    this.registrationId = "SPS" + random;
+    const year = new Date().getFullYear();
+
+    const lastRegistration = await this.constructor
+      .findOne({ registrationId: new RegExp(`SPS${year}`) })
+      .sort({ createdAt: -1 });
+
+    let number = 1;
+
+    if (lastRegistration) {
+      const lastNumber = parseInt(
+        lastRegistration.registrationId.split("-")[1],
+      );
+      number = lastNumber + 1;
+    }
+
+    const formattedNumber = String(number).padStart(3, "0");
+
+    this.registrationId = `SPS${year}-${formattedNumber}`;
   }
+
+  next();
 });
 
 module.exports = mongoose.model("Registration", registrationSchema);

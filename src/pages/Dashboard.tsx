@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Calendar, Mail, Upload, LogOut, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 /* ================= EDITABLE EVENT ================= */
 
@@ -165,6 +173,18 @@ const Dashboard = () => {
   const buildathonCount = registrations.filter(
     (r) => r.eventType === "buildathon",
   ).length;
+  const hostelCount = registrations.filter(
+    (r) => r.accommodationRequired === true,
+  ).length;
+  const statusData = [
+    { name: "Pending", value: pendingCount },
+    { name: "Confirmed", value: confirmedCount },
+  ];
+
+  const eventData = [
+    { name: "Combo", value: comboCount },
+    { name: "Buildathon", value: buildathonCount },
+  ];
   const [registrationView, setRegistrationView] = useState("pending");
   const [registrationFilter, setRegistrationFilter] = useState("all");
 
@@ -439,10 +459,22 @@ const Dashboard = () => {
     setEditMember(null);
     fetchMembers();
   };
-  const exportConfirmedToCSV = () => {
-    const confirmed = registrations.filter(
+  const exportRegistrations = (type) => {
+    let filtered = registrations.filter(
       (r) => r.registrationStatus === "Confirmed",
     );
+
+    if (type === "combo") {
+      filtered = filtered.filter((r) => r.eventType === "combo");
+    }
+
+    if (type === "buildathon") {
+      filtered = filtered.filter((r) => r.eventType === "buildathon");
+    }
+
+    if (type === "hostel") {
+      filtered = filtered.filter((r) => r.accommodationRequired === true);
+    }
 
     const rows = [];
 
@@ -450,23 +482,45 @@ const Dashboard = () => {
       "Registration ID",
       "Team Name",
       "Event",
-      "Event Type",
-      "Accommodation Required",
-      "Members",
+      "Accommodation",
+      "Member1 Name",
+      "Member1 Email",
+      "Member1 Phone",
+      "Member2 Name",
+      "Member2 Email",
+      "Member2 Phone",
+      "Member3 Name",
+      "Member3 Email",
+      "Member3 Phone",
+      "Member4 Name",
+      "Member4 Email",
+      "Member4 Phone",
     ]);
 
-    confirmed.forEach((reg) => {
-      const members = reg.teamMembers
-        .map((m: any) => `${m.fullName} (${m.email})`)
-        .join(" | ");
+    filtered.forEach((reg) => {
+      const m = reg.teamMembers;
 
       rows.push([
         reg.registrationId,
         reg.teamName,
         reg.eventName,
-        reg.eventType,
         reg.accommodationRequired ? "Yes" : "No",
-        members,
+
+        m[0]?.fullName || "",
+        m[0]?.email || "",
+        m[0]?.phone || "",
+
+        m[1]?.fullName || "",
+        m[1]?.email || "",
+        m[1]?.phone || "",
+
+        m[2]?.fullName || "",
+        m[2]?.email || "",
+        m[2]?.phone || "",
+
+        m[3]?.fullName || "",
+        m[3]?.email || "",
+        m[3]?.phone || "",
       ]);
     });
 
@@ -474,13 +528,17 @@ const Dashboard = () => {
       "data:text/csv;charset=utf-8," + rows.map((e) => e.join(",")).join("\n");
 
     const encodedUri = encodeURI(csvContent);
+
     const link = document.createElement("a");
+
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "confirmed_registrations.csv");
+
+    link.setAttribute("download", `${type}_registrations.csv`);
+
     document.body.appendChild(link);
+
     link.click();
   };
-
   /* ================= MENU ================= */
 
   const menu = [
@@ -1009,7 +1067,7 @@ const Dashboard = () => {
           {activeTab === "registrations" && (
             <>
               {/* ANALYTICS CARDS */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
                 <div className="bg-zinc-900 p-4 rounded border border-cyan-500/20">
                   <p className="text-gray-400 text-sm">Total</p>
                   <p className="text-2xl font-bold text-cyan-400">
@@ -1043,6 +1101,60 @@ const Dashboard = () => {
                   <p className="text-2xl font-bold text-purple-400">
                     {buildathonCount}
                   </p>
+                </div>
+                <div className="bg-zinc-900 p-4 rounded border border-orange-500/20">
+                  <p className="text-gray-400 text-sm">Hostel</p>
+                  <p className="text-2xl font-bold text-orange-400">
+                    {hostelCount}
+                  </p>
+                </div>
+                {/* CHARTS */}
+                <div className="grid md:grid-cols-2 gap-8 mb-10">
+                  {/* Registration Status Chart */}
+                  <div className="bg-zinc-900 p-6 rounded border border-cyan-500/20">
+                    <h3 className="text-lg text-cyan-400 mb-4">
+                      Registration Status
+                    </h3>
+
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={statusData}
+                          dataKey="value"
+                          nameKey="name"
+                          outerRadius={80}
+                          label
+                        >
+                          <Cell />
+                          <Cell />
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Event Type Chart */}
+                  <div className="bg-zinc-900 p-6 rounded border border-cyan-500/20">
+                    <h3 className="text-lg text-cyan-400 mb-4">Event Type</h3>
+
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie
+                          data={eventData}
+                          dataKey="value"
+                          nameKey="name"
+                          outerRadius={80}
+                          label
+                        >
+                          <Cell />
+                          <Cell />
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>{" "}
               {/* ✅ CLOSE GRID PROPERLY */}
@@ -1093,6 +1205,16 @@ const Dashboard = () => {
                   >
                     Buildathon
                   </button>
+                  <button
+                    onClick={() => setRegistrationFilter("hostel")}
+                    className={`px-4 py-2 rounded ${
+                      registrationFilter === "hostel"
+                        ? "bg-cyan-500 text-black"
+                        : "bg-zinc-800"
+                    }`}
+                  >
+                    Hostel
+                  </button>
                 </div>
 
                 <div className="flex gap-4 mb-6">
@@ -1135,11 +1257,15 @@ const Dashboard = () => {
               {registrationView === "pending" ? (
                 <>
                   {registrations
-                    .filter((reg) =>
-                      registrationFilter === "all"
-                        ? true
-                        : reg.eventType === registrationFilter,
-                    )
+                    .filter((reg) => {
+                      if (registrationFilter === "all") return true;
+
+                      if (registrationFilter === "hostel") {
+                        return reg.accommodationRequired === true;
+                      }
+
+                      return reg.eventType === registrationFilter;
+                    })
                     .filter((reg) => reg.registrationStatus === "Pending")
                     .filter((reg) =>
                       reg.teamName
@@ -1203,12 +1329,30 @@ const Dashboard = () => {
               ) : (
                 <>
                   {/* ================= CONFIRMED TABLE ================= */}
-                  <button
-                    onClick={exportConfirmedToCSV}
-                    className="mb-4 bg-green-500 px-4 py-2 rounded"
-                  >
-                    Export Confirmed to CSV
-                  </button>
+                  <div className="flex gap-4 mb-4">
+                    <div className="flex gap-4 mb-4">
+                      <button
+                        onClick={() => exportRegistrations("combo")}
+                        className="bg-blue-500 px-4 py-2 rounded"
+                      >
+                        Export Combo CSV
+                      </button>
+
+                      <button
+                        onClick={() => exportRegistrations("buildathon")}
+                        className="bg-purple-500 px-4 py-2 rounded"
+                      >
+                        Export Buildathon CSV
+                      </button>
+
+                      <button
+                        onClick={() => exportRegistrations("hostel")}
+                        className="bg-orange-500 px-4 py-2 rounded"
+                      >
+                        Export Hostel CSV
+                      </button>
+                    </div>
+                  </div>
 
                   <div className="overflow-x-auto">
                     <table className="w-full bg-zinc-900 rounded-lg overflow-hidden">
@@ -1225,11 +1369,15 @@ const Dashboard = () => {
                       </thead>
                       <tbody>
                         {registrations
-                          .filter((reg) =>
-                            registrationFilter === "all"
-                              ? true
-                              : reg.eventType === registrationFilter,
-                          )
+                          .filter((reg) => {
+                            if (registrationFilter === "all") return true;
+
+                            if (registrationFilter === "hostel") {
+                              return reg.accommodationRequired === true;
+                            }
+
+                            return reg.eventType === registrationFilter;
+                          })
                           .filter(
                             (reg) => reg.registrationStatus === "Confirmed",
                           )
