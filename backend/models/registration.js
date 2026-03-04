@@ -55,7 +55,10 @@ const registrationSchema = new mongoose.Schema(
         required: true,
         unique: true,
       },
-      screenshotUrl: String,
+      screenshotUrl: {
+        type: String,
+        required: true,
+      },
       verified: {
         type: Boolean,
         default: false,
@@ -85,7 +88,7 @@ registrationSchema.pre("save", async function (next) {
 
       if (lastRegistration) {
         const lastNumber = parseInt(
-          lastRegistration.registrationId.split("-")[1]
+          lastRegistration.registrationId.split("-")[1],
         );
         number = lastNumber + 1;
       }

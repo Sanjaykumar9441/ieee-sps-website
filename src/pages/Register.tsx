@@ -594,8 +594,10 @@ const Register = () => {
                         teamMembers: members,
                         accommodationRequired,
                         hostelMembers: selectedHostelMembers,
-                        userTransactionId: transactionId,
-                        screenshotUrl,
+                        payment: {
+                          userTransactionId: transactionId,
+                          screenshotUrl,
+                        },
                       },
                     );
 
