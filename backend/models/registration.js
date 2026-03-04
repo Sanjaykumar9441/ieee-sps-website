@@ -89,6 +89,5 @@ registrationSchema.pre("save", async function (next) {
 
   next();
 });
-registrationSchema.index({ "payment.userTransactionId": 1 });
 
 module.exports = mongoose.model("Registration", registrationSchema);
