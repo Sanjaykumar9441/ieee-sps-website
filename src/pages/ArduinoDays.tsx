@@ -98,7 +98,7 @@ overflow-y-auto
       <Particles
         id="tsparticles"
         init={particlesInit}
-        className="fixed inset-0 z-20"
+        className="fixed inset-0 z-20 pointer-events-none"
         options={{
           background: { color: "transparent" },
           fpsLimit: 60,
