@@ -145,7 +145,7 @@ router.put("/confirm/:id", async (req, res) => {
     // Collect all emails
     const allEmails = registration.teamMembers
       .map((member) => member.email)
-      .filter((email) => email);
+      .filter((email) => email && email.trim() !== "");
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -186,8 +186,12 @@ router.put("/confirm/:id", async (req, res) => {
     };
 
     try {
-      await transporter.sendMail(mailOptions);
-      console.log("✅ Email sent successfully");
+      if (allEmails.length > 0) {
+        await transporter.sendMail(mailOptions);
+        console.log("✅ Email sent successfully");
+      } else {
+        console.log("⚠ No emails found, skipping email sending");
+      }
     } catch (emailError) {
       console.error("❌ EMAIL ERROR:", emailError.message);
     }

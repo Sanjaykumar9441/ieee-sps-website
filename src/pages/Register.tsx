@@ -27,7 +27,7 @@ const createEmptyMember = (): Member => ({
 
 const Register = () => {
   const [searchParams] = useSearchParams();
-  const event = searchParams.get("event");
+  const event = searchParams.get("event") || "combo";
   const [loading, setLoading] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [teamSize, setTeamSize] = useState<number>(2);
@@ -191,7 +191,9 @@ const Register = () => {
           <>
             <h1 className="text-3xl font-bold mb-8 text-center text-cyan-400">
               Register for{" "}
-              {event === "combo" ? "Skill Forze + Buildathon" : "Buildathon"}
+              <span className="bg-cyan-400 text-black px-3 py-1 rounded">
+                {event === "combo" ? "Skill Forze + Buildathon" : "Buildathon"}
+              </span>
             </h1>
 
             {/* Team Name */}
@@ -201,7 +203,9 @@ const Register = () => {
                 type="text"
                 className="w-full p-3 bg-black border border-gray-600 rounded"
                 value={teamName}
-                onChange={(e) => setTeamName(e.target.value.toUpperCase())}
+                onChange={(e) =>
+                  setTeamName(e.target.value.replace(/\s+/g, " ").toUpperCase())
+                }
               />
             </div>
 
@@ -584,7 +588,8 @@ const Register = () => {
                     await axios.post(
                       "https://ieee-sps-website.onrender.com/api/register",
                       {
-                        eventType: event,
+                        eventType:
+                          event === "buildathon" ? "buildathon" : "combo",
                         eventName:
                           event === "combo"
                             ? "Skill Forze + Buildathon"
