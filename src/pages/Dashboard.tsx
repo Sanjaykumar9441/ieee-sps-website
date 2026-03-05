@@ -4,6 +4,7 @@ import { Calendar, Mail, Upload, LogOut, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import emailjs from "@emailjs/browser";
 import {
   PieChart,
   Pie,
@@ -255,16 +256,57 @@ const Dashboard = () => {
   };
 
   const confirmRegistration = async (id: string) => {
-    if (!confirm("Confirm this registration?")) return;
+  if (!confirm("Confirm this registration?")) return;
 
-    await axios.put(
+  try {
+    const res = await axios.put(
       `https://ieee-sps-website.onrender.com/api/confirm/${id}`,
       {},
       { headers: { Authorization: `Bearer ${token}` } },
     );
 
+    const registration = res.data.data;
+
+    // ✅ send email
+    sendConfirmationEmail(registration);
+
     fetchRegistrations();
-  };
+
+  } catch (error) {
+    console.error("Confirmation error:", error);
+  }
+};
+  const sendConfirmationEmail = (registration) => {
+
+  const participants = registration.teamMembers
+    .map((m) => m.fullName)
+    .join("\n");
+
+  registration.teamMembers.forEach((member) => {
+
+    emailjs.send(
+      "service_hni6o4c",
+      "template_ed130jt",
+      {
+        name: member.fullName,
+        event_name: registration.eventName,
+        team_name: registration.teamName,
+        registration_id: registration.registrationId,
+        participants: participants,
+        email: member.email
+      },
+      "lpvHy5SSBdeUC_ryt"
+    )
+    .then(() => {
+      console.log("Email sent to:", member.email);
+    })
+    .catch((error) => {
+      console.error("Email error:", error);
+    });
+
+  });
+
+};
 
   const deleteRegistration = async (id: string) => {
     if (!confirm("Delete this registration?")) return;

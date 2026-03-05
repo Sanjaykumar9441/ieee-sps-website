@@ -3,7 +3,6 @@ const router = express.Router();
 const Registration = require("../models/registration");
 const Event = require("../models/event"); // adjust path if needed
 const PDFDocument = require("pdfkit");
-const emailjs = require("@emailjs/nodejs");
 const axios = require("axios");
 
 const sendTelegramNotification = async (message) => {
@@ -199,33 +198,6 @@ Hostel: ${registration.accommodationRequired ? "Yes" : "No"}
 
     await sendTelegramNotification(message);
 
-    /* ================= SEND EMAIL TO ALL TEAM MEMBERS ================= */
-    const participants = registration.teamMembers
-      .map((m) => m.fullName)
-      .join("\n");
-
-    for (const member of registration.teamMembers) {
-      try {
-        await emailjs.send(
-          process.env.EMAILJS_SERVICE_ID,
-          process.env.EMAILJS_TEMPLATE_ID,
-          {
-            email: member.email,
-            event_name: registration.eventName,
-            team_name: registration.teamName,
-            registration_id: registration.registrationId,
-            participants: participants,
-          },
-          {
-            publicKey: process.env.EMAILJS_PUBLIC_KEY,
-          },
-        );
-
-        console.log("Email sent to:", member.email);
-      } catch (error) {
-        console.error("Email sending failed:", error);
-      }
-    }
 
     // Fetch event details from Events collection
     let eventDate = "To be announced";
