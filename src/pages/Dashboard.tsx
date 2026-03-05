@@ -12,8 +12,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-  const STATUS_COLORS = ["#facc15", "#22c55e"]; // Pending, Confirmed
-  const EVENT_COLORS = ["#3b82f6", "#a855f7"]; // Combo, Buildathon
+const STATUS_COLORS = ["#facc15", "#22c55e"]; // Pending, Confirmed
+const EVENT_COLORS = ["#3b82f6", "#a855f7"]; // Combo, Buildathon
 /* ================= EDITABLE EVENT ================= */
 
 const EditableEvent = ({ event, onUpdate, onDelete }: any) => {
@@ -204,11 +204,18 @@ const Dashboard = () => {
   const [messages, setMessages] = useState<any[]>([]);
 
   useEffect(() => {
-    if (token) {
-      fetchEvents();
-      fetchMembers();
+    if (!token) return;
+
+    fetchEvents();
+    fetchMembers();
+    fetchRegistrations();
+
+    // 🔁 Auto refresh every 10 seconds
+    const interval = setInterval(() => {
       fetchRegistrations();
-    }
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, [token]);
 
   useEffect(() => {
@@ -257,9 +264,6 @@ const Dashboard = () => {
     );
 
     fetchRegistrations();
-
-    // force UI refresh
-    window.location.reload();
   };
 
   const deleteRegistration = async (id: string) => {
@@ -280,21 +284,6 @@ const Dashboard = () => {
     );
 
     fetchRegistrations();
-  };
-
-  const fetchConfirmedRegistrations = async () => {
-    try {
-      const res = await axios.get(
-        "https://ieee-sps-website.onrender.com/api/confirmed",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-
-      setRegistrations(res.data);
-    } catch (error) {
-      console.error(error);
-    }
   };
 
   const fetchMessages = async () => {
@@ -537,7 +526,7 @@ const Dashboard = () => {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
 
-    saveAs(blob, "registrations.xlsx");
+    saveAs(blob, "arduino-days-2026-registrations.xlsx");
   };
 
   /* ================= MENU ================= */
@@ -1070,35 +1059,38 @@ const Dashboard = () => {
           {/* REGISTRATIONS */}
           {activeTab === "registrations" && (
             <>
+              <div className="flex items-center gap-2 mb-4 text-green-400 text-sm">
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                Live Updates Enabled
+              </div>
               {/* ANALYTICS CARDS */}
               <div>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
-                  {/* QUICK STATS */}
-                    <div className="bg-zinc-900 p-4 rounded border border-green-500/30">
-                      <p className="text-gray-400 text-sm">
-                        Confirmed Combo Teams
-                      </p>
-                      <p className="text-2xl font-bold text-green-400">
-                        {confirmedComboTeams}
-                      </p>
-                    </div>
-
-                    <div className="bg-zinc-900 p-4 rounded border border-blue-500/30">
-                      <p className="text-gray-400 text-sm">
-                        Confirmed Buildathon Teams
-                      </p>
-                      <p className="text-2xl font-bold text-blue-400">
-                        {confirmedBuildathonTeams}
-                      </p>
-                    </div>
-
-                    <div className="bg-zinc-900 p-4 rounded border border-orange-500/30">
-                      <p className="text-gray-400 text-sm">Hostel Students</p>
-                      <p className="text-2xl font-bold text-orange-400">
-                        {hostelStudents}
-                      </p>
-                    </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-10">
+                  <div className="bg-zinc-900 p-4 rounded border border-green-500/20">
+                    <p className="text-gray-400 text-sm">
+                      Confirmed Combo Teams
+                    </p>
+                    <p className="text-2xl font-bold text-green-400">
+                      {confirmedComboTeams}
+                    </p>
                   </div>
+
+                  <div className="bg-zinc-900 p-4 rounded border border-blue-500/20">
+                    <p className="text-gray-400 text-sm">
+                      Confirmed Buildathon Teams
+                    </p>
+                    <p className="text-2xl font-bold text-blue-400">
+                      {confirmedBuildathonTeams}
+                    </p>
+                  </div>
+
+                  <div className="bg-zinc-900 p-4 rounded border border-orange-500/20">
+                    <p className="text-gray-400 text-sm">Hostel Students</p>
+                    <p className="text-2xl font-bold text-orange-400">
+                      {hostelStudents}
+                    </p>
+                  </div>
+
                   <div className="bg-zinc-900 p-4 rounded border border-cyan-500/20">
                     <p className="text-gray-400 text-sm">Total</p>
                     <p className="text-2xl font-bold text-cyan-400">
@@ -1141,64 +1133,71 @@ const Dashboard = () => {
                     </p>
                   </div>
                 </div>
-                {/* CHARTS */}
-                <div className="grid md:grid-cols-2 gap-8 mb-10">
-                  {/* Registration Status Chart */}
-                  <div className="bg-zinc-900 p-6 rounded border border-cyan-500/20">
-                    <h3 className="text-lg text-cyan-400 mb-4">
-                      Registration Status
-                    </h3>
+              </div>
+              {/* CHARTS */}
+              <div className="grid md:grid-cols-2 gap-6 mb-12">
+                {/* Registration Status Chart */}
+                <div className="bg-zinc-900 p-5 rounded-xl border border-cyan-500/20 shadow-lg">
+                  <h3 className="text-lg text-cyan-400 mb-4">
+                    Registration Status
+                  </h3>
 
-                    <ResponsiveContainer width="100%" height={250}>
-  <PieChart>
-    <Pie
-      data={statusData}
-      dataKey="value"
-      nameKey="name"
-      outerRadius={90}
-      label
-    >
-      {statusData.map((entry, index) => (
-        <Cell key={`cell-${index}`} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
-      ))}
-    </Pie>
-    <Tooltip />
-    <Legend />
-  </PieChart>
-</ResponsiveContainer>
-                  </div>
-
-                  {/* Event Type Chart */}
-                  <div className="bg-zinc-900 p-6 rounded border border-cyan-500/20">
-                    <h3 className="text-lg text-cyan-400 mb-4">Event Type</h3>
-
-                    <ResponsiveContainer width="100%" height={250}>
-  <PieChart>
-    <Pie
-      data={eventData}
-      dataKey="value"
-      nameKey="name"
-      outerRadius={90}
-      label
-    >
-      {eventData.map((entry, index) => (
-        <Cell key={`cell-${index}`} fill={EVENT_COLORS[index % EVENT_COLORS.length]} />
-      ))}
-    </Pie>
-    <Tooltip />
-    <Legend />
-  </PieChart>
-</ResponsiveContainer>
-                  </div>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={statusData}
+                        dataKey="value"
+                        nameKey="name"
+                        outerRadius={90}
+                        label
+                      >
+                        {statusData.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={STATUS_COLORS[index % STATUS_COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
+
+                {/* Event Type Chart */}
+                <div className="bg-zinc-900 p-5 rounded-xl border border-cyan-500/20 shadow-lg">
+                  <h3 className="text-lg text-cyan-400 mb-4">Event Type</h3>
+
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={eventData}
+                        dataKey="value"
+                        nameKey="name"
+                        outerRadius={90}
+                        label
+                      >
+                        {eventData.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={EVENT_COLORS[index % EVENT_COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
               {/* ✅ CLOSE GRID PROPERLY */}
               {/* SEARCH + FILTER SECTION */}
-              <div>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
                 {/* SEARCH BAR */}
                 <div className="relative w-full md:w-1/3">
                   <input
                     type="text"
-                    placeholder="Search by Team Name..."
+                    placeholder="Search Team Name or Roll No..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full p-3 pr-10 bg-zinc-900 border border-cyan-500/30 rounded focus:outline-none focus:border-cyan-400"
@@ -1215,7 +1214,7 @@ const Dashboard = () => {
                 </div>
 
                 {/* FILTER BUTTONS */}
-                <div className="flex gap-4 mb-6">
+                <div className="flex flex-wrap gap-3">
                   <button
                     onClick={() => setRegistrationFilter("all")}
                     className={`px-4 py-2 rounded ${
@@ -1248,6 +1247,7 @@ const Dashboard = () => {
                   >
                     Buildathon
                   </button>
+
                   <button
                     onClick={() => setRegistrationFilter("hostel")}
                     className={`px-4 py-2 rounded ${
@@ -1259,30 +1259,31 @@ const Dashboard = () => {
                     Hostel
                   </button>
                 </div>
+              </div>
 
-                <div className="flex gap-4 mb-6">
-                  <button
-                    onClick={() => setRegistrationView("pending")}
-                    className={`px-4 py-2 rounded ${
-                      registrationView === "pending"
-                        ? "bg-yellow-500 text-black"
-                        : "bg-zinc-800"
-                    }`}
-                  >
-                    Pending
-                  </button>
+              {/* VIEW BUTTONS */}
+              <div className="flex gap-4 mb-6">
+                <button
+                  onClick={() => setRegistrationView("pending")}
+                  className={`px-4 py-2 rounded ${
+                    registrationView === "pending"
+                      ? "bg-yellow-500 text-black"
+                      : "bg-zinc-800"
+                  }`}
+                >
+                  Pending
+                </button>
 
-                  <button
-                    onClick={() => setRegistrationView("confirmed")}
-                    className={`px-4 py-2 rounded ${
-                      registrationView === "confirmed"
-                        ? "bg-green-500 text-black"
-                        : "bg-zinc-800"
-                    }`}
-                  >
-                    Confirmed
-                  </button>
-                </div>
+                <button
+                  onClick={() => setRegistrationView("confirmed")}
+                  className={`px-4 py-2 rounded ${
+                    registrationView === "confirmed"
+                      ? "bg-green-500 text-black"
+                      : "bg-zinc-800"
+                  }`}
+                >
+                  Confirmed
+                </button>
               </div>
               {/* TOTAL COUNTER */}
               <p className="mb-4 text-yellow-400 font-semibold">
@@ -1314,15 +1315,23 @@ const Dashboard = () => {
                       return reg.eventType === registrationFilter;
                     })
                     .filter((reg) => reg.registrationStatus === "Pending")
-                    .filter((reg) =>
-                      reg.teamName
+                    .filter((reg) => {
+                      const term = searchTerm.toLowerCase();
+
+                      const teamMatch = reg.teamName
                         .toLowerCase()
-                        .includes(searchTerm.toLowerCase()),
-                    )
+                        .includes(term);
+
+                      const rollMatch = reg.teamMembers.some((m: any) =>
+                        m.rollNo?.toLowerCase().includes(term),
+                      );
+
+                      return teamMatch || rollMatch;
+                    })
                     .map((reg) => (
                       <div
                         key={reg._id}
-                        className="bg-zinc-900 border border-cyan-500/20 p-6 rounded mb-6"
+                        className="bg-zinc-900 border border-cyan-500/20 p-6 rounded-xl shadow-lg hover:border-cyan-400 transition mb-6"
                       >
                         <div className="flex justify-between items-center mb-3">
                           <h3 className="text-xl text-cyan-400">
@@ -1506,7 +1515,9 @@ const Dashboard = () => {
                                   }
                                   className="bg-yellow-500 px-3 py-1 rounded"
                                 >
-                                  Mark Unverified
+                                  {reg.payment?.verified
+                                    ? "Mark Unverified"
+                                    : "Mark Verified"}
                                 </button>
                                 <button
                                   onClick={() => deleteRegistration(reg._id)}
