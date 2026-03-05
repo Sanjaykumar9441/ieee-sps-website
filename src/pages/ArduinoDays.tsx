@@ -11,6 +11,7 @@ import { loadFull } from "tsparticles";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Menu } from "lucide-react";
 
 const particlesInit = async (main: any) => {
   await loadFull(main);
@@ -119,8 +120,14 @@ overflow-y-auto
   className="md:hidden fixed top-4 left-4 z-50 bg-black/80 p-2 rounded-lg border border-green-400"
   onClick={() => setMenuOpen(!menuOpen)}
 >
-  ☰
+  <Menu size={22} />
 </button>
+{menuOpen && (
+  <div
+    className="fixed inset-0 bg-black/70 backdrop-blur-sm z-30 md:hidden"
+    onClick={() => setMenuOpen(false)}
+  />
+)}
 
 <div
   ref={sidebarRef}
@@ -129,7 +136,7 @@ bg-black/90 backdrop-blur-xl
 border-r border-green-500/20
 shadow-[0_0_40px_rgba(0,255,200,0.1)]
 p-6 flex flex-col gap-8
-z-40 transform transition-transform duration-300
+z-50 transform transition-transform duration-300
 overflow-hidden
 ${menuOpen ? "translate-x-0" : "-translate-x-full"}
 md:translate-x-0`}
@@ -158,7 +165,7 @@ md:translate-x-0`}
   {/* Sidebar Content */}
   <div className="relative z-10">
 
-    <div className="text-2xl font-bold text-green-400 mb-6">
+    <div className="text-lg md:text-2xl font-bold text-green-400 mb-6 leading-tight">
       Arduino Days 2026
     </div>
 
@@ -221,7 +228,7 @@ md:translate-x-0`}
 
 
       {/* Main Content with Smooth Animation */}
-      <div className="relative z-30 md:ml-64 min-h-screen">
+      <div className="relative z-10 md:ml-64 min-h-screen">
         <AnimatePresence mode="wait">
           <motion.div
             key={active}
@@ -322,7 +329,7 @@ md:translate-x-0`}
         <img
           src="/map.png"
           alt="Community Events Map"
-          className="w-full h-[400px] md:h-[500px] object-cover rounded-xl"
+          className="w-full h-[260px] sm:h-[350px] md:h-[500px] object-cover rounded-xl"
         />
       </div>
 

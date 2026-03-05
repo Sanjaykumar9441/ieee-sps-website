@@ -12,7 +12,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-
+  const STATUS_COLORS = ["#facc15", "#22c55e"]; // Pending, Confirmed
+  const EVENT_COLORS = ["#3b82f6", "#a855f7"]; // Combo, Buildathon
 /* ================= EDITABLE EVENT ================= */
 
 const EditableEvent = ({ event, onUpdate, onDelete }: any) => {
@@ -1071,9 +1072,8 @@ const Dashboard = () => {
             <>
               {/* ANALYTICS CARDS */}
               <div>
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
                   {/* QUICK STATS */}
-                  <div className="grid md:grid-cols-3 gap-4 mb-8">
                     <div className="bg-zinc-900 p-4 rounded border border-green-500/30">
                       <p className="text-gray-400 text-sm">
                         Confirmed Combo Teams
@@ -1150,21 +1150,22 @@ const Dashboard = () => {
                     </h3>
 
                     <ResponsiveContainer width="100%" height={250}>
-                      <PieChart>
-                        <Pie
-                          data={statusData}
-                          dataKey="value"
-                          nameKey="name"
-                          outerRadius={80}
-                          label
-                        >
-                          <Cell />
-                          <Cell />
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
+  <PieChart>
+    <Pie
+      data={statusData}
+      dataKey="value"
+      nameKey="name"
+      outerRadius={90}
+      label
+    >
+      {statusData.map((entry, index) => (
+        <Cell key={`cell-${index}`} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
+      ))}
+    </Pie>
+    <Tooltip />
+    <Legend />
+  </PieChart>
+</ResponsiveContainer>
                   </div>
 
                   {/* Event Type Chart */}
@@ -1172,24 +1173,24 @@ const Dashboard = () => {
                     <h3 className="text-lg text-cyan-400 mb-4">Event Type</h3>
 
                     <ResponsiveContainer width="100%" height={250}>
-                      <PieChart>
-                        <Pie
-                          data={eventData}
-                          dataKey="value"
-                          nameKey="name"
-                          outerRadius={80}
-                          label
-                        >
-                          <Cell />
-                          <Cell />
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
+  <PieChart>
+    <Pie
+      data={eventData}
+      dataKey="value"
+      nameKey="name"
+      outerRadius={90}
+      label
+    >
+      {eventData.map((entry, index) => (
+        <Cell key={`cell-${index}`} fill={EVENT_COLORS[index % EVENT_COLORS.length]} />
+      ))}
+    </Pie>
+    <Tooltip />
+    <Legend />
+  </PieChart>
+</ResponsiveContainer>
                   </div>
                 </div>
-              </div>{" "}
               {/* ✅ CLOSE GRID PROPERLY */}
               {/* SEARCH + FILTER SECTION */}
               <div>

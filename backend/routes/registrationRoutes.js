@@ -3,11 +3,7 @@ const router = express.Router();
 const Registration = require("../models/registration");
 const Event = require("../models/event"); // adjust path if needed
 const PDFDocument = require("pdfkit");
-
-const { Resend } = require("resend");
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-
+const emailjs = require("@emailjs/nodejs");
 const axios = require("axios");
 
 const sendTelegramNotification = async (message) => {
@@ -106,8 +102,7 @@ router.post("/register", async (req, res) => {
 
     await registration.save();
 
-    await registration.save();
-
+    // Main registration message
     const message = `
 🚀 New Registration Submitted
 
@@ -119,6 +114,23 @@ Transaction ID: ${userTransactionId}
 `;
 
     await sendTelegramNotification(message);
+    // Team member details
+    let memberDetails = "👥 Team Members:\n\n";
+
+    teamMembers.forEach((member, index) => {
+      memberDetails += `${index + 1}. ${member.fullName}\n`;
+    });
+
+    await sendTelegramNotification(memberDetails);
+    // Email list
+    let emailList = "📧 Member Emails:\n\n";
+
+    teamMembers.forEach((member, index) => {
+      emailList += `${index + 1}. ${member.email}\n`;
+    });
+
+    await sendTelegramNotification(emailList);
+    await sendTelegramNotification(`🖼 Payment Screenshot:\n${screenshotUrl}`);
 
     res.status(201).json({
       message: "Registration submitted successfully",
@@ -188,6 +200,32 @@ Hostel: ${registration.accommodationRequired ? "Yes" : "No"}
     await sendTelegramNotification(message);
 
     /* ================= SEND EMAIL TO ALL TEAM MEMBERS ================= */
+    const participants = registration.teamMembers
+      .map((m) => m.fullName)
+      .join("\n");
+
+    for (const member of registration.teamMembers) {
+      try {
+        await emailjs.send(
+          process.env.EMAILJS_SERVICE_ID,
+          process.env.EMAILJS_TEMPLATE_ID,
+          {
+            email: member.email,
+            event_name: registration.eventName,
+            team_name: registration.teamName,
+            registration_id: registration.registrationId,
+            participants: participants,
+          },
+          {
+            publicKey: process.env.EMAILJS_PUBLIC_KEY,
+          },
+        );
+
+        console.log("Email sent to:", member.email);
+      } catch (error) {
+        console.error("Email sending failed:", error);
+      }
+    }
 
     // Fetch event details from Events collection
     let eventDate = "To be announced";
@@ -202,109 +240,9 @@ Hostel: ${registration.accommodationRequired ? "Yes" : "No"}
       eventVenue = eventDetails.location || eventVenue;
     }
 
-    // Collect all emails
-    const allEmails = registration.teamMembers
-      .map((member) => member.email)
-      .filter((email) => email && email.trim() !== "");
-
-    try {
-      if (allEmails.length > 0) {
-        const emailResponse = await resend.emails.send({
-          from: "onboarding@resend.dev",
-          to: allEmails,
-          subject: `Registration Confirmed - ${registration.eventName}`,
-          html: `
-<div style="font-family: Arial, sans-serif; padding:20px">
-
-<h2 style="color:#0ea5e9;">IEEE Signal Processing Society</h2>
-
-<p>Dear Participant,</p>
-
-<p>
-Greetings from <b>IEEE SPS Student Branch – Aditya University</b>.
-</p>
-
-<p>
-Your registration for the event has been successfully confirmed.
-</p>
-
-<h3>Event Details</h3>
-
-<table style="border-collapse:collapse">
-<tr>
-<td style="padding:6px"><b>Event</b></td>
-<td style="padding:6px">${registration.eventName}</td>
-</tr>
-
-<tr>
-<td style="padding:6px"><b>Date</b></td>
-<td style="padding:6px">${eventDate}</td>
-</tr>
-
-<tr>
-<td style="padding:6px"><b>Venue</b></td>
-<td style="padding:6px">${eventVenue}</td>
-</tr>
-</table>
-
-<h3>Registration Details</h3>
-
-<table style="border-collapse:collapse">
-<tr>
-<td style="padding:6px"><b>Registration ID</b></td>
-<td style="padding:6px">${registrationId}</td>
-</tr>
-
-<tr>
-<td style="padding:6px"><b>Team Name</b></td>
-<td style="padding:6px">${registration.teamName}</td>
-</tr>
-
-<tr>
-<td style="padding:6px"><b>Team Size</b></td>
-<td style="padding:6px">${registration.teamSize}</td>
-</tr>
-</table>
-
-<p>
-Please keep this email for future reference.
-</p>
-
-<p>
-We look forward to your participation!
-</p>
-<p>
-For updates visit:
-<a href="https://ieeespsaditya.vercel.app">
-https://ieeespsaditya.vercel.app
-</a>
-</p>
-
-<br>
-
-<p>
-Best Regards<br>
-<b>IEEE SPS Student Branch</b><br>
-Aditya University
-</p>
-
-</div>
-
-      `,
-        });
-        console.log("Resend response:", emailResponse);
-
-        console.log("✅ Email sent successfully");
-      } else {
-        console.log("⚠ No emails found, skipping email");
-      }
-    } catch (emailError) {
-      console.error("❌ EMAIL ERROR:", emailError);
-    }
-
     // ✅ THIS WAS MISSING
     res.json({
-      message: "Registration confirmed and Email sent",
+      message: "Registration confirmed successfully",
       data: registration,
     });
   } catch (error) {
