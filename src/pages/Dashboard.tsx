@@ -124,7 +124,9 @@ const Dashboard = () => {
     }
   }, [token, navigate]);
 
-  const [activeTab, setActiveTab] = useState("upload");
+  const [activeTab, setActiveTab] = useState(
+  localStorage.getItem("adminTab") || "upload"
+);
 
   /* ================= EVENTS ================= */
   const [events, setEvents] = useState<any[]>([]);
@@ -247,6 +249,9 @@ const Dashboard = () => {
     );
 
     fetchRegistrations();
+
+    // force UI refresh
+    window.location.reload();
   };
 
   const deleteRegistration = async (id: string) => {
@@ -560,7 +565,10 @@ const Dashboard = () => {
             {menu.map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+  setActiveTab(item.id);
+  localStorage.setItem("adminTab", item.id);
+}}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${
                   activeTab === item.id
                     ? "bg-cyan-500 text-black"

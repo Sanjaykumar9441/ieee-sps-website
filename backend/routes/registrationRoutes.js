@@ -7,7 +7,9 @@ const PDFDocument = require("pdfkit");
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // true for 465
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -174,7 +176,7 @@ router.put("/confirm/:id", async (req, res) => {
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: allEmails, // send to all
+      to: allEmails.join(","), // send to all
       subject: `Registration Confirmed - ${registration.eventName}`,
       html: `
     <p>Dear Participant,</p>
@@ -333,6 +335,25 @@ router.put("/verify-payment/:id", async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: "Error updating payment" });
+  }
+});
+/* =====================================
+   TEST EMAIL
+===================================== */
+
+router.get("/test-email", async (req, res) => {
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: process.env.EMAIL_USER,
+      subject: "Test Email",
+      text: "Email working!",
+    });
+
+    res.send("Email sent successfully");
+  } catch (err) {
+    console.error("TEST EMAIL ERROR:", err);
+    res.send("Email failed");
   }
 });
 
