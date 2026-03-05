@@ -106,6 +106,20 @@ router.post("/register", async (req, res) => {
 
     await registration.save();
 
+    await registration.save();
+
+    const message = `
+🚀 New Registration Submitted
+
+Team: ${teamName}
+Event: ${eventName}
+Members: ${teamMembers.length}
+Hostel: ${accommodationRequired ? "Yes" : "No"}
+Transaction ID: ${userTransactionId}
+`;
+
+    await sendTelegramNotification(message);
+
     res.status(201).json({
       message: "Registration submitted successfully",
       data: registration,
@@ -159,10 +173,19 @@ router.put("/confirm/:id", async (req, res) => {
     registration.registrationStatus = "Confirmed";
     registration.payment.verified = true;
 
-    await registration.save().catch((err) => {
-      console.error("SAVE ERROR:", err);
-      throw err;
-    });
+    await registration.save();
+
+    const message = `
+✅ Registration Confirmed
+
+Team: ${registration.teamName}
+Event: ${registration.eventName}
+Registration ID: ${registration.registrationId}
+Members: ${registration.teamMembers.length}
+Hostel: ${registration.accommodationRequired ? "Yes" : "No"}
+`;
+
+    await sendTelegramNotification(message);
 
     /* ================= SEND EMAIL TO ALL TEAM MEMBERS ================= */
 
@@ -186,8 +209,8 @@ router.put("/confirm/:id", async (req, res) => {
 
     try {
       if (allEmails.length > 0) {
-        await resend.emails.send({
-          from: "IEEE SPS <onboarding@resend.dev>",
+        const emailResponse = await resend.emails.send({
+          from: "onboarding@resend.dev",
           to: allEmails,
           subject: `Registration Confirmed - ${registration.eventName}`,
           html: `
@@ -269,6 +292,7 @@ Aditya University
 
       `,
         });
+        console.log("Resend response:", emailResponse);
 
         console.log("✅ Email sent successfully");
       } else {
@@ -384,13 +408,11 @@ router.put("/verify-payment/:id", async (req, res) => {
     registration.payment.verified = !registration.payment.verified;
     await registration.save();
     const message = `
-🚀 New Registration
+💳 Payment Status Updated
 
-Team: ${teamName}
-Event: ${eventName}
-Members: ${teamMembers.length}
-Hostel: ${accommodationRequired ? "Yes" : "No"}
-Transaction ID: ${userTransactionId}
+Team: ${registration.teamName}
+Event: ${registration.eventName}
+Verified: ${registration.payment.verified ? "Yes" : "No"}
 `;
 
     await sendTelegramNotification(message);
@@ -403,24 +425,4 @@ Transaction ID: ${userTransactionId}
     res.status(500).json({ message: "Error updating payment" });
   }
 });
-/* =====================================
-   TEST EMAIL
-===================================== */
-
-router.get("/test-email", async (req, res) => {
-  try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: process.env.EMAIL_USER,
-      subject: "Test Email",
-      text: "Email working!",
-    });
-
-    res.send("Email sent successfully");
-  } catch (err) {
-    console.error("TEST EMAIL ERROR:", err);
-    res.send("Email failed");
-  }
-});
-
 module.exports = router;
