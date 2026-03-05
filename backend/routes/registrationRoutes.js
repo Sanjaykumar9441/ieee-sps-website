@@ -4,29 +4,27 @@ const Registration = require("../models/registration");
 const Event = require("../models/event"); // adjust path if needed
 const PDFDocument = require("pdfkit");
 
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-const transporter = nodemailer.createTransport({
-  host: "142.250.102.109", // Gmail SMTP IPv4
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Verify SMTP connection
-transporter.verify(function (error, success) {
-  if (error) {
-    console.log("❌ SMTP Connection Error:", error);
-  } else {
-    console.log("✅ SMTP Server Ready");
+const axios = require("axios");
+
+const sendTelegramNotification = async (message) => {
+  try {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+
+    await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+      chat_id: chatId,
+      text: message,
+    });
+
+    console.log("✅ Telegram notification sent");
+  } catch (error) {
+    console.error("❌ Telegram notification failed:", error.message);
   }
-});
+};
 
 /* =====================================
    1️⃣ GET ALL REGISTRATIONS
@@ -147,7 +145,7 @@ router.put("/confirm/:id", async (req, res) => {
       nextNumber = lastNumber + 1;
     }
 
-    const registrationId = `${prefix}-${String(nextNumber).padStart(3,"0")}`;
+    const registrationId = `${prefix}-${String(nextNumber).padStart(3, "0")}`;
     // SAFETY CHECK
     const existing = await Registration.findOne({ registrationId });
 
@@ -186,53 +184,98 @@ router.put("/confirm/:id", async (req, res) => {
       .map((member) => member.email)
       .filter((email) => email && email.trim() !== "");
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: allEmails.join(","), // send to all
-      subject: `Registration Confirmed - ${registration.eventName}`,
-      html: `
-    <p>Dear Participant,</p>
-
-    <p>Greetings from <b>IEEE SPS Student Branch</b>!</p>
-
-    <p>Your registration has been successfully confirmed.</p>
-
-    <h3>Event Details:</h3>
-    <ul>
-      <li><b>Event:</b> ${registration.eventName}</li>
-      <li><b>Date:</b> ${eventDate}</li>
-      <li><b>Venue:</b> ${eventVenue}</li>
-    </ul>
-
-    <h3>Registration Details:</h3>
-    <ul>
-      <li><b>Registration ID:</b> ${registrationId}</li>
-      <li><b>Team Name:</b> ${registration.teamName}</li>
-      <li><b>Team Size:</b> ${registration.teamSize}</li>
-    </ul>
-
-    <p>Please keep this email for future reference.</p>
-
-    <p>We look forward to your participation!</p>
-
-    <br/>
-    <p>
-      Best Regards,<br/>
-      IEEE SPS Student Branch
-      Aditya University
-    </p>
-  `,
-    };
-
     try {
       if (allEmails.length > 0) {
-        await transporter.sendMail(mailOptions);
+        await resend.emails.send({
+          from: "IEEE SPS <onboarding@resend.dev>",
+          to: allEmails,
+          subject: `Registration Confirmed - ${registration.eventName}`,
+          html: `
+<div style="font-family: Arial, sans-serif; padding:20px">
+
+<h2 style="color:#0ea5e9;">IEEE Signal Processing Society</h2>
+
+<p>Dear Participant,</p>
+
+<p>
+Greetings from <b>IEEE SPS Student Branch – Aditya University</b>.
+</p>
+
+<p>
+Your registration for the event has been successfully confirmed.
+</p>
+
+<h3>Event Details</h3>
+
+<table style="border-collapse:collapse">
+<tr>
+<td style="padding:6px"><b>Event</b></td>
+<td style="padding:6px">${registration.eventName}</td>
+</tr>
+
+<tr>
+<td style="padding:6px"><b>Date</b></td>
+<td style="padding:6px">${eventDate}</td>
+</tr>
+
+<tr>
+<td style="padding:6px"><b>Venue</b></td>
+<td style="padding:6px">${eventVenue}</td>
+</tr>
+</table>
+
+<h3>Registration Details</h3>
+
+<table style="border-collapse:collapse">
+<tr>
+<td style="padding:6px"><b>Registration ID</b></td>
+<td style="padding:6px">${registrationId}</td>
+</tr>
+
+<tr>
+<td style="padding:6px"><b>Team Name</b></td>
+<td style="padding:6px">${registration.teamName}</td>
+</tr>
+
+<tr>
+<td style="padding:6px"><b>Team Size</b></td>
+<td style="padding:6px">${registration.teamSize}</td>
+</tr>
+</table>
+
+<p>
+Please keep this email for future reference.
+</p>
+
+<p>
+We look forward to your participation!
+</p>
+<p>
+For updates visit:
+<a href="https://ieeespsaditya.vercel.app">
+https://ieeespsaditya.vercel.app
+</a>
+</p>
+
+<br>
+
+<p>
+Best Regards<br>
+<b>IEEE SPS Student Branch</b><br>
+Aditya University
+</p>
+
+</div>
+
+      `,
+        });
+
         console.log("✅ Email sent successfully");
       } else {
-        console.log("⚠ No emails found, skipping email sending");
+        console.log("⚠ No emails found, skipping email");
       }
     } catch (emailError) {
-      console.error("❌ EMAIL ERROR:", emailError.message);
+      console.error("❌ EMAIL ERROR:", emailError);
     }
 
     // ✅ THIS WAS MISSING
@@ -340,6 +383,17 @@ router.put("/verify-payment/:id", async (req, res) => {
 
     registration.payment.verified = !registration.payment.verified;
     await registration.save();
+    const message = `
+🚀 New Registration
+
+Team: ${teamName}
+Event: ${eventName}
+Members: ${teamMembers.length}
+Hostel: ${accommodationRequired ? "Yes" : "No"}
+Transaction ID: ${userTransactionId}
+`;
+
+    await sendTelegramNotification(message);
 
     res.json({
       message: "Payment status updated",

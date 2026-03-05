@@ -125,8 +125,8 @@ const Dashboard = () => {
   }, [token, navigate]);
 
   const [activeTab, setActiveTab] = useState(
-  localStorage.getItem("adminTab") || "upload"
-);
+    localStorage.getItem("adminTab") || "upload",
+  );
 
   /* ================= EVENTS ================= */
   const [events, setEvents] = useState<any[]>([]);
@@ -169,17 +169,24 @@ const Dashboard = () => {
   const confirmedCount = registrations.filter(
     (r) => r.registrationStatus === "Confirmed",
   ).length;
-
   const comboCount = registrations.filter(
     (r) => r.eventType === "combo",
   ).length;
-
   const buildathonCount = registrations.filter(
     (r) => r.eventType === "buildathon",
   ).length;
   const hostelCount = registrations.filter(
     (r) => r.accommodationRequired === true,
   ).length;
+  const confirmedComboTeams = registrations.filter(
+    (r) => r.registrationStatus === "Confirmed" && r.eventType === "combo",
+  ).length;
+  const confirmedBuildathonTeams = registrations.filter(
+    (r) => r.registrationStatus === "Confirmed" && r.eventType === "buildathon",
+  ).length;
+  const hostelStudents = registrations
+    .filter((r) => r.registrationStatus === "Confirmed")
+    .reduce((count, r) => count + (r.hostelMembers?.length || 0), 0);
   const statusData = [
     { name: "Pending", value: pendingCount },
     { name: "Confirmed", value: confirmedCount },
@@ -348,7 +355,7 @@ const Dashboard = () => {
     setDate("");
     setLocation("");
     setStatus("Upcoming");
-    setImages(null); 
+    setImages(null);
 
     fetchEvents();
   };
@@ -566,9 +573,9 @@ const Dashboard = () => {
               <button
                 key={item.id}
                 onClick={() => {
-  setActiveTab(item.id);
-  localStorage.setItem("adminTab", item.id);
-}}
+                  setActiveTab(item.id);
+                  localStorage.setItem("adminTab", item.id);
+                }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${
                   activeTab === item.id
                     ? "bg-cyan-500 text-black"
@@ -1065,6 +1072,33 @@ const Dashboard = () => {
               {/* ANALYTICS CARDS */}
               <div>
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+                  {/* QUICK STATS */}
+                  <div className="grid md:grid-cols-3 gap-4 mb-8">
+                    <div className="bg-zinc-900 p-4 rounded border border-green-500/30">
+                      <p className="text-gray-400 text-sm">
+                        Confirmed Combo Teams
+                      </p>
+                      <p className="text-2xl font-bold text-green-400">
+                        {confirmedComboTeams}
+                      </p>
+                    </div>
+
+                    <div className="bg-zinc-900 p-4 rounded border border-blue-500/30">
+                      <p className="text-gray-400 text-sm">
+                        Confirmed Buildathon Teams
+                      </p>
+                      <p className="text-2xl font-bold text-blue-400">
+                        {confirmedBuildathonTeams}
+                      </p>
+                    </div>
+
+                    <div className="bg-zinc-900 p-4 rounded border border-orange-500/30">
+                      <p className="text-gray-400 text-sm">Hostel Students</p>
+                      <p className="text-2xl font-bold text-orange-400">
+                        {hostelStudents}
+                      </p>
+                    </div>
+                  </div>
                   <div className="bg-zinc-900 p-4 rounded border border-cyan-500/20">
                     <p className="text-gray-400 text-sm">Total</p>
                     <p className="text-2xl font-bold text-cyan-400">
@@ -1415,9 +1449,15 @@ const Dashboard = () => {
                               <td className="p-3">{reg.teamName}</td>
 
                               <td className="p-3 text-sm">
-                                {reg.teamMembers.map((m: any, i: number) => (
-                                  <div key={i}>{m.fullName}</div>
-                                ))}
+                                {registrationFilter === "hostel"
+                                  ? reg.hostelMembers?.map(
+                                      (m: any, i: number) => (
+                                        <div key={i}>{m.fullName}</div>
+                                      ),
+                                    )
+                                  : reg.teamMembers.map((m: any, i: number) => (
+                                      <div key={i}>{m.fullName}</div>
+                                    ))}
                               </td>
 
                               <td className="p-3">{reg.eventName}</td>
@@ -1466,6 +1506,12 @@ const Dashboard = () => {
                                   className="bg-yellow-500 px-3 py-1 rounded"
                                 >
                                   Mark Unverified
+                                </button>
+                                <button
+                                  onClick={() => deleteRegistration(reg._id)}
+                                  className="bg-red-500 px-3 py-1 rounded"
+                                >
+                                  Delete
                                 </button>
 
                                 <a
