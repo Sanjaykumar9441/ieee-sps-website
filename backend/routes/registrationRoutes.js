@@ -116,17 +116,32 @@ router.put("/confirm/:id", async (req, res) => {
     }
 
     // Generate Registration ID
-    const count = await Registration.countDocuments({
+    const prefix =
+      registration.eventType === "combo" ? "SPS26-CMB" : "SPS26-BLD";
+
+    // find last registration
+    const lastRegistration = await Registration.findOne({
       eventType: registration.eventType,
       registrationStatus: "Confirmed",
-    });
+    }).sort({ createdAt: -1 });
 
-    let prefix = "SPS-GEN";
+    let nextNumber = 1;
 
-    if (registration.eventType === "combo") prefix = "SPS-COMBO";
-    if (registration.eventType === "buildathon") prefix = "SPS-BUILD";
+    if (lastRegistration && lastRegistration.registrationId) {
+      const parts = lastRegistration.registrationId.split("-");
+      const lastNumber = parseInt(parts[parts.length - 1]);
+      nextNumber = lastNumber + 1;
+    }
 
-    const registrationId = `${prefix}-2026-${String(count + 1).padStart(3, "0")}`;
+    const registrationId = `${prefix}-${String(nextNumber).padStart(3,"0")}`;
+    // SAFETY CHECK
+    const existing = await Registration.findOne({ registrationId });
+
+    if (existing) {
+      return res.status(400).json({
+        message: "Registration ID conflict. Please try again.",
+      });
+    }
 
     registration.registrationId = registrationId;
     registration.registrationStatus = "Confirmed";

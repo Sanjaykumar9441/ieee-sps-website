@@ -479,65 +479,27 @@ const Dashboard = () => {
         "Team Name",
         "Event",
         "Accommodation",
-
-        "Member1 Name",
-        "Member1 Roll",
-        "Member1 Email",
-        "Member1 Phone",
-        "Member1 College",
-
-        "Member2 Name",
-        "Member2 Roll",
-        "Member2 Email",
-        "Member2 Phone",
-        "Member2 College",
-
-        "Member3 Name",
-        "Member3 Roll",
-        "Member3 Email",
-        "Member3 Phone",
-        "Member3 College",
-
-        "Member4 Name",
-        "Member4 Roll",
-        "Member4 Email",
-        "Member4 Phone",
-        "Member4 College",
+        "Member Name",
+        "Roll No",
+        "Email",
+        "Phone",
+        "College",
       ]);
 
       data.forEach((reg) => {
-        const m = reg.teamMembers;
-
-        rows.push([
-          reg.registrationId,
-          reg.teamName,
-          reg.eventName,
-          reg.accommodationRequired ? "Yes" : "No",
-
-          m[0]?.fullName || "",
-          m[0]?.rollNo || "",
-          m[0]?.email || "",
-          m[0]?.phone || "",
-          m[0]?.college || "",
-
-          m[1]?.fullName || "",
-          m[1]?.rollNo || "",
-          m[1]?.email || "",
-          m[1]?.phone || "",
-          m[1]?.college || "",
-
-          m[2]?.fullName || "",
-          m[2]?.rollNo || "",
-          m[2]?.email || "",
-          m[2]?.phone || "",
-          m[2]?.college || "",
-
-          m[3]?.fullName || "",
-          m[3]?.rollNo || "",
-          m[3]?.email || "",
-          m[3]?.phone || "",
-          m[3]?.college || "",
-        ]);
+        reg.teamMembers.forEach((member: any) => {
+          rows.push([
+            reg.registrationId,
+            reg.teamName,
+            reg.eventName,
+            reg.accommodationRequired ? "Yes" : "No",
+            member.fullName || "",
+            member.rollNo || "",
+            member.email || "",
+            member.phone || "",
+            member.college || "",
+          ]);
+        });
       });
 
       return rows;
@@ -1190,14 +1152,23 @@ const Dashboard = () => {
               {/* SEARCH + FILTER SECTION */}
               <div>
                 {/* SEARCH BAR */}
-                <div className="mb-6">
+                <div className="relative w-full md:w-1/3">
                   <input
                     type="text"
                     placeholder="Search by Team Name..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full md:w-1/3 p-3 bg-zinc-900 border border-cyan-500/30 rounded focus:outline-none focus:border-cyan-400"
+                    className="w-full p-3 pr-10 bg-zinc-900 border border-cyan-500/30 rounded focus:outline-none focus:border-cyan-400"
                   />
+
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
 
                 {/* FILTER BUTTONS */}
@@ -1532,40 +1503,83 @@ const Dashboard = () => {
                     className="bg-zinc-900 p-8 rounded w-[700px] max-h-[90vh] overflow-y-auto"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <h3 className="text-xl text-cyan-400 mb-4">
+                    <h3 className="text-2xl font-semibold text-cyan-400 mb-4">
                       Full Registration Details
                     </h3>
 
-                    <p>
-                      <b>Registration ID:</b>{" "}
-                      {selectedFullDetails.registrationId}
-                    </p>
-                    <p>
-                      <b>Team Name:</b> {selectedFullDetails.teamName}
-                    </p>
-                    <p>
-                      <b>Event:</b> {selectedFullDetails.eventName}
-                    </p>
-                    <p>
-                      <b>Event Type:</b> {selectedFullDetails.eventType}
-                    </p>
-                    <p>
-                      <b>Accommodation Required:</b>{" "}
-                      {selectedFullDetails.accommodationRequired ? "Yes" : "No"}
-                    </p>
+                    <div className="space-y-1 mb-4">
+                      <p>
+                        <b>Registration ID:</b>{" "}
+                        {selectedFullDetails.registrationId}
+                      </p>
+                      <p>
+                        <b>Team Name:</b> {selectedFullDetails.teamName}
+                      </p>
+                      <p>
+                        <b>Event:</b> {selectedFullDetails.eventName}
+                      </p>
+                      <p>
+                        <b>Event Type:</b> {selectedFullDetails.eventType}
+                      </p>
+                      <p>
+                        <b>Accommodation Required:</b>{" "}
+                        {selectedFullDetails.accommodationRequired
+                          ? "Yes"
+                          : "No"}
+                      </p>
+
+                      <p>
+                        <b>Payment Status:</b>{" "}
+                        {selectedFullDetails.payment?.verified ? (
+                          <span className="text-green-400">Verified</span>
+                        ) : (
+                          <span className="text-red-400">Not Verified</span>
+                        )}
+                      </p>
+                    </div>
+                    {selectedFullDetails.hostelMembers &&
+                      selectedFullDetails.hostelMembers.length > 0 && (
+                        <div className="mt-3">
+                          <b>Hostel Members:</b>
+                          {selectedFullDetails.hostelMembers.map(
+                            (m: any, i: number) => (
+                              <div
+                                key={i}
+                                className="mt-2 p-2 bg-zinc-800 rounded"
+                              >
+                                {m.fullName}
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      )}
 
                     <div className="mt-4">
                       <b>Team Members:</b>
                       {selectedFullDetails.teamMembers.map(
                         (m: any, i: number) => (
                           <div key={i} className="mt-2 p-2 bg-zinc-800 rounded">
-                            <p><b>Name:</b> {m.fullName}</p>
-                            <p><b>Roll No:</b> {m.rollNo}</p>
-                            <p><b>Email:</b> {m.email}</p>
-                            <p><b>Phone:</b> {m.phone}</p>
-                            <p><b>Department:</b> {m.department}</p>
-                            <p><b>Year:</b> {m.year}</p>
-                            <p><b>College:</b> {m.college}</p>
+                            <p>
+                              <b>Name:</b> {m.fullName}
+                            </p>
+                            <p>
+                              <b>Roll No:</b> {m.rollNo || "N/A"}
+                            </p>
+                            <p>
+                              <b>Email:</b> {m.email || "N/A"}
+                            </p>
+                            <p>
+                              <b>Phone:</b> {m.phone || "N/A"}
+                            </p>
+                            <p>
+                              <b>Department:</b> {m.department}
+                            </p>
+                            <p>
+                              <b>Year:</b> {m.year}
+                            </p>
+                            <p>
+                              <b>College:</b> {m.college}
+                            </p>
                           </div>
                         ),
                       )}
