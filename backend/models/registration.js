@@ -10,7 +10,6 @@ const memberSchema = new mongoose.Schema({
   year: String,
   college: String,
 });
-
 const registrationSchema = new mongoose.Schema(
   {
     // combo | buildathon

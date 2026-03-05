@@ -348,7 +348,7 @@ const Dashboard = () => {
     setDate("");
     setLocation("");
     setStatus("Upcoming");
-    setImages(null);
+    setImages(null); 
 
     fetchEvents();
   };
