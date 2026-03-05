@@ -577,6 +577,12 @@ const Register = () => {
                       formData,
                     );
 
+                    if (!uploadRes.data?.url) {
+                      alert("Screenshot upload failed. Try again.");
+                      setLoading(false);
+                      return;
+                    }
+
                     const screenshotUrl = uploadRes.data.url;
 
                     // 2️⃣ Prepare hostel members

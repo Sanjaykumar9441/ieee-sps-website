@@ -121,8 +121,10 @@ router.put("/confirm/:id", async (req, res) => {
       registrationStatus: "Confirmed",
     });
 
-    const prefix =
-      registration.eventType === "combo" ? "SPS-COMBO" : "SPS-BUILD";
+    let prefix = "SPS-GEN";
+
+    if (registration.eventType === "combo") prefix = "SPS-COMBO";
+    if (registration.eventType === "buildathon") prefix = "SPS-BUILD";
 
     const registrationId = `${prefix}-2026-${String(count + 1).padStart(3, "0")}`;
 
@@ -130,17 +132,25 @@ router.put("/confirm/:id", async (req, res) => {
     registration.registrationStatus = "Confirmed";
     registration.payment.verified = true;
 
-    await registration.save();
+    await registration.save().catch((err) => {
+      console.error("SAVE ERROR:", err);
+      throw err;
+    });
 
     /* ================= SEND EMAIL TO ALL TEAM MEMBERS ================= */
 
     // Fetch event details from Events collection
+    let eventDate = "To be announced";
+    let eventVenue = "To be announced";
+
     const eventDetails = await Event.findOne({
       title: registration.eventName,
     });
 
-    const eventDate = eventDetails?.date || "To be announced";
-    const eventVenue = eventDetails?.location || "To be announced";
+    if (eventDetails) {
+      eventDate = eventDetails.date || eventDate;
+      eventVenue = eventDetails.location || eventVenue;
+    }
 
     // Collect all emails
     const allEmails = registration.teamMembers

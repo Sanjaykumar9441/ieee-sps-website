@@ -479,18 +479,30 @@ const Dashboard = () => {
         "Team Name",
         "Event",
         "Accommodation",
+
         "Member1 Name",
+        "Member1 Roll",
         "Member1 Email",
         "Member1 Phone",
+        "Member1 College",
+
         "Member2 Name",
+        "Member2 Roll",
         "Member2 Email",
         "Member2 Phone",
+        "Member2 College",
+
         "Member3 Name",
+        "Member3 Roll",
         "Member3 Email",
         "Member3 Phone",
+        "Member3 College",
+
         "Member4 Name",
+        "Member4 Roll",
         "Member4 Email",
         "Member4 Phone",
+        "Member4 College",
       ]);
 
       data.forEach((reg) => {
@@ -503,20 +515,28 @@ const Dashboard = () => {
           reg.accommodationRequired ? "Yes" : "No",
 
           m[0]?.fullName || "",
+          m[0]?.rollNo || "",
           m[0]?.email || "",
           m[0]?.phone || "",
+          m[0]?.college || "",
 
           m[1]?.fullName || "",
+          m[1]?.rollNo || "",
           m[1]?.email || "",
           m[1]?.phone || "",
+          m[1]?.college || "",
 
           m[2]?.fullName || "",
+          m[2]?.rollNo || "",
           m[2]?.email || "",
           m[2]?.phone || "",
+          m[2]?.college || "",
 
           m[3]?.fullName || "",
+          m[3]?.rollNo || "",
           m[3]?.email || "",
           m[3]?.phone || "",
+          m[3]?.college || "",
         ]);
       });
 
@@ -1270,7 +1290,11 @@ const Dashboard = () => {
                       if (registrationFilter === "all") return true;
 
                       if (registrationFilter === "hostel") {
-                        return reg.accommodationRequired === true;
+                        return (
+                          reg.accommodationRequired === true &&
+                          reg.hostelMembers &&
+                          reg.hostelMembers.length > 0
+                        );
                       }
 
                       return reg.eventType === registrationFilter;
@@ -1306,7 +1330,14 @@ const Dashboard = () => {
                           ))}
                         </div>
 
-                        <div className="mt-4 flex gap-3">
+                        <div className="mt-4 flex gap-3 flex-wrap">
+                          <button
+                            onClick={() => setSelectedFullDetails(reg)}
+                            className="bg-cyan-500 px-3 py-1 rounded"
+                          >
+                            Full Details
+                          </button>
+
                           <button
                             onClick={() => confirmRegistration(reg._id)}
                             className="bg-green-500 px-3 py-1 rounded"
@@ -1368,7 +1399,11 @@ const Dashboard = () => {
                             if (registrationFilter === "all") return true;
 
                             if (registrationFilter === "hostel") {
-                              return reg.accommodationRequired === true;
+                              return (
+                                reg.accommodationRequired === true &&
+                                reg.hostelMembers &&
+                                reg.hostelMembers.length > 0
+                              );
                             }
 
                             return reg.eventType === registrationFilter;
@@ -1376,11 +1411,19 @@ const Dashboard = () => {
                           .filter(
                             (reg) => reg.registrationStatus === "Confirmed",
                           )
-                          .filter((reg) =>
-                            reg.teamName
+                          .filter((reg) => {
+                            const term = searchTerm.toLowerCase();
+
+                            const teamMatch = reg.teamName
                               .toLowerCase()
-                              .includes(searchTerm.toLowerCase()),
-                          )
+                              .includes(term);
+
+                            const rollMatch = reg.teamMembers.some((m: any) =>
+                              m.rollNo?.toLowerCase().includes(term),
+                            );
+
+                            return teamMatch || rollMatch;
+                          })
                           .map((reg) => (
                             <tr
                               key={reg._id}
@@ -1516,10 +1559,13 @@ const Dashboard = () => {
                       {selectedFullDetails.teamMembers.map(
                         (m: any, i: number) => (
                           <div key={i} className="mt-2 p-2 bg-zinc-800 rounded">
-                            <p>Name: {m.fullName}</p>
-                            <p>Email: {m.email}</p>
-                            <p>Phone: {m.phone}</p>
-                            <p>College: {m.college}</p>
+                            <p><b>Name:</b> {m.fullName}</p>
+                            <p><b>Roll No:</b> {m.rollNo}</p>
+                            <p><b>Email:</b> {m.email}</p>
+                            <p><b>Phone:</b> {m.phone}</p>
+                            <p><b>Department:</b> {m.department}</p>
+                            <p><b>Year:</b> {m.year}</p>
+                            <p><b>College:</b> {m.college}</p>
                           </div>
                         ),
                       )}
