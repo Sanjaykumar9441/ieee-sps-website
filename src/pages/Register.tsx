@@ -251,8 +251,8 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#050a12] text-white px-6 py-12">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-[#050a12] text-white px-4 md:px-6 py-12 overflow-x-hidden">
+      <div className="max-w-4xl mx-auto w-full">
         {!showSummary && !showPayment && (
           <>
             <h1 className="text-3xl font-bold mb-8 text-center text-cyan-400">
@@ -295,7 +295,7 @@ const Register = () => {
             {members.map((member, index) => (
               <div
                 key={index}
-                className="mb-10 p-6 border border-cyan-400/30 rounded-lg"
+                className="mb-10 p-4 md:p-6 border border-cyan-400/30 rounded-lg"
               >
                 <h2 className="text-xl font-semibold mb-4 text-cyan-300">
                   Member {index + 1}
@@ -305,7 +305,7 @@ const Register = () => {
                   <input
                     type="text"
                     placeholder="Full Name with initial"
-                    className="p-3 bg-black border border-gray-600 rounded"
+                    className="w-full p-3 bg-black border border-gray-600 rounded"
                     value={member.fullName}
                     onChange={(e) =>
                       handleMemberChange(index, "fullName", e.target.value)
@@ -315,7 +315,7 @@ const Register = () => {
                   <input
                     type="text"
                     placeholder="Roll Number"
-                    className="p-3 bg-black border border-gray-600 rounded"
+                    className="w-full p-3 bg-black border border-gray-600 rounded"
                     value={member.rollNo}
                     onChange={(e) =>
                       handleMemberChange(index, "rollNo", e.target.value)
@@ -325,7 +325,7 @@ const Register = () => {
                   <input
                     type="email"
                     placeholder="Email"
-                    className="p-3 bg-black border border-gray-600 rounded"
+                    className="w-full p-3 bg-black border border-gray-600 rounded"
                     value={member.email}
                     onChange={(e) =>
                       handleMemberChange(index, "email", e.target.value)
@@ -338,7 +338,7 @@ const Register = () => {
                     maxLength={10}
                     inputMode="numeric"
                     pattern="[0-9]{10}"
-                    className="p-3 bg-black border border-gray-600 rounded"
+                    className="w-full p-3 bg-black border border-gray-600 rounded"
                     value={member.phone}
                     onChange={(e) =>
                       handleMemberChange(index, "phone", e.target.value)
@@ -348,7 +348,7 @@ const Register = () => {
                   <input
                     type="text"
                     placeholder="Department"
-                    className="p-3 bg-black border border-gray-600 rounded"
+                    className="w-full p-3 bg-black border border-gray-600 rounded"
                     value={member.department}
                     onChange={(e) =>
                       handleMemberChange(index, "department", e.target.value)
@@ -356,7 +356,7 @@ const Register = () => {
                   />
 
                   <select
-                    className="p-3 bg-black border border-gray-600 rounded"
+                    className="w-full p-3 bg-black border border-gray-600 rounded"
                     value={member.year}
                     onChange={(e) =>
                       handleMemberChange(index, "year", e.target.value)
@@ -369,7 +369,7 @@ const Register = () => {
                     <option>4th</option>
                   </select>
                   <select
-                    className="p-3 bg-black border border-gray-600 rounded"
+                    className="w-full p-3 bg-black border border-gray-600 rounded"
                     value={member.selectedCollege}
                     onChange={(e) =>
                       handleMemberChange(
@@ -387,11 +387,11 @@ const Register = () => {
                     <option value="OTHER">Other College</option>
                   </select>
                   {member.selectedCollege === "OTHER" && (
-                    <div className="grid md:grid-cols-2 gap-4 mt-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
                       <input
                         type="text"
                         placeholder="College Name"
-                        className="p-3 bg-black border border-gray-600 rounded"
+                        className="w-full p-3 bg-black border border-gray-600 rounded"
                         value={member.college}
                         onChange={(e) =>
                           handleMemberChange(index, "college", e.target.value)
@@ -401,7 +401,7 @@ const Register = () => {
                       <input
                         type="text"
                         placeholder="City"
-                        className="p-3 bg-black border border-gray-600 rounded"
+                        className="w-full p-3 bg-black border border-gray-600 rounded"
                         value={member.collegeCity}
                         onChange={(e) =>
                           handleMemberChange(
@@ -414,7 +414,7 @@ const Register = () => {
                       <input
                         type="text"
                         placeholder="Pincode"
-                        className="p-3 bg-black border border-gray-600 rounded"
+                        className="w-full p-3 bg-black border border-gray-600 rounded"
                         value={member.collegePincode}
                         onChange={(e) => {
                           const value = e.target.value;
@@ -428,7 +428,7 @@ const Register = () => {
                       <input
                         type="text"
                         placeholder="District"
-                        className="p-3 bg-black border border-gray-600 rounded"
+                        className="w-full p-3 bg-black border border-gray-600 rounded"
                         value={member.collegeDistrict}
                         onChange={(e) =>
                           handleMemberChange(
@@ -440,7 +440,7 @@ const Register = () => {
                       />
 
                       <select
-                        className="p-3 bg-black border border-gray-600 rounded"
+                        className="w-full p-3 bg-black border border-gray-600 rounded"
                         value={member.collegeState}
                         onChange={(e) =>
                           handleMemberChange(
