@@ -22,13 +22,10 @@ const sendTelegramNotification = async (message) => {
   }
 };
 async function extractAmountFromImage(imageUrl) {
-
   try {
-
-    const { data: { text } } = await Tesseract.recognize(
-      imageUrl,
-      "eng"
-    );
+    const {
+      data: { text },
+    } = await Tesseract.recognize(imageUrl, "eng");
 
     console.log("OCR TEXT:", text);
 
@@ -39,12 +36,9 @@ async function extractAmountFromImage(imageUrl) {
     }
 
     return null;
-
   } catch (error) {
-
     console.error("OCR Error:", error);
     return null;
-
   }
 }
 
@@ -103,7 +97,7 @@ router.post("/register", async (req, res) => {
       teamMembers,
       accommodationRequired,
       hostelMembers,
-      expectedAmount, // This is what the frontend claims is the price
+      expectedAmount: frontendAmount, // This is what the frontend claims is the price
       userTransactionId,
       screenshotUrl,
     } = req.body;
@@ -112,16 +106,16 @@ router.post("/register", async (req, res) => {
     const perPersonFee = eventType === "combo" ? 200 : 100;
     const correctAmount = perPersonFee * teamSize;
     // AI OCR Payment Detection
-const detectedAmount = await extractAmountFromImage(screenshotUrl);
+    const detectedAmount = await extractAmountFromImage(screenshotUrl);
 
-if (detectedAmount && detectedAmount !== correctAmount) {
-  console.log("⚠ Payment mismatch detected");
-}
+    if (detectedAmount && detectedAmount !== correctAmount) {
+      console.log("⚠ Payment mismatch detected");
+    }
 
     // 🚫 Prevent fake payment amounts
-    if (expectedAmount !== correctAmount) {
+    if (frontendAmount !== correctAmount) {
       return res.status(400).json({
-        message: "Invalid payment amount detected."
+        message: "Invalid payment amount detected.",
       });
     }
 
@@ -131,7 +125,9 @@ if (detectedAmount && detectedAmount !== correctAmount) {
     }
 
     if (!screenshotUrl) {
-      return res.status(400).json({ message: "Payment screenshot is required" });
+      return res
+        .status(400)
+        .json({ message: "Payment screenshot is required" });
     }
 
     // 🚫 Prevent duplicate transaction ID
@@ -139,7 +135,9 @@ if (detectedAmount && detectedAmount !== correctAmount) {
       "payment.userTransactionId": userTransactionId,
     });
     if (existingTransaction) {
-      return res.status(400).json({ message: "This UTR ID has already been used." });
+      return res
+        .status(400)
+        .json({ message: "This UTR ID has already been used." });
     }
 
     // 🚫 Prevent duplicate team name
@@ -148,7 +146,9 @@ if (detectedAmount && detectedAmount !== correctAmount) {
       eventName: eventName,
     });
     if (existingTeam) {
-      return res.status(400).json({ message: "Team name already registered for this event." });
+      return res
+        .status(400)
+        .json({ message: "Team name already registered for this event." });
     }
 
     // 🚫 Check for duplicate members (Email, Phone, or RollNo)
@@ -156,12 +156,14 @@ if (detectedAmount && detectedAmount !== correctAmount) {
       $or: [
         { "teamMembers.email": { $in: teamMembers.map((m) => m.email) } },
         { "teamMembers.phone": { $in: teamMembers.map((m) => m.phone) } },
-        { "teamMembers.rollNo": { $in: teamMembers.map((m) => m.rollNo) } }
-      ]
+        { "teamMembers.rollNo": { $in: teamMembers.map((m) => m.rollNo) } },
+      ],
     });
 
     if (duplicateMember) {
-      return res.status(400).json({ message: "One of the team members is already registered." });
+      return res
+        .status(400)
+        .json({ message: "One of the team members is already registered." });
     }
 
     const registration = new Registration({
@@ -192,7 +194,6 @@ if (detectedAmount && detectedAmount !== correctAmount) {
       message: "Registration submitted successfully",
       data: registration,
     });
-
   } catch (error) {
     console.error("CREATE ERROR:", error);
     res.status(500).json({ message: "Error submitting registration" });
@@ -249,7 +250,7 @@ router.put("/confirm/:id", async (req, res) => {
 
 Team: ${registration.teamName}
 Event: ${registration.eventName}
-Registration ID: ${registration.registrationId}
+Registration ID:${registration.registrationId}
 Members: ${registration.teamMembers.length}
 Hostel: ${registration.accommodationRequired ? "Yes" : "No"}
 `;
@@ -422,10 +423,14 @@ router.post("/send-confirmation-email", async (req, res) => {
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; padding: 40px 10px; color: #fff;">
     <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(145deg, #18181b, #09090b); border: 1px solid #22d3ee; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 212, 255, 0.1);">
         
-        <div style="background: linear-gradient(90deg, #0891b2, #0e7490); padding: 30px; text-align: center;">
-            <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px; text-transform: uppercase;">Arduino Days 2026</h1>
-            <p style="margin-top: 5px; opacity: 0.9; font-weight: 300;">Registration Confirmed 🎉</p>
-        </div>
+<div style="background: #0f172a; padding: 30px; text-align: center; border-bottom: 1px solid #22d3ee;">
+    <img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" 
+         alt="Arduino Days Logo" 
+         style="width: 180px; height: auto; display: block; margin: 0 auto;" />
+    <p style="margin-top: 12px; color: #22d3ee; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">
+        Registration Confirmed 🎉
+    </p>
+</div>
 
         <div style="padding: 30px; line-height: 1.6;">
             <p style="font-size: 18px;">Hello <b style="color: #22d3ee;">${registration.teamName}</b>,</p>
@@ -433,7 +438,7 @@ router.post("/send-confirmation-email", async (req, res) => {
             
             <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 20px; border-left: 4px solid #22d3ee; margin: 25px 0;">
                 <p style="margin: 5px 0;"><strong>Event:</strong> Skill Forze Workshop + Buildathon</p>
-                <p style="margin: 5px 0;"><strong>Registration ID:</strong> <span style="color: #facc15;">${registration._id}</span></p>
+                <p style="margin: 5px 0;"><strong>Registration ID:</strong> <span style="color: #facc15;">${registration.registrationId}</span></p>
                 <p style="margin: 5px 0;"><strong>Team Size:</strong> ${registration.teamSize} Members</p>
             </div>
 
@@ -459,21 +464,32 @@ router.post("/send-confirmation-email", async (req, res) => {
         </div>
 
         <div style="background: #111; padding: 20px; text-align: center; border-top: 1px solid #27272a;">
-            <p style="margin: 0; font-size: 14px; color: #71717a;">Regards,</p>
-            <p style="margin: 5px 0; color: #22d3ee; font-weight: bold;">IEEE SPS Student Branch Chapter</p>
-            <p style="margin: 0; font-size: 12px; color: #52525b;">Aditya University, Surampalem</p>
-        </div>
+    <p style="margin: 0; font-size: 14px; color: #71717a;">For any help or queries, contact:</p>
+    <p style="margin: 5px 0; color: #fff; font-size: 15px;">
+        <b>Chitturi Sanjay Kumar</b><br>
+        <a href="tel:+917095009441" style="color: #22d3ee; text-decoration: none;">+91 7095009441</a>
+    </p>
+    
+    <hr style="border: 0; border-top: 1px solid #27272a; width: 50%; margin: 15px auto;">
+    
+    <p style="margin: 5px 0; color: #22d3ee; font-weight: bold;">IEEE SPS Student Branch Chapter</p>
+    <p style="margin: 0; font-size: 12px; color: #52525b;">Aditya University, Surampalem</p>
+</div>
     </div>
-</div>` ;
+</div>`;
     } else {
       htmlTemplate = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; padding: 40px 10px; color: #fff;">
     <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(145deg, #18181b, #09090b); border: 1px solid #a855f7; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(168, 85, 247, 0.1);">
         
-        <div style="background: linear-gradient(90deg, #9333ea, #6b21a8); padding: 30px; text-align: center;">
-            <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px; text-transform: uppercase;">Arduino Days 2026</h1>
-            <p style="margin-top: 5px; opacity: 0.9; font-weight: 300;">Buildathon Hackathon Confirmed 🚀</p>
-        </div>
+        <div style="background: #0f172a; padding: 30px; text-align: center; border-bottom: 1px solid #22d3ee;">
+    <img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" 
+         alt="Arduino Days Logo" 
+         style="width: 180px; height: auto; display: block; margin: 0 auto;" />
+    <p style="margin-top: 12px; color: #22d3ee; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">
+        Registration Confirmed 🎉
+    </p>
+</div>
 
         <div style="padding: 30px; line-height: 1.6;">
             <p style="font-size: 18px;">Hello <b style="color: #a855f7;">${registration.teamName}</b>,</p>
@@ -481,7 +497,7 @@ router.post("/send-confirmation-email", async (req, res) => {
             
             <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 20px; border-left: 4px solid #a855f7; margin: 25px 0;">
                 <p style="margin: 5px 0;"><strong>Event:</strong> Buildathon Hackathon</p>
-                <p style="margin: 5px 0;"><strong>Registration ID:</strong> <span style="color: #facc15;">${registration._id}</span></p>
+                <p style="margin: 5px 0;"><strong>Registration ID:</strong> <span style="color: #facc15;">${registration.registrationId}</span></p>
                 <p style="margin: 5px 0;"><strong>Team Size:</strong> ${registration.teamSize} Members</p>
             </div>
 
@@ -507,10 +523,11 @@ router.post("/send-confirmation-email", async (req, res) => {
         </div>
 
         <div style="background: #111; padding: 20px; text-align: center; border-top: 1px solid #27272a;">
-            <p style="margin: 0; font-size: 14px; color: #71717a;">Regards,</p>
-            <p style="margin: 5px 0; color: #a855f7; font-weight: bold;">IEEE SPS Student Branch Chapter</p>
-            <p style="margin: 0; font-size: 12px; color: #52525b;">Aditya University, Surampalem</p>
-        </div>
+    <p style="margin: 0; font-size: 14px; color: #71717a;">For any help or queries, contact:</p>
+    <p style="margin: 5px 0; color: #fff; font-size: 15px;">
+        <b>Chitturi Sanjay Kumar</b><br>
+        <a href="tel:+917095009441" style="color: #22d3ee; text-decoration: none;">+91 7095009441</a>
+    </p>
     </div>
 </div>`;
     }
@@ -520,7 +537,7 @@ router.post("/send-confirmation-email", async (req, res) => {
       await sendMail(
         member.email,
         "Arduino Days 2026 Registration Confirmed",
-        htmlTemplate
+        htmlTemplate,
       );
     }
 

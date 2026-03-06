@@ -304,7 +304,7 @@ const Register = () => {
                 <div className="grid md:grid-cols-2 gap-4">
                   <input
                     type="text"
-                    placeholder="Full Name"
+                    placeholder="Full Name with initial"
                     className="p-3 bg-black border border-gray-600 rounded"
                     value={member.fullName}
                     onChange={(e) =>
@@ -334,7 +334,7 @@ const Register = () => {
 
                   <input
                     type="tel"
-                    placeholder="Phone (10 digits)"
+                    placeholder="WhatsApp Number (10 digits)"
                     maxLength={10}
                     inputMode="numeric"
                     pattern="[0-9]{10}"
@@ -639,7 +639,7 @@ const Register = () => {
                 </p>
                 {accommodationRequired && accommodationMembers.length > 0 && (
                   <div className="mt-4 p-4 border border-yellow-400/40 rounded-lg bg-yellow-900/10 text-yellow-300 text-sm">
-                    For hostel accommodation, our team will personally contact
+                    For hostel accommodation Fees, our team will personally contact
                     the selected members after registration.
                   </div>
                 )}
