@@ -3,7 +3,6 @@ console.log("MONGO_URI from ENV:", process.env.MONGO_URI);
 
 const express = require("express");
 const mongoose = require("mongoose");
-const nodemailer = require("nodemailer");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
