@@ -1,38 +1,38 @@
-const nodemailer = require("nodemailer");
+const SibApiV3Sdk = require("sib-api-v3-sdk");
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: Number(process.env.EMAIL_PORT),   // convert env string to number
-  secure: false,                          // use TLS
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
+const client = SibApiV3Sdk.ApiClient.instance;
 
-  // These help on cloud servers like Render
-  connectionTimeout: 20000,
-  greetingTimeout: 20000,
-  socketTimeout: 20000,
-  tls: {
-    rejectUnauthorized: false
-  }
-});
+const apiKey = client.authentications["api-key"];
+apiKey.apiKey = process.env.BREVO_API_KEY;
+
+const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
 const sendMail = async (to, subject, html) => {
+
   try {
-    await transporter.sendMail({
-      from: `"Arduino Days 2026" <ieee.club.aus@gmail.com>`,
-      to,
-      subject,
-      html
-    });
+
+    const email = {
+      sender: {
+        name: "Arduino Days 2026",
+        email: "ieee.club.aus@gmail.com"
+      },
+      to: [
+        { email: to }
+      ],
+      subject: subject,
+      htmlContent: html
+    };
+
+    await apiInstance.sendTransacEmail(email);
 
     console.log("✅ Email sent:", to);
 
   } catch (error) {
+
     console.error("❌ Mail error:", error);
-    throw error;
+
   }
+
 };
 
 module.exports = sendMail;
