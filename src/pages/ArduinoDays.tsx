@@ -84,6 +84,13 @@ const ArduinoDays = () => {
       phone: "8309873938",
     },
     {
+      name: "Ch. Harini",
+      designation: "Web Master",
+      department: "ECE",
+      roll: "24B11EC055",
+      phone: "6302041984",
+    },
+    {
       name: "Ch. Naveen Sai",
       designation: "IEEE Member",
       department: "ECE",
@@ -98,6 +105,16 @@ const ArduinoDays = () => {
       designation: "Assistant Professor",
       department: "ECE",
       phone: "9440722720",
+    },
+  ];
+
+  const sponsors = [
+    {
+      name: "Arkance",
+      logo: "/arkance.jpg",
+      description:
+        "Arkance is a global technology partner providing digital transformation solutions for the architecture, engineering, and construction industries.",
+      website: "https://www.arkance.world",
     },
   ];
 
@@ -360,7 +377,7 @@ md:translate-x-0`}
                   className="min-h-screen w-full flex flex-col items-center justify-center px-6 py-20 space-y-8"
                 >
                   <h2 className="text-xl md:text-3xl font-semibold text-cyan-400 tracking-wide text-center">
-                    Or organise a Community event around the world
+                    Organise a Community event around the world
                   </h2>
 
                   <div
@@ -545,13 +562,15 @@ md:translate-x-0`}
                     </li>
                     <div className="mt-6 flex justify-center">
                       <button
-  onClick={() => window.location.href="/register?event=combo"}
-  className="px-6 py-3 rounded-lg bg-cyan-400 text-black font-semibold
+                        onClick={() =>
+                          (window.location.href = "/register?event=combo")
+                        }
+                        className="px-6 py-3 rounded-lg bg-cyan-400 text-black font-semibold
              hover:scale-105 transition shadow-lg shadow-cyan-400/30
              animate-pulse"
->
-  Register for Skill Forze + Buildathon
-</button>
+                      >
+                        Register for Skill Forze + Buildathon
+                      </button>
                     </div>
                   </ul>
                 </div>
@@ -579,13 +598,15 @@ md:translate-x-0`}
                     <li>Winners will receive prizes and merit certificates.</li>
                     <div className="mt-6 flex justify-center">
                       <button
-  onClick={() => window.location.href="/register?event=buildathon"}
-  className="px-6 py-3 rounded-lg bg-yellow-400 text-black font-semibold
+                        onClick={() =>
+                          (window.location.href = "/register?event=buildathon")
+                        }
+                        className="px-6 py-3 rounded-lg bg-yellow-400 text-black font-semibold
              hover:scale-105 transition shadow-lg shadow-yellow-400/30
              animate-pulse"
->
-  Register for Buildathon
-</button>
+                      >
+                        Register for Buildathon
+                      </button>
                     </div>
                   </ul>
                 </div>
@@ -636,7 +657,7 @@ md:translate-x-0`}
                 {/* ================= FACULTY COORDINATORS ================= */}
                 <div className="space-y-12">
                   <h2 className="text-2xl md:text-3xl font-semibold text-cyan-400 text-center">
-                    Faculty Coordinator
+                    Faculty Advisor
                   </h2>
 
                   <div className="flex justify-center">
@@ -664,6 +685,65 @@ md:translate-x-0`}
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* SPONSORS */}
+            {active === "sponsors" && (
+              <div className="w-full max-w-6xl px-6 md:px-10 py-16 mx-auto">
+                <h1
+                  className="text-4xl md:text-5xl font-bold text-center mb-16
+    bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 
+    bg-clip-text text-transparent"
+                >
+                  Sponsors
+                </h1>
+
+                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-10">
+                  {sponsors.map((sponsor, index) => (
+                    <div
+                      key={index}
+                      className="
+          bg-white/5 backdrop-blur-xl
+          border border-green-400/20
+          rounded-2xl p-8
+          text-center
+          hover:scale-105
+          transition duration-300
+          "
+                    >
+                      {/* Logo */}
+                      <div className="flex justify-center mb-6">
+                        <img
+                          src={sponsor.logo}
+                          alt={sponsor.name}
+                          className="h-20 object-contain"
+                        />
+                      </div>
+
+                      {/* Name */}
+                      <h3 className="text-xl font-semibold text-green-400 mb-3">
+                        {sponsor.name}
+                      </h3>
+
+                      {/* Description */}
+                      <p className="text-gray-300 text-sm mb-5">
+                        {sponsor.description}
+                      </p>
+
+                      {/* Website */}
+                      <a
+                        href={sponsor.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block bg-cyan-400 text-black px-5 py-2 rounded-full
+            font-semibold hover:scale-105 transition"
+                      >
+                        Visit Website
+                      </a>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

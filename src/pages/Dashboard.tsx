@@ -4,7 +4,6 @@ import { Calendar, Mail, Upload, LogOut, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import emailjs from "@emailjs/browser";
 import {
   PieChart,
   Pie,
@@ -160,14 +159,11 @@ const Dashboard = () => {
   const [selectedFullDetails, setSelectedFullDetails] = useState<any>(null);
   /* ================= REGISTRATIONS ================= */
   const [registrations, setRegistrations] = useState<any[]>([]);
-  // ================= ANALYTICS =================
-
+  // 2. Verified Analytics Logic
   const totalCount = registrations.length;
-
   const pendingCount = registrations.filter(
     (r) => r.registrationStatus === "Pending",
   ).length;
-
   const confirmedCount = registrations.filter(
     (r) => r.registrationStatus === "Confirmed",
   ).length;
@@ -180,15 +176,19 @@ const Dashboard = () => {
   const hostelCount = registrations.filter(
     (r) => r.accommodationRequired === true,
   ).length;
+
   const confirmedComboTeams = registrations.filter(
     (r) => r.registrationStatus === "Confirmed" && r.eventType === "combo",
   ).length;
+
   const confirmedBuildathonTeams = registrations.filter(
     (r) => r.registrationStatus === "Confirmed" && r.eventType === "buildathon",
   ).length;
+
   const hostelStudents = registrations
     .filter((r) => r.registrationStatus === "Confirmed")
     .reduce((count, r) => count + (r.hostelMembers?.length || 0), 0);
+
   const statusData = [
     { name: "Pending", value: pendingCount },
     { name: "Confirmed", value: confirmedCount },
@@ -198,19 +198,22 @@ const Dashboard = () => {
     { name: "Combo", value: comboCount },
     { name: "Buildathon", value: buildathonCount },
   ];
+
+  // 3. Safe College Analytics Logic
   const collegeCounts = {};
   registrations.forEach((reg) => {
-    // Added ?. to prevent crash if teamMembers is null
     reg.teamMembers?.forEach((member) => {
       const college = member.college || "Unknown";
       collegeCounts[college] = (collegeCounts[college] || 0) + 1;
     });
   });
 
-  const collegeAnalytics = Object.entries(collegeCounts).map(([name, value]) => ({
-    name,
-    value
-  }));
+  const collegeAnalytics = Object.entries(collegeCounts).map(
+    ([name, value]) => ({
+      name,
+      value,
+    }),
+  );
   const [registrationView, setRegistrationView] = useState("pending");
   const [registrationFilter, setRegistrationFilter] = useState("all");
 
@@ -272,6 +275,7 @@ const Dashboard = () => {
     if (!confirm("Confirm this registration?")) return;
 
     try {
+      // confirm registration first
       const res = await axios.put(
         `https://ieee-sps-website.onrender.com/api/confirm/${id}`,
         {},
@@ -280,41 +284,20 @@ const Dashboard = () => {
 
       const registration = res.data.data;
 
-      // ✅ send email
-      sendConfirmationEmail(registration);
+      // send email (safe)
+      try {
+        await axios.post(
+          "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+          { registration },
+        );
+      } catch (emailError) {
+        console.error("Email sending failed:", emailError);
+      }
 
       fetchRegistrations();
     } catch (error) {
       console.error("Confirmation error:", error);
     }
-  };
-  const sendConfirmationEmail = (registration) => {
-    const participants = registration.teamMembers
-      .map((m) => m.fullName)
-      .join("\n");
-
-    registration.teamMembers.forEach((member) => {
-      emailjs
-        .send(
-          "service_hni6o4c",
-          "template_ed130jt",
-          {
-            name: member.fullName,
-            event_name: registration.eventName,
-            team_name: registration.teamName,
-            registration_id: registration.registrationId,
-            participants: participants,
-            email: member.email,
-          },
-          "c3_zwkFgeHxKi5oSx",
-        )
-        .then(() => {
-          console.log("Email sent to:", member.email);
-        })
-        .catch((error) => {
-          console.error("Email error:", error);
-        });
-    });
   };
 
   const deleteRegistration = async (id: string) => {

@@ -471,7 +471,7 @@ const Register = () => {
             {/* Accommodation */}
             <div className="mb-8">
               <label className="block mb-2">
-                Hostel Accommodation Required? (₹150 per day)
+                Hostel Accommodation Required? (₹150 per person per day)
               </label>
 
               <select
