@@ -40,6 +40,9 @@ const registrationSchema = new mongoose.Schema(
     },
 
     teamMembers: [memberSchema],
+    expectedAmount: {
+      type: Number,
+    },
 
     accommodationRequired: {
       type: Boolean,

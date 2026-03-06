@@ -158,6 +158,20 @@ const Register = () => {
 
   const handleNext = async () => {
     if (!validateForm()) return;
+
+    try {
+      const res = await axios.get(
+        `https://ieee-sps-website.onrender.com/api/check-team?teamName=${teamName}&event=${event}`,
+      );
+
+      if (res.data.exists) {
+        alert("This team name is already registered for this event.");
+        return;
+      }
+    } catch (error) {
+      alert("Error checking team name. Please try again.");
+      return;
+    }
     const selectedHostelMembers = accommodationMembers.map(
       (index) => members[index],
     );
@@ -214,7 +228,9 @@ const Register = () => {
                 className="w-full p-3 bg-black border border-gray-600 rounded"
                 value={teamName}
                 onChange={(e) =>
-                  setTeamName(e.target.value.replace(/\s+/g, " ").toUpperCase())
+                  setTeamName(
+                    e.target.value.replace(/ {2,}/g, " ").toUpperCase(),
+                  )
                 }
               />
             </div>
@@ -275,8 +291,11 @@ const Register = () => {
                   />
 
                   <input
-                    type="text"
-                    placeholder="Phone"
+                    type="tel"
+                    placeholder="Phone (10 digits)"
+                    maxLength={10}
+                    inputMode="numeric"
+                    pattern="[0-9]{10}"
                     className="p-3 bg-black border border-gray-600 rounded"
                     value={member.phone}
                     onChange={(e) =>
@@ -657,13 +676,12 @@ const Register = () => {
                 </ol>
               </div>
               <div className="mb-4 text-yellow-400 text-sm text-center">
-                ⚠️ After payment, upload screenshot and enter correct
-                Transaction ID.
+                ⚠️ After payment, upload screenshot and enter correct UTR ID.
               </div>
 
               <input
                 type="text"
-                placeholder="Enter 12-16 digit Transaction ID"
+                placeholder="Enter 12-16 digit UTR ID"
                 value={transactionId}
                 maxLength={16}
                 pattern="\d{12,16}"
@@ -696,9 +714,9 @@ const Register = () => {
                     : "bg-green-400 text-black hover:scale-105"
                 }`}
                 onClick={async () => {
-                  // Validate Transaction ID
+                  // Validate UTR ID
                   if (!/^\d{12,16}$/.test(transactionId)) {
-                    alert("Transaction ID must be exactly 12 to 16 digits.");
+                    alert("UTR ID must be exactly 12 to 16 digits.");
                     return;
                   }
 

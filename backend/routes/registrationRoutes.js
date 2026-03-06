@@ -38,6 +38,32 @@ router.get("/registrations", async (req, res) => {
 });
 
 /* =====================================
+   CHECK TEAM NAME BEFORE PAYMENT
+===================================== */
+router.get("/check-team", async (req, res) => {
+  try {
+    const { teamName, event } = req.query;
+
+    const eventName =
+      event === "combo" ? "Skill Forze + Buildathon" : "Buildathon";
+
+    const existingTeam = await Registration.findOne({
+      teamName: teamName.toUpperCase(),
+      eventName: eventName,
+    });
+
+    if (existingTeam) {
+      return res.json({ exists: true });
+    }
+
+    res.json({ exists: false });
+  } catch (error) {
+    console.error("TEAM CHECK ERROR:", error);
+    res.status(500).json({ message: "Error checking team name" });
+  }
+});
+
+/* =====================================
    2️⃣ CREATE REGISTRATION
 ===================================== */
 router.post("/register", async (req, res) => {
@@ -54,9 +80,15 @@ router.post("/register", async (req, res) => {
       screenshotUrl,
     } = req.body;
     // 🚫 Prevent empty payment submission
-    if (!userTransactionId || !screenshotUrl) {
+    if (!userTransactionId || userTransactionId.length < 12) {
       return res.status(400).json({
-        message: "Transaction ID and screenshot are required",
+        message: "Valid UTR ID is required",
+      });
+    }
+
+    if (!screenshotUrl) {
+      return res.status(400).json({
+        message: "Payment screenshot is required",
       });
     }
 
@@ -67,7 +99,7 @@ router.post("/register", async (req, res) => {
 
     if (existingTransaction) {
       return res.status(400).json({
-        message: "This transaction ID has already been used.",
+        message: "This UTR ID has already been used.",
       });
     }
 
@@ -82,6 +114,17 @@ router.post("/register", async (req, res) => {
         message: "This team name has already registered for this event.",
       });
     }
+    const emailExists = await Registration.findOne({
+      "teamMembers.email": { $in: teamMembers.map((m) => m.email) },
+    });
+
+    if (emailExists) {
+      return res.status(400).json({
+        message: "One of the team members already registered in another team.",
+      });
+    }
+
+    const expectedAmount = eventType === "combo" ? 400 : 200;
 
     const registration = new Registration({
       eventType,
@@ -89,6 +132,7 @@ router.post("/register", async (req, res) => {
       teamName: teamName.toUpperCase(),
       teamSize,
       teamMembers,
+      expectedAmount,
       accommodationRequired,
       hostelMembers,
       payment: {
@@ -197,7 +241,6 @@ Hostel: ${registration.accommodationRequired ? "Yes" : "No"}
 `;
 
     await sendTelegramNotification(message);
-
 
     // Fetch event details from Events collection
     let eventDate = "To be announced";
