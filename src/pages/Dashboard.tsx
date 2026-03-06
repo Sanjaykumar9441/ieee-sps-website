@@ -295,7 +295,7 @@ const Dashboard = () => {
         participants: participants,
         email: member.email
       },
-      "lpvHy5SSBdeUC_ryt"
+      "c3_zwkFgeHxKi5oSx"
     )
     .then(() => {
       console.log("Email sent to:", member.email);

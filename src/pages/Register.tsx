@@ -40,7 +40,7 @@ const Register = () => {
   const [agreedRules, setAgreedRules] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [rulesError, setRulesError] = useState(false);
-
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([
     createEmptyMember(),
     createEmptyMember(),
@@ -183,6 +183,16 @@ const Register = () => {
   const [transactionId, setTransactionId] = useState("");
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+
+    setCopiedField(field);
+
+    setTimeout(() => {
+      setCopiedField(null);
+    }, 1500);
+  };
 
   return (
     <div className="min-h-screen bg-[#050a12] text-white px-6 py-12">
@@ -505,18 +515,150 @@ const Register = () => {
               </div>
 
               <p className="mb-4 text-center">
-                Pay the above amount using any of the methods below:
+                Transfer the above amount using Bank Transfer (PhonePe / GPay /
+                NetBanking).
               </p>
+              <div className="text-center text-sm text-gray-400 mb-4">
+                Secure payment via bank transfer. Your registration will be
+                confirmed after verification.
+              </div>
 
-              <img
-                src="/qr.png"
-                alt="UPI QR"
-                className="w-64 mx-auto mb-6 rounded-lg"
-              />
+              {/* Payment Card */}
+              <div className="mb-8 p-6 rounded-xl border border-cyan-400/30 bg-gradient-to-br from-[#0a1623] to-[#02060c] shadow-lg">
+                <h3 className="text-xl font-semibold text-cyan-400 mb-6 text-center">
+                  🏦 Bank Transfer Details
+                </h3>
 
-              <div className="text-center mb-6">
-                <p className="font-semibold">UPI ID 1: 7095009441@ybl</p>
-                <p className="font-semibold">UPI ID 2: yourupi@okhdfc</p>
+                <div className="space-y-4">
+                  {/* Account Name */}
+                  <div className="flex justify-between items-center bg-black/40 p-3 rounded">
+                    <span>Account Name</span>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-cyan-300">
+                        ADITYA UNIVERSITY / ADITYA ACADEMY
+                      </span>
+
+                      <button
+                        onClick={() =>
+                          copyToClipboard(
+                            "ADITYA UNIVERSITY / ADITYA ACADEMY",
+                            "accountName",
+                          )
+                        }
+                        className="text-xs px-3 py-1 bg-cyan-400 text-black rounded hover:scale-105"
+                      >
+                        {copiedField === "accountName" ? "✓ copied" : "Copy"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Account Number */}
+                  <div className="flex justify-between items-center bg-black/40 p-3 rounded">
+                    <span>Account Number</span>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-green-400 font-semibold">
+                        120028094544
+                      </span>
+
+                      <button
+                        onClick={() =>
+                          copyToClipboard("120028094544", "accountNumber")
+                        }
+                        className="text-xs px-3 py-1 bg-cyan-400 text-black rounded"
+                      >
+                        {copiedField === "accountNumber" ? "Copied ✓" : "Copy"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* IFSC */}
+                  <div className="flex justify-between items-center bg-black/40 p-3 rounded">
+                    <span>IFSC Code</span>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-yellow-400 font-semibold">
+                        CNRB0013268
+                      </span>
+
+                      <button
+                        onClick={() => copyToClipboard("CNRB0013268", "ifsc")}
+                        className="text-xs px-3 py-1 bg-cyan-400 text-black rounded"
+                      >
+                        {copiedField === "ifsc" ? "Copied ✓" : "Copy"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Bank */}
+                  <div className="flex justify-between items-center bg-black/40 p-3 rounded">
+                    <span>Bank Name</span>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-cyan-300">CANARA BANK</span>
+
+                      <button
+                        onClick={() => copyToClipboard("CANARA BANK", "bank")}
+                        className="text-xs px-3 py-1 bg-cyan-400 text-black rounded"
+                      >
+                        {copiedField === "bank" ? "Copied ✓" : "Copy"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Branch */}
+                  <div className="flex justify-between items-center bg-black/40 p-3 rounded">
+                    <span>Branch</span>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-cyan-300">Surampalem</span>
+
+                      <button
+                        onClick={() => copyToClipboard("Surampalem", "branch")}
+                        className="text-xs px-3 py-1 bg-cyan-400 text-black rounded"
+                      >
+                        {copiedField === "branch" ? "Copied ✓" : "Copy"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* PhonePe Guide */}
+              <div className="mb-6 p-6 rounded-xl border border-green-400/30 bg-[#071018]">
+                <h3 className="text-lg font-semibold text-green-400 mb-4 text-center">
+                  📱 How to Pay Using PhonePe
+                </h3>
+
+                <ol className="list-decimal list-inside text-gray-300 space-y-2 text-sm">
+                  <li>
+                    Open the <b>PhonePe App</b>
+                  </li>
+
+                  <li>
+                    Select <b>To Bank Account</b>
+                  </li>
+
+                  <li>Paste Account Number & IFSC</li>
+
+                  <li>
+                    Enter Amount: <b>₹{totalAmount}</b>
+                  </li>
+
+                  <li>
+                    Add Note: <b>ArduinoDays + TeamName</b>
+                  </li>
+
+                  <li>Complete the payment</li>
+
+                  <li>
+                    Copy the <b>Transaction ID</b>
+                  </li>
+                </ol>
+              </div>
+              <div className="mb-4 text-yellow-400 text-sm text-center">
+                ⚠️ After payment, upload screenshot and enter correct
+                Transaction ID.
               </div>
 
               <input
@@ -524,7 +666,7 @@ const Register = () => {
                 placeholder="Enter 12-16 digit Transaction ID"
                 value={transactionId}
                 maxLength={16}
-                pattern="\d{12}"
+                pattern="\d{12,16}"
                 onChange={(e) => {
                   const value = e.target.value;
 
@@ -537,7 +679,7 @@ const Register = () => {
 
               <input
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/jpg"
                 className="w-full mb-6"
                 onChange={(e) => {
                   if (e.target.files) {
@@ -640,7 +782,7 @@ const Register = () => {
 
             <p>
               We will verify your payment and send confirmation details to your
-              Email and WhatsApp shortly.
+              Email shortly.
             </p>
           </div>
         )}
