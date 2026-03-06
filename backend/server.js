@@ -114,13 +114,28 @@ async function ensureAdmin() {
     console.error("❌ Error creating admin:", err.message);
   }
 }
+const sendMail = require("./utils/mailer");
 
+app.get("/test-mail", async (req, res) => {
 
+  try {
 
+    await sendMail(
+      "sanjaykumarchitturi@gmail.com",
+      "Arduino Days Test Email",
+      "<h2>Nodemailer is working correctly 🚀</h2>"
+    );
 
+    res.send("Test email sent successfully");
 
+  } catch (error) {
 
+    console.error(error);
+    res.send("Email failed");
 
+  }
+
+});
 /* ===============================
    🚀 Start Server
 ================================= */

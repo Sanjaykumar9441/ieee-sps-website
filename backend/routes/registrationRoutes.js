@@ -4,7 +4,7 @@ const Registration = require("../models/registration");
 const Event = require("../models/event"); // adjust path if needed
 const PDFDocument = require("pdfkit");
 const axios = require("axios");
-
+const sendMail = require("../utils/mailer");
 const sendTelegramNotification = async (message) => {
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -76,55 +76,60 @@ router.post("/register", async (req, res) => {
       teamMembers,
       accommodationRequired,
       hostelMembers,
+      expectedAmount, // This is what the frontend claims is the price
       userTransactionId,
       screenshotUrl,
     } = req.body;
+
+    // 🔐 Secure amount calculation (backend authority)
+    const perPersonFee = eventType === "combo" ? 200 : 100;
+    const correctAmount = perPersonFee * teamSize;
+
+    // 🚫 Prevent fake payment amounts
+    if (expectedAmount !== correctAmount) {
+      return res.status(400).json({
+        message: "Invalid payment amount detected."
+      });
+    }
+
     // 🚫 Prevent empty payment submission
     if (!userTransactionId || userTransactionId.length < 12) {
-      return res.status(400).json({
-        message: "Valid UTR ID is required",
-      });
+      return res.status(400).json({ message: "Valid UTR ID is required" });
     }
 
     if (!screenshotUrl) {
-      return res.status(400).json({
-        message: "Payment screenshot is required",
-      });
+      return res.status(400).json({ message: "Payment screenshot is required" });
     }
 
-    /* 🚫 Prevent duplicate transaction ID */
+    // 🚫 Prevent duplicate transaction ID
     const existingTransaction = await Registration.findOne({
       "payment.userTransactionId": userTransactionId,
     });
-
     if (existingTransaction) {
-      return res.status(400).json({
-        message: "This UTR ID has already been used.",
-      });
+      return res.status(400).json({ message: "This UTR ID has already been used." });
     }
 
-    /* 🚫 Prevent duplicate team name */
+    // 🚫 Prevent duplicate team name
     const existingTeam = await Registration.findOne({
       teamName: teamName.toUpperCase(),
       eventName: eventName,
     });
-
     if (existingTeam) {
-      return res.status(400).json({
-        message: "This team name has already registered for this event.",
-      });
+      return res.status(400).json({ message: "Team name already registered for this event." });
     }
-    const emailExists = await Registration.findOne({
-      "teamMembers.email": { $in: teamMembers.map((m) => m.email) },
+
+    // 🚫 Check for duplicate members (Email, Phone, or RollNo)
+    const duplicateMember = await Registration.findOne({
+      $or: [
+        { "teamMembers.email": { $in: teamMembers.map((m) => m.email) } },
+        { "teamMembers.phone": { $in: teamMembers.map((m) => m.phone) } },
+        { "teamMembers.rollNo": { $in: teamMembers.map((m) => m.rollNo) } }
+      ]
     });
 
-    if (emailExists) {
-      return res.status(400).json({
-        message: "One of the team members already registered in another team.",
-      });
+    if (duplicateMember) {
+      return res.status(400).json({ message: "One of the team members is already registered." });
     }
-
-    const expectedAmount = eventType === "combo" ? 400 : 200;
 
     const registration = new Registration({
       eventType,
@@ -132,7 +137,7 @@ router.post("/register", async (req, res) => {
       teamName: teamName.toUpperCase(),
       teamSize,
       teamMembers,
-      expectedAmount,
+      expectedAmount: correctAmount, // Save the verified amount
       accommodationRequired,
       hostelMembers,
       payment: {
@@ -145,40 +150,16 @@ router.post("/register", async (req, res) => {
 
     await registration.save();
 
-    // Main registration message
-    const message = `
-🚀 New Registration Submitted
-
-Team: ${teamName}
-Event: ${eventName}
-Members: ${teamMembers.length}
-Hostel: ${accommodationRequired ? "Yes" : "No"}
-Transaction ID: ${userTransactionId}
-`;
-
+    // Telegram Notifications
+    const message = `🚀 New Registration: ${teamName}\nEvent: ${eventName}\nUTR: ${userTransactionId}`;
     await sendTelegramNotification(message);
-    // Team member details
-    let memberDetails = "👥 Team Members:\n\n";
-
-    teamMembers.forEach((member, index) => {
-      memberDetails += `${index + 1}. ${member.fullName}\n`;
-    });
-
-    await sendTelegramNotification(memberDetails);
-    // Email list
-    let emailList = "📧 Member Emails:\n\n";
-
-    teamMembers.forEach((member, index) => {
-      emailList += `${index + 1}. ${member.email}\n`;
-    });
-
-    await sendTelegramNotification(emailList);
     await sendTelegramNotification(`🖼 Payment Screenshot:\n${screenshotUrl}`);
 
     res.status(201).json({
       message: "Registration submitted successfully",
       data: registration,
     });
+
   } catch (error) {
     console.error("CREATE ERROR:", error);
     res.status(500).json({ message: "Error submitting registration" });
@@ -378,4 +359,26 @@ Verified: ${registration.payment.verified ? "Yes" : "No"}
     res.status(500).json({ message: "Error updating payment" });
   }
 });
+const participants = registration.teamMembers
+  .map((m) => m.fullName)
+  .join("<br>");
+
+for (const member of registration.teamMembers) {
+
+  const html = `
+  <h2>Arduino Days 2026 Registration Confirmed</h2>
+
+  <p><b>Team Name:</b> ${registration.teamName}</p>
+  <p><b>Event:</b> ${registration.eventName}</p>
+  <p><b>Registration ID:</b> ${registration.registrationId}</p>
+
+  <h3>Participants</h3>
+  ${participants}
+
+  <p>See you at the event!</p>
+  `;
+
+  sendMail(member.email,"Arduino Days Registration Confirmed",html);
+
+}
 module.exports = router;

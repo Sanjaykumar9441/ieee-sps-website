@@ -9,6 +9,10 @@ const memberSchema = new mongoose.Schema({
   department: String,
   year: String,
   college: String,
+  collegeCity: String,
+  collegePincode: String,
+  collegeDistrict: String,
+  collegeState: String,
 });
 const registrationSchema = new mongoose.Schema(
   {

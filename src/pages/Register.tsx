@@ -11,6 +11,10 @@ type Member = {
   department: string;
   year: string;
   college: string; // Final college value
+  collegeCity: string;
+  collegePincode: string;
+  collegeDistrict: string;
+  collegeState: string;
   selectedCollege: string; // AUS / ACET / OTHER
 };
 
@@ -22,6 +26,10 @@ const createEmptyMember = (): Member => ({
   department: "",
   year: "",
   college: "",
+  collegeCity: "",
+  collegePincode: "",
+  collegeDistrict: "",
+  collegeState: "",
   selectedCollege: "",
 });
 
@@ -139,18 +147,52 @@ const Register = () => {
         !member.phone.trim() ||
         !member.department.trim() ||
         !member.year.trim() ||
-        !member.selectedCollege.trim() ||
-        !member.college.trim()
+        !member.selectedCollege.trim()
       ) {
         alert("Please fill all required fields.");
         return false;
       }
 
-      // 🔥 10 Digit Phone Check
+      // 🔴 If OTHER college selected → require extra fields
+      if (member.selectedCollege === "OTHER") {
+        if (
+          !member.college.trim() ||
+          !member.collegeCity.trim() ||
+          !member.collegePincode.trim() ||
+          !member.collegeDistrict.trim() ||
+          !member.collegeState.trim()
+        ) {
+          alert(
+            "Please enter College Name, City, Pincode, District and State for OTHER colleges.",
+          );
+          return false;
+        }
+      }
+
+      // Phone validation
       if (!/^\d{10}$/.test(member.phone)) {
         alert("Phone number must be exactly 10 digits.");
         return false;
       }
+    }
+    // 🚫 Prevent duplicate members inside same team
+    const phones = members.map((m) => m.phone);
+    const emails = members.map((m) => m.email);
+    const rollNumbers = members.map((m) => m.rollNo);
+
+    if (new Set(phones).size !== phones.length) {
+      alert("Duplicate phone numbers are not allowed in the same team.");
+      return false;
+    }
+
+    if (new Set(emails).size !== emails.length) {
+      alert("Duplicate emails are not allowed in the same team.");
+      return false;
+    }
+
+    if (new Set(rollNumbers).size !== rollNumbers.length) {
+      alert("Duplicate roll numbers are not allowed in the same team.");
+      return false;
     }
 
     return true;
@@ -190,8 +232,8 @@ const Register = () => {
     setShowSummary(true);
   };
 
-  const baseFee = event === "combo" ? 400 : 200;
-
+  const perPersonFee = event === "combo" ? 200 : 100;
+  const baseFee = perPersonFee * teamSize;
   const totalAmount = baseFee;
 
   const [transactionId, setTransactionId] = useState("");
@@ -338,20 +380,89 @@ const Register = () => {
                     }
                   >
                     <option value="">Select College</option>
-                    <option value="AUS">AUS</option>
-                    <option value="ACET">ACET</option>
-                    <option value="OTHER">OTHER</option>
+                    <option value="AUS">Aditya University (AUS)</option>
+                    <option value="ACET">
+                      Aditya College of Engineering & Technology (ACET)
+                    </option>
+                    <option value="OTHER">Other College</option>
                   </select>
                   {member.selectedCollege === "OTHER" && (
-                    <input
-                      type="text"
-                      placeholder="Enter College Name"
-                      className="p-3 bg-black border border-gray-600 rounded mt-3"
-                      value={member.college}
-                      onChange={(e) =>
-                        handleMemberChange(index, "college", e.target.value)
-                      }
-                    />
+                    <div className="grid md:grid-cols-2 gap-4 mt-3">
+                      <input
+                        type="text"
+                        placeholder="College Name"
+                        className="p-3 bg-black border border-gray-600 rounded"
+                        value={member.college}
+                        onChange={(e) =>
+                          handleMemberChange(index, "college", e.target.value)
+                        }
+                      />
+
+                      <input
+                        type="text"
+                        placeholder="City"
+                        className="p-3 bg-black border border-gray-600 rounded"
+                        value={member.collegeCity}
+                        onChange={(e) =>
+                          handleMemberChange(
+                            index,
+                            "collegeCity",
+                            e.target.value,
+                          )
+                        }
+                      />
+                      <input
+                        type="text"
+                        placeholder="Pincode"
+                        className="p-3 bg-black border border-gray-600 rounded"
+                        value={member.collegePincode}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^\d{0,6}$/.test(value)) {
+                            handleMemberChange(index, "collegePincode", value);
+                          }
+                        }}
+                        inputMode="numeric"
+                      />
+
+                      <input
+                        type="text"
+                        placeholder="District"
+                        className="p-3 bg-black border border-gray-600 rounded"
+                        value={member.collegeDistrict}
+                        onChange={(e) =>
+                          handleMemberChange(
+                            index,
+                            "collegeDistrict",
+                            e.target.value,
+                          )
+                        }
+                      />
+
+                      <select
+                        className="p-3 bg-black border border-gray-600 rounded"
+                        value={member.collegeState}
+                        onChange={(e) =>
+                          handleMemberChange(
+                            index,
+                            "collegeState",
+                            e.target.value,
+                          )
+                        }
+                      >
+                        <option value="">Select State</option>
+                        <option>Andhra Pradesh</option>
+                        <option>Telangana</option>
+                        <option>Tamil Nadu</option>
+                        <option>Karnataka</option>
+                        <option>Kerala</option>
+                        <option>Maharashtra</option>
+                        <option>Odisha</option>
+                        <option>West Bengal</option>
+                        <option>Delhi</option>
+                        <option>Gujarat</option>
+                      </select>
+                    </div>
                   )}
                 </div>
               </div>
@@ -518,7 +629,8 @@ const Register = () => {
                   Fee Breakdown
                 </h3>
 
-                <p>Event Fee: ₹{baseFee}</p>
+                <p>Event Fee: ₹{perPersonFee} per person</p>
+                <p>Team Size: {teamSize}</p>
 
                 <hr className="my-3 border-gray-600" />
 
@@ -671,7 +783,7 @@ const Register = () => {
                   <li>Complete the payment</li>
 
                   <li>
-                    Copy the <b>Transaction ID</b>
+                    Copy the <b>UTR ID</b>
                   </li>
                 </ol>
               </div>
@@ -765,7 +877,7 @@ const Register = () => {
                         teamMembers: members,
                         accommodationRequired,
                         hostelMembers: selectedHostelMembers,
-
+                        expectedAmount: totalAmount,
                         userTransactionId: transactionId,
                         screenshotUrl: screenshotUrl,
                       },
@@ -846,7 +958,8 @@ const Register = () => {
 
                   <div>
                     <h3 className="text-lg text-cyan-400 font-semibold mb-2">
-                      Skill Forze (23rd & 24th March) – Workshop Guidelines
+                      Skill Forze (23<sup>rd</sup> & 24<sup>th</sup> March) –
+                      Workshop Guidelines
                     </h3>
                     <ul className="list-disc list-inside space-y-1">
                       <li>Team registration is compulsory.</li>
@@ -861,7 +974,7 @@ const Register = () => {
 
                   <div>
                     <h3 className="text-lg text-yellow-400 font-semibold mb-2">
-                      Buildathon (25th March) – Hackathon Guidelines
+                      Buildathon (25<sup>th</sup> March) – Hackathon Guidelines
                     </h3>
                     <ul className="list-disc list-inside space-y-1">
                       <li>Team size: 2–4 members.</li>

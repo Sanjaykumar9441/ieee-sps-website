@@ -198,6 +198,19 @@ const Dashboard = () => {
     { name: "Combo", value: comboCount },
     { name: "Buildathon", value: buildathonCount },
   ];
+  const collegeCounts = {};
+  registrations.forEach((reg) => {
+    // Added ?. to prevent crash if teamMembers is null
+    reg.teamMembers?.forEach((member) => {
+      const college = member.college || "Unknown";
+      collegeCounts[college] = (collegeCounts[college] || 0) + 1;
+    });
+  });
+
+  const collegeAnalytics = Object.entries(collegeCounts).map(([name, value]) => ({
+    name,
+    value
+  }));
   const [registrationView, setRegistrationView] = useState("pending");
   const [registrationFilter, setRegistrationFilter] = useState("all");
 
@@ -256,57 +269,53 @@ const Dashboard = () => {
   };
 
   const confirmRegistration = async (id: string) => {
-  if (!confirm("Confirm this registration?")) return;
+    if (!confirm("Confirm this registration?")) return;
 
-  try {
-    const res = await axios.put(
-      `https://ieee-sps-website.onrender.com/api/confirm/${id}`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
+    try {
+      const res = await axios.put(
+        `https://ieee-sps-website.onrender.com/api/confirm/${id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
 
-    const registration = res.data.data;
+      const registration = res.data.data;
 
-    // ✅ send email
-    sendConfirmationEmail(registration);
+      // ✅ send email
+      sendConfirmationEmail(registration);
 
-    fetchRegistrations();
-
-  } catch (error) {
-    console.error("Confirmation error:", error);
-  }
-};
+      fetchRegistrations();
+    } catch (error) {
+      console.error("Confirmation error:", error);
+    }
+  };
   const sendConfirmationEmail = (registration) => {
+    const participants = registration.teamMembers
+      .map((m) => m.fullName)
+      .join("\n");
 
-  const participants = registration.teamMembers
-    .map((m) => m.fullName)
-    .join("\n");
-
-  registration.teamMembers.forEach((member) => {
-
-    emailjs.send(
-      "service_hni6o4c",
-      "template_ed130jt",
-      {
-        name: member.fullName,
-        event_name: registration.eventName,
-        team_name: registration.teamName,
-        registration_id: registration.registrationId,
-        participants: participants,
-        email: member.email
-      },
-      "c3_zwkFgeHxKi5oSx"
-    )
-    .then(() => {
-      console.log("Email sent to:", member.email);
-    })
-    .catch((error) => {
-      console.error("Email error:", error);
+    registration.teamMembers.forEach((member) => {
+      emailjs
+        .send(
+          "service_hni6o4c",
+          "template_ed130jt",
+          {
+            name: member.fullName,
+            event_name: registration.eventName,
+            team_name: registration.teamName,
+            registration_id: registration.registrationId,
+            participants: participants,
+            email: member.email,
+          },
+          "c3_zwkFgeHxKi5oSx",
+        )
+        .then(() => {
+          console.log("Email sent to:", member.email);
+        })
+        .catch((error) => {
+          console.error("Email error:", error);
+        });
     });
-
-  });
-
-};
+  };
 
   const deleteRegistration = async (id: string) => {
     if (!confirm("Delete this registration?")) return;
@@ -1687,6 +1696,18 @@ const Dashboard = () => {
                             </p>
                             <p>
                               <b>College:</b> {m.college}
+                            </p>
+                            <p>
+                              <b>City:</b> {m.collegeCity || "N/A"}
+                            </p>
+                            <p>
+                              <b>Pincode:</b> {m.collegePincode || "N/A"}
+                            </p>
+                            <p>
+                              <b>District:</b> {m.collegeDistrict || "N/A"}
+                            </p>
+                            <p>
+                              <b>State:</b> {m.collegeState || "N/A"}
                             </p>
                           </div>
                         ),
