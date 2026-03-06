@@ -341,6 +341,37 @@ router.put("/verify-payment/:id", async (req, res) => {
 
     registration.payment.verified = !registration.payment.verified;
     await registration.save();
+    /* ================= EMAIL CONFIRMATION ================= */
+
+const participants = registration.teamMembers
+  .map((m) => m.fullName)
+  .join("<br>");
+
+for (const member of registration.teamMembers) {
+
+  const html = `
+  <h2>Arduino Days 2026 Registration Confirmed</h2>
+
+  <p><b>Team Name:</b> ${registration.teamName}</p>
+  <p><b>Event:</b> ${registration.eventName}</p>
+  <p><b>Registration ID:</b> ${registration.registrationId}</p>
+
+  <h3>Participants</h3>
+  ${participants}
+
+  <p>📅 Date: 23–25 March 2026</p>
+  <p>📍 Venue: Aditya University, Surampalem</p>
+
+  <p>Looking forward to seeing you at the event!</p>
+  `;
+
+  await sendMail(
+    member.email,
+    "Arduino Days Registration Confirmed",
+    html
+  );
+
+}
     const message = `
 💳 Payment Status Updated
 
@@ -359,26 +390,4 @@ Verified: ${registration.payment.verified ? "Yes" : "No"}
     res.status(500).json({ message: "Error updating payment" });
   }
 });
-const participants = registration.teamMembers
-  .map((m) => m.fullName)
-  .join("<br>");
-
-for (const member of registration.teamMembers) {
-
-  const html = `
-  <h2>Arduino Days 2026 Registration Confirmed</h2>
-
-  <p><b>Team Name:</b> ${registration.teamName}</p>
-  <p><b>Event:</b> ${registration.eventName}</p>
-  <p><b>Registration ID:</b> ${registration.registrationId}</p>
-
-  <h3>Participants</h3>
-  ${participants}
-
-  <p>See you at the event!</p>
-  `;
-
-  sendMail(member.email,"Arduino Days Registration Confirmed",html);
-
-}
 module.exports = router;
