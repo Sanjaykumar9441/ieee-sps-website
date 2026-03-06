@@ -5,6 +5,7 @@ const Event = require("../models/event"); // adjust path if needed
 const PDFDocument = require("pdfkit");
 const axios = require("axios");
 const sendMail = require("../utils/mailer");
+const Tesseract = require("tesseract.js");
 const sendTelegramNotification = async (message) => {
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -20,6 +21,32 @@ const sendTelegramNotification = async (message) => {
     console.error("❌ Telegram notification failed:", error.message);
   }
 };
+async function extractAmountFromImage(imageUrl) {
+
+  try {
+
+    const { data: { text } } = await Tesseract.recognize(
+      imageUrl,
+      "eng"
+    );
+
+    console.log("OCR TEXT:", text);
+
+    const amountMatch = text.match(/₹\s?\d+/);
+
+    if (amountMatch) {
+      return parseInt(amountMatch[0].replace(/[^0-9]/g, ""));
+    }
+
+    return null;
+
+  } catch (error) {
+
+    console.error("OCR Error:", error);
+    return null;
+
+  }
+}
 
 /* =====================================
    1️⃣ GET ALL REGISTRATIONS
@@ -84,6 +111,12 @@ router.post("/register", async (req, res) => {
     // 🔐 Secure amount calculation (backend authority)
     const perPersonFee = eventType === "combo" ? 200 : 100;
     const correctAmount = perPersonFee * teamSize;
+    // AI OCR Payment Detection
+const detectedAmount = await extractAmountFromImage(screenshotUrl);
+
+if (detectedAmount && detectedAmount !== correctAmount) {
+  console.log("⚠ Payment mismatch detected");
+}
 
     // 🚫 Prevent fake payment amounts
     if (expectedAmount !== correctAmount) {
@@ -331,47 +364,21 @@ router.get("/pdf/:id", async (req, res) => {
   }
 });
 
+/* =====================================
+   6️⃣ VERIFY PAYMENT STATUS
+===================================== */
 router.put("/verify-payment/:id", async (req, res) => {
   try {
     const registration = await Registration.findById(req.params.id);
 
     if (!registration) {
-      return res.status(404).json({ message: "Not found" });
+      return res.status(404).json({ message: "Registration not found" });
     }
 
+    // Toggle verification status
     registration.payment.verified = !registration.payment.verified;
     await registration.save();
-    /* ================= EMAIL CONFIRMATION ================= */
 
-const participants = registration.teamMembers
-  .map((m) => m.fullName)
-  .join("<br>");
-
-for (const member of registration.teamMembers) {
-
-  const html = `
-  <h2>Arduino Days 2026 Registration Confirmed</h2>
-
-  <p><b>Team Name:</b> ${registration.teamName}</p>
-  <p><b>Event:</b> ${registration.eventName}</p>
-  <p><b>Registration ID:</b> ${registration.registrationId}</p>
-
-  <h3>Participants</h3>
-  ${participants}
-
-  <p>📅 Date: 23–25 March 2026</p>
-  <p>📍 Venue: Aditya University, Surampalem</p>
-
-  <p>Looking forward to seeing you at the event!</p>
-  `;
-
-  await sendMail(
-    member.email,
-    "Arduino Days Registration Confirmed",
-    html
-  );
-
-}
     const message = `
 💳 Payment Status Updated
 
@@ -387,7 +394,141 @@ Verified: ${registration.payment.verified ? "Yes" : "No"}
       data: registration,
     });
   } catch (error) {
+    console.error("VERIFY ERROR:", error);
     res.status(500).json({ message: "Error updating payment" });
   }
 });
+
+/* =====================================
+   7️⃣ SEND CONFIRMATION EMAIL (Separate Route)
+===================================== */
+router.post("/send-confirmation-email", async (req, res) => {
+  try {
+    const { registration } = req.body;
+
+    if (!registration || !registration.teamMembers) {
+      return res.status(400).json({ message: "Invalid registration data" });
+    }
+
+    const participants = registration.teamMembers
+      .map((m, i) => `${i + 1}. ${m.fullName}`)
+      .join("<br>");
+
+    let htmlTemplate = "";
+
+    // Template Selection
+    if (registration.eventType === "combo") {
+      htmlTemplate = `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; padding: 40px 10px; color: #fff;">
+    <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(145deg, #18181b, #09090b); border: 1px solid #22d3ee; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 212, 255, 0.1);">
+        
+        <div style="background: linear-gradient(90deg, #0891b2, #0e7490); padding: 30px; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px; text-transform: uppercase;">Arduino Days 2026</h1>
+            <p style="margin-top: 5px; opacity: 0.9; font-weight: 300;">Registration Confirmed 🎉</p>
+        </div>
+
+        <div style="padding: 30px; line-height: 1.6;">
+            <p style="font-size: 18px;">Hello <b style="color: #22d3ee;">${registration.teamName}</b>,</p>
+            <p style="color: #a1a1aa;">Great news! Your team has successfully secured a spot for the premium technical experience at Aditya University.</p>
+            
+            <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 20px; border-left: 4px solid #22d3ee; margin: 25px 0;">
+                <p style="margin: 5px 0;"><strong>Event:</strong> Skill Forze Workshop + Buildathon</p>
+                <p style="margin: 5px 0;"><strong>Registration ID:</strong> <span style="color: #facc15;">${registration._id}</span></p>
+                <p style="margin: 5px 0;"><strong>Team Size:</strong> ${registration.teamSize} Members</p>
+            </div>
+
+            <h3 style="color: #22d3ee; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">📅 Event Schedule</h3>
+            <p style="margin-bottom: 5px;"><strong>Skill Forze:</strong> 23<sup>rd</sup> & 24<sup>th</sup> March 2026</p>
+            <p style="margin-top: 0;"><strong>Buildathon:</strong> 25<sup>th</sup> March 2026</p>
+            <p><strong>Venue:</strong> Aditya University, Surampalem</p>
+
+            <h3 style="color: #22d3ee; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">👥 Team Members</h3>
+            <div style="color: #d4d4d8;">${participants}</div>
+
+            <h3 style="color: #22d3ee; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">📢 Important Checklist</h3>
+            <ul style="color: #a1a1aa; padding-left: 20px;">
+                <li>Carry your <b>Student ID Card</b> for verification.</li>
+                <li>Bring a <b>Laptop</b> with Arduino IDE pre-installed.</li>
+                <li>Teams must present a <b>working prototype</b> for Buildathon.</li>
+            </ul>
+
+            <div style="text-align: center; margin-top: 40px; padding: 20px; background: rgba(37, 211, 102, 0.1); border-radius: 12px;">
+                <p style="margin-bottom: 15px; font-size: 14px;">Join the official group for live updates & coordination:</p>
+                <a href="https://chat.whatsapp.com/DruOGVhGlNc989mcDWTEYP?mode=gi_t" style="background: #25D366; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Join WhatsApp Group</a>
+            </div>
+        </div>
+
+        <div style="background: #111; padding: 20px; text-align: center; border-top: 1px solid #27272a;">
+            <p style="margin: 0; font-size: 14px; color: #71717a;">Regards,</p>
+            <p style="margin: 5px 0; color: #22d3ee; font-weight: bold;">IEEE SPS Student Branch Chapter</p>
+            <p style="margin: 0; font-size: 12px; color: #52525b;">Aditya University, Surampalem</p>
+        </div>
+    </div>
+</div>` ;
+    } else {
+      htmlTemplate = `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; padding: 40px 10px; color: #fff;">
+    <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(145deg, #18181b, #09090b); border: 1px solid #a855f7; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(168, 85, 247, 0.1);">
+        
+        <div style="background: linear-gradient(90deg, #9333ea, #6b21a8); padding: 30px; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px; text-transform: uppercase;">Arduino Days 2026</h1>
+            <p style="margin-top: 5px; opacity: 0.9; font-weight: 300;">Buildathon Hackathon Confirmed 🚀</p>
+        </div>
+
+        <div style="padding: 30px; line-height: 1.6;">
+            <p style="font-size: 18px;">Hello <b style="color: #a855f7;">${registration.teamName}</b>,</p>
+            <p style="color: #a1a1aa;">Gear up! Your registration for the Buildathon challenge is officially confirmed.</p>
+            
+            <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 20px; border-left: 4px solid #a855f7; margin: 25px 0;">
+                <p style="margin: 5px 0;"><strong>Event:</strong> Buildathon Hackathon</p>
+                <p style="margin: 5px 0;"><strong>Registration ID:</strong> <span style="color: #facc15;">${registration._id}</span></p>
+                <p style="margin: 5px 0;"><strong>Team Size:</strong> ${registration.teamSize} Members</p>
+            </div>
+
+            <h3 style="color: #a855f7; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">📅 Hackathon Details</h3>
+            <p style="margin-bottom: 5px;"><strong>Date:</strong> 25<sup>th</sup> March 2026</p>
+            <p><strong>Venue:</strong> Aditya University, Surampalem</p>
+
+            <h3 style="color: #a855f7; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">👥 Innovators</h3>
+            <div style="color: #d4d4d8;">${participants}</div>
+
+            <h3 style="color: #a855f7; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">📢 Participation Rules</h3>
+            <ul style="color: #a1a1aa; padding-left: 20px;">
+                <li>Minimum <b>one laptop per team</b> is mandatory.</li>
+                <li>Problem statements will be revealed at the venue.</li>
+                <li>Projects must be developed <b>scratch</b> during the event.</li>
+                <li>A functional hardware prototype must be presented for judging.</li>
+            </ul>
+
+            <div style="text-align: center; margin-top: 40px; padding: 20px; background: rgba(37, 211, 102, 0.1); border-radius: 12px;">
+                <p style="margin-bottom: 15px; font-size: 14px;">Join the hackathon community for briefings:</p>
+                <a href="https://chat.whatsapp.com/Csy0z79Sxyz7kwKvwTEN8p?mode=gi_t" style="background: #25D366; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Join Hackathon Group</a>
+            </div>
+        </div>
+
+        <div style="background: #111; padding: 20px; text-align: center; border-top: 1px solid #27272a;">
+            <p style="margin: 0; font-size: 14px; color: #71717a;">Regards,</p>
+            <p style="margin: 5px 0; color: #a855f7; font-weight: bold;">IEEE SPS Student Branch Chapter</p>
+            <p style="margin: 0; font-size: 12px; color: #52525b;">Aditya University, Surampalem</p>
+        </div>
+    </div>
+</div>`;
+    }
+
+    // Send to all members
+    for (const member of registration.teamMembers) {
+      await sendMail(
+        member.email,
+        "Arduino Days 2026 Registration Confirmed",
+        htmlTemplate
+      );
+    }
+
+    res.json({ success: true, message: "Emails sent successfully" });
+  } catch (error) {
+    console.error("Mail error:", error);
+    res.status(500).json({ message: "Email sending failed" });
+  }
+});
+
 module.exports = router;
