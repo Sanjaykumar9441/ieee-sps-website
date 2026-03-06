@@ -2,7 +2,7 @@ const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
+  port: Number(process.env.EMAIL_PORT),
   secure: false,
 
   auth: {
@@ -16,7 +16,7 @@ const sendMail = async (to, subject, html) => {
   try {
 
     await transporter.sendMail({
-      from: '"Arduino Days 2026" <noreply@arduino-days.com>',
+      from: '"Arduino Days 2026" <ieee.club.aus@gmail.com>',
       to,
       subject,
       html
