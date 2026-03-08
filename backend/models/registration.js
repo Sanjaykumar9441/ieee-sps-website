@@ -13,6 +13,11 @@ const memberSchema = new mongoose.Schema({
   collegePincode: String,
   collegeDistrict: String,
   collegeState: String,
+
+  checkedIn: {
+    type: Boolean,
+    default: false
+  }
 });
 const registrationSchema = new mongoose.Schema(
   {
@@ -57,27 +62,22 @@ const registrationSchema = new mongoose.Schema(
 
     hostelMembers: [memberSchema],
 
-    payment: {
-      userTransactionId: {
-        type: String,
-        required: true,
-        unique: true,
-      },
-      screenshotUrl: {
-        type: String,
-        required: true,
-      },
-      verified: {
-        type: Boolean,
-        default: false,
-      },
-    },
+  payment: {
+  userTransactionId,
+  screenshotUrl,
+  detectedAmount,
+  verified: false,
+},
 
     registrationStatus: {
-      type: String,
-      enum: ["Pending", "Confirmed"],
-      default: "Pending",
-    },
+  type: String,
+  enum: ["Pending", "Confirmed"],
+  default: "Pending",
+},
+entryTime: {
+  type: Date,
+  default: null
+},
   },
   { timestamps: true },
 );

@@ -26,6 +26,7 @@ const MovingWaves = () => {
 
 const ArduinoDays = () => {
   const navigate = useNavigate();
+  const [registerLoading, setRegisterLoading] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const active = searchParams.get("section") || "home";
   const [menuOpen, setMenuOpen] = useState(false);
@@ -432,11 +433,21 @@ const ArduinoDays = () => {
                       </p>
                       <div className="mt-auto">
                         <button
-                          onClick={() => navigate("/register?event=combo")}
-                          className="inline-block bg-white text-black font-semibold px-6 py-2 rounded-full hover:scale-105 transition"
-                        >
-                          Register Now
-                        </button>
+  onClick={() => {
+    setRegisterLoading("combo");
+
+    setTimeout(() => {
+      navigate("/register?event=combo");
+    }, 600);
+  }}
+  className="inline-flex items-center gap-2 bg-white text-black font-semibold px-6 py-2 rounded-full"
+>
+  {registerLoading === "combo" && (
+    <span className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full"></span>
+  )}
+
+  {registerLoading === "combo" ? "Opening..." : "Register Now"}
+</button>
                       </div>
                     </div>
                   </div>
@@ -480,12 +491,22 @@ const ArduinoDays = () => {
                         All students from any branch can participate.
                       </p>
                       <div className="mt-auto">
-                        <button
-                          onClick={() => navigate("/register?event=buildathon")}
-                          className="inline-block bg-white text-black font-semibold px-6 py-2 rounded-full hover:scale-105 transition"
-                        >
-                          Register Now
-                        </button>
+                         <button
+  onClick={() => {
+    setRegisterLoading("buildathon");
+
+    setTimeout(() => {
+      navigate("/register?event=buildathon");
+    }, 600);
+  }}
+  className="inline-flex items-center gap-2 bg-white text-black font-semibold px-6 py-2 rounded-full"
+>
+  {registerLoading === "buildathon" && (
+    <span className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full"></span>
+  )}
+
+  {registerLoading === "buildathon" ? "Opening..." : "Register Now"}
+</button>
                       </div>
                     </div>
                   </div>

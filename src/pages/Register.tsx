@@ -37,7 +37,6 @@ const createEmptyMember = (): Member => ({
 const BackgroundImage = () => {
   return (
     <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-
       {/* Background Image */}
       <img
         src="/freepik_arduino_background.jpg"
@@ -50,7 +49,6 @@ const BackgroundImage = () => {
 
       {/* Bottom fade */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-
     </div>
   );
 };
@@ -62,7 +60,6 @@ const StepIndicator = ({
   showSummary: boolean;
   showPayment: boolean;
 }) => {
-
   let step = 1;
 
   if (showSummary) step = 2;
@@ -70,20 +67,16 @@ const StepIndicator = ({
 
   return (
     <div className="flex items-center justify-center mb-10">
-
-      {[1,2,3].map((s,index)=>{
-
+      {[1, 2, 3].map((s, index) => {
         const active = s <= step;
 
         return (
           <div key={s} className="flex items-center">
-
             {/* Circle */}
             <div
               className={`w-10 h-10 flex items-center justify-center rounded-full font-bold
-              ${active
-                ? "bg-cyan-400 text-black"
-                : "bg-gray-700 text-gray-300"
+              ${
+                active ? "bg-cyan-400 text-black" : "bg-gray-700 text-gray-300"
               }`}
             >
               {s}
@@ -91,21 +84,18 @@ const StepIndicator = ({
 
             {/* Label */}
             <span className="ml-2 mr-6 text-sm hidden md:block">
-              {s===1 && "Team Info"}
-              {s===2 && "Summary"}
-              {s===3 && "Payment"}
+              {s === 1 && "Team Info"}
+              {s === 2 && "Summary"}
+              {s === 3 && "Payment"}
             </span>
 
             {/* Line */}
             {index < 2 && (
               <div className="w-10 md:w-16 h-[2px] bg-gray-600 mr-6"></div>
             )}
-
           </div>
         );
-
       })}
-
     </div>
   );
 };
@@ -149,22 +139,26 @@ const Register = () => {
     setAccommodationMembers([]);
   };
 
-const handleEnterNext = (
-  e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>
-) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
+  const handleEnterNext = (
+    e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
 
-    const form = e.currentTarget.form;
-    if (!form) return;
+      const form = e.currentTarget.form;
+      if (!form) return;
 
-    const index = Array.prototype.indexOf.call(form, e.currentTarget);
+      const elements = Array.from(
+        form.querySelectorAll("input, select, textarea"),
+      ) as HTMLElement[];
 
-    const next = form.elements[index + 1] as HTMLElement;
+      const index = elements.indexOf(e.currentTarget);
 
-    if (next) next.focus();
-  }
-};
+      const next = elements[index + 1];
+
+      if (next) next.focus();
+    }
+  };
 
   const handleMemberChange = (
     index: number,
@@ -225,36 +219,35 @@ const handleEnterNext = (
     }
 
     setMembers((prev) => {
-  const updated = prev.map((member, i) =>
-    i === index ? { ...member, [field]: updatedValue } : member
-  );
+      const updated = prev.map((member, i) =>
+        i === index ? { ...member, [field]: updatedValue } : member,
+      );
 
-  const m = updated[index];
+      const m = updated[index];
 
-  const completed =
-    m.fullName &&
-    m.rollNo &&
-    m.email &&
-    m.phone &&
-    m.department &&
-    m.year &&
-    m.selectedCollege;
+      const completed =
+        m.fullName &&
+        m.rollNo &&
+        m.email &&
+        m.phone &&
+        m.department &&
+        m.year &&
+        m.selectedCollege;
 
- if (completed && memberRefs.current[index + 1]) {
-  setTimeout(() => {
-    memberRefs.current[index + 1]?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
+      if (completed && memberRefs.current[index + 1]) {
+        setTimeout(() => {
+          memberRefs.current[index + 1]?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+
+          nameInputRefs.current[index + 1]?.focus();
+        }, 300);
+      }
+
+      return updated;
     });
-
-    nameInputRefs.current[index + 1]?.focus();
-
-  }, 300);
-}
-
-  return updated;
-});
-  }
+  };
   const validateForm = () => {
     if (!teamName.trim() || teamName.length < 3) {
       alert("Team name is required.");
@@ -364,7 +357,6 @@ const handleEnterNext = (
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
   const successRef = useRef<HTMLDivElement | null>(null);
 
-
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
 
@@ -375,162 +367,145 @@ const handleEnterNext = (
     }, 1500);
   };
 
- const downloadReceipt = (registrationId: string) => {
+  const downloadReceipt = (registrationId: string) => {
+    const doc = new jsPDF();
 
-  const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
+    const now = new Date();
 
-  const now = new Date();
-
-  const date = now.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-
-  const time = now.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  // BORDER
-  doc.setDrawColor(0, 180, 255);
-  doc.setLineWidth(1.2);
-  doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
-
-  // LOGO
-  const logo = new Image();
-  logo.src = "/titlelogo.png";
-
-  logo.onload = () => {
-
-    doc.addImage(logo, "PNG", pageWidth / 2 - 30, 18, 60, 25);
-
-    // TITLE
-    doc.setFontSize(18);
-    doc.setTextColor(0, 180, 255);
-
-    doc.text(
-      "Arduino Days 2026 Registration Receipt",
-      pageWidth / 2,
-      55,
-      { align: "center" }
-    );
-
-    doc.setTextColor(0,0,0);
-    doc.setFontSize(12);
-
-    // DETAILS
-    let y = 75;
-
-    doc.text(`Registration ID : ${registrationId}`, 20, y);
-    y += 10;
-
-    doc.text(`Team Name : ${teamName}`, 20, y);
-    y += 10;
-
-    doc.text(
-      `Event : ${
-        event === "combo"
-          ? "Skill Forze + Buildathon"
-          : "Buildathon"
-      }`,
-      20,
-      y
-    );
-
-    y += 10;
-
-    doc.text(`Team Size : ${teamSize}`, 20, y);
-    y += 10;
-
-    doc.text(`Amount Paid : ₹${totalAmount}`, 20, y);
-    y += 10;
-
-    doc.text(`Transaction ID : ${transactionId}`, 20, y);
-    y += 10;
-
-    doc.text(`Date : ${date}`, 20, y);
-    y += 10;
-
-    doc.text(`Time : ${time}`, 20, y);
-
-    // MEMBERS SECTION
-    y += 20;
-
-    doc.setFontSize(14);
-    doc.setTextColor(0, 180, 255);
-
-    doc.text("Team Members", 20, y);
-
-    doc.setFontSize(12);
-    doc.setTextColor(0,0,0);
-
-    y += 10;
-
-    members.forEach((member, index) => {
-
-      doc.text(
-        `${index + 1}. ${member.fullName} - ${member.rollNo}`,
-        25,
-        y
-      );
-
-      y += 8;
+    const date = now.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
     });
 
-    // STATUS
-    y += 10;
+    const time = now.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
-    doc.setTextColor(200,0,0);
+    // BORDER
+    doc.setDrawColor(0, 180, 255);
+    doc.setLineWidth(1.2);
+    doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
 
-    doc.text(
-  "Status : Payment Submitted - Verification Pending",
-  20,
-  y
-);
+    // LOGO
+    const logo = new Image();
+    logo.src = "/titlelogo.png";
 
-    // FOOTER
-    doc.setTextColor(0,0,0);
-    doc.setFontSize(10);
+    logo.onload = () => {
+      doc.addImage(logo, "PNG", pageWidth / 2 - 30, 18, 60, 25);
 
-    doc.text(
-      "IEEE SPS Student Branch Chapter",
-      pageWidth / 2,
-      pageHeight - 25,
-      { align: "center" }
-    );
+      // TITLE
+      doc.setFontSize(18);
+      doc.setTextColor(0, 180, 255);
 
-    doc.text(
-      "Aditya University",
-      pageWidth / 2,
-      pageHeight - 18,
-      { align: "center" }
-    );
+      doc.text("Arduino Days 2026 Registration Receipt", pageWidth / 2, 55, {
+        align: "center",
+      });
 
-    doc.save(`${teamName}_ArduinoDays_Receipt.pdf`);
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(12);
+
+      // DETAILS
+      let y = 75;
+
+      doc.text(`Registration ID : ${registrationId}`, 20, y);
+      y += 10;
+
+      doc.text(`Team Name : ${teamName}`, 20, y);
+      y += 10;
+
+      doc.text(
+        `Event : ${
+          event === "combo" ? "Skill Forze + Buildathon" : "Buildathon"
+        }`,
+        20,
+        y,
+      );
+
+      y += 10;
+
+      doc.text(`Team Size : ${teamSize}`, 20, y);
+      y += 10;
+
+      doc.text(`Amount Paid : ₹${totalAmount}`, 20, y);
+      y += 10;
+
+      doc.text(`Transaction ID : ${transactionId}`, 20, y);
+      y += 10;
+
+      doc.text(`Date : ${date}`, 20, y);
+      y += 10;
+
+      doc.text(`Time : ${time}`, 20, y);
+
+      // MEMBERS SECTION
+      y += 20;
+
+      doc.setFontSize(14);
+      doc.setTextColor(0, 180, 255);
+
+      doc.text("Team Members", 20, y);
+
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+
+      y += 10;
+
+      members.forEach((member, index) => {
+        doc.text(`${index + 1}. ${member.fullName} - ${member.rollNo}`, 25, y);
+
+        y += 8;
+      });
+
+      // STATUS
+      y += 10;
+
+      doc.setTextColor(200, 0, 0);
+
+      doc.text("Status : Payment Submitted - Verification Pending", 20, y);
+
+      // FOOTER
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+
+      doc.text(
+        "IEEE SPS Student Branch Chapter",
+        pageWidth / 2,
+        pageHeight - 25,
+        { align: "center" },
+      );
+
+      doc.text("Aditya University", pageWidth / 2, pageHeight - 18, {
+        align: "center",
+      });
+
+      doc.save(`${teamName}_ArduinoDays_Receipt.pdf`);
+    };
   };
-};
 
   return (
-  <div className="min-h-screen relative text-white px-4 md:px-6 py-12 overflow-x-hidden">
+    <div className="min-h-screen relative text-white px-4 md:px-6 py-12 overflow-x-hidden">
+      <BackgroundImage />
 
-    <BackgroundImage />
-
-    <div className="relative z-10 max-w-4xl mx-auto w-full">
-      <StepIndicator
-  showSummary={showSummary}
-  showPayment={showPayment}
-/>
+      <div className="relative z-10 max-w-4xl mx-auto w-full">
+        <StepIndicator showSummary={showSummary} showPayment={showPayment} />
       </div>
-      <div className="relative z-10 max-w-4xl mx-auto w-full backdrop-blur-xl bg-black/50 border border-cyan-400/20 rounded-2xl p-8 shadow-[0_10px_40px_rgba(0,0,0,0.6)]">
+      <form
+        autoComplete="off"
+        onSubmit={(e) => e.preventDefault()}
+        className="relative z-10 max-w-4xl mx-auto w-full backdrop-blur-xl bg-black/50 border border-cyan-400/20 rounded-2xl p-8 shadow-[0_10px_40px_rgba(0,0,0,0.6)]"
+      >
         {!showSummary && !showPayment && (
           <>
-            <h1 className="text-3xl md:text-4xl font-bold mb-8 text-center 
+            <h1
+              className="text-3xl md:text-4xl font-bold mb-8 text-center 
 bg-gradient-to-r from-cyan-400 via-blue-400 to-green-400 
-bg-clip-text text-transparent">
+bg-clip-text text-transparent"
+            >
               Register for{" "}
               <span className="bg-cyan-400 text-black px-3 py-1 rounded">
                 {event === "combo" ? "Skill Forze + Buildathon" : "Buildathon"}
@@ -553,13 +528,13 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 }
               />
             </div>
-              <input
-  type="text"
-  name="website"
-  value={honeypot}
-  onChange={(e) => setHoneypot(e.target.value)}
-  style={{ display: "none" }}
-/>
+            <input
+              type="text"
+              name="website"
+              value={honeypot}
+              onChange={(e) => setHoneypot(e.target.value)}
+              style={{ display: "none" }}
+            />
             {/* Team Size */}
             <div className="mb-8">
               <label className="block mb-2">Select Team Size</label>
@@ -577,11 +552,11 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
 
             {/* Members */}
             {members.map((member, index) => (
-  <div
-    key={index}
-    ref={(el) => (memberRefs.current[index] = el)}
-    className="mb-10 p-6 border border-cyan-400/20 rounded-xl bg-black/40 backdrop-blur-md"
-  >
+              <div
+                key={index}
+                ref={(el) => (memberRefs.current[index] = el)}
+                className="mb-10 p-6 border border-cyan-400/20 rounded-xl bg-black/40 backdrop-blur-md"
+              >
                 <h2 className="text-xl font-semibold mb-4 text-cyan-300">
                   Member {index + 1}
                 </h2>
@@ -658,6 +633,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     onChange={(e) =>
                       handleMemberChange(index, "year", e.target.value)
                     }
+                    onKeyDown={handleEnterNext}
                   >
                     <option value="">Select Year</option>
                     <option>1st</option>
@@ -795,7 +771,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 <option value="yes">Yes</option>
               </select>
               {accommodationRequired && (
-  <div className="mt-6 p-6 border border-yellow-400/30 rounded-lg bg-yellow-900/10">
+                <div className="mt-6 p-6 border border-yellow-400/30 rounded-lg bg-yellow-900/10">
                   <h2 className="text-lg font-semibold mb-4 text-yellow-300">
                     Select Members for Accommodation
                   </h2>
@@ -815,16 +791,16 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
             </div>
 
             <button
-  disabled={loading}
-  onClick={handleNext}
-  className={`w-full font-bold py-3 rounded-lg transition ${
-    loading
-      ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-      : "bg-gradient-to-r from-cyan-400 to-blue-400 text-black hover:scale-105 hover:shadow-lg hover:shadow-cyan-400/30"
-  }`}
->
-  {loading ? "Checking Details..." : "Go to Payment"}
-</button>
+              disabled={loading}
+              onClick={handleNext}
+              className={`w-full font-bold py-3 rounded-lg transition ${
+                loading
+                  ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                  : "bg-gradient-to-r from-cyan-400 to-blue-400 text-black hover:scale-105 hover:shadow-lg hover:shadow-cyan-400/30"
+              }`}
+            >
+              {loading ? "Checking Details..." : "Go to Payment"}
+            </button>
           </>
         )}
 
@@ -906,12 +882,12 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
               </button>
 
               <button
-  disabled={loading}
-  className={`flex-1 font-bold py-3 rounded transition ${
-    loading
-      ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-      : "bg-green-400 text-black hover:scale-105"
-  }`}
+                disabled={loading}
+                className={`flex-1 font-bold py-3 rounded transition ${
+                  loading
+                    ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                    : "bg-green-400 text-black hover:scale-105"
+                }`}
                 onClick={() => {
                   if (!agreedRules) {
                     setRulesError(true);
@@ -953,20 +929,16 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 <hr className="my-3 border-gray-600" />
 
                 <div className="text-center mt-4">
+                  <p className="text-sm text-gray-400">Amount to Pay</p>
 
-<p className="text-sm text-gray-400">
-Amount to Pay
-</p>
-
-<p className="text-4xl font-bold text-green-400 tracking-wide">
-₹{totalAmount}
-</p>
-
-</div>
+                  <p className="text-4xl font-bold text-green-400 tracking-wide">
+                    ₹{totalAmount}
+                  </p>
+                </div>
                 {accommodationRequired && accommodationMembers.length > 0 && (
                   <div className="mt-4 p-4 border border-yellow-400/40 rounded-lg bg-yellow-900/10 text-yellow-300 text-sm">
-                    For hostel accommodation Fees, our team will personally contact
-                    the selected members after registration.
+                    For hostel accommodation Fees, our team will personally
+                    contact the selected members after registration.
                   </div>
                 )}
               </div>
@@ -981,10 +953,12 @@ Amount to Pay
               </div>
 
               {/* Payment Card */}
-              <div className="mb-8 p-8 rounded-2xl border border-cyan-400/30 
+              <div
+                className="mb-8 p-8 rounded-2xl border border-cyan-400/30 
 bg-gradient-to-br from-[#07111b] to-[#02060c]
 shadow-[0_10px_40px_rgba(0,0,0,0.6)]
-backdrop-blur-md">
+backdrop-blur-md"
+              >
                 <h3 className="text-xl font-semibold text-cyan-400 mb-6 text-center">
                   🏦 Bank Transfer Details
                 </h3>
@@ -1137,20 +1111,17 @@ backdrop-blur-md">
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
               />
               <div className="border border-dashed border-cyan-400/30 p-6 rounded-xl text-center mb-6 bg-black/30">
-
-<p className="text-gray-400 mb-3">
-Upload Payment Screenshot
-</p>
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/jpg"
-                className="text-sm"
-                onChange={(e) => {
-                  if (e.target.files) {
-                    setScreenshot(e.target.files[0]);
-                  }
-                }}
-              />
+                <p className="text-gray-400 mb-3">Upload Payment Screenshot</p>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  className="text-sm"
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      setScreenshot(e.target.files[0]);
+                    }
+                  }}
+                />
               </div>
 
               <button
@@ -1199,8 +1170,8 @@ Upload Payment Screenshot
 
                     // 3️⃣ Send registration data to backend
                     const res = await axios.post(
-"https://ieee-sps-website.onrender.com/api/register",
-{
+                      "https://ieee-sps-website.onrender.com/api/register",
+                      {
                         eventType:
                           event === "buildathon" ? "buildathon" : "combo",
                         eventName:
@@ -1221,33 +1192,33 @@ Upload Payment Screenshot
 
                     setPaymentSubmitted(true);
                     setTimeout(() => {
-  successRef.current?.scrollIntoView({
-    behavior: "smooth",
-    block: "center",
-  });
-  setRegistrationId(res.data.data.registrationId);
-}, 200);
+                      successRef.current?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center",
+                      });
+                      setRegistrationId(res.data.data.registrationId);
+                    }, 200);
 
-// 🎉 Confetti burst
-confetti({
-  particleCount: 80,
-  spread: 70,
-  origin: { y: 0.6 },
-});
+                    // 🎉 Confetti burst
+                    confetti({
+                      particleCount: 80,
+                      spread: 70,
+                      origin: { y: 0.6 },
+                    });
 
-confetti({
-  particleCount: 60,
-  angle: 60,
-  spread: 55,
-  origin: { x: 0 },
-});
+                    confetti({
+                      particleCount: 60,
+                      angle: 60,
+                      spread: 55,
+                      origin: { x: 0 },
+                    });
 
-confetti({
-  particleCount: 60,
-  angle: 120,
-  spread: 55,
-  origin: { x: 1 },
-});
+                    confetti({
+                      particleCount: 60,
+                      angle: 120,
+                      spread: 55,
+                      origin: { x: 1 },
+                    });
                     setLoading(false);
                   } catch (error: any) {
                     console.error("REGISTRATION ERROR:", error);
@@ -1269,65 +1240,72 @@ confetti({
         )}
 
         {paymentSubmitted && (
-  <div
-    ref={successRef}
-    className="mt-12 flex flex-col items-center justify-center text-center"
-  >
+          <div
+            ref={successRef}
+            className="mt-12 flex flex-col items-center justify-center text-center"
+          >
+            {/* Animated Check Circle */}
+            <div className="w-24 h-24 rounded-full bg-green-400/20 flex items-center justify-center mb-6">
+              <motion.svg
+                viewBox="0 0 52 52"
+                className="w-16 h-16"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                <motion.circle
+                  cx="26"
+                  cy="26"
+                  r="24"
+                  fill="none"
+                  stroke="#22c55e"
+                  strokeWidth="3"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 0.6 }}
+                />
 
-    {/* Animated Check Circle */}
-    <div className="w-24 h-24 rounded-full bg-green-400/20 flex items-center justify-center mb-6">
+                <motion.path
+                  fill="none"
+                  stroke="#22c55e"
+                  strokeWidth="3"
+                  d="M14 27 L22 35 L38 18"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ delay: 0.5, duration: 0.4 }}
+                />
+              </motion.svg>
+            </div>
 
-      <motion.svg
-        viewBox="0 0 52 52"
-        className="w-16 h-16"
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ duration: 0.4 }}
-      >
-        <motion.circle
-          cx="26"
-          cy="26"
-          r="24"
-          fill="none"
-          stroke="#22c55e"
-          strokeWidth="3"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 0.6 }}
-        />
+            <h2 className="text-2xl font-bold text-green-400 mb-3">
+              Payment Submitted Successfully
+            </h2>
 
-        <motion.path
-          fill="none"
-          stroke="#22c55e"
-          strokeWidth="3"
-          d="M14 27 L22 35 L38 18"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ delay: 0.5, duration: 0.4 }}
-        />
-      </motion.svg>
-
-    </div>
-
-    <h2 className="text-2xl font-bold text-green-400 mb-3">
-      Payment Submitted Successfully
-    </h2>
-
-    <p className="text-gray-300 max-w-md">
-      Your payment has been received. Our team will verify it and send the
-      confirmation details to your email shortly.
-    </p>
-    <button
- onClick={() => downloadReceipt(registrationId)}
-  className="mt-6 bg-gradient-to-r from-cyan-400 to-blue-400
+            <p className="text-gray-300 max-w-md">
+              Your payment has been received. Our team will verify it and send
+              the confirmation details to your email shortly.
+            </p>
+            <button
+              onClick={() => downloadReceipt(registrationId)}
+              className="mt-6 bg-gradient-to-r from-cyan-400 to-blue-400
   text-black px-6 py-3 rounded-lg font-semibold
   hover:scale-105 hover:shadow-lg hover:shadow-cyan-400/30 transition"
->
-  Download Registration Receipt
-</button>
+            >
+              Download Registration Receipt
+            </button>
+            <p className="mt-5 text-sm text-gray-300 max-w-md">
+              📧 After payment verification, a{" "}
+              <span className="text-cyan-400 font-semibold">
+                confirmation email with your Entry QR Code
+              </span>{" "}
+              will be sent to all registered team members.
+            </p>
 
-  </div>
-)}
+            <p className="text-xs text-gray-500 mt-2">
+              Please check your inbox or spam folder.
+            </p>
+          </div>
+        )}
 
         <AnimatePresence>
           {showRulesModal && (
@@ -1422,7 +1400,7 @@ confetti({
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </form>
     </div>
   );
 };

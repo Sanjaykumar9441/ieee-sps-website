@@ -3,10 +3,12 @@ const express = require("express");
 const router = express.Router();
 const Registration = require("../models/registration");
 const Event = require("../models/event"); // adjust path if needed
+const rateLimit = require("express-rate-limit");
 const PDFDocument = require("pdfkit");
 const axios = require("axios");
 const sendMail = require("../utils/mailer");
 const Tesseract = require("tesseract.js");
+const QRCode = require("qrcode");
 const sendTelegramNotification = async (message) => {
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -30,10 +32,10 @@ async function extractAmountFromImage(imageUrl) {
 
     console.log("OCR TEXT:", text);
 
-    const amountMatch = text.match(/₹\s?\d+/);
+    const amountMatch = text.match(/(₹|rs|inr)?\s?\d{2,5}(\.\d{1,2})?/i);
 
     if (amountMatch) {
-      return parseInt(amountMatch[0].replace(/[^0-9]/g, ""));
+      return parseFloat(amountMatch[0].replace(/[^\d.]/g, ""));
     }
 
     return null;
@@ -42,7 +44,11 @@ async function extractAmountFromImage(imageUrl) {
     return null;
   }
 }
-
+const registerLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 15, // max 15 registrations per IP
+  message: "Too many registrations. Please try again later.",
+});
 /* =====================================
    1️⃣ GET ALL REGISTRATIONS
 ===================================== */
@@ -87,11 +93,10 @@ router.get("/check-team", async (req, res) => {
 /* =====================================
    2️⃣ CREATE REGISTRATION
 ===================================== */
-router.post("/register", async (req, res) => {
-
+router.post("/register", registerLimiter, async (req, res) => {
   if (req.body.honeypot) {
     return res.status(400).json({
-      message: "Spam detected"
+      message: "Spam detected",
     });
   }
   try {
@@ -112,10 +117,10 @@ router.post("/register", async (req, res) => {
     const perPersonFee = eventType === "combo" ? 200 : 100;
     const correctAmount = perPersonFee * teamSize;
     // AI OCR Payment Detection
-    //const detectedAmount = await extractAmountFromImage(screenshotUrl);
+    const detectedAmount = await extractAmountFromImage(screenshotUrl);
 
-   // if (detectedAmount && detectedAmount !== correctAmount) {
-     // console.log("⚠ Payment mismatch detected");
+    // if (detectedAmount && detectedAmount !== correctAmount) {
+    // console.log("⚠ Payment mismatch detected");
     //}
 
     // 🚫 Prevent fake payment amounts
@@ -125,9 +130,19 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // 🚫 Prevent empty payment submission
-    if (!userTransactionId || userTransactionId.length < 12) {
-      return res.status(400).json({ message: "Valid UTR ID is required" });
+    // 🚫 Prevent invalid UTR format
+    const utrRegex = /^[A-Za-z0-9]{12,22}$/;
+
+    if (!userTransactionId || !utrRegex.test(userTransactionId)) {
+      return res.status(400).json({
+        message: "Invalid UTR ID format",
+      });
+    }
+    // 🚫 Prevent repeated fake UTR numbers
+    if (/^(\d)\1+$/.test(userTransactionId)) {
+      return res.status(400).json({
+        message: "Invalid transaction ID",
+      });
     }
 
     if (!screenshotUrl) {
@@ -171,24 +186,22 @@ router.post("/register", async (req, res) => {
         .json({ message: "One of the team members is already registered." });
     }
     // 🔐 Generate Random Registration ID
-const prefix = eventType === "combo" ? "SPS26CMB" : "SPS26BLD";
+    const prefix = eventType === "combo" ? "SPS26CMB" : "SPS26BLD";
 
-let registrationId;
-let exists = true;
+    let registrationId;
+    let exists = true;
 
-while (exists) {
+    while (exists) {
+      const randomNumber = Math.floor(1000 + Math.random() * 9000);
 
-  const randomNumber = Math.floor(1000 + Math.random() * 9000);
+      registrationId = `${prefix}-${randomNumber}`;
 
-  registrationId = `${prefix}-${randomNumber}`;
+      const existing = await Registration.findOne({ registrationId });
 
-  const existing = await Registration.findOne({ registrationId });
-
-  if (!existing) {
-    exists = false;
-  }
-
-}
+      if (!existing) {
+        exists = false;
+      }
+    }
 
     const registration = new Registration({
       registrationId,
@@ -211,9 +224,39 @@ while (exists) {
     await registration.save();
 
     // Telegram Notifications
-    const message = `🚀 New Registration: ${teamName}\nEvent: ${eventName}\nUTR: ${userTransactionId}`;
-    await sendTelegramNotification(message);
-    await sendTelegramNotification(`🖼 Payment Screenshot:\n${screenshotUrl}`);
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+const chatId = process.env.TELEGRAM_CHAT_ID;
+
+await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, {
+  chat_id: chatId,
+  photo: screenshotUrl,
+  caption: `🚀 *New Registration*
+
+Team: *${teamName}*
+Event: ${eventName}
+Amount: ₹${correctAmount}
+UTR: \`${userTransactionId}\`
+Members: ${teamMembers.length}
+
+Registration ID: ${registrationId}`,
+
+  parse_mode: "Markdown",
+
+  reply_markup: {
+    inline_keyboard: [
+      [
+        {
+          text: "✅ Confirm",
+          callback_data: `confirm_${registrationId}`
+        },
+        {
+          text: "❌ Reject",
+          callback_data: `reject_${registrationId}`
+        }
+      ]
+    ]
+  }
+});
 
     res.status(201).json({
       message: "Registration submitted successfully",
@@ -226,9 +269,7 @@ while (exists) {
 });
 
 const generateReceiptPDF = (registration) => {
-
   return new Promise((resolve) => {
-
     const doc = new PDFDocument({ margin: 40 });
 
     let buffers = [];
@@ -236,11 +277,9 @@ const generateReceiptPDF = (registration) => {
     doc.on("data", buffers.push.bind(buffers));
 
     doc.on("end", () => {
-
       const pdfBuffer = Buffer.concat(buffers);
 
       resolve(pdfBuffer);
-
     });
 
     const pageWidth = doc.page.width;
@@ -275,12 +314,9 @@ const generateReceiptPDF = (registration) => {
     doc
       .fontSize(18)
       .fillColor("#00b4ff")
-      .text(
-        "Arduino Days 2026 Registration Receipt",
-        0,
-        70,
-        { align: "center" }
-      );
+      .text("Arduino Days 2026 Registration Receipt", 0, 70, {
+        align: "center",
+      });
 
     doc.fillColor("black").fontSize(12);
 
@@ -301,7 +337,11 @@ const generateReceiptPDF = (registration) => {
     doc.text(`Amount Paid : ₹${registration.expectedAmount}`, 40, y);
     y += 20;
 
-    doc.text(`Transaction ID : ${registration.payment.userTransactionId}`, 40, y);
+    doc.text(
+      `Transaction ID : ${registration.payment.userTransactionId}`,
+      40,
+      y,
+    );
     y += 20;
 
     doc.text(`Date : ${date}`, 40, y);
@@ -312,25 +352,16 @@ const generateReceiptPDF = (registration) => {
     /* MEMBERS */
     y += 40;
 
-    doc
-      .fontSize(14)
-      .fillColor("#00b4ff")
-      .text("Team Members", 40, y);
+    doc.fontSize(14).fillColor("#00b4ff").text("Team Members", 40, y);
 
     doc.fontSize(12).fillColor("black");
 
     y += 20;
 
     registration.teamMembers.forEach((member, index) => {
-
-      doc.text(
-        `${index + 1}. ${member.fullName} - ${member.rollNo}`,
-        50,
-        y
-      );
+      doc.text(`${index + 1}. ${member.fullName} - ${member.rollNo}`, 50, y);
 
       y += 15;
-
     });
 
     /* STATUS */
@@ -339,35 +370,21 @@ const generateReceiptPDF = (registration) => {
 
     doc
       .fillColor("red")
-      .text(
-        "Status : Payment Submitted - Verification Pending",
-        40,
-        y
-      );
+      .text("Status : Payment Submitted - Verification Pending", 40, y);
 
     /* FOOTER */
 
     doc
       .fillColor("black")
       .fontSize(10)
-      .text(
-        "IEEE SPS Student Branch Chapter",
-        0,
-        pageHeight - 60,
-        { align: "center" }
-      );
+      .text("IEEE SPS Student Branch Chapter", 0, pageHeight - 60, {
+        align: "center",
+      });
 
-    doc.text(
-      "Aditya University",
-      0,
-      pageHeight - 45,
-      { align: "center" }
-    );
+    doc.text("Aditya University", 0, pageHeight - 45, { align: "center" });
 
     doc.end();
-
   });
-
 };
 
 /* =====================================
@@ -376,6 +393,10 @@ const generateReceiptPDF = (registration) => {
 router.put("/confirm/:id", verifyToken, async (req, res) => {
   try {
     const registration = await Registration.findById(req.params.id);
+    // Generate QR code containing entry link
+    const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
+
+    const qrCodeImage = await QRCode.toDataURL(qrData);
 
     if (!registration) {
       return res.status(404).json({ message: "Registration not found" });
@@ -384,6 +405,13 @@ router.put("/confirm/:id", verifyToken, async (req, res) => {
     registration.payment.verified = true;
 
     await registration.save();
+    await axios.post(
+  "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+  { registration, qrCodeImage },
+  {
+    headers: { Authorization: req.headers.authorization },
+  }
+);
 
     const message = `
 ✅ Registration Confirmed
@@ -446,7 +474,6 @@ router.delete("/:id", verifyToken, async (req, res) => {
 ===================================== */
 router.get("/pdf/:id", async (req, res) => {
   try {
-
     const registration = await Registration.findOne({
       registrationId: req.params.id,
     });
@@ -458,7 +485,7 @@ router.get("/pdf/:id", async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=${registration.registrationId}.pdf`
+      `attachment; filename=${registration.registrationId}.pdf`,
     );
 
     const doc = new PDFDocument({ margin: 40 });
@@ -519,7 +546,7 @@ router.get("/pdf/:id", async (req, res) => {
     doc.text(
       `Transaction ID : ${registration.payment.userTransactionId}`,
       40,
-      y
+      y,
     );
     y += 20;
 
@@ -530,10 +557,7 @@ router.get("/pdf/:id", async (req, res) => {
 
     y += 40;
 
-    doc
-      .fontSize(14)
-      .fillColor("#00b4ff")
-      .text("Team Members", 40, y);
+    doc.fontSize(14).fillColor("#00b4ff").text("Team Members", 40, y);
 
     doc.fontSize(12).fillColor("black");
 
@@ -546,26 +570,20 @@ router.get("/pdf/:id", async (req, res) => {
 
     y += 20;
 
-    doc.fillColor("red").text(
-      "Status : Payment Submitted - Verification Pending",
-      40,
-      y
-    );
+    doc
+      .fillColor("red")
+      .text("Status : Payment Submitted - Verification Pending", 40, y);
 
     doc
       .fillColor("black")
       .fontSize(10)
-      .text(
-        "IEEE SPS Student Branch Chapter",
-        0,
-        pageHeight - 60,
-        { align: "center" }
-      );
+      .text("IEEE SPS Student Branch Chapter", 0, pageHeight - 60, {
+        align: "center",
+      });
 
     doc.text("Aditya University", 0, pageHeight - 45, { align: "center" });
 
     doc.end();
-
   } catch (error) {
     console.error("PDF ERROR:", error);
     res.status(500).json({ message: "Error generating PDF" });
@@ -585,12 +603,27 @@ router.put("/verify-payment/:id", verifyToken, async (req, res) => {
     // 1. OCR Check (Non-blocking but informative)
     let ocrWarning = "";
     try {
-      const detectedAmount = await extractAmountFromImage(registration.payment.screenshotUrl);
-      
-      // Use fuzzy matching or Number conversion to avoid string/number type issues
+      const detectedAmount = await extractAmountFromImage(
+        registration.payment.screenshotUrl,
+      );
+
       if (Number(detectedAmount) !== Number(registration.expectedAmount)) {
-        console.warn(`⚠ OCR Mismatch: Expected ${registration.expectedAmount}, found ${detectedAmount}`);
-        ocrWarning = " (Note: OCR detected an amount mismatch)";
+        console.warn(
+          `⚠ OCR Mismatch: Expected ${registration.expectedAmount}, found ${detectedAmount}`,
+        );
+
+        ocrWarning = " (OCR detected amount mismatch)";
+
+        // 🚨 Send Telegram warning
+        await sendTelegramNotification(`
+⚠ Suspicious Payment Detected
+
+Team: ${registration.teamName}
+Event: ${registration.eventName}
+Expected Amount: ₹${registration.expectedAmount}
+Detected Amount: ₹${detectedAmount}
+UTR: ${registration.payment.userTransactionId}
+`);
       }
     } catch (ocrError) {
       console.error("OCR Failed:", ocrError);
@@ -599,7 +632,7 @@ router.put("/verify-payment/:id", verifyToken, async (req, res) => {
 
     // 2. Explicitly set verified (Don't toggle!)
     // If you want to toggle, check a value in req.body, e.g., req.body.status
-    registration.payment.verified = true; 
+    registration.payment.verified = true;
     await registration.save();
 
     // 3. Structured Telegram Message
@@ -617,12 +650,13 @@ ${ocrWarning}
     return res.json({
       success: true,
       message: "Payment verified successfully",
-      ocrMismatch: !!ocrWarning
+      ocrMismatch: !!ocrWarning,
     });
-
   } catch (error) {
     console.error("VERIFY ERROR:", error);
-    res.status(500).json({ message: "Internal server error during verification" });
+    res
+      .status(500)
+      .json({ message: "Internal server error during verification" });
   }
 });
 
@@ -631,7 +665,7 @@ ${ocrWarning}
 ===================================== */
 router.post("/send-confirmation-email", verifyToken, async (req, res) => {
   try {
-    const { registration } = req.body;
+    const { registration, qrCodeImage } = req.body;
 
     if (!registration || !registration.teamMembers) {
       return res.status(400).json({ message: "Invalid registration data" });
@@ -675,6 +709,13 @@ router.post("/send-confirmation-email", verifyToken, async (req, res) => {
 
             <h3 style="color: #22d3ee; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">👥 Team Members</h3>
             <div style="color: #d4d4d8;">${participants}</div>
+            <div style="text-align:center;margin-top:30px;">
+  <p><b>Event Entry QR Code</b></p>
+ <img src="${qrCodeImage}" width="200"/>
+  <p style="font-size:12px;color:#aaa">
+    Please show this QR code at the event entrance.
+  </p>
+</div>
 
             <h3 style="color: #22d3ee; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">📢 Important Checklist</h3>
             <ul style="color: #a1a1aa; padding-left: 20px;">
@@ -733,6 +774,13 @@ router.post("/send-confirmation-email", verifyToken, async (req, res) => {
 
             <h3 style="color: #a855f7; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">👥 Innovators</h3>
             <div style="color: #d4d4d8;">${participants}</div>
+            <div style="text-align:center;margin-top:30px;">
+  <p><b>Event Entry QR Code</b></p>
+<img src="${qrCodeImage}" width="200"/>
+  <p style="font-size:12px;color:#aaa">
+    Please show this QR code at the event entrance.
+  </p>
+</div>
 
             <h3 style="color: #a855f7; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">📢 Participation Rules</h3>
             <ul style="color: #a1a1aa; padding-left: 20px;">
@@ -759,17 +807,15 @@ router.post("/send-confirmation-email", verifyToken, async (req, res) => {
     }
     const pdfBuffer = await generateReceiptPDF(registration);
 
-for (const member of registration.teamMembers) {
-
-await sendMail(
-member.email,
-"Arduino Days 2026 Registration Confirmed",
-htmlTemplate,
-pdfBuffer,
-`${registration.registrationId}.pdf`
-);
-
-}
+    for (const member of registration.teamMembers) {
+      await sendMail(
+        member.email,
+        "Arduino Days 2026 Registration Confirmed",
+        htmlTemplate,
+        pdfBuffer,
+        `${registration.registrationId}.pdf`,
+      );
+    }
 
     res.json({ success: true, message: "Emails sent successfully" });
   } catch (error) {
@@ -778,4 +824,234 @@ pdfBuffer,
   }
 });
 
+/* =====================================
+   8️⃣ ENTRY QR SCAN
+===================================== */
+
+router.get("/entry/:registrationId", async (req, res) => {
+
+  try {
+
+    const { registrationId } = req.params;
+
+    const registration = await Registration.findOne({ registrationId });
+
+    // 1️⃣ Check QR validity
+    if (!registration) {
+      return res.send(`
+        <h2 style="color:red;text-align:center;">
+        ❌ Invalid QR Code
+        </h2>
+      `);
+    }
+
+    // 2️⃣ Check payment verified
+    if (!registration.payment.verified) {
+      return res.send(`
+        <h2 style="color:red;text-align:center;">
+        ❌ Payment Not Verified Yet
+        </h2>
+
+        <p style="text-align:center;">
+        Please contact event organizers.
+        </p>
+      `);
+    }
+
+    // 3️⃣ Check registration confirmed
+    if (registration.registrationStatus !== "Confirmed") {
+      return res.send(`
+        <h2 style="color:red;text-align:center;">
+        ❌ Registration Not Confirmed
+        </h2>
+      `);
+    }
+
+    // 4️⃣ Check if already entered
+    const alreadyEntered = registration.teamMembers.every(
+      (m) => m.checkedIn
+    );
+
+    if (alreadyEntered) {
+      return res.send(`
+        <h2 style="color:orange;text-align:center;">
+        ⚠ Team Already Checked In
+        </h2>
+
+        <p style="text-align:center;">
+        Team: ${registration.teamName}
+        </p>
+      `);
+    }
+
+    // 5️⃣ Mark members as checked in
+    registration.teamMembers.forEach((member) => {
+      member.checkedIn = true;
+    });
+
+    registration.entryTime = new Date();
+
+    await registration.save();
+    // Send Telegram entry notification
+const token = process.env.TELEGRAM_BOT_TOKEN;
+const chatId = process.env.TELEGRAM_CHAT_ID;
+
+const entryTime = new Date().toLocaleTimeString("en-IN", {
+  hour: "2-digit",
+  minute: "2-digit"
+});
+
+await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+  chat_id: chatId,
+  text: `🎟 Entry Scanned
+
+Team: ${registration.teamName}
+Members: ${registration.teamMembers.length}
+Event: ${registration.eventName}
+Time: ${entryTime}`
+});
+
+    // 6️⃣ Success response
+    res.send(`
+      <h2 style="color:green;text-align:center;">
+      ✅ Entry Recorded
+      </h2>
+
+      <p style="text-align:center;">
+      Team: ${registration.teamName}
+      </p>
+
+      <p style="text-align:center;">
+      Members: ${registration.teamMembers.length}
+      </p>
+    `);
+
+  } catch (error) {
+
+    console.error("ENTRY ERROR:", error);
+
+    res.status(500).send("Server Error");
+
+  }
+
+});
+
+router.post("/telegram-webhook", async (req, res) => {
+
+  const data = req.body;
+
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+
+  /* =========================
+     TELEGRAM COMMANDS
+  ========================= */
+
+  if (data.message && data.message.text) {
+
+    const command = data.message.text;
+    const chatId = data.message.chat.id;
+
+    if (command === "/stats") {
+
+      const totalTeams = await Registration.countDocuments();
+
+      const totalParticipants = await Registration.aggregate([
+        { $group: { _id: null, total: { $sum: "$teamSize" } } }
+      ]);
+
+      const checkedIn = await Registration.aggregate([
+        { $unwind: "$teamMembers" },
+        { $match: { "teamMembers.checkedIn": true } },
+        { $count: "count" }
+      ]);
+
+      const revenue = await Registration.aggregate([
+        { $group: { _id: null, total: { $sum: "$expectedAmount" } } }
+      ]);
+
+      const statsMessage = `📊 Arduino Days Live Stats
+
+👥 Teams: ${totalTeams}
+
+🧑 Participants: ${totalParticipants[0]?.total || 0}
+
+🎟 Checked In: ${checkedIn[0]?.count || 0}
+
+💰 Revenue: ₹${revenue[0]?.total || 0}
+`;
+
+      await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+        chat_id: chatId,
+        text: statsMessage
+      });
+
+    }
+
+    return res.sendStatus(200);
+  }
+
+  /* =========================
+     TELEGRAM BUTTON ACTIONS
+  ========================= */
+
+  if (!data.callback_query) {
+    return res.sendStatus(200);
+  }
+
+  const callbackData = data.callback_query.data;
+
+  /* =========================
+     CONFIRM REGISTRATION
+  ========================= */
+
+  if (callbackData.startsWith("confirm_")) {
+
+    const registrationId = callbackData.split("_")[1];
+
+    const registration = await Registration.findOne({ registrationId });
+
+    if (!registration) return res.sendStatus(200);
+
+    registration.registrationStatus = "Confirmed";
+    registration.payment.verified = true;
+
+    await registration.save();
+
+    // Generate QR
+    const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
+    const qrCodeImage = await QRCode.toDataURL(qrData);
+
+    // Send confirmation email
+    await axios.post(
+      "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+      { registration, qrCodeImage }
+    );
+
+    console.log("✅ Confirmed via Telegram");
+
+  }
+
+  /* =========================
+     REJECT REGISTRATION
+  ========================= */
+
+  else if (callbackData.startsWith("reject_")) {
+
+    const registrationId = callbackData.split("_")[1];
+
+    const registration = await Registration.findOne({ registrationId });
+
+    if (!registration) return res.sendStatus(200);
+
+    registration.registrationStatus = "Rejected";
+
+    await registration.save();
+
+    console.log("❌ Registration rejected via Telegram");
+
+  }
+
+  res.sendStatus(200);
+
+});
 module.exports = router;
