@@ -68,6 +68,12 @@ const ArduinoDays = () => {
       window.removeEventListener("scroll", handleScroll);
     };
   }, [active]);
+  useEffect(() => {
+  window.scrollTo({
+    top: 0,
+    behavior: "auto"
+  });
+}, [active]);
 
   const studentCoordinators = [
     {
@@ -559,7 +565,7 @@ const ArduinoDays = () => {
                     <div className="mt-auto pt-6 flex justify-center">
                       <button
                         onClick={() =>
-                          (window.location.href = "/register?event=combo")
+                          (navigate("/register?event=combo"))
                         }
                         className="px-6 py-3 rounded-lg bg-cyan-400 text-black font-semibold
              hover:scale-105 transition shadow-lg shadow-cyan-400/30
