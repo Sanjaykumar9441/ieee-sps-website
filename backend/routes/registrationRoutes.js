@@ -1,3 +1,4 @@
+const verifyToken = require("../middleware/verifyToken");
 const express = require("express");
 const router = express.Router();
 const Registration = require("../models/registration");
@@ -45,7 +46,7 @@ async function extractAmountFromImage(imageUrl) {
 /* =====================================
    1️⃣ GET ALL REGISTRATIONS
 ===================================== */
-router.get("/registrations", async (req, res) => {
+router.get("/registrations", verifyToken, async (req, res) => {
   try {
     const registrations = await Registration.find()
       .sort({ createdAt: -1 })
@@ -70,7 +71,6 @@ router.get("/check-team", async (req, res) => {
 
     const existingTeam = await Registration.findOne({
       teamName: teamName.toUpperCase(),
-      eventName: eventName,
     });
 
     if (existingTeam) {
@@ -88,6 +88,12 @@ router.get("/check-team", async (req, res) => {
    2️⃣ CREATE REGISTRATION
 ===================================== */
 router.post("/register", async (req, res) => {
+
+  if (req.body.honeypot) {
+    return res.status(400).json({
+      message: "Spam detected"
+    });
+  }
   try {
     const {
       eventType,
@@ -106,11 +112,11 @@ router.post("/register", async (req, res) => {
     const perPersonFee = eventType === "combo" ? 200 : 100;
     const correctAmount = perPersonFee * teamSize;
     // AI OCR Payment Detection
-    const detectedAmount = await extractAmountFromImage(screenshotUrl);
+    //const detectedAmount = await extractAmountFromImage(screenshotUrl);
 
-    if (detectedAmount && detectedAmount !== correctAmount) {
-      console.log("⚠ Payment mismatch detected");
-    }
+   // if (detectedAmount && detectedAmount !== correctAmount) {
+     // console.log("⚠ Payment mismatch detected");
+    //}
 
     // 🚫 Prevent fake payment amounts
     if (frontendAmount !== correctAmount) {
@@ -143,12 +149,11 @@ router.post("/register", async (req, res) => {
     // 🚫 Prevent duplicate team name
     const existingTeam = await Registration.findOne({
       teamName: teamName.toUpperCase(),
-      eventName: eventName,
     });
     if (existingTeam) {
       return res
         .status(400)
-        .json({ message: "Team name already registered for this event." });
+        .json({ message: "This Team name is already registered." });
     }
 
     // 🚫 Check for duplicate members (Email, Phone, or RollNo)
@@ -158,15 +163,35 @@ router.post("/register", async (req, res) => {
         { "teamMembers.phone": { $in: teamMembers.map((m) => m.phone) } },
         { "teamMembers.rollNo": { $in: teamMembers.map((m) => m.rollNo) } },
       ],
-    });
+    }).lean();
 
     if (duplicateMember) {
       return res
         .status(400)
         .json({ message: "One of the team members is already registered." });
     }
+    // 🔐 Generate Random Registration ID
+const prefix = eventType === "combo" ? "SPS26CMB" : "SPS26BLD";
+
+let registrationId;
+let exists = true;
+
+while (exists) {
+
+  const randomNumber = Math.floor(1000 + Math.random() * 9000);
+
+  registrationId = `${prefix}-${randomNumber}`;
+
+  const existing = await Registration.findOne({ registrationId });
+
+  if (!existing) {
+    exists = false;
+  }
+
+}
 
     const registration = new Registration({
+      registrationId,
       eventType,
       eventName,
       teamName: teamName.toUpperCase(),
@@ -200,46 +225,161 @@ router.post("/register", async (req, res) => {
   }
 });
 
+const generateReceiptPDF = (registration) => {
+
+  return new Promise((resolve) => {
+
+    const doc = new PDFDocument({ margin: 40 });
+
+    let buffers = [];
+
+    doc.on("data", buffers.push.bind(buffers));
+
+    doc.on("end", () => {
+
+      const pdfBuffer = Buffer.concat(buffers);
+
+      resolve(pdfBuffer);
+
+    });
+
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
+
+    const createdDate = new Date(registration.createdAt);
+
+    const date = createdDate.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+
+    const time = createdDate.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    /* BORDER */
+    doc
+      .lineWidth(1.2)
+      .strokeColor("#00b4ff")
+      .rect(10, 10, pageWidth - 20, pageHeight - 20)
+      .stroke();
+
+    /* LOGO */
+    doc.image("public/titlelogo.png", pageWidth / 2 - 60, 20, {
+      width: 120,
+    });
+
+    /* TITLE */
+    doc
+      .fontSize(18)
+      .fillColor("#00b4ff")
+      .text(
+        "Arduino Days 2026 Registration Receipt",
+        0,
+        70,
+        { align: "center" }
+      );
+
+    doc.fillColor("black").fontSize(12);
+
+    let y = 110;
+
+    doc.text(`Registration ID : ${registration.registrationId}`, 40, y);
+    y += 20;
+
+    doc.text(`Team Name : ${registration.teamName}`, 40, y);
+    y += 20;
+
+    doc.text(`Event : ${registration.eventName}`, 40, y);
+    y += 20;
+
+    doc.text(`Team Size : ${registration.teamSize}`, 40, y);
+    y += 20;
+
+    doc.text(`Amount Paid : ₹${registration.expectedAmount}`, 40, y);
+    y += 20;
+
+    doc.text(`Transaction ID : ${registration.payment.userTransactionId}`, 40, y);
+    y += 20;
+
+    doc.text(`Date : ${date}`, 40, y);
+    y += 20;
+
+    doc.text(`Time : ${time}`, 40, y);
+
+    /* MEMBERS */
+    y += 40;
+
+    doc
+      .fontSize(14)
+      .fillColor("#00b4ff")
+      .text("Team Members", 40, y);
+
+    doc.fontSize(12).fillColor("black");
+
+    y += 20;
+
+    registration.teamMembers.forEach((member, index) => {
+
+      doc.text(
+        `${index + 1}. ${member.fullName} - ${member.rollNo}`,
+        50,
+        y
+      );
+
+      y += 15;
+
+    });
+
+    /* STATUS */
+
+    y += 20;
+
+    doc
+      .fillColor("red")
+      .text(
+        "Status : Payment Submitted - Verification Pending",
+        40,
+        y
+      );
+
+    /* FOOTER */
+
+    doc
+      .fillColor("black")
+      .fontSize(10)
+      .text(
+        "IEEE SPS Student Branch Chapter",
+        0,
+        pageHeight - 60,
+        { align: "center" }
+      );
+
+    doc.text(
+      "Aditya University",
+      0,
+      pageHeight - 45,
+      { align: "center" }
+    );
+
+    doc.end();
+
+  });
+
+};
+
 /* =====================================
    3️⃣ CONFIRM REGISTRATION
 ===================================== */
-router.put("/confirm/:id", async (req, res) => {
+router.put("/confirm/:id", verifyToken, async (req, res) => {
   try {
     const registration = await Registration.findById(req.params.id);
 
     if (!registration) {
       return res.status(404).json({ message: "Registration not found" });
     }
-
-    // Generate Registration ID
-    const prefix =
-      registration.eventType === "combo" ? "SPS26-CMB" : "SPS26-BLD";
-
-    // find last registration
-    const lastRegistration = await Registration.findOne({
-      eventType: registration.eventType,
-      registrationStatus: "Confirmed",
-    }).sort({ createdAt: -1 });
-
-    let nextNumber = 1;
-
-    if (lastRegistration && lastRegistration.registrationId) {
-      const parts = lastRegistration.registrationId.split("-");
-      const lastNumber = parseInt(parts[parts.length - 1]);
-      nextNumber = lastNumber + 1;
-    }
-
-    const registrationId = `${prefix}-${String(nextNumber).padStart(3, "0")}`;
-    // SAFETY CHECK
-    const existing = await Registration.findOne({ registrationId });
-
-    if (existing) {
-      return res.status(400).json({
-        message: "Registration ID conflict. Please try again.",
-      });
-    }
-
-    registration.registrationId = registrationId;
     registration.registrationStatus = "Confirmed";
     registration.payment.verified = true;
 
@@ -284,7 +424,7 @@ Hostel: ${registration.accommodationRequired ? "Yes" : "No"}
 /* =====================================
    4️⃣ DELETE REGISTRATION
 ===================================== */
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyToken, async (req, res) => {
   try {
     const registration = await Registration.findById(req.params.id);
 
@@ -306,69 +446,135 @@ router.delete("/:id", async (req, res) => {
 ===================================== */
 router.get("/pdf/:id", async (req, res) => {
   try {
-    const registration = await Registration.findById(req.params.id);
+
+    const registration = await Registration.findOne({
+      registrationId: req.params.id,
+    });
 
     if (!registration) {
       return res.status(404).json({ message: "Registration not found" });
     }
 
-    if (!registration.registrationId) {
-      return res.status(400).json({
-        message: "Registration not confirmed yet",
-      });
-    }
-
-    const doc = new PDFDocument();
-
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=${registration.registrationId}.pdf`,
+      `attachment; filename=${registration.registrationId}.pdf`
     );
 
+    const doc = new PDFDocument({ margin: 40 });
+
+    // STREAM PDF DIRECTLY
     doc.pipe(res);
 
-    doc.fontSize(18).text("IEEE SPS Registration Confirmation", {
-      align: "center",
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
+
+    const createdDate = new Date(registration.createdAt);
+
+    const date = createdDate.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
     });
 
-    doc.moveDown();
-    doc.fontSize(12);
-
-    doc.text(`Registration ID: ${registration.registrationId}`);
-    doc.text(`Event: ${registration.eventName}`);
-    doc.text(`Team Name: ${registration.teamName}`);
-    doc.text(`Team Size: ${registration.teamSize}`);
-    doc.moveDown();
-
-    doc.text("Team Members:");
-    registration.teamMembers.forEach((member, index) => {
-      doc.text(`${index + 1}. ${member.fullName} - ${member.rollNo}`);
+    const time = createdDate.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
     });
 
-    if (
-      registration.accommodationRequired &&
-      registration.hostelMembers &&
-      registration.hostelMembers.length > 0
-    ) {
-      doc.moveDown();
-      doc.text("Hostel Members:");
-      registration.hostelMembers.forEach((member, index) => {
-        doc.text(`${index + 1}. ${member.fullName}`);
+    /* BORDER */
+    doc
+      .lineWidth(1.2)
+      .strokeColor("#00b4ff")
+      .rect(10, 10, pageWidth - 20, pageHeight - 20)
+      .stroke();
+
+    /* TITLE */
+    doc
+      .fontSize(18)
+      .fillColor("#00b4ff")
+      .text("Arduino Days 2026 Registration Receipt", 0, 70, {
+        align: "center",
       });
-    }
+
+    doc.fillColor("black").fontSize(12);
+
+    let y = 110;
+
+    doc.text(`Registration ID : ${registration.registrationId}`, 40, y);
+    y += 20;
+
+    doc.text(`Team Name : ${registration.teamName}`, 40, y);
+    y += 20;
+
+    doc.text(`Event : ${registration.eventName}`, 40, y);
+    y += 20;
+
+    doc.text(`Team Size : ${registration.teamSize}`, 40, y);
+    y += 20;
+
+    doc.text(`Amount Paid : ₹${registration.expectedAmount}`, 40, y);
+    y += 20;
+
+    doc.text(
+      `Transaction ID : ${registration.payment.userTransactionId}`,
+      40,
+      y
+    );
+    y += 20;
+
+    doc.text(`Date : ${date}`, 40, y);
+    y += 20;
+
+    doc.text(`Time : ${time}`, 40, y);
+
+    y += 40;
+
+    doc
+      .fontSize(14)
+      .fillColor("#00b4ff")
+      .text("Team Members", 40, y);
+
+    doc.fontSize(12).fillColor("black");
+
+    y += 20;
+
+    registration.teamMembers.forEach((member, index) => {
+      doc.text(`${index + 1}. ${member.fullName} - ${member.rollNo}`, 50, y);
+      y += 15;
+    });
+
+    y += 20;
+
+    doc.fillColor("red").text(
+      "Status : Payment Submitted - Verification Pending",
+      40,
+      y
+    );
+
+    doc
+      .fillColor("black")
+      .fontSize(10)
+      .text(
+        "IEEE SPS Student Branch Chapter",
+        0,
+        pageHeight - 60,
+        { align: "center" }
+      );
+
+    doc.text("Aditya University", 0, pageHeight - 45, { align: "center" });
 
     doc.end();
+
   } catch (error) {
     console.error("PDF ERROR:", error);
     res.status(500).json({ message: "Error generating PDF" });
   }
 });
-
 /* =====================================
    6️⃣ VERIFY PAYMENT STATUS
 ===================================== */
-router.put("/verify-payment/:id", async (req, res) => {
+router.put("/verify-payment/:id", verifyToken, async (req, res) => {
   try {
     const registration = await Registration.findById(req.params.id);
 
@@ -376,34 +582,54 @@ router.put("/verify-payment/:id", async (req, res) => {
       return res.status(404).json({ message: "Registration not found" });
     }
 
-    // Toggle verification status
-    registration.payment.verified = !registration.payment.verified;
+    // 1. OCR Check (Non-blocking but informative)
+    let ocrWarning = "";
+    try {
+      const detectedAmount = await extractAmountFromImage(registration.payment.screenshotUrl);
+      
+      // Use fuzzy matching or Number conversion to avoid string/number type issues
+      if (Number(detectedAmount) !== Number(registration.expectedAmount)) {
+        console.warn(`⚠ OCR Mismatch: Expected ${registration.expectedAmount}, found ${detectedAmount}`);
+        ocrWarning = " (Note: OCR detected an amount mismatch)";
+      }
+    } catch (ocrError) {
+      console.error("OCR Failed:", ocrError);
+      // Don't crash the whole route if OCR fails
+    }
+
+    // 2. Explicitly set verified (Don't toggle!)
+    // If you want to toggle, check a value in req.body, e.g., req.body.status
+    registration.payment.verified = true; 
     await registration.save();
 
+    // 3. Structured Telegram Message
     const message = `
-💳 Payment Status Updated
-
-Team: ${registration.teamName}
-Event: ${registration.eventName}
-Verified: ${registration.payment.verified ? "Yes" : "No"}
+💳 *Payment Verified* ${ocrWarning ? "⚠️" : "✅"}
+-------------------------
+*Team:* ${registration.teamName}
+*Event:* ${registration.eventName}
+*Amount:* ${registration.expectedAmount}
+${ocrWarning}
 `;
 
     await sendTelegramNotification(message);
 
-    res.json({
-      message: "Payment status updated",
-      data: registration,
+    return res.json({
+      success: true,
+      message: "Payment verified successfully",
+      ocrMismatch: !!ocrWarning
     });
+
   } catch (error) {
     console.error("VERIFY ERROR:", error);
-    res.status(500).json({ message: "Error updating payment" });
+    res.status(500).json({ message: "Internal server error during verification" });
   }
 });
 
 /* =====================================
    7️⃣ SEND CONFIRMATION EMAIL (Separate Route)
 ===================================== */
-router.post("/send-confirmation-email", async (req, res) => {
+router.post("/send-confirmation-email", verifyToken, async (req, res) => {
   try {
     const { registration } = req.body;
 
@@ -531,15 +757,19 @@ router.post("/send-confirmation-email", async (req, res) => {
     </div>
 </div>`;
     }
+    const pdfBuffer = await generateReceiptPDF(registration);
 
-    // Send to all members
-    for (const member of registration.teamMembers) {
-      await sendMail(
-        member.email,
-        "Arduino Days 2026 Registration Confirmed",
-        htmlTemplate,
-      );
-    }
+for (const member of registration.teamMembers) {
+
+await sendMail(
+member.email,
+"Arduino Days 2026 Registration Confirmed",
+htmlTemplate,
+pdfBuffer,
+`${registration.registrationId}.pdf`
+);
+
+}
 
     res.json({ success: true, message: "Emails sent successfully" });
   } catch (error) {

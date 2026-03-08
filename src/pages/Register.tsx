@@ -1,8 +1,9 @@
 import { useSearchParams } from "react-router-dom";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-
+import confetti from "canvas-confetti";
+import jsPDF from "jspdf";
 type Member = {
   fullName: string;
   rollNo: string;
@@ -33,7 +34,85 @@ const createEmptyMember = (): Member => ({
   selectedCollege: "",
 });
 
+const BackgroundImage = () => {
+  return (
+    <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+
+      {/* Background Image */}
+      <img
+        src="/freepik_arduino_background.jpg"
+        alt="background"
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+
+      {/* Dark overlay for readability */}
+      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/10" />
+
+      {/* Bottom fade */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+
+    </div>
+  );
+};
+
+const StepIndicator = ({
+  showSummary,
+  showPayment,
+}: {
+  showSummary: boolean;
+  showPayment: boolean;
+}) => {
+
+  let step = 1;
+
+  if (showSummary) step = 2;
+  if (showPayment) step = 3;
+
+  return (
+    <div className="flex items-center justify-center mb-10">
+
+      {[1,2,3].map((s,index)=>{
+
+        const active = s <= step;
+
+        return (
+          <div key={s} className="flex items-center">
+
+            {/* Circle */}
+            <div
+              className={`w-10 h-10 flex items-center justify-center rounded-full font-bold
+              ${active
+                ? "bg-cyan-400 text-black"
+                : "bg-gray-700 text-gray-300"
+              }`}
+            >
+              {s}
+            </div>
+
+            {/* Label */}
+            <span className="ml-2 mr-6 text-sm hidden md:block">
+              {s===1 && "Team Info"}
+              {s===2 && "Summary"}
+              {s===3 && "Payment"}
+            </span>
+
+            {/* Line */}
+            {index < 2 && (
+              <div className="w-10 md:w-16 h-[2px] bg-gray-600 mr-6"></div>
+            )}
+
+          </div>
+        );
+
+      })}
+
+    </div>
+  );
+};
+
 const Register = () => {
+  const [registrationId, setRegistrationId] = useState("");
+  const [honeypot, setHoneypot] = useState("");
   const [searchParams] = useSearchParams();
   const event = searchParams.get("event") || "combo";
   const [loading, setLoading] = useState(false);
@@ -49,6 +128,8 @@ const Register = () => {
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [rulesError, setRulesError] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const memberRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const nameInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [members, setMembers] = useState<Member[]>([
     createEmptyMember(),
     createEmptyMember(),
@@ -67,6 +148,23 @@ const Register = () => {
     // RESET accommodation selections when team size changes
     setAccommodationMembers([]);
   };
+
+const handleEnterNext = (
+  e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>
+) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+
+    const form = e.currentTarget.form;
+    if (!form) return;
+
+    const index = Array.prototype.indexOf.call(form, e.currentTarget);
+
+    const next = form.elements[index + 1] as HTMLElement;
+
+    if (next) next.focus();
+  }
+};
 
   const handleMemberChange = (
     index: number,
@@ -126,15 +224,39 @@ const Register = () => {
       updatedValue = value.replace(/\D/g, "");
     }
 
-    setMembers((prev) =>
-      prev.map((member, i) =>
-        i === index ? { ...member, [field]: updatedValue } : member,
-      ),
-    );
-  };
+    setMembers((prev) => {
+  const updated = prev.map((member, i) =>
+    i === index ? { ...member, [field]: updatedValue } : member
+  );
 
+  const m = updated[index];
+
+  const completed =
+    m.fullName &&
+    m.rollNo &&
+    m.email &&
+    m.phone &&
+    m.department &&
+    m.year &&
+    m.selectedCollege;
+
+ if (completed && memberRefs.current[index + 1]) {
+  setTimeout(() => {
+    memberRefs.current[index + 1]?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+
+    nameInputRefs.current[index + 1]?.focus();
+
+  }, 300);
+}
+
+  return updated;
+});
+  }
   const validateForm = () => {
-    if (!teamName.trim()) {
+    if (!teamName.trim() || teamName.length < 3) {
       alert("Team name is required.");
       return false;
     }
@@ -199,6 +321,7 @@ const Register = () => {
   };
 
   const handleNext = async () => {
+    if (loading) return;
     if (!validateForm()) return;
 
     try {
@@ -239,6 +362,8 @@ const Register = () => {
   const [transactionId, setTransactionId] = useState("");
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
+  const successRef = useRef<HTMLDivElement | null>(null);
+
 
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
@@ -250,12 +375,162 @@ const Register = () => {
     }, 1500);
   };
 
+ const downloadReceipt = (registrationId: string) => {
+
+  const doc = new jsPDF();
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  const now = new Date();
+
+  const date = now.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+
+  const time = now.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  // BORDER
+  doc.setDrawColor(0, 180, 255);
+  doc.setLineWidth(1.2);
+  doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
+
+  // LOGO
+  const logo = new Image();
+  logo.src = "/titlelogo.png";
+
+  logo.onload = () => {
+
+    doc.addImage(logo, "PNG", pageWidth / 2 - 30, 18, 60, 25);
+
+    // TITLE
+    doc.setFontSize(18);
+    doc.setTextColor(0, 180, 255);
+
+    doc.text(
+      "Arduino Days 2026 Registration Receipt",
+      pageWidth / 2,
+      55,
+      { align: "center" }
+    );
+
+    doc.setTextColor(0,0,0);
+    doc.setFontSize(12);
+
+    // DETAILS
+    let y = 75;
+
+    doc.text(`Registration ID : ${registrationId}`, 20, y);
+    y += 10;
+
+    doc.text(`Team Name : ${teamName}`, 20, y);
+    y += 10;
+
+    doc.text(
+      `Event : ${
+        event === "combo"
+          ? "Skill Forze + Buildathon"
+          : "Buildathon"
+      }`,
+      20,
+      y
+    );
+
+    y += 10;
+
+    doc.text(`Team Size : ${teamSize}`, 20, y);
+    y += 10;
+
+    doc.text(`Amount Paid : ₹${totalAmount}`, 20, y);
+    y += 10;
+
+    doc.text(`Transaction ID : ${transactionId}`, 20, y);
+    y += 10;
+
+    doc.text(`Date : ${date}`, 20, y);
+    y += 10;
+
+    doc.text(`Time : ${time}`, 20, y);
+
+    // MEMBERS SECTION
+    y += 20;
+
+    doc.setFontSize(14);
+    doc.setTextColor(0, 180, 255);
+
+    doc.text("Team Members", 20, y);
+
+    doc.setFontSize(12);
+    doc.setTextColor(0,0,0);
+
+    y += 10;
+
+    members.forEach((member, index) => {
+
+      doc.text(
+        `${index + 1}. ${member.fullName} - ${member.rollNo}`,
+        25,
+        y
+      );
+
+      y += 8;
+    });
+
+    // STATUS
+    y += 10;
+
+    doc.setTextColor(200,0,0);
+
+    doc.text(
+  "Status : Payment Submitted - Verification Pending",
+  20,
+  y
+);
+
+    // FOOTER
+    doc.setTextColor(0,0,0);
+    doc.setFontSize(10);
+
+    doc.text(
+      "IEEE SPS Student Branch Chapter",
+      pageWidth / 2,
+      pageHeight - 25,
+      { align: "center" }
+    );
+
+    doc.text(
+      "Aditya University",
+      pageWidth / 2,
+      pageHeight - 18,
+      { align: "center" }
+    );
+
+    doc.save(`${teamName}_ArduinoDays_Receipt.pdf`);
+  };
+};
+
   return (
-    <div className="min-h-screen bg-[#050a12] text-white px-4 md:px-6 py-12 overflow-x-hidden">
-      <div className="max-w-4xl mx-auto w-full">
+  <div className="min-h-screen relative text-white px-4 md:px-6 py-12 overflow-x-hidden">
+
+    <BackgroundImage />
+
+    <div className="relative z-10 max-w-4xl mx-auto w-full">
+      <StepIndicator
+  showSummary={showSummary}
+  showPayment={showPayment}
+/>
+      </div>
+      <div className="relative z-10 max-w-4xl mx-auto w-full backdrop-blur-xl bg-black/50 border border-cyan-400/20 rounded-2xl p-8 shadow-[0_10px_40px_rgba(0,0,0,0.6)]">
         {!showSummary && !showPayment && (
           <>
-            <h1 className="text-3xl font-bold mb-8 text-center text-cyan-400">
+            <h1 className="text-3xl md:text-4xl font-bold mb-8 text-center 
+bg-gradient-to-r from-cyan-400 via-blue-400 to-green-400 
+bg-clip-text text-transparent">
               Register for{" "}
               <span className="bg-cyan-400 text-black px-3 py-1 rounded">
                 {event === "combo" ? "Skill Forze + Buildathon" : "Buildathon"}
@@ -267,7 +542,9 @@ const Register = () => {
               <label className="block mb-2">Team Name</label>
               <input
                 type="text"
-                className="w-full p-3 bg-black border border-gray-600 rounded"
+                placeholder="Enter your team name"
+                className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 value={teamName}
                 onChange={(e) =>
                   setTeamName(
@@ -276,12 +553,19 @@ const Register = () => {
                 }
               />
             </div>
-
+              <input
+  type="text"
+  name="website"
+  value={honeypot}
+  onChange={(e) => setHoneypot(e.target.value)}
+  style={{ display: "none" }}
+/>
             {/* Team Size */}
             <div className="mb-8">
               <label className="block mb-2">Select Team Size</label>
               <select
-                className="w-full p-3 bg-black border border-gray-600 rounded"
+                className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 value={teamSize}
                 onChange={(e) => handleTeamSizeChange(Number(e.target.value))}
               >
@@ -293,43 +577,51 @@ const Register = () => {
 
             {/* Members */}
             {members.map((member, index) => (
-              <div
-                key={index}
-                className="mb-10 p-4 md:p-6 border border-cyan-400/30 rounded-lg"
-              >
+  <div
+    key={index}
+    ref={(el) => (memberRefs.current[index] = el)}
+    className="mb-10 p-6 border border-cyan-400/20 rounded-xl bg-black/40 backdrop-blur-md"
+  >
                 <h2 className="text-xl font-semibold mb-4 text-cyan-300">
                   Member {index + 1}
                 </h2>
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <input
+                    ref={(el) => (nameInputRefs.current[index] = el)}
                     type="text"
                     placeholder="Full Name with initial"
-                    className="w-full p-3 bg-black border border-gray-600 rounded"
+                    className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     value={member.fullName}
                     onChange={(e) =>
                       handleMemberChange(index, "fullName", e.target.value)
                     }
+                    onKeyDown={handleEnterNext}
                   />
 
                   <input
                     type="text"
                     placeholder="Roll Number"
-                    className="w-full p-3 bg-black border border-gray-600 rounded"
+                    className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     value={member.rollNo}
                     onChange={(e) =>
                       handleMemberChange(index, "rollNo", e.target.value)
                     }
+                    onKeyDown={handleEnterNext}
                   />
 
                   <input
                     type="email"
                     placeholder="Email"
-                    className="w-full p-3 bg-black border border-gray-600 rounded"
+                    className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     value={member.email}
                     onChange={(e) =>
                       handleMemberChange(index, "email", e.target.value)
                     }
+                    onKeyDown={handleEnterNext}
                   />
 
                   <input
@@ -338,25 +630,30 @@ const Register = () => {
                     maxLength={10}
                     inputMode="numeric"
                     pattern="[0-9]{10}"
-                    className="w-full p-3 bg-black border border-gray-600 rounded"
+                    className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     value={member.phone}
                     onChange={(e) =>
                       handleMemberChange(index, "phone", e.target.value)
                     }
+                    onKeyDown={handleEnterNext}
                   />
 
                   <input
                     type="text"
                     placeholder="Department"
-                    className="w-full p-3 bg-black border border-gray-600 rounded"
+                    className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     value={member.department}
                     onChange={(e) =>
                       handleMemberChange(index, "department", e.target.value)
                     }
+                    onKeyDown={handleEnterNext}
                   />
 
                   <select
-                    className="w-full p-3 bg-black border border-gray-600 rounded"
+                    className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     value={member.year}
                     onChange={(e) =>
                       handleMemberChange(index, "year", e.target.value)
@@ -369,7 +666,8 @@ const Register = () => {
                     <option>4th</option>
                   </select>
                   <select
-                    className="w-full p-3 bg-black border border-gray-600 rounded"
+                    className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     value={member.selectedCollege}
                     onChange={(e) =>
                       handleMemberChange(
@@ -391,17 +689,20 @@ const Register = () => {
                       <input
                         type="text"
                         placeholder="College Name"
-                        className="w-full p-3 bg-black border border-gray-600 rounded"
+                        className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                         value={member.college}
                         onChange={(e) =>
                           handleMemberChange(index, "college", e.target.value)
                         }
+                        onKeyDown={handleEnterNext}
                       />
 
                       <input
                         type="text"
                         placeholder="City"
-                        className="w-full p-3 bg-black border border-gray-600 rounded"
+                        className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                         value={member.collegeCity}
                         onChange={(e) =>
                           handleMemberChange(
@@ -410,11 +711,13 @@ const Register = () => {
                             e.target.value,
                           )
                         }
+                        onKeyDown={handleEnterNext}
                       />
                       <input
                         type="text"
                         placeholder="Pincode"
-                        className="w-full p-3 bg-black border border-gray-600 rounded"
+                        className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                         value={member.collegePincode}
                         onChange={(e) => {
                           const value = e.target.value;
@@ -423,12 +726,14 @@ const Register = () => {
                           }
                         }}
                         inputMode="numeric"
+                        onKeyDown={handleEnterNext}
                       />
 
                       <input
                         type="text"
                         placeholder="District"
-                        className="w-full p-3 bg-black border border-gray-600 rounded"
+                        className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                         value={member.collegeDistrict}
                         onChange={(e) =>
                           handleMemberChange(
@@ -437,10 +742,12 @@ const Register = () => {
                             e.target.value,
                           )
                         }
+                        onKeyDown={handleEnterNext}
                       />
 
                       <select
-                        className="w-full p-3 bg-black border border-gray-600 rounded"
+                        className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                         value={member.collegeState}
                         onChange={(e) =>
                           handleMemberChange(
@@ -475,7 +782,8 @@ const Register = () => {
               </label>
 
               <select
-                className="w-full p-3 bg-black border border-gray-600 rounded"
+                className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 value={accommodationRequired ? "yes" : "no"}
                 onChange={(e) => {
                   const isYes = e.target.value === "yes";
@@ -487,13 +795,13 @@ const Register = () => {
                 <option value="yes">Yes</option>
               </select>
               {accommodationRequired && (
-                <div className="mb-8 p-6 border border-yellow-400/30 rounded-lg">
+  <div className="mt-6 p-6 border border-yellow-400/30 rounded-lg bg-yellow-900/10">
                   <h2 className="text-lg font-semibold mb-4 text-yellow-300">
                     Select Members for Accommodation
                   </h2>
 
                   {members.map((member, index) => (
-                    <label key={index} className="flex items-center gap-3 mb-2">
+                    <label key={index} className="flex items-center gap-3 mb-3">
                       <input
                         type="checkbox"
                         checked={accommodationMembers.includes(index)}
@@ -507,11 +815,16 @@ const Register = () => {
             </div>
 
             <button
-              onClick={handleNext}
-              className="w-full bg-cyan-400 text-black font-bold py-3 rounded hover:scale-105 transition"
-            >
-              {loading ? "Loading..." : "Go to Payment"}
-            </button>
+  disabled={loading}
+  onClick={handleNext}
+  className={`w-full font-bold py-3 rounded-lg transition ${
+    loading
+      ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+      : "bg-gradient-to-r from-cyan-400 to-blue-400 text-black hover:scale-105 hover:shadow-lg hover:shadow-cyan-400/30"
+  }`}
+>
+  {loading ? "Checking Details..." : "Go to Payment"}
+</button>
           </>
         )}
 
@@ -593,7 +906,12 @@ const Register = () => {
               </button>
 
               <button
-                className="flex-1 bg-green-400 text-black font-bold py-3 rounded hover:scale-105 transition"
+  disabled={loading}
+  className={`flex-1 font-bold py-3 rounded transition ${
+    loading
+      ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+      : "bg-green-400 text-black hover:scale-105"
+  }`}
                 onClick={() => {
                   if (!agreedRules) {
                     setRulesError(true);
@@ -634,9 +952,17 @@ const Register = () => {
 
                 <hr className="my-3 border-gray-600" />
 
-                <p className="text-xl font-bold text-yellow-400">
-                  Total Amount: ₹{totalAmount}
-                </p>
+                <div className="text-center mt-4">
+
+<p className="text-sm text-gray-400">
+Amount to Pay
+</p>
+
+<p className="text-4xl font-bold text-green-400 tracking-wide">
+₹{totalAmount}
+</p>
+
+</div>
                 {accommodationRequired && accommodationMembers.length > 0 && (
                   <div className="mt-4 p-4 border border-yellow-400/40 rounded-lg bg-yellow-900/10 text-yellow-300 text-sm">
                     For hostel accommodation Fees, our team will personally contact
@@ -655,7 +981,10 @@ const Register = () => {
               </div>
 
               {/* Payment Card */}
-              <div className="mb-8 p-6 rounded-xl border border-cyan-400/30 bg-gradient-to-br from-[#0a1623] to-[#02060c] shadow-lg">
+              <div className="mb-8 p-8 rounded-2xl border border-cyan-400/30 
+bg-gradient-to-br from-[#07111b] to-[#02060c]
+shadow-[0_10px_40px_rgba(0,0,0,0.6)]
+backdrop-blur-md">
                 <h3 className="text-xl font-semibold text-cyan-400 mb-6 text-center">
                   🏦 Bank Transfer Details
                 </h3>
@@ -804,26 +1133,32 @@ const Register = () => {
                     setTransactionId(value);
                   }
                 }}
-                className="w-full p-3 bg-black border border-gray-700 rounded"
+                className="w-full p-3 bg-black/70 border border-cyan-400/30 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
               />
+              <div className="border border-dashed border-cyan-400/30 p-6 rounded-xl text-center mb-6 bg-black/30">
 
+<p className="text-gray-400 mb-3">
+Upload Payment Screenshot
+</p>
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/jpg"
-                className="w-full mb-6"
+                className="text-sm"
                 onChange={(e) => {
                   if (e.target.files) {
                     setScreenshot(e.target.files[0]);
                   }
                 }}
               />
+              </div>
 
               <button
                 disabled={loading}
                 className={`w-full font-bold py-3 rounded transition ${
                   loading
                     ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                    : "bg-green-400 text-black hover:scale-105"
+                    : "bg-gradient-to-r from-green-400 to-emerald-400 text-black hover:scale-105 hover:shadow-lg hover:shadow-green-400/30"
                 }`}
                 onClick={async () => {
                   // Validate UTR ID
@@ -863,9 +1198,9 @@ const Register = () => {
                     );
 
                     // 3️⃣ Send registration data to backend
-                    await axios.post(
-                      "https://ieee-sps-website.onrender.com/api/register",
-                      {
+                    const res = await axios.post(
+"https://ieee-sps-website.onrender.com/api/register",
+{
                         eventType:
                           event === "buildathon" ? "buildathon" : "combo",
                         eventName:
@@ -875,6 +1210,7 @@ const Register = () => {
                         teamName,
                         teamSize,
                         teamMembers: members,
+                        honeypot,
                         accommodationRequired,
                         hostelMembers: selectedHostelMembers,
                         expectedAmount: totalAmount,
@@ -884,6 +1220,34 @@ const Register = () => {
                     );
 
                     setPaymentSubmitted(true);
+                    setTimeout(() => {
+  successRef.current?.scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+  });
+  setRegistrationId(res.data.data.registrationId);
+}, 200);
+
+// 🎉 Confetti burst
+confetti({
+  particleCount: 80,
+  spread: 70,
+  origin: { y: 0.6 },
+});
+
+confetti({
+  particleCount: 60,
+  angle: 60,
+  spread: 55,
+  origin: { x: 0 },
+});
+
+confetti({
+  particleCount: 60,
+  angle: 120,
+  spread: 55,
+  origin: { x: 1 },
+});
                     setLoading(false);
                   } catch (error: any) {
                     console.error("REGISTRATION ERROR:", error);
@@ -898,24 +1262,72 @@ const Register = () => {
                   }
                 }}
               >
-                {loading ? "Processing..." : "Payment Done"}
+                {loading ? "Processing Payment..." : "Payment Done"}
               </button>
             </div>
           </>
         )}
 
         {paymentSubmitted && (
-          <div className="mt-10 p-8 border border-yellow-400/30 rounded-lg text-center">
-            <h2 className="text-2xl font-bold text-yellow-400 mb-4">
-              Payment Submitted Successfully
-            </h2>
+  <div
+    ref={successRef}
+    className="mt-12 flex flex-col items-center justify-center text-center"
+  >
 
-            <p>
-              We will verify your payment and send confirmation details to your
-              Email shortly.
-            </p>
-          </div>
-        )}
+    {/* Animated Check Circle */}
+    <div className="w-24 h-24 rounded-full bg-green-400/20 flex items-center justify-center mb-6">
+
+      <motion.svg
+        viewBox="0 0 52 52"
+        className="w-16 h-16"
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ duration: 0.4 }}
+      >
+        <motion.circle
+          cx="26"
+          cy="26"
+          r="24"
+          fill="none"
+          stroke="#22c55e"
+          strokeWidth="3"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.6 }}
+        />
+
+        <motion.path
+          fill="none"
+          stroke="#22c55e"
+          strokeWidth="3"
+          d="M14 27 L22 35 L38 18"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
+        />
+      </motion.svg>
+
+    </div>
+
+    <h2 className="text-2xl font-bold text-green-400 mb-3">
+      Payment Submitted Successfully
+    </h2>
+
+    <p className="text-gray-300 max-w-md">
+      Your payment has been received. Our team will verify it and send the
+      confirmation details to your email shortly.
+    </p>
+    <button
+ onClick={() => downloadReceipt(registrationId)}
+  className="mt-6 bg-gradient-to-r from-cyan-400 to-blue-400
+  text-black px-6 py-3 rounded-lg font-semibold
+  hover:scale-105 hover:shadow-lg hover:shadow-cyan-400/30 transition"
+>
+  Download Registration Receipt
+</button>
+
+  </div>
+)}
 
         <AnimatePresence>
           {showRulesModal && (

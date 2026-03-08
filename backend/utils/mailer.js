@@ -1,13 +1,4 @@
-const SibApiV3Sdk = require("sib-api-v3-sdk");
-
-const client = SibApiV3Sdk.ApiClient.instance;
-
-const apiKey = client.authentications["api-key"];
-apiKey.apiKey = process.env.BREVO_API_KEY;
-
-const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
-
-const sendMail = async (to, subject, html) => {
+const sendMail = async (to, subject, html, pdfBuffer, filename) => {
 
   try {
 
@@ -16,11 +7,21 @@ const sendMail = async (to, subject, html) => {
         name: "Arduino Days 2026",
         email: "ieee.club.aus@gmail.com"
       },
-      to: [
-        { email: to }
-      ],
+
+      to: [{ email: to }],
+
       subject: subject,
-      htmlContent: html
+
+      htmlContent: html,
+
+      attachment: pdfBuffer
+        ? [
+            {
+              name: filename,
+              content: pdfBuffer.toString("base64"),
+            },
+          ]
+        : [],
     };
 
     await apiInstance.sendTransacEmail(email);
@@ -28,11 +29,6 @@ const sendMail = async (to, subject, html) => {
     console.log("✅ Email sent:", to);
 
   } catch (error) {
-
     console.error("❌ Mail error:", error);
-
   }
-
 };
-
-module.exports = sendMail;

@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,245 +7,301 @@
 /* =========================
    BASE THEME VARIABLES
 ========================= */
+
 @layer base {
 
-  :root {
-    /* ===== PREMIUM LIGHT MODE ===== */
+:root {
 
-    --background: 210 40% 97%;
-    --foreground: 222 47% 15%;
+  --background: 210 40% 97%;
+  --foreground: 222 47% 15%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 15%;
 
-    --primary: 190 100% 45%;
-    --primary-foreground: 0 0% 100%;
+  --primary: 190 100% 45%;
+  --primary-foreground: 0 0% 100%;
 
-    --secondary: 295 90% 50%;
-    --secondary-foreground: 0 0% 100%;
+  --secondary: 295 90% 50%;
+  --secondary-foreground: 0 0% 100%;
 
-    --accent: 110 80% 45%;
-    --accent-foreground: 0 0% 100%;
+  --accent: 110 80% 45%;
+  --accent-foreground: 0 0% 100%;
 
-    --muted: 210 30% 94%;
-    --muted-foreground: 215 20% 40%;
+  --muted: 210 30% 94%;
+  --muted-foreground: 215 20% 40%;
 
-    --border: 214 32% 85%;
-    --input: 214 32% 85%;
-    --ring: 190 100% 45%;
+  --border: 214 32% 85%;
+  --input: 214 32% 85%;
+  --ring: 190 100% 45%;
 
-    --radius: 0.6rem;
+  --radius: 0.6rem;
 
-    --font-display: 'Orbitron', monospace;
-    --font-body: 'Inter', sans-serif;
-  }
+  --font-display: 'Orbitron', monospace;
+  --font-body: 'Inter', sans-serif;
+}
 
-  .dark {
-    /* ===== DARK MODE (UNCHANGED) ===== */
+/* Dark Mode */
 
-    --background: 0 0% 2%;
-    --foreground: 0 0% 95%;
+.dark {
 
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 95%;
+  --background: 0 0% 2%;
+  --foreground: 0 0% 95%;
 
-    --primary: 186 100% 50%;
-    --primary-foreground: 0 0% 2%;
+  --card: 0 0% 5%;
+  --card-foreground: 0 0% 95%;
 
-    --secondary: 295 100% 45%;
-    --secondary-foreground: 0 0% 95%;
+  --primary: 186 100% 50%;
+  --primary-foreground: 0 0% 2%;
 
-    --accent: 110 100% 55%;
-    --accent-foreground: 0 0% 2%;
+  --secondary: 295 100% 45%;
+  --secondary-foreground: 0 0% 95%;
 
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 55%;
+  --accent: 110 100% 55%;
+  --accent-foreground: 0 0% 2%;
 
-    --border: 0 0% 12%;
-    --input: 0 0% 12%;
-    --ring: 186 100% 50%;
-  }
+  --muted: 0 0% 10%;
+  --muted-foreground: 0 0% 55%;
 
-  body {
+  --border: 0 0% 12%;
+  --input: 0 0% 12%;
+  --ring: 186 100% 50%;
+}
+
+/* Base body */
+
+body {
   @apply bg-background text-foreground;
   font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
 }
 
-
-
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display);
-  }
+h1,h2,h3,h4,h5,h6{
+  font-family: var(--font-display);
 }
-
-
+}
 /* =========================
-   LIGHT MODE RGB BUTTON
+   RGB BUTTON
 ========================= */
 
-.btn-glow-light {
+.btn-glow-light{
+
   background: linear-gradient(
     90deg,
     hsl(190 100% 45%),
     hsl(295 90% 50%),
     hsl(110 80% 45%)
   );
-  background-size: 200% 100%;
-  color: white;
-  font-weight: 600;
-  border-radius: 999px;
-  padding: 0.8rem 2rem;
-  transition: all 0.3s ease;
-  animation: rgb-button-shift 4s linear infinite;
+
+  background-size:200% 100%;
+
+  color:white;
+  font-weight:600;
+  border-radius:999px;
+
+  padding:0.8rem 2rem;
+
+  transition:all .3s ease;
+
+  animation:rgb-button-shift 4s linear infinite;
+
   box-shadow:
-    0 5px 20px hsl(190 100% 45% / 0.25),
-    0 0 40px hsl(295 90% 50% / 0.15);
+  0 5px 20px hsl(190 100% 45% / .25),
+  0 0 40px hsl(295 90% 50% / .15);
 }
 
-.btn-glow-light:hover {
-  transform: translateY(-3px) scale(1.03);
+.btn-glow-light:hover{
+
+  transform:translateY(-3px) scale(1.03);
+
   box-shadow:
-    0 10px 30px hsl(190 100% 45% / 0.4),
-    0 0 60px hsl(295 90% 50% / 0.3);
+  0 10px 30px hsl(190 100% 45% / .4),
+  0 0 60px hsl(295 90% 50% / .3);
 }
 
-@keyframes rgb-button-shift {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 200% 50%; }
+@keyframes rgb-button-shift{
+
+0%{background-position:0% 50%}
+100%{background-position:200% 50%}
+
 }
 
 
 /* =========================
-   LIGHT RGB BORDER
+   RGB BORDER
 ========================= */
 
-.rgb-border-light {
-  position: relative;
-  border-radius: 1rem;
-  padding: 2px;
-  background: linear-gradient(
-    90deg,
-    hsl(190 100% 45%),
-    hsl(295 90% 50%),
-    hsl(110 80% 45%),
-    hsl(190 100% 45%)
-  );
-  background-size: 300% 100%;
-  animation: rgb-border-flow 5s linear infinite;
+.rgb-border-light{
+
+position:relative;
+border-radius:1rem;
+padding:2px;
+
+background:linear-gradient(
+90deg,
+hsl(190 100% 45%),
+hsl(295 90% 50%),
+hsl(110 80% 45%),
+hsl(190 100% 45%)
+);
+
+background-size:300% 100%;
+
+animation:rgb-border-flow 5s linear infinite;
+
 }
 
-.rgb-border-light > * {
-  background: white;
-  border-radius: 0.9rem;
+.rgb-border-light > *{
+
+background:white;
+border-radius:.9rem;
+
 }
 
-@keyframes rgb-border-flow {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 300% 50%; }
+@keyframes rgb-border-flow{
+
+0%{background-position:0% 50%}
+100%{background-position:300% 50%}
+
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translate(-50%, -10px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.25s ease-out;
-}
-
-@keyframes gradientMove {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.animate-gradient {
-  background-size: 200% 200%;
-  animation: gradientMove 8s ease infinite;
-}
-
-@keyframes gradientMove {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.animate-gradient {
-  background-size: 300% 300%;
-  animation: gradientMove 6s ease infinite;
-}
-
-@keyframes spin-slow {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin-slow {
-  animation: spin-slow 6s linear infinite;
-}
-
-@keyframes gradientMove {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.animate-gradientMove {
-  background-size: 300% 300%;
-  animation: gradientMove 15s ease infinite;
-}
-
-@keyframes textGlow {
-  0%, 100% { text-shadow: 0 0 10px rgba(6,182,212,0.6); }
-  50% { text-shadow: 0 0 25px rgba(6,182,212,1); }
-}
-
-.animate-textGlow {
-  animation: textGlow 3s ease-in-out infinite;
-}
-
-@keyframes globalGradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.animate-globalGradient {
-  background-size: 400% 400%;
-  animation: globalGradient 25s ease infinite;
-}
-
-@keyframes floatSlow {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-40px); }
-}
-
-.animate-floatSlow {
-  animation: floatSlow 18s ease-in-out infinite;
-}
 /* =========================
-   MOBILE HERO BACKGROUND ONLY
+   ANIMATIONS
 ========================= */
 
+@keyframes fadeIn{
 
-@media (max-width: 768px) {
+from{
+opacity:0;
+transform:translate(-50%,-10px);
+}
 
-  html.dark body {
-    background: #020617; /* deep navy */
+to{
+opacity:1;
+transform:translate(-50%,0);
+}
 
-    background-image: radial-gradient(
-      circle at 50% 35%,
-      rgba(0, 180, 255, 0.25),
-      rgba(0, 0, 0, 0) 65%
-    );
+}
 
-    background-repeat: no-repeat;
-    background-size: cover;
+.animate-fadeIn{
+animation:fadeIn .25s ease-out;
+}
+
+/* Gradient Animation */
+
+@keyframes gradientMove{
+
+0%{background-position:0% 50%}
+50%{background-position:100% 50%}
+100%{background-position:0% 50%}
+
+}
+
+.animate-gradient{
+
+background-size:300% 300%;
+animation:gradientMove 6s ease infinite;
+
+}
+
+.animate-gradientMove{
+
+background-size:300% 300%;
+animation:gradientMove 15s ease infinite;
+
+}
+
+/* Spin */
+
+@keyframes spin-slow{
+
+from{transform:rotate(0deg)}
+to{transform:rotate(360deg)}
+
+}
+
+.animate-spin-slow{
+animation:spin-slow 6s linear infinite;
+}
+
+/* Text Glow */
+
+@keyframes textGlow{
+
+0%,100%{
+text-shadow:0 0 10px rgba(6,182,212,.6);
+}
+
+50%{
+text-shadow:0 0 25px rgba(6,182,212,1);
+}
+
+}
+
+.animate-textGlow{
+animation:textGlow 3s ease-in-out infinite;
+}
+
+/* Global Gradient */
+
+@keyframes globalGradient{
+
+0%{background-position:0% 50%}
+50%{background-position:100% 50%}
+100%{background-position:0% 50%}
+
+}
+
+.animate-globalGradient{
+
+background-size:400% 400%;
+animation:globalGradient 25s ease infinite;
+
+}
+
+/* Floating */
+
+@keyframes floatSlow{
+
+0%,100%{transform:translateY(0)}
+50%{transform:translateY(-40px)}
+
+}
+
+.animate-floatSlow{
+animation:floatSlow 18s ease-in-out infinite;
+}
+
+/* =========================
+   MOBILE HERO BACKGROUND
+========================= */
+
+@media(max-width:768px){
+
+html.dark body{
+
+background:#020617;
+
+background-image:radial-gradient(
+circle at 50% 35%,
+rgba(0,180,255,.25),
+rgba(0,0,0,0) 65%
+);
+
+background-repeat:no-repeat;
+background-size:cover;
+
+}
+
+}
+
+/* =========================
+   FREEPIK WAVE STYLE
+========================= */
+@keyframes meshFlow{
+  0%{
+    transform: translateX(0);
   }
-
+  100%{
+    transform: translateX(-50%);
+  }
 }

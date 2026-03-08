@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { Calendar, Mail, Upload, LogOut, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -159,6 +159,7 @@ const Dashboard = () => {
   const [selectedFullDetails, setSelectedFullDetails] = useState<any>(null);
   /* ================= REGISTRATIONS ================= */
   const [registrations, setRegistrations] = useState<any[]>([]);
+  const [latestRegistrations, setLatestRegistrations] = useState<any[]>([]);
   // 2. Verified Analytics Logic
   const totalCount = registrations.length;
   const pendingCount = registrations.filter(
@@ -189,6 +190,23 @@ const Dashboard = () => {
     .filter((r) => r.registrationStatus === "Confirmed")
     .reduce((count, r) => count + (r.hostelMembers?.length || 0), 0);
 
+  const confirmedRegistrations = registrations.filter(
+  (r) => r.registrationStatus === "Confirmed"
+);
+
+const totalRevenue = confirmedRegistrations.reduce(
+  (sum, r) => sum + (r.expectedAmount || 0),
+  0
+);
+
+const comboRevenue = confirmedRegistrations
+  .filter((r) => r.eventType === "combo")
+  .reduce((sum, r) => sum + (r.expectedAmount || 0), 0);
+
+const buildathonRevenue = confirmedRegistrations
+  .filter((r) => r.eventType === "buildathon")
+  .reduce((sum, r) => sum + (r.expectedAmount || 0), 0);
+
   const statusData = [
     { name: "Pending", value: pendingCount },
     { name: "Confirmed", value: confirmedCount },
@@ -200,20 +218,21 @@ const Dashboard = () => {
   ];
 
   // 3. Safe College Analytics Logic
-  const collegeCounts = {};
+const collegeAnalytics = useMemo(() => {
+  const collegeCounts: Record<string, number> = {};
+
   registrations.forEach((reg) => {
-    reg.teamMembers?.forEach((member) => {
+    reg.teamMembers?.forEach((member: any) => {
       const college = member.college || "Unknown";
       collegeCounts[college] = (collegeCounts[college] || 0) + 1;
     });
   });
 
-  const collegeAnalytics = Object.entries(collegeCounts).map(
-    ([name, value]) => ({
-      name,
-      value,
-    }),
-  );
+  return Object.entries(collegeCounts).map(([name, value]) => ({
+    name,
+    value,
+  }));
+}, [registrations]);
   const [registrationView, setRegistrationView] = useState("pending");
   const [registrationFilter, setRegistrationFilter] = useState("all");
 
@@ -256,20 +275,42 @@ const Dashboard = () => {
     );
     setMembers(sortedMembers);
   };
-  const fetchRegistrations = async () => {
-    try {
-      const res = await axios.get(
-        "https://ieee-sps-website.onrender.com/api/registrations",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+const fetchRegistrations = async () => {
+  try {
+    const res = await axios.get(
+      "https://ieee-sps-website.onrender.com/api/registrations",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    const newData = res.data;
+
+    // detect new registrations
+    if (registrations.length > 0) {
+      const newOnes = newData.filter(
+        (r: any) =>
+          !registrations.some((old) => old._id === r._id)
       );
 
-      setRegistrations(res.data);
-    } catch (error) {
-      console.error("Registration Fetch Error:", error);
+      if (newOnes.length > 0) {
+        setLatestRegistrations(newOnes);
+      }
     }
-  };
+
+    setRegistrations(newData);
+
+  } catch (error: any) {
+
+    if (error.response?.status === 401) {
+      alert("Session expired. Please login again.");
+      localStorage.removeItem("token");
+      navigate("/");
+    }
+
+    console.error("Registration Fetch Error:", error);
+  }
+};
 
   const confirmRegistration = async (id: string) => {
     if (!confirm("Confirm this registration?")) return;
@@ -287,9 +328,12 @@ const Dashboard = () => {
       // send email (safe)
       try {
         await axios.post(
-          "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
-          { registration },
-        );
+  "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+  { registration },
+  {
+    headers: { Authorization: `Bearer ${token}` },
+  }
+);
       } catch (emailError) {
         console.error("Email sending failed:", emailError);
       }
@@ -1094,12 +1138,39 @@ const Dashboard = () => {
           {activeTab === "registrations" && (
             <>
               <div className="flex items-center gap-2 mb-4 text-green-400 text-sm">
+                {latestRegistrations.length > 0 && (
+  <div className="bg-zinc-900 border border-cyan-500/30 p-3 rounded mb-6">
+    <p className="text-cyan-400 font-semibold mb-2">
+      🔔 New Registrations
+    </p>
+
+    {latestRegistrations.map((reg, i) => (
+      <p key={i} className="text-sm text-gray-300">
+        🚀 {reg.teamName} registered for {reg.eventName}
+      </p>
+    ))}
+  </div>
+)}
                 <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                 Live Updates Enabled
               </div>
               {/* ANALYTICS CARDS */}
               <div>
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-10">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-10">
+                  <div className="bg-zinc-900 p-4 rounded border border-emerald-500/20">
+  <p className="text-gray-400 text-sm">Total Revenue</p>
+  <p className="text-2xl font-bold text-emerald-400">₹{totalRevenue}</p>
+</div>
+
+<div className="bg-zinc-900 p-4 rounded border border-blue-500/20">
+  <p className="text-gray-400 text-sm">Combo Revenue</p>
+  <p className="text-2xl font-bold text-blue-400">₹{comboRevenue}</p>
+</div>
+
+<div className="bg-zinc-900 p-4 rounded border border-purple-500/20">
+  <p className="text-gray-400 text-sm">Buildathon Revenue</p>
+  <p className="text-2xl font-bold text-purple-400">₹{buildathonRevenue}</p>
+</div>
                   <div className="bg-zinc-900 p-4 rounded border border-green-500/20">
                     <p className="text-gray-400 text-sm">
                       Confirmed Combo Teams
@@ -1169,7 +1240,7 @@ const Dashboard = () => {
                 </div>
               </div>
               {/* CHARTS */}
-              <div className="grid md:grid-cols-2 gap-6 mb-12">
+              <div className="grid md:grid-cols-3 gap-6 mb-12">
                 {/* Registration Status Chart */}
                 <div className="bg-zinc-900 p-5 rounded-xl border border-cyan-500/20 shadow-lg">
                   <h3 className="text-lg text-cyan-400 mb-4">
@@ -1396,11 +1467,17 @@ const Dashboard = () => {
                           </button>
 
                           <button
-                            onClick={() => confirmRegistration(reg._id)}
-                            className="bg-green-500 px-3 py-1 rounded"
-                          >
-                            Confirm
-                          </button>
+  onClick={() => {
+    if (!reg.payment?.verified) {
+      alert("Verify payment before confirming.");
+      return;
+    }
+    confirmRegistration(reg._id);
+  }}
+  className="bg-green-500 px-3 py-1 rounded"
+>
+  Confirm
+</button>
 
                           <button
                             onClick={() => deleteRegistration(reg._id)}
@@ -1561,7 +1638,7 @@ const Dashboard = () => {
                                 </button>
 
                                 <a
-                                  href={`https://ieee-sps-website.onrender.com/api/pdf/${reg._id}`}
+                                  href={`https://ieee-sps-website.onrender.com/api/pdf/${reg.registrationId}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="bg-purple-500 px-3 py-1 rounded"

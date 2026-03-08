@@ -30,12 +30,14 @@ const registrationSchema = new mongoose.Schema(
     // Generated automatically
     registrationId: {
       type: String,
+      required: true,
       unique: true,
     },
 
     teamName: {
       type: String,
       required: true,
+      unique: true,
     },
 
     teamSize: {

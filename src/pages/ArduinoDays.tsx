@@ -1,19 +1,33 @@
 import { useState, useEffect, useRef } from "react";
 import { Home, HelpCircle, Info, Handshake } from "lucide-react";
-import Particles from "react-tsparticles";
-import { loadFull } from "tsparticles";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { Users, IndianRupee, Calendar } from "lucide-react";
-const particlesInit = async (main: any) => {
-  await loadFull(main);
+import { MapPin } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+
+const MovingWaves = () => {
+  return (
+    <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+
+      <img
+        src="/freepik_arduino_background.jpg"
+        alt="background"
+        className="absolute top-0 right-0 h-full w-full object-cover"
+      />
+
+      <div className="absolute inset-0 bg-black/50" />
+
+    </div>
+  );
 };
 
 const ArduinoDays = () => {
   const navigate = useNavigate();
-  const [active, setActive] = useState("home");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const active = searchParams.get("section") || "home";
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -126,43 +140,10 @@ const ArduinoDays = () => {
   };
 
   return (
-    <div
-      className="
-min-h-screen
-bg-gradient-to-br from-[#050a12] via-[#081420] to-[#050a12]
-relative
-text-white
-overflow-x-hidden
-overflow-y-auto
-"
-    >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(0,255,200,0.06),transparent_40%)] pointer-events-none"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_60%,rgba(0,150,255,0.06),transparent_40%)] pointer-events-none"></div>
-
-      {/* Particles */}
-      <Particles
-        id="tsparticles"
-        init={particlesInit}
-        className="fixed inset-0 z-20 pointer-events-none"
-        options={{
-          background: { color: "transparent" },
-          fpsLimit: 60,
-          particles: {
-            number: { value: 60 },
-            color: { value: ["#00ff99", "#00ffff"] },
-            links: {
-              enable: true,
-              color: "#00ffcc",
-              distance: 150,
-              opacity: 0.4,
-              width: 1,
-            },
-            move: { enable: true, speed: 1.5 },
-            opacity: { value: 0.5 },
-            size: { value: 2 },
-          },
-        }}
-      />
+    
+<div className="min-h-screen bg-[#02060c] relative text-white overflow-x-hidden overflow-y-auto">
+    {/* 1. Add the moving waves here */}
+    <MovingWaves />
 
       {/* Sidebar */}
       {/* Mobile Menu Button */}
@@ -181,15 +162,9 @@ overflow-y-auto
 
       <div
         ref={sidebarRef}
-        className={`fixed top-0 left-0 h-screen w-64
-bg-black/90 backdrop-blur-xl
-border-r border-green-500/20
-shadow-[0_0_40px_rgba(0,255,200,0.1)]
-p-6 flex flex-col gap-8
-z-50 transform transition-transform duration-300
-overflow-hidden
-${menuOpen ? "translate-x-0" : "-translate-x-full"}
-md:translate-x-0`}
+        className={`fixed top-0 left-0 h-screen w-64 bg-black/50 backdrop-blur-3xl border-r border-green-500/20 shadow-xl p-6 flex flex-col gap-8 z-50 transform transition-transform duration-300 ${
+        menuOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0`}
       >
         {/* ⚡ Subtle Circuit Overlay */}
         <div className="absolute inset-0 opacity-10 pointer-events-none">
@@ -243,7 +218,7 @@ md:translate-x-0`}
                     "_blank",
                   );
                 } else {
-                  setActive(item.id);
+                  setSearchParams({ section: item.id });
                   setMenuOpen(false);
                 }
               }}
@@ -336,19 +311,18 @@ md:translate-x-0`}
                   </div>
 
                   {/* Date */}
-                  <div className="flex flex-col sm:flex-row items-center gap-6">
-                    <div className="px-6 py-3 rounded-full bg-green-500/20 border border-green-400 text-green-300 text-sm md:text-base">
-                      <p className="text-gray-300 mb-2 flex items-center gap-2">
-                        <Calendar size={18} className="text-cyan-400" />
-                        <span>
-                          March 23<sup>rd</sup> – 26<sup>th</sup>, 2026
-                        </span>
-                      </p>
-                    </div>
+                  <div className="flex flex-wrap justify-center items-center gap-6">
+                    <div className="flex items-center gap-2 px-6 py-3 rounded-full bg-green-500/20 border border-green-400 text-green-300 text-sm md:text-base">
+  <Calendar size={18} className="text-cyan-400 flex-shrink-0" />
+  <span>
+    March 23<sup>rd</sup> – 26<sup>th</sup>, 2026
+  </span>
+</div>
 
-                    <div className="px-6 py-3 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-sm md:text-base">
-                      📍 Aditya University
-                    </div>
+                    <div className="flex items-center gap-2 px-6 py-3 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-sm md:text-base">
+  <MapPin size={18} className="text-pink-400 flex-shrink-0" />
+  <span>Aditya University</span>
+</div>
                   </div>
 
                   {/* Tagline */}
@@ -414,7 +388,7 @@ md:translate-x-0`}
                 <div className="grid md:grid-cols-2 gap-10 items-stretch">
                   {/* ================== Skill Forze + Buildathon ============ */}
                   <div className="relative group">
-                    <div className="absolute -inset-[3px] rounded-2xl bg-gradient-to-r from-yellow-400 via-orange-500 via-pink-500 to-purple-600 blur opacity-90 transition duration-500"></div>
+                    <div className="absolute -inset-[3px] rounded-2xl bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 blur opacity-90 transition duration-500"></div>
 
                     <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10 h-full flex flex-col">
                       <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold px-3 py-1 rounded-full shadow-lg">
@@ -469,7 +443,7 @@ md:translate-x-0`}
 
                   {/* ================= Buildathon ================= */}
                   <div className="relative group">
-                    <div className="absolute -inset-[2px] rounded-2xl bg-gradient-to-r from-green-400 via-cyan-400 via-purple-500 via-pink-500 to-yellow-400 blur opacity-70 group-hover:opacity-100 transition duration-500 animate-gradient"></div>
+                    <div className="absolute -inset-[2px] rounded-2xl bg-gradient-to-r from-green-400 via-purple-500 to-yellow-400 blur opacity-70 group-hover:opacity-100 transition duration-500 animate-gradient"></div>
 
                     <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10 h-full flex flex-col">
                       <h2 className="text-2xl font-bold mb-4 text-white">
@@ -520,13 +494,14 @@ md:translate-x-0`}
             )}
 
             {active === "rules" && (
-              <div className="w-full max-w-5xl px-6 md:px-10 py-16 mx-auto space-y-16">
+              <div className="w-full max-w-7xl px-6 md:px-10 py-16 mx-auto">
                 <h1 className="text-2xl md:text-3xl font-bold text-center bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
                   Rules & Regulations
                 </h1>
+                <div className="grid md:grid-cols-3 gap-10 mt-12 items-stretch">
 
                 {/* ================= GENERAL RULES ================= */}
-                <div className="bg-white/5 backdrop-blur-xl border border-green-400/20 rounded-2xl p-8 space-y-6">
+                <div className="bg-white/5 backdrop-blur-xl border border-green-400/20 rounded-2xl p-8 flex flex-col">
                   <h2 className="text-2xl font-semibold text-green-400">
                     Event Rules & Guidelines
                   </h2>
@@ -544,7 +519,7 @@ md:translate-x-0`}
                 </div>
 
                 {/* ================= SKILL FORZE ================= */}
-                <div className="bg-white/5 backdrop-blur-xl border border-cyan-400/20 rounded-2xl p-8 space-y-6">
+                <div className="bg-white/5 backdrop-blur-xl border border-green-400/20 rounded-2xl p-8 flex flex-col">
                   <h2 className="text-2xl font-semibold text-cyan-400">
                     <span>
                       Skill Forze (23<sup>rd</sup> & 24<sup>th</sup> March) –
@@ -560,7 +535,7 @@ md:translate-x-0`}
                     <li>
                       Teams are encouraged to participate in the Buildathon.
                     </li>
-                    <div className="mt-6 flex justify-center">
+                    <div className="mt-auto pt-6 flex justify-center">
                       <button
                         onClick={() =>
                           (window.location.href = "/register?event=combo")
@@ -576,7 +551,7 @@ md:translate-x-0`}
                 </div>
 
                 {/* ================= BUILDATHON ================= */}
-                <div className="bg-white/5 backdrop-blur-xl border border-yellow-400/20 rounded-2xl p-8 space-y-6">
+                <div className="bg-white/5 backdrop-blur-xl border border-green-400/20 rounded-2xl p-8 flex flex-col">
                   <h2 className="text-2xl font-semibold text-yellow-400">
                     Buildathon (25<sup>th</sup> March) – Hackathon Guidelines
                   </h2>
@@ -596,7 +571,7 @@ md:translate-x-0`}
                     </li>
                     <li>Teams must present a working prototype.</li>
                     <li>Winners will receive prizes and merit certificates.</li>
-                    <div className="mt-6 flex justify-center">
+                    <div className="mt-auto pt-6 flex justify-center">
                       <button
                         onClick={() =>
                           (window.location.href = "/register?event=buildathon")
@@ -610,6 +585,7 @@ md:translate-x-0`}
                     </div>
                   </ul>
                 </div>
+              </div>
               </div>
             )}
 
