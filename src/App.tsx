@@ -11,7 +11,7 @@ import Register from "./pages/Register"; // temporary
 import { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import LoadingScreen from "./components/LoadingScreen";
-
+import Scanner from "./pages/Scanner";
 function App() {
   const [loading, setLoading] = useState(true);
 
@@ -64,6 +64,7 @@ function App() {
             <Route path="/team/:id" element={<TeamDetails />} />
             <Route path="/arduino-days" element={<ArduinoDays />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/scan" element={<Scanner />} />
           </Routes>
         </div>
 

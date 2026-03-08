@@ -322,19 +322,6 @@ const Dashboard = () => {
 
       const registration = res.data.data;
 
-      // send email (safe)
-      try {
-        await axios.post(
-          "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
-          { registration },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
-      } catch (emailError) {
-        console.error("Email sending failed:", emailError);
-      }
-
       fetchRegistrations();
     } catch (error) {
       console.error("Confirmation error:", error);
@@ -562,6 +549,7 @@ const Dashboard = () => {
         "Phone",
         "College",
         "Entry Status",
+        "Entry Time",
       ]);
 
       data.forEach((reg) => {
@@ -577,6 +565,9 @@ const Dashboard = () => {
             member.phone || "",
             member.college || "",
             member.checkedIn ? "YES" : "NO",
+reg.entryTime
+  ? new Date(reg.entryTime).toLocaleTimeString("en-IN")
+  : "",
           ]);
         });
       });

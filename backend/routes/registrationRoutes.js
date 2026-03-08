@@ -7,7 +7,6 @@ const rateLimit = require("express-rate-limit");
 const PDFDocument = require("pdfkit");
 const axios = require("axios");
 const sendMail = require("../utils/mailer");
-const Tesseract = require("tesseract.js");
 const QRCode = require("qrcode");
 const sendTelegramNotification = async (message) => {
   try {
@@ -24,26 +23,6 @@ const sendTelegramNotification = async (message) => {
     console.error("❌ Telegram notification failed:", error.message);
   }
 };
-async function extractAmountFromImage(imageUrl) {
-  try {
-    const {
-      data: { text },
-    } = await Tesseract.recognize(imageUrl, "eng");
-
-    console.log("OCR TEXT:", text);
-
-    const amountMatch = text.match(/(₹|rs|inr)?\s?\d{2,5}(\.\d{1,2})?/i);
-
-    if (amountMatch) {
-      return parseFloat(amountMatch[0].replace(/[^\d.]/g, ""));
-    }
-
-    return null;
-  } catch (error) {
-    console.error("OCR Error:", error);
-    return null;
-  }
-}
 const registerLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 15, // max 15 registrations per IP
@@ -116,12 +95,6 @@ router.post("/register", registerLimiter, async (req, res) => {
     // 🔐 Secure amount calculation (backend authority)
     const perPersonFee = eventType === "combo" ? 200 : 100;
     const correctAmount = perPersonFee * teamSize;
-    // AI OCR Payment Detection
-    const detectedAmount = await extractAmountFromImage(screenshotUrl);
-
-    // if (detectedAmount && detectedAmount !== correctAmount) {
-    // console.log("⚠ Payment mismatch detected");
-    //}
 
     // 🚫 Prevent fake payment amounts
     if (frontendAmount !== correctAmount) {
@@ -226,19 +199,30 @@ router.post("/register", registerLimiter, async (req, res) => {
     // Telegram Notifications
     const token = process.env.TELEGRAM_BOT_TOKEN;
 const chatId = process.env.TELEGRAM_CHAT_ID;
-
+const memberNames = teamMembers
+  .map((m, i) => `${i + 1}. ${m.fullName} (${m.rollNo})`)
+  .join("\n");
+// Count pending registrations
+const pendingCount = await Registration.countDocuments({
+  registrationStatus: "Pending"
+});
 await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, {
   chat_id: chatId,
   photo: screenshotUrl,
-  caption: `🚀 *New Registration*
+caption: `🚀 *New Registration*
 
 Team: *${teamName}*
 Event: ${eventName}
 Amount: ₹${correctAmount}
-UTR: \`${userTransactionId}\`
-Members: ${teamMembers.length}
 
-Registration ID: ${registrationId}`,
+UTR: \`${userTransactionId}\`
+
+👥 *Members*
+${memberNames}
+
+Registration ID: \`${registrationId}\`
+
+⏳ Pending Approvals: *${pendingCount}*`,
 
   parse_mode: "Markdown",
 
@@ -267,121 +251,100 @@ Registration ID: ${registrationId}`,
     res.status(500).json({ message: "Error submitting registration" });
   }
 });
-
-const generateReceiptPDF = (registration) => {
+ const generateReceiptPDF = (registration) => {
   return new Promise((resolve) => {
-    const doc = new PDFDocument({ margin: 40 });
+
+    const doc = new PDFDocument({ margin: 50 });
 
     let buffers = [];
-
     doc.on("data", buffers.push.bind(buffers));
-
-    doc.on("end", () => {
-      const pdfBuffer = Buffer.concat(buffers);
-
-      resolve(pdfBuffer);
-    });
+    doc.on("end", () => resolve(Buffer.concat(buffers)));
 
     const pageWidth = doc.page.width;
-    const pageHeight = doc.page.height;
 
-    const createdDate = new Date(registration.createdAt);
+    /* HEADER LOGO */
+    doc.image("public/titlelogo.png", pageWidth / 2 - 70, 20, { width: 140 });
 
-    const date = createdDate.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
-
-    const time = createdDate.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    /* BORDER */
-    doc
-      .lineWidth(1.2)
-      .strokeColor("#00b4ff")
-      .rect(10, 10, pageWidth - 20, pageHeight - 20)
-      .stroke();
-
-    /* LOGO */
-    doc.image("public/titlelogo.png", pageWidth / 2 - 60, 20, {
-      width: 120,
-    });
-
-    /* TITLE */
-    doc
-      .fontSize(18)
-      .fillColor("#00b4ff")
-      .text("Arduino Days 2026 Registration Receipt", 0, 70, {
-        align: "center",
-      });
-
-    doc.fillColor("black").fontSize(12);
-
-    let y = 110;
-
-    doc.text(`Registration ID : ${registration.registrationId}`, 40, y);
-    y += 20;
-
-    doc.text(`Team Name : ${registration.teamName}`, 40, y);
-    y += 20;
-
-    doc.text(`Event : ${registration.eventName}`, 40, y);
-    y += 20;
-
-    doc.text(`Team Size : ${registration.teamSize}`, 40, y);
-    y += 20;
-
-    doc.text(`Amount Paid : ₹${registration.expectedAmount}`, 40, y);
-    y += 20;
-
-    doc.text(
-      `Transaction ID : ${registration.payment.userTransactionId}`,
-      40,
-      y,
-    );
-    y += 20;
-
-    doc.text(`Date : ${date}`, 40, y);
-    y += 20;
-
-    doc.text(`Time : ${time}`, 40, y);
-
-    /* MEMBERS */
-    y += 40;
-
-    doc.fontSize(14).fillColor("#00b4ff").text("Team Members", 40, y);
-
-    doc.fontSize(12).fillColor("black");
-
-    y += 20;
-
-    registration.teamMembers.forEach((member, index) => {
-      doc.text(`${index + 1}. ${member.fullName} - ${member.rollNo}`, 50, y);
-
-      y += 15;
-    });
-
-    /* STATUS */
-
-    y += 20;
+    doc.moveDown(3);
 
     doc
+      .fontSize(20)
+      .fillColor("#0077cc")
+      .text("Arduino Days 2026", { align: "center" });
+
+    doc
+      .fontSize(12)
+      .fillColor("gray")
+      .text("Registration Receipt", { align: "center" });
+
+    doc.moveDown();
+
+    /* LINE */
+    doc.moveTo(50, doc.y).lineTo(pageWidth - 50, doc.y).stroke();
+
+    doc.moveDown(1.5);
+
+    /* DETAILS TABLE */
+
+    const details = [
+      ["Registration ID", registration.registrationId],
+      ["Team Name", registration.teamName],
+      ["Event", registration.eventName],
+      ["Team Size", registration.teamSize],
+      ["Amount Paid", `₹${registration.expectedAmount}`],
+      ["Transaction ID", registration.payment.userTransactionId],
+      ["Date", new Date(registration.createdAt).toLocaleDateString()],
+      ["Time", new Date(registration.createdAt).toLocaleTimeString()],
+    ];
+
+    details.forEach(([label, value]) => {
+      doc
+        .font("Helvetica-Bold")
+        .text(label + ":", { continued: true })
+        .font("Helvetica")
+        .text(` ${value}`);
+      doc.moveDown(0.5);
+    });
+
+    doc.moveDown();
+
+    /* TEAM MEMBERS */
+
+    doc
+      .fontSize(14)
+      .fillColor("#0077cc")
+      .text("Team Members");
+
+    doc.moveDown(0.5);
+
+    registration.teamMembers.forEach((member, i) => {
+      doc
+        .fontSize(11)
+        .fillColor("black")
+        .text(`${i + 1}. ${member.fullName} - ${member.rollNo}`);
+    });
+
+    doc.moveDown(2);
+
+    /* STATUS BADGE */
+
+    doc
+      .fontSize(12)
       .fillColor("red")
-      .text("Status : Payment Submitted - Verification Pending", 40, y);
+      .text("Status : Payment Submitted - Verification Pending");
+
+    doc.moveDown(2);
+
+    doc.moveDown(3);
 
     /* FOOTER */
 
     doc
-      .fillColor("black")
       .fontSize(10)
-      .text("IEEE SPS Student Branch Chapter", 0, pageHeight - 60, {
-        align: "center",
-      });
+      .fillColor("gray")
+      .text("IEEE SPS Student Branch Chapter", { align: "center" });
 
-    doc.text("Aditya University", 0, pageHeight - 45, { align: "center" });
+    doc.text("Aditya University", { align: "center" });
 
     doc.end();
   });
@@ -393,25 +356,30 @@ const generateReceiptPDF = (registration) => {
 router.put("/confirm/:id", verifyToken, async (req, res) => {
   try {
     const registration = await Registration.findById(req.params.id);
-    // Generate QR code containing entry link
-    const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
-
-    const qrCodeImage = await QRCode.toDataURL(qrData);
 
     if (!registration) {
       return res.status(404).json({ message: "Registration not found" });
     }
-    registration.registrationStatus = "Confirmed";
-    registration.payment.verified = true;
+
+    // Generate QR code containing entry link
+    const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
+    const qrCodeImage = await QRCode.toDataURL(qrData);
+
+if (registration.registrationStatus === "Confirmed") {
+  return res.sendStatus(200);
+}
+
+registration.registrationStatus = "Confirmed";
+registration.payment.verified = true;
 
     await registration.save();
     await axios.post(
-  "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
-  { registration, qrCodeImage },
-  {
-    headers: { Authorization: req.headers.authorization },
-  }
-);
+      "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+      { registration, qrCodeImage },
+      {
+        headers: { Authorization: req.headers.authorization },
+      }
+    );
 
     const message = `
 ✅ Registration Confirmed
@@ -425,20 +393,6 @@ Hostel: ${registration.accommodationRequired ? "Yes" : "No"}
 
     await sendTelegramNotification(message);
 
-    // Fetch event details from Events collection
-    let eventDate = "To be announced";
-    let eventVenue = "To be announced";
-
-    const eventDetails = await Event.findOne({
-      title: registration.eventName,
-    });
-
-    if (eventDetails) {
-      eventDate = eventDetails.date || eventDate;
-      eventVenue = eventDetails.location || eventVenue;
-    }
-
-    // ✅ THIS WAS MISSING
     res.json({
       message: "Registration confirmed successfully",
       data: registration,
@@ -569,11 +523,17 @@ router.get("/pdf/:id", async (req, res) => {
     });
 
     y += 20;
-
+    
     doc
       .fillColor("red")
       .text("Status : Payment Submitted - Verification Pending", 40, y);
-
+    doc
+  .fontSize(10)
+  .fillColor("gray")
+  .text(
+    "Your event entry QR code will be sent to your email after payment verification.",
+    { align: "center" }
+  );
     doc
       .fillColor("black")
       .fontSize(10)
@@ -599,59 +559,24 @@ router.put("/verify-payment/:id", verifyToken, async (req, res) => {
     if (!registration) {
       return res.status(404).json({ message: "Registration not found" });
     }
-
-    // 1. OCR Check (Non-blocking but informative)
-    let ocrWarning = "";
-    try {
-      const detectedAmount = await extractAmountFromImage(
-        registration.payment.screenshotUrl,
-      );
-
-      if (Number(detectedAmount) !== Number(registration.expectedAmount)) {
-        console.warn(
-          `⚠ OCR Mismatch: Expected ${registration.expectedAmount}, found ${detectedAmount}`,
-        );
-
-        ocrWarning = " (OCR detected amount mismatch)";
-
-        // 🚨 Send Telegram warning
-        await sendTelegramNotification(`
-⚠ Suspicious Payment Detected
-
-Team: ${registration.teamName}
-Event: ${registration.eventName}
-Expected Amount: ₹${registration.expectedAmount}
-Detected Amount: ₹${detectedAmount}
-UTR: ${registration.payment.userTransactionId}
-`);
-      }
-    } catch (ocrError) {
-      console.error("OCR Failed:", ocrError);
-      // Don't crash the whole route if OCR fails
-    }
-
-    // 2. Explicitly set verified (Don't toggle!)
-    // If you want to toggle, check a value in req.body, e.g., req.body.status
     registration.payment.verified = true;
     await registration.save();
 
     // 3. Structured Telegram Message
     const message = `
-💳 *Payment Verified* ${ocrWarning ? "⚠️" : "✅"}
+💳 *Payment Verified* ✅
 -------------------------
 *Team:* ${registration.teamName}
 *Event:* ${registration.eventName}
-*Amount:* ${registration.expectedAmount}
-${ocrWarning}
+*Amount:* ${registration.expectedAmount}  
 `;
 
     await sendTelegramNotification(message);
 
     return res.json({
-      success: true,
-      message: "Payment verified successfully",
-      ocrMismatch: !!ocrWarning,
-    });
+  success: true,
+  message: "Payment verified successfully"
+});
   } catch (error) {
     console.error("VERIFY ERROR:", error);
     res
@@ -663,7 +588,7 @@ ${ocrWarning}
 /* =====================================
    7️⃣ SEND CONFIRMATION EMAIL (Separate Route)
 ===================================== */
-router.post("/send-confirmation-email", verifyToken, async (req, res) => {
+router.post("/send-confirmation-email", async (req, res) => {
   try {
     const { registration, qrCodeImage } = req.body;
 
@@ -872,17 +797,13 @@ router.get("/entry/:registrationId", async (req, res) => {
       (m) => m.checkedIn
     );
 
-    if (alreadyEntered) {
-      return res.send(`
-        <h2 style="color:orange;text-align:center;">
-        ⚠ Team Already Checked In
-        </h2>
-
-        <p style="text-align:center;">
-        Team: ${registration.teamName}
-        </p>
-      `);
-    }
+   if (alreadyEntered) {
+  return res.json({
+    success: false,
+    reason: "already",
+    teamName: registration.teamName
+  });
+}
 
     // 5️⃣ Mark members as checked in
     registration.teamMembers.forEach((member) => {
@@ -901,36 +822,73 @@ const entryTime = new Date().toLocaleTimeString("en-IN", {
   minute: "2-digit"
 });
 
+const memberList = registration.teamMembers
+  .map((m, i) => `${i + 1}. ${m.fullName}`)
+  .join("\n");
+
 await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
   chat_id: chatId,
   text: `🎟 Entry Scanned
 
 Team: ${registration.teamName}
-Members: ${registration.teamMembers.length}
+Registration ID: ${registration.registrationId}
 Event: ${registration.eventName}
-Time: ${entryTime}`
+
+👥 Members:
+${memberList}
+
+⏰ Time: ${entryTime}`
 });
 
     // 6️⃣ Success response
-    res.send(`
-      <h2 style="color:green;text-align:center;">
-      ✅ Entry Recorded
-      </h2>
-
-      <p style="text-align:center;">
-      Team: ${registration.teamName}
-      </p>
-
-      <p style="text-align:center;">
-      Members: ${registration.teamMembers.length}
-      </p>
-    `);
+    res.json({
+  success: true,
+  teamName: registration.teamName,
+  members: registration.teamMembers.map((m) => m.fullName)
+});
 
   } catch (error) {
 
     console.error("ENTRY ERROR:", error);
 
     res.status(500).send("Server Error");
+
+  }
+
+});
+
+/* =====================================
+   ENTRY STATS
+===================================== */
+
+router.get("/entry-stats", async (req, res) => {
+
+  try {
+
+    const totalParticipants = await Registration.aggregate([
+      { $group: { _id: null, total: { $sum: "$teamSize" } } }
+    ]);
+
+    const checkedInParticipants = await Registration.aggregate([
+      { $unwind: "$teamMembers" },
+      { $match: { "teamMembers.checkedIn": true } },
+      { $count: "count" }
+    ]);
+
+    const total = totalParticipants[0]?.total || 0;
+    const entered = checkedInParticipants[0]?.count || 0;
+
+    res.json({
+      totalParticipants: total,
+      enteredParticipants: entered,
+      remainingParticipants: total - entered
+    });
+
+  } catch (error) {
+
+    console.error("Entry stats error:", error);
+
+    res.status(500).json({ message: "Error fetching entry stats" });
 
   }
 
@@ -995,10 +953,13 @@ router.post("/telegram-webhook", async (req, res) => {
   ========================= */
 
   if (!data.callback_query) {
-    return res.sendStatus(200);
-  }
+  return res.sendStatus(200);
+}
 
-  const callbackData = data.callback_query.data;
+const callbackData = data.callback_query.data;
+
+const chatId = data.callback_query.message.chat.id;
+const messageId = data.callback_query.message.message_id;
 
   /* =========================
      CONFIRM REGISTRATION
@@ -1006,50 +967,91 @@ router.post("/telegram-webhook", async (req, res) => {
 
   if (callbackData.startsWith("confirm_")) {
 
-    const registrationId = callbackData.split("_")[1];
+  const registrationId = callbackData.split("_")[1];
 
-    const registration = await Registration.findOne({ registrationId });
+  const registration = await Registration.findOne({ registrationId });
 
-    if (!registration) return res.sendStatus(200);
+  if (!registration) return res.sendStatus(200);
 
-    registration.registrationStatus = "Confirmed";
-    registration.payment.verified = true;
+  registration.registrationStatus = "Confirmed";
+  registration.payment.verified = true;
 
-    await registration.save();
+  await registration.save();
+  // Generate QR for entry
+const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
 
-    // Generate QR
-    const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
-    const qrCodeImage = await QRCode.toDataURL(qrData);
+const qrCodeImage = await QRCode.toDataURL(qrData);
 
-    // Send confirmation email
-    await axios.post(
-      "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
-      { registration, qrCodeImage }
-    );
+// Send confirmation email
+await axios.post(
+  "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+  { registration, qrCodeImage }
+);
 
-    console.log("✅ Confirmed via Telegram");
+  const members = registration.teamMembers
+    .map((m, i) => `${i + 1}. ${m.fullName}`)
+    .join("\n");
 
-  }
+  // 🔥 Update Telegram message
+  await axios.post(`https://api.telegram.org/bot${token}/editMessageCaption`, {
+    chat_id: chatId,
+    message_id: messageId,
+    caption: `✅ *Registration Confirmed*
+
+Team: *${registration.teamName}*
+Event: ${registration.eventName}
+Registration ID: \`${registration.registrationId}\`
+
+👥 *Members*
+${members}
+
+Status: ✅ Confirmed`,
+    parse_mode: "Markdown",
+    reply_markup: { inline_keyboard: [] } // removes buttons
+  });
+
+  console.log("✅ Confirmed via Telegram");
+}
 
   /* =========================
      REJECT REGISTRATION
   ========================= */
 
-  else if (callbackData.startsWith("reject_")) {
+  if (callbackData.startsWith("reject_")) {
 
-    const registrationId = callbackData.split("_")[1];
+  const registrationId = callbackData.split("_")[1];
 
-    const registration = await Registration.findOne({ registrationId });
+  const registration = await Registration.findOne({ registrationId });
 
-    if (!registration) return res.sendStatus(200);
+  if (!registration) return res.sendStatus(200);
 
-    registration.registrationStatus = "Rejected";
+  registration.registrationStatus = "Rejected";
 
-    await registration.save();
+  await registration.save();
 
-    console.log("❌ Registration rejected via Telegram");
+  const members = registration.teamMembers
+    .map((m, i) => `${i + 1}. ${m.fullName}`)
+    .join("\n");
 
-  }
+  await axios.post(`https://api.telegram.org/bot${token}/editMessageCaption`, {
+    chat_id: chatId,
+    message_id: messageId,
+    caption: `❌ *Registration Rejected*
+
+Team: *${registration.teamName}*
+Event: ${registration.eventName}
+Registration ID: \`${registration.registrationId}\`
+
+👥 *Members*
+${members}
+
+Status: ❌ Rejected`,
+    parse_mode: "Markdown",
+    reply_markup: { inline_keyboard: [] }
+  });
+
+  console.log("❌ Rejected via Telegram");
+}
 
   res.sendStatus(200);
 

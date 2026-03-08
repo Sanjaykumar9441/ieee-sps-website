@@ -71,9 +71,6 @@ const registrationSchema = new mongoose.Schema(
     type: String,
     required: true
   },
-  detectedAmount: {
-    type: Number
-  },
   verified: {
     type: Boolean,
     default: false

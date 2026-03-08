@@ -224,26 +224,26 @@ const Register = () => {
       );
 
       const m = updated[index];
-
+      const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m.email);
       const completed =
         m.fullName &&
         m.rollNo &&
         m.email &&
-        m.phone &&
+        m.phone.length === 10 &&
         m.department &&
         m.year &&
         m.selectedCollege;
 
-      if (completed && memberRefs.current[index + 1]) {
-        setTimeout(() => {
-          memberRefs.current[index + 1]?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
+      if (completed && index < members.length - 1 && memberRefs.current[index + 1]) {
+  setTimeout(() => {
+    memberRefs.current[index + 1]?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
 
-          nameInputRefs.current[index + 1]?.focus();
-        }, 300);
-      }
+    nameInputRefs.current[index + 1]?.focus();
+  }, 300);
+}
 
       return updated;
     });
@@ -253,6 +253,7 @@ const Register = () => {
       alert("Team name is required.");
       return false;
     }
+    
 
     for (let member of members) {
       if (
@@ -289,6 +290,10 @@ const Register = () => {
         alert("Phone number must be exactly 10 digits.");
         return false;
       }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email)) {
+       alert("Please enter a valid email address.");
+       return false;
+}
     }
     // 🚫 Prevent duplicate members inside same team
     const phones = members.map((m) => m.phone);
