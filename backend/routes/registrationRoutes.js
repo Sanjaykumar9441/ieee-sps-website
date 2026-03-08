@@ -1009,4 +1009,15 @@ Status: ❌ Rejected`,
   res.sendStatus(200);
 
 });
+router.get("/test-mail", async (req,res)=>{
+
+  await sendMail(
+    "ieee.club.aus@gmail.com",
+    "Test Email",
+    "<h1>Email working</h1>"
+  );
+
+  res.send("Mail sent");
+
+});
 module.exports = router;
