@@ -63,10 +63,21 @@ const registrationSchema = new mongoose.Schema(
     hostelMembers: [memberSchema],
 
   payment: {
-  userTransactionId,
-  screenshotUrl,
-  detectedAmount,
-  verified: false,
+  userTransactionId: {
+    type: String,
+    required: true
+  },
+  screenshotUrl: {
+    type: String,
+    required: true
+  },
+  detectedAmount: {
+    type: Number
+  },
+  verified: {
+    type: Boolean,
+    default: false
+  }
 },
 
     registrationStatus: {
