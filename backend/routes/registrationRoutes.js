@@ -354,6 +354,9 @@ router.put("/confirm/:id", verifyToken, async (req, res) => {
     if (!registration) {
       return res.status(404).json({ message: "Registration not found" });
     }
+    if (registration.registrationStatus === "Confirmed") {
+  return res.sendStatus(200);
+}
 
     // Generate QR code containing entry link
     const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
@@ -371,21 +374,35 @@ registration.payment.verified = true;
 const chatId = process.env.TELEGRAM_CHAT_ID;
 
 if (registration.telegramMessageId) {
+
+  const members = registration.teamMembers
+    .map((m,i)=>`${i+1}. ${m.fullName}`)
+    .join("\n");
+
   await axios.post(
-    `https://api.telegram.org/bot${token}/editMessageReplyMarkup`,
+    `https://api.telegram.org/bot${token}/editMessageCaption`,
     {
       chat_id: chatId,
       message_id: registration.telegramMessageId,
+      caption: `✅ *Registration Confirmed*
+
+Team: *${registration.teamName}*
+Event: ${registration.eventName}
+Registration ID: \`${registration.registrationId}\`
+
+👥 *Members*
+${members}
+
+Status: ✅ Confirmed`,
+      parse_mode: "Markdown",
       reply_markup: { inline_keyboard: [] }
     }
   );
+
 }
     await axios.post(
       "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
       { registration, qrCodeImage },
-      {
-        headers: { Authorization: req.headers.authorization },
-      }
     );
 
     const message = `

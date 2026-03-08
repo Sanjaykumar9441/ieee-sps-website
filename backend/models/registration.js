@@ -77,7 +77,7 @@ const registrationSchema = new mongoose.Schema(
   }
 },
 telegramMessageId: {
-  type: String
+  type: Number
 },
 
     registrationStatus: {
