@@ -565,9 +565,9 @@ const Dashboard = () => {
             member.phone || "",
             member.college || "",
             member.checkedIn ? "YES" : "NO",
-reg.entryTime
-  ? new Date(reg.entryTime).toLocaleTimeString("en-IN")
-  : "",
+            reg.entryTime
+              ? new Date(reg.entryTime).toLocaleTimeString("en-IN")
+              : "",
           ]);
         });
       });
@@ -595,6 +595,21 @@ reg.entryTime
     });
 
     saveAs(blob, "arduino-days-2026-registrations.xlsx");
+  };
+  const verifyPayment = async (id) => {
+    try {
+      await axios.put(
+        `https://ieee-sps-website.onrender.com/api/verify-payment/${id}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      fetchRegistrations(); // reload list after verification
+    } catch (error) {
+      console.error("Verify payment error:", error);
+    }
   };
 
   /* ================= MENU ================= */
@@ -1466,6 +1481,14 @@ reg.entryTime
                           >
                             Full Details
                           </button>
+                          {!reg.payment.verified && (
+                            <button
+                              onClick={() => verifyPayment(reg._id)}
+                              className="bg-yellow-500 px-3 py-1 rounded text-black"
+                            >
+                              Verify Payment
+                            </button>
+                          )}
 
                           <button
                             onClick={() => {

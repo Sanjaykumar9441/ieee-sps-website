@@ -1,5 +1,5 @@
 import { useSearchParams } from "react-router-dom";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
@@ -124,7 +124,12 @@ const Register = () => {
     createEmptyMember(),
     createEmptyMember(),
   ]);
-
+  useEffect(() => {
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}, [showSummary, showPayment]);
   const handleAccommodationToggle = (index: number) => {
     setAccommodationMembers((prev) =>
       prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index],
