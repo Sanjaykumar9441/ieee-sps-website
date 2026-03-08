@@ -338,16 +338,6 @@ const Dashboard = () => {
     fetchRegistrations();
   };
 
-  const togglePaymentVerification = async (id: string) => {
-    await axios.put(
-      `https://ieee-sps-website.onrender.com/api/verify-payment/${id}`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
-
-    fetchRegistrations();
-  };
-
   const fetchMessages = async () => {
     try {
       const res = await axios.get(
@@ -595,21 +585,6 @@ const Dashboard = () => {
     });
 
     saveAs(blob, "arduino-days-2026-registrations.xlsx");
-  };
-  const verifyPayment = async (id) => {
-    try {
-      await axios.put(
-        `https://ieee-sps-website.onrender.com/api/verify-payment/${id}`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-
-      fetchRegistrations(); // reload list after verification
-    } catch (error) {
-      console.error("Verify payment error:", error);
-    }
   };
 
   /* ================= MENU ================= */
@@ -1481,23 +1456,8 @@ const Dashboard = () => {
                           >
                             Full Details
                           </button>
-                          {!reg.payment.verified && (
-                            <button
-                              onClick={() => verifyPayment(reg._id)}
-                              className="bg-yellow-500 px-3 py-1 rounded text-black"
-                            >
-                              Verify Payment
-                            </button>
-                          )}
-
                           <button
-                            onClick={() => {
-                              if (!reg.payment?.verified) {
-                                alert("Verify payment before confirming.");
-                                return;
-                              }
-                              confirmRegistration(reg._id);
-                            }}
+                            onClick={() => confirmRegistration(reg._id)}
                             className="bg-green-500 px-3 py-1 rounded"
                           >
                             Confirm
@@ -1611,18 +1571,6 @@ const Dashboard = () => {
                                 {reg.accommodationRequired ? "Yes" : "No"}
                               </td>
 
-                              <td className="p-3">
-                                {reg.payment?.verified ? (
-                                  <span className="text-blue-400">
-                                    Verified
-                                  </span>
-                                ) : (
-                                  <span className="text-red-400">
-                                    Not Verified
-                                  </span>
-                                )}
-                              </td>
-
                               <td className="p-3 flex gap-2 justify-center">
                                 <button
                                   onClick={() => setSelectedFullDetails(reg)}
@@ -1643,17 +1591,6 @@ const Dashboard = () => {
                                     View
                                   </button>
                                 )}
-
-                                <button
-                                  onClick={() =>
-                                    togglePaymentVerification(reg._id)
-                                  }
-                                  className="bg-yellow-500 px-3 py-1 rounded"
-                                >
-                                  {reg.payment?.verified
-                                    ? "Mark Unverified"
-                                    : "Mark Verified"}
-                                </button>
                                 <button
                                   onClick={() => deleteRegistration(reg._id)}
                                   className="bg-red-500 px-3 py-1 rounded"
@@ -1730,12 +1667,7 @@ const Dashboard = () => {
                       </p>
 
                       <p>
-                        <b>Payment Status:</b>{" "}
-                        {selectedFullDetails.payment?.verified ? (
-                          <span className="text-green-400">Verified</span>
-                        ) : (
-                          <span className="text-red-400">Not Verified</span>
-                        )}
+                        <b>Payment Screenshot Submitted</b>
                       </p>
                     </div>
                     {selectedFullDetails.hostelMembers &&

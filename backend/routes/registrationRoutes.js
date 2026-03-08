@@ -8,21 +8,6 @@ const PDFDocument = require("pdfkit");
 const axios = require("axios");
 const sendMail = require("../utils/mailer");
 const QRCode = require("qrcode");
-const sendTelegramNotification = async (message) => {
-  try {
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
-
-    await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-      chat_id: chatId,
-      text: message,
-    });
-
-    console.log("✅ Telegram notification sent");
-  } catch (error) {
-    console.error("❌ Telegram notification failed:", error.message);
-  }
-};
 const registerLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 15, // max 15 registrations per IP
@@ -352,22 +337,20 @@ router.put("/confirm/:id", verifyToken, async (req, res) => {
     const registration = await Registration.findById(req.params.id);
 
     if (!registration) {
-      return res.status(404).json({ message: "Registration not found" });
-    }
-    if (registration.registrationStatus === "Confirmed") {
-  return res.sendStatus(200);
+  return res.status(404).json({ message: "Registration not found" });
 }
-
-    // Generate QR code containing entry link
-    const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
-    const qrCodeImage = await QRCode.toDataURL(qrData);
 
 if (registration.registrationStatus === "Confirmed") {
   return res.sendStatus(200);
 }
 
+// Generate QR
+const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
+const qrCodeImage = await QRCode.toDataURL(qrData);
+
 registration.registrationStatus = "Confirmed";
-registration.payment.verified = true;
+
+await registration.save();
 
     await registration.save();
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -404,18 +387,6 @@ Status: ✅ Confirmed`,
       "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
       { registration, qrCodeImage },
     );
-
-    const message = `
-✅ Registration Confirmed
-
-Team: ${registration.teamName}
-Event: ${registration.eventName}
-Registration ID:${registration.registrationId}
-Members: ${registration.teamMembers.length}
-Hostel: ${registration.accommodationRequired ? "Yes" : "No"}
-`;
-
-    await sendTelegramNotification(message);
 
     res.json({
       message: "Registration confirmed successfully",
@@ -573,41 +544,6 @@ router.get("/pdf/:id", async (req, res) => {
     res.status(500).json({ message: "Error generating PDF" });
   }
 });
-/* =====================================
-   6️⃣ VERIFY PAYMENT STATUS
-===================================== */
-router.put("/verify-payment/:id", verifyToken, async (req, res) => {
-  try {
-    const registration = await Registration.findById(req.params.id);
-
-    if (!registration) {
-      return res.status(404).json({ message: "Registration not found" });
-    }
-    registration.payment.verified = true;
-    await registration.save();
-
-    // 3. Structured Telegram Message
-    const message = `
-💳 *Payment Verified* ✅
--------------------------
-*Team:* ${registration.teamName}
-*Event:* ${registration.eventName}
-*Amount:* ${registration.expectedAmount}  
-`;
-
-    await sendTelegramNotification(message);
-
-    return res.json({
-  success: true,
-  message: "Payment verified successfully"
-});
-  } catch (error) {
-    console.error("VERIFY ERROR:", error);
-    res
-      .status(500)
-      .json({ message: "Internal server error during verification" });
-  }
-});
 
 /* =====================================
    7️⃣ SEND CONFIRMATION EMAIL (Separate Route)
@@ -757,14 +693,17 @@ router.post("/send-confirmation-email", async (req, res) => {
     const pdfBuffer = await generateReceiptPDF(registration);
 
     for (const member of registration.teamMembers) {
-      await sendMail(
-        member.email,
-        "Arduino Days 2026 Registration Confirmed",
-        htmlTemplate,
-        pdfBuffer,
-        `${registration.registrationId}.pdf`,
-      );
-    }
+
+  if (!member.email) continue;
+
+  await sendMail(
+    member.email,
+    "Arduino Days 2026 Registration Confirmed",
+    htmlTemplate,
+    pdfBuffer,
+    `${registration.registrationId}.pdf`
+  );
+}
 
     res.json({ success: true, message: "Emails sent successfully" });
   } catch (error) {
@@ -794,19 +733,6 @@ router.get("/entry/:registrationId", async (req, res) => {
       `);
     }
 
-    // 2️⃣ Check payment verified
-    if (!registration.payment.verified) {
-      return res.send(`
-        <h2 style="color:red;text-align:center;">
-        ❌ Payment Not Verified Yet
-        </h2>
-
-        <p style="text-align:center;">
-        Please contact event organizers.
-        </p>
-      `);
-    }
-
     // 3️⃣ Check registration confirmed
     if (registration.registrationStatus !== "Confirmed") {
       return res.send(`
@@ -816,12 +742,8 @@ router.get("/entry/:registrationId", async (req, res) => {
       `);
     }
 
-    // 4️⃣ Check if already entered
-    const alreadyEntered = registration.teamMembers.every(
-      (m) => m.checkedIn
-    );
-
-   if (alreadyEntered) {
+// 4️⃣ Prevent duplicate scans (multiple devices)
+if (registration.entryTime) {
   return res.json({
     success: false,
     reason: "already",
@@ -988,20 +910,19 @@ const messageId = data.callback_query.message.message_id;
   /* =========================
      CONFIRM REGISTRATION
   ========================= */
-
-  if (callbackData.startsWith("confirm_")) {
+if (callbackData.startsWith("confirm_")) {
 
   const registrationId = callbackData.split("_")[1];
 
   const registration = await Registration.findOne({ registrationId });
 
   if (!registration) return res.sendStatus(200);
+
   if (registration.registrationStatus === "Confirmed") {
-  return res.sendStatus(200);
-}
+    return res.sendStatus(200);
+  }
 
   registration.registrationStatus = "Confirmed";
-  registration.payment.verified = true;
 
   await registration.save();
   // Generate QR for entry
