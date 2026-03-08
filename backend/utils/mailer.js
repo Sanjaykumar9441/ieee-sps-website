@@ -14,26 +14,27 @@ const sendMail = async (to, subject, html, pdfBuffer, filename) => {
   try {
 
     const email = {
-      sender: {
-        name: "Arduino Days 2026",
-        email: "ieee.club.aus@gmail.com"
-      },
+  sender: {
+    name: "Arduino Days 2026",
+    email: "ieee.club.aus@gmail.com"
+  },
 
-      to: [{ email: to }],
+  to: [{ email: to }],
 
-      subject: subject,
+  subject: subject,
 
-      htmlContent: html,
+  htmlContent: html,
 
-      attachment: pdfBuffer
-        ? [
-            {
-              name: filename,
-              content: pdfBuffer.toString("base64")
-            }
-          ]
-        : [],
-    };
+  ...(pdfBuffer && {
+    attachment: [
+      {
+        name: filename,
+        content: pdfBuffer.toString("base64")
+      }
+    ]
+  })
+
+};
 
     await apiInstance.sendTransacEmail(email);
 

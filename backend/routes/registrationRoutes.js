@@ -1014,7 +1014,9 @@ router.get("/test-mail", async (req,res)=>{
   await sendMail(
     "ieee.club.aus@gmail.com",
     "Test Email",
-    "<h1>Email working</h1>"
+    "<h1>Email working</h1>",
+    null,
+    null
   );
 
   res.send("Mail sent");
