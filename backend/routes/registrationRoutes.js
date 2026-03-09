@@ -8,6 +8,7 @@ const PDFDocument = require("pdfkit");
 const axios = require("axios");
 const sendMail = require("../utils/mailer");
 const QRCode = require("qrcode");
+const path = require("path");
 const registerLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 15, // max 15 registrations per IP
@@ -180,20 +181,20 @@ router.post("/register", registerLimiter, async (req, res) => {
 
     // Telegram Notifications
     const token = process.env.TELEGRAM_BOT_TOKEN;
-const chatId = process.env.TELEGRAM_CHAT_ID;
-const memberNames = teamMembers
-  .map((m, i) => `${i + 1}. ${m.fullName} (${m.rollNo})`)
-  .join("\n");
-// Count pending registrations
-const pendingCount = await Registration.countDocuments({
-  registrationStatus: "Pending"
-});
-const telegramRes = await axios.post(
-  `https://api.telegram.org/bot${token}/sendPhoto`,
-  {
-    chat_id: chatId,
-    photo: screenshotUrl,
-    caption: `🚀 *New Registration*
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    const memberNames = teamMembers
+      .map((m, i) => `${i + 1}. ${m.fullName} (${m.rollNo})`)
+      .join("\n");
+    // Count pending registrations
+    const pendingCount = await Registration.countDocuments({
+      registrationStatus: "Pending",
+    });
+    const telegramRes = await axios.post(
+      `https://api.telegram.org/bot${token}/sendPhoto`,
+      {
+        chat_id: chatId,
+        photo: screenshotUrl,
+        caption: `🚀 *New Registration*
 
 Team: *${teamName}*
 Event: ${eventName}
@@ -208,20 +209,23 @@ ${memberNames}
 Registration ID: \`${registrationId}\`
 
 ⏳ Pending Approvals: *${pendingCount}*`,
-    parse_mode: "Markdown",
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: "✅ Confirm", callback_data: `confirm_${registrationId}` },
-          { text: "❌ Reject", callback_data: `reject_${registrationId}` }
-        ]
-      ]
-    }
-  }
-);
-// Save telegram message ID
-registration.telegramMessageId = telegramRes.data.result.message_id;
-await registration.save();
+        parse_mode: "Markdown",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "✅ Confirm",
+                callback_data: `confirm_${registrationId}`,
+              },
+              { text: "❌ Reject", callback_data: `reject_${registrationId}` },
+            ],
+          ],
+        },
+      },
+    );
+    // Save telegram message ID
+    registration.telegramMessageId = telegramRes.data.result.message_id;
+    await registration.save();
     res.status(201).json({
       message: "Registration submitted successfully",
       data: registration,
@@ -231,9 +235,8 @@ await registration.save();
     res.status(500).json({ message: "Error submitting registration" });
   }
 });
- const generateReceiptPDF = (registration) => {
+const generateReceiptPDF = (registration) => {
   return new Promise((resolve) => {
-
     const doc = new PDFDocument({ margin: 50 });
 
     let buffers = [];
@@ -243,8 +246,16 @@ await registration.save();
     const pageWidth = doc.page.width;
 
     /* HEADER LOGO */
-    const path = require("path");
-    doc.image(path.join(__dirname, "../public/titlelogo.png"),pageWidth / 2 - 70, 20, { width: 140 });
+    try {
+      doc.image(
+        path.join(__dirname, "../public/titlelogo.png"),
+        pageWidth / 2 - 70,
+        20,
+        { width: 140 },
+      );
+    } catch (err) {
+      console.log("Logo not found, skipping logo");
+    }
 
     doc.moveDown(3);
 
@@ -261,7 +272,10 @@ await registration.save();
     doc.moveDown();
 
     /* LINE */
-    doc.moveTo(50, doc.y).lineTo(pageWidth - 50, doc.y).stroke();
+    doc
+      .moveTo(50, doc.y)
+      .lineTo(pageWidth - 50, doc.y)
+      .stroke();
 
     doc.moveDown(1.5);
 
@@ -291,10 +305,7 @@ await registration.save();
 
     /* TEAM MEMBERS */
 
-    doc
-      .fontSize(14)
-      .fillColor("#0077cc")
-      .text("Team Members");
+    doc.fontSize(14).fillColor("#0077cc").text("Team Members");
 
     doc.moveDown(0.5);
 
@@ -339,37 +350,36 @@ router.put("/confirm/:id", verifyToken, async (req, res) => {
     const registration = await Registration.findById(req.params.id);
 
     if (!registration) {
-  return res.status(404).json({ message: "Registration not found" });
-}
+      return res.status(404).json({ message: "Registration not found" });
+    }
 
-if (registration.registrationStatus === "Confirmed") {
-  return res.sendStatus(200);
-}
+    if (registration.registrationStatus === "Confirmed") {
+      return res.sendStatus(200);
+    }
 
-// Generate QR
-const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
-const qrCodeImage = await QRCode.toDataURL(qrData);
+    // Generate QR
+    const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
+    const qrCodeImage = await QRCode.toDataURL(qrData);
 
-registration.registrationStatus = "Confirmed";
+    registration.registrationStatus = "Confirmed";
 
-await registration.save();
+    await registration.save();
 
     await registration.save();
     const token = process.env.TELEGRAM_BOT_TOKEN;
-const chatId = process.env.TELEGRAM_CHAT_ID;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
 
-if (registration.telegramMessageId) {
+    if (registration.telegramMessageId) {
+      const members = registration.teamMembers
+        .map((m, i) => `${i + 1}. ${m.fullName}`)
+        .join("\n");
 
-  const members = registration.teamMembers
-    .map((m,i)=>`${i+1}. ${m.fullName}`)
-    .join("\n");
-
-  await axios.post(
-    `https://api.telegram.org/bot${token}/editMessageCaption`,
-    {
-      chat_id: chatId,
-      message_id: registration.telegramMessageId,
-      caption: `✅ *Registration Confirmed*
+      await axios.post(
+        `https://api.telegram.org/bot${token}/editMessageCaption`,
+        {
+          chat_id: chatId,
+          message_id: registration.telegramMessageId,
+          caption: `✅ *Registration Confirmed*
 
 Team: *${registration.teamName}*
 Event: ${registration.eventName}
@@ -379,12 +389,11 @@ Registration ID: \`${registration.registrationId}\`
 ${members}
 
 Status: ✅ Confirmed`,
-      parse_mode: "Markdown",
-      reply_markup: { inline_keyboard: [] }
+          parse_mode: "Markdown",
+          reply_markup: { inline_keyboard: [] },
+        },
+      );
     }
-  );
-
-}
     await axios.post(
       "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
       { registration, qrCodeImage },
@@ -520,17 +529,17 @@ router.get("/pdf/:id", async (req, res) => {
     });
 
     y += 20;
-    
+
     doc
       .fillColor("red")
       .text("Status : Payment Submitted - Verification Pending", 40, y);
     doc
-  .fontSize(10)
-  .fillColor("gray")
-  .text(
-    "Your event entry QR code will be sent to your email after payment verification.",
-    { align: "center" }
-  );
+      .fontSize(10)
+      .fillColor("gray")
+      .text(
+        "Your event entry QR code will be sent to your email after payment verification.",
+        { align: "center" },
+      );
     doc
       .fillColor("black")
       .fontSize(10)
@@ -695,17 +704,16 @@ router.post("/send-confirmation-email", async (req, res) => {
     const pdfBuffer = await generateReceiptPDF(registration);
 
     for (const member of registration.teamMembers) {
+      if (!member.email) continue;
 
-  if (!member.email) continue;
-
-  await sendMail(
-    member.email,
-    "Arduino Days 2026 Registration Confirmed",
-    htmlTemplate,
-    pdfBuffer,
-    `${registration.registrationId}.pdf`
-  );
-}
+      await sendMail(
+        member.email,
+        "Arduino Days 2026 Registration Confirmed",
+        htmlTemplate,
+        pdfBuffer,
+        `${registration.registrationId}.pdf`,
+      );
+    }
 
     res.json({ success: true, message: "Emails sent successfully" });
   } catch (error) {
@@ -719,9 +727,7 @@ router.post("/send-confirmation-email", async (req, res) => {
 ===================================== */
 
 router.get("/entry/:registrationId", async (req, res) => {
-
   try {
-
     const { registrationId } = req.params;
 
     const registration = await Registration.findOne({ registrationId });
@@ -744,14 +750,14 @@ router.get("/entry/:registrationId", async (req, res) => {
       `);
     }
 
-// 4️⃣ Prevent duplicate scans (multiple devices)
-if (registration.entryTime) {
-  return res.json({
-    success: false,
-    reason: "already",
-    teamName: registration.teamName
-  });
-}
+    // 4️⃣ Prevent duplicate scans (multiple devices)
+    if (registration.entryTime) {
+      return res.json({
+        success: false,
+        reason: "already",
+        teamName: registration.teamName,
+      });
+    }
 
     // 5️⃣ Mark members as checked in
     registration.teamMembers.forEach((member) => {
@@ -762,21 +768,21 @@ if (registration.entryTime) {
 
     await registration.save();
     // Send Telegram entry notification
-const token = process.env.TELEGRAM_BOT_TOKEN;
-const chatId = process.env.TELEGRAM_CHAT_ID;
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
 
-const entryTime = new Date().toLocaleTimeString("en-IN", {
-  hour: "2-digit",
-  minute: "2-digit"
-});
+    const entryTime = new Date().toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
-const memberList = registration.teamMembers
-  .map((m, i) => `${i + 1}. ${m.fullName}`)
-  .join("\n");
+    const memberList = registration.teamMembers
+      .map((m, i) => `${i + 1}. ${m.fullName}`)
+      .join("\n");
 
-await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-  chat_id: chatId,
-  text: `🎟 Entry Scanned
+    await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+      chat_id: chatId,
+      text: `🎟 Entry Scanned
 
 Team: ${registration.teamName}
 Registration ID: ${registration.registrationId}
@@ -785,24 +791,20 @@ Event: ${registration.eventName}
 👥 Members:
 ${memberList}
 
-⏰ Time: ${entryTime}`
-});
+⏰ Time: ${entryTime}`,
+    });
 
     // 6️⃣ Success response
     res.json({
-  success: true,
-  teamName: registration.teamName,
-  members: registration.teamMembers.map((m) => m.fullName)
-});
-
+      success: true,
+      teamName: registration.teamName,
+      members: registration.teamMembers.map((m) => m.fullName),
+    });
   } catch (error) {
-
     console.error("ENTRY ERROR:", error);
 
     res.status(500).send("Server Error");
-
   }
-
 });
 
 /* =====================================
@@ -810,17 +812,15 @@ ${memberList}
 ===================================== */
 
 router.get("/entry-stats", async (req, res) => {
-
   try {
-
     const totalParticipants = await Registration.aggregate([
-      { $group: { _id: null, total: { $sum: "$teamSize" } } }
+      { $group: { _id: null, total: { $sum: "$teamSize" } } },
     ]);
 
     const checkedInParticipants = await Registration.aggregate([
       { $unwind: "$teamMembers" },
       { $match: { "teamMembers.checkedIn": true } },
-      { $count: "count" }
+      { $count: "count" },
     ]);
 
     const total = totalParticipants[0]?.total || 0;
@@ -829,21 +829,16 @@ router.get("/entry-stats", async (req, res) => {
     res.json({
       totalParticipants: total,
       enteredParticipants: entered,
-      remainingParticipants: total - entered
+      remainingParticipants: total - entered,
     });
-
   } catch (error) {
-
     console.error("Entry stats error:", error);
 
     res.status(500).json({ message: "Error fetching entry stats" });
-
   }
-
 });
 
 router.post("/telegram-webhook", async (req, res) => {
-
   const data = req.body;
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -853,26 +848,24 @@ router.post("/telegram-webhook", async (req, res) => {
   ========================= */
 
   if (data.message && data.message.text) {
-
     const command = data.message.text;
     const chatId = data.message.chat.id;
 
     if (command === "/stats") {
-
       const totalTeams = await Registration.countDocuments();
 
       const totalParticipants = await Registration.aggregate([
-        { $group: { _id: null, total: { $sum: "$teamSize" } } }
+        { $group: { _id: null, total: { $sum: "$teamSize" } } },
       ]);
 
       const checkedIn = await Registration.aggregate([
         { $unwind: "$teamMembers" },
         { $match: { "teamMembers.checkedIn": true } },
-        { $count: "count" }
+        { $count: "count" },
       ]);
 
       const revenue = await Registration.aggregate([
-        { $group: { _id: null, total: { $sum: "$expectedAmount" } } }
+        { $group: { _id: null, total: { $sum: "$expectedAmount" } } },
       ]);
 
       const statsMessage = `📊 Arduino Days Live Stats
@@ -888,9 +881,8 @@ router.post("/telegram-webhook", async (req, res) => {
 
       await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
         chat_id: chatId,
-        text: statsMessage
+        text: statsMessage,
       });
-
     }
 
     return res.sendStatus(200);
@@ -901,57 +893,58 @@ router.post("/telegram-webhook", async (req, res) => {
   ========================= */
 
   if (!data.callback_query) {
-  return res.sendStatus(200);
-}
+    return res.sendStatus(200);
+  }
 
-const callbackData = data.callback_query.data;
+  const callbackData = data.callback_query.data;
 
-const chatId = data.callback_query.message.chat.id;
-const messageId = data.callback_query.message.message_id;
+  const chatId = data.callback_query.message.chat.id;
+  const messageId = data.callback_query.message.message_id;
 
   /* =========================
      CONFIRM REGISTRATION
   ========================= */
-if (callbackData.startsWith("confirm_")) {
+  if (callbackData.startsWith("confirm_")) {
+    const registrationId = callbackData.split("_")[1];
 
-  const registrationId = callbackData.split("_")[1];
+    const registration = await Registration.findOne({ registrationId });
 
-  const registration = await Registration.findOne({ registrationId });
+    if (!registration) return res.sendStatus(200);
 
-  if (!registration) return res.sendStatus(200);
+    if (registration.registrationStatus === "Confirmed") {
+      return res.sendStatus(200);
+    }
 
-  if (registration.registrationStatus === "Confirmed") {
-    return res.sendStatus(200);
-  }
+    registration.registrationStatus = "Confirmed";
 
-  registration.registrationStatus = "Confirmed";
+    await registration.save();
+    // Generate QR for entry
+    const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
 
-  await registration.save();
-  // Generate QR for entry
-const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
+    const qrCodeImage = await QRCode.toDataURL(qrData);
 
-const qrCodeImage = await QRCode.toDataURL(qrData);
+    // Send confirmation email
+    try {
+      await axios.post(
+        "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+        { registration, qrCodeImage },
+      );
+      console.log("📧 Confirmation email sent");
+    } catch (err) {
+      console.error("Email sending failed:", err.message);
+    }
 
-// Send confirmation email
-try {
-  await axios.post(
-    "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
-    { registration, qrCodeImage }
-  );
-  console.log("📧 Confirmation email sent");
-} catch (err) {
-  console.error("Email sending failed:", err.message);
-}
+    const members = registration.teamMembers
+      .map((m, i) => `${i + 1}. ${m.fullName}`)
+      .join("\n");
 
-  const members = registration.teamMembers
-    .map((m, i) => `${i + 1}. ${m.fullName}`)
-    .join("\n");
-
-  // 🔥 Update Telegram message
-  await axios.post(`https://api.telegram.org/bot${token}/editMessageCaption`, {
-    chat_id: chatId,
-    message_id: messageId,
-    caption: `✅ *Registration Confirmed*
+    // 🔥 Update Telegram message
+    await axios.post(
+      `https://api.telegram.org/bot${token}/editMessageCaption`,
+      {
+        chat_id: chatId,
+        message_id: messageId,
+        caption: `✅ *Registration Confirmed*
 
 Team: *${registration.teamName}*
 Event: ${registration.eventName}
@@ -961,37 +954,39 @@ Registration ID: \`${registration.registrationId}\`
 ${members}
 
 Status: ✅ Confirmed`,
-    parse_mode: "Markdown",
-    reply_markup: { inline_keyboard: [] } // removes buttons
-  });
+        parse_mode: "Markdown",
+        reply_markup: { inline_keyboard: [] }, // removes buttons
+      },
+    );
 
-  console.log("✅ Confirmed via Telegram");
-}
+    console.log("✅ Confirmed via Telegram");
+  }
 
   /* =========================
      REJECT REGISTRATION
   ========================= */
 
   if (callbackData.startsWith("reject_")) {
+    const registrationId = callbackData.split("_")[1];
 
-  const registrationId = callbackData.split("_")[1];
+    const registration = await Registration.findOne({ registrationId });
 
-  const registration = await Registration.findOne({ registrationId });
+    if (!registration) return res.sendStatus(200);
 
-  if (!registration) return res.sendStatus(200);
+    registration.registrationStatus = "Rejected";
 
-  registration.registrationStatus = "Rejected";
+    await registration.save();
 
-  await registration.save();
+    const members = registration.teamMembers
+      .map((m, i) => `${i + 1}. ${m.fullName}`)
+      .join("\n");
 
-  const members = registration.teamMembers
-    .map((m, i) => `${i + 1}. ${m.fullName}`)
-    .join("\n");
-
-  await axios.post(`https://api.telegram.org/bot${token}/editMessageCaption`, {
-    chat_id: chatId,
-    message_id: messageId,
-    caption: `❌ *Registration Rejected*
+    await axios.post(
+      `https://api.telegram.org/bot${token}/editMessageCaption`,
+      {
+        chat_id: chatId,
+        message_id: messageId,
+        caption: `❌ *Registration Rejected*
 
 Team: *${registration.teamName}*
 Event: ${registration.eventName}
@@ -1001,15 +996,15 @@ Registration ID: \`${registration.registrationId}\`
 ${members}
 
 Status: ❌ Rejected`,
-    parse_mode: "Markdown",
-    reply_markup: { inline_keyboard: [] }
-  });
+        parse_mode: "Markdown",
+        reply_markup: { inline_keyboard: [] },
+      },
+    );
 
-  console.log("❌ Rejected via Telegram");
-}
+    console.log("❌ Rejected via Telegram");
+  }
 
   res.sendStatus(200);
-
 });
 
 module.exports = router;

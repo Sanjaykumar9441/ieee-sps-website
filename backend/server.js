@@ -17,7 +17,7 @@ const uploadRoutes = require("./routes/uploadRoutes");
 
 
 const app = express();
-
+app.set("trust proxy", 1);
 
 const fs = require("fs");
 const path = require("path");
@@ -47,8 +47,6 @@ app.use(
 );
 
 app.use(express.json());
-app.set("trust proxy", 1);
-
 /* ===============================
    ✅ ROOT ROUTE
 ================================= */
