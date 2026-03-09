@@ -235,8 +235,8 @@ Registration ID: \`${registrationId}\`
     res.status(500).json({ message: "Error submitting registration" });
   }
 });
-const generateReceiptPDF = (registration) => {
-  return new Promise((resolve) => {
+const generateReceiptPDF = async (registration) => {
+  return new Promise(async (resolve) => {
     const doc = new PDFDocument({ margin: 50 });
 
     let buffers = [];
@@ -248,7 +248,7 @@ const generateReceiptPDF = (registration) => {
     /* HEADER LOGO */
     try {
       doc.image(
-        path.join(__dirname, "../public/titlelogo.png"),
+        path.join(__dirname, "../public/AD2026.png"),
         pageWidth / 2 - 70,
         20,
         { width: 140 },
@@ -281,34 +281,47 @@ const generateReceiptPDF = (registration) => {
 
     /* DETAILS TABLE */
 
+    const createdDate = new Date(registration.createdAt);
+
+    const date = createdDate.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+
+    const time = createdDate.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
     const details = [
       ["Registration ID", registration.registrationId],
       ["Team Name", registration.teamName],
       ["Event", registration.eventName],
       ["Team Size", registration.teamSize],
-      ["Amount Paid", "Rs. " + registration.expectedAmount],
+      ["Amount Paid", `₹${registration.expectedAmount}`],
       ["Transaction ID", registration.payment.userTransactionId],
-      ["Date", new Date(registration.createdAt).toLocaleDateString()],
-      ["Time", new Date(registration.createdAt).toLocaleTimeString()],
+      ["Date", date],
+      ["Time", time],
     ];
 
     details.forEach(([label, value]) => {
       doc
         .font("Helvetica-Bold")
-        .text(label + ":", { continued: true })
+        .text(label + " : ", { continued: true })
         .font("Helvetica")
-        .text(` ${value}`);
-      doc.moveDown(0.5);
-    });
+        .text(value);
 
+      doc.moveDown(0.8);
+    });
     doc.moveDown();
 
-    /* TEAM MEMBERS */
-
-    doc.fontSize(14).fillColor("#0077cc").text("Team Members");
+    doc
+      .fontSize(15)
+      .fillColor("#0077cc")
+      .text("Team Members", { align: "left" });
 
     doc.moveDown(0.5);
-
     registration.teamMembers.forEach((member, i) => {
       doc
         .fontSize(11)
@@ -317,13 +330,48 @@ const generateReceiptPDF = (registration) => {
     });
 
     doc.moveDown(2);
+    if (registration.registrationStatus === "Confirmed") {
+      const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
+
+      const qrImage = await QRCode.toDataURL(qrData);
+
+      const qrBuffer = Buffer.from(qrImage.split(",")[1], "base64");
+
+      doc.moveDown(2);
+
+      doc
+        .fontSize(15)
+        .fillColor("#0077cc")
+        .text("Event Entry QR Code", { align: "center" });
+
+      doc.moveDown();
+
+      doc.image(qrBuffer, pageWidth / 2 - 65, doc.y, {
+        width: 130,
+      });
+
+      doc.moveDown(7);
+
+      doc
+        .fontSize(10)
+        .fillColor("gray")
+        .text("Show this QR code at the event entrance", { align: "center" });
+    }
 
     /* STATUS BADGE */
+    const statusText =
+      registration.registrationStatus === "Confirmed"
+        ? "Payment Verified"
+        : "Payment Submitted - Verification Pending";
+
+    doc.moveDown();
 
     doc
       .fontSize(12)
-      .fillColor("red")
-      .text("Status : Payment Submitted - Verification Pending");
+      .fillColor(
+        registration.registrationStatus === "Confirmed" ? "green" : "red",
+      )
+      .text(`Status : ${statusText}`, { align: "center" });
 
     doc.moveDown(2);
 
@@ -362,8 +410,6 @@ router.put("/confirm/:id", verifyToken, async (req, res) => {
     const qrCodeImage = await QRCode.toDataURL(qrData);
 
     registration.registrationStatus = "Confirmed";
-
-    await registration.save();
 
     await registration.save();
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -442,114 +488,15 @@ router.get("/pdf/:id", async (req, res) => {
       return res.status(404).json({ message: "Registration not found" });
     }
 
+    const pdfBuffer = await generateReceiptPDF(registration);
+
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
       `attachment; filename=${registration.registrationId}.pdf`,
     );
 
-    const doc = new PDFDocument({ margin: 40 });
-
-    // STREAM PDF DIRECTLY
-    doc.pipe(res);
-
-    const pageWidth = doc.page.width;
-    const pageHeight = doc.page.height;
-
-    const createdDate = new Date(registration.createdAt);
-
-    const date = createdDate.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
-
-    const time = createdDate.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    /* BORDER */
-    doc
-      .lineWidth(1.2)
-      .strokeColor("#00b4ff")
-      .rect(10, 10, pageWidth - 20, pageHeight - 20)
-      .stroke();
-
-    /* TITLE */
-    doc
-      .fontSize(18)
-      .fillColor("#00b4ff")
-      .text("Arduino Days 2026 Registration Receipt", 0, 70, {
-        align: "center",
-      });
-
-    doc.fillColor("black").fontSize(12);
-
-    let y = 110;
-
-    doc.text(`Registration ID : ${registration.registrationId}`, 40, y);
-    y += 20;
-
-    doc.text(`Team Name : ${registration.teamName}`, 40, y);
-    y += 20;
-
-    doc.text(`Event : ${registration.eventName}`, 40, y);
-    y += 20;
-
-    doc.text(`Team Size : ${registration.teamSize}`, 40, y);
-    y += 20;
-
-    doc.text(`Amount Paid : ₹${registration.expectedAmount}`, 40, y);
-    y += 20;
-
-    doc.text(
-      `Transaction ID : ${registration.payment.userTransactionId}`,
-      40,
-      y,
-    );
-    y += 20;
-
-    doc.text(`Date : ${date}`, 40, y);
-    y += 20;
-
-    doc.text(`Time : ${time}`, 40, y);
-
-    y += 40;
-
-    doc.fontSize(14).fillColor("#00b4ff").text("Team Members", 40, y);
-
-    doc.fontSize(12).fillColor("black");
-
-    y += 20;
-
-    registration.teamMembers.forEach((member, index) => {
-      doc.text(`${index + 1}. ${member.fullName} - ${member.rollNo}`, 50, y);
-      y += 15;
-    });
-
-    y += 20;
-
-    doc
-      .fillColor("red")
-      .text("Status : Payment Submitted - Verification Pending", 40, y);
-    doc
-      .fontSize(10)
-      .fillColor("gray")
-      .text(
-        "Your event entry QR code will be sent to your email after payment verification.",
-        { align: "center" },
-      );
-    doc
-      .fillColor("black")
-      .fontSize(10)
-      .text("IEEE SPS Student Branch Chapter", 0, pageHeight - 60, {
-        align: "center",
-      });
-
-    doc.text("Aditya University", 0, pageHeight - 45, { align: "center" });
-
-    doc.end();
+    res.send(pdfBuffer);
   } catch (error) {
     console.error("PDF ERROR:", error);
     res.status(500).json({ message: "Error generating PDF" });
@@ -576,7 +523,7 @@ router.post("/send-confirmation-email", async (req, res) => {
     // Template Selection
     if (registration.eventType === "combo") {
       htmlTemplate = `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; padding: 40px 10px; color: #fff;">
+        <div style="font-family: Arial, sans-serif; background:#f8fafc; padding:30px;">
     <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(145deg, #18181b, #09090b); border: 1px solid #22d3ee; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 212, 255, 0.1);">
         
 <div style="background: #0f172a; padding: 30px; text-align: center; border-bottom: 1px solid #22d3ee;">
@@ -642,7 +589,7 @@ router.post("/send-confirmation-email", async (req, res) => {
 </div>`;
     } else {
       htmlTemplate = `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; padding: 40px 10px; color: #fff;">
+       <div style="font-family: Arial, sans-serif; background:#f8fafc; padding:30px;">
     <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(145deg, #18181b, #09090b); border: 1px solid #a855f7; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(168, 85, 247, 0.1);">
         
         <div style="background: #0f172a; padding: 30px; text-align: center; border-bottom: 1px solid #22d3ee;">
