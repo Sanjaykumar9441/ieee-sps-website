@@ -228,10 +228,9 @@ const Dashboard = () => {
       });
     });
 
-    return Object.entries(collegeCounts).map(([name, value]) => ({
-      name,
-      value,
-    }));
+    return Object.entries(collegeCounts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value); // sort highest first
   }, [registrations]);
   const [registrationView, setRegistrationView] = useState("pending");
   const [registrationFilter, setRegistrationFilter] = useState("all");
@@ -1279,6 +1278,28 @@ const Dashboard = () => {
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
+                </div>
+                <div className="bg-zinc-900 p-6 rounded-xl border border-cyan-500/20 shadow-lg mb-10">
+                  <h3 className="text-lg text-cyan-400 mb-4">
+                    🏫 Top Colleges
+                  </h3>
+
+                  <div className="space-y-2">
+                    {collegeAnalytics.slice(0, 10).map((college, index) => (
+                      <div
+                        key={index}
+                        className="flex justify-between items-center bg-zinc-800 px-4 py-2 rounded"
+                      >
+                        <span>
+                          {index + 1}. {college.name}
+                        </span>
+
+                        <span className="text-cyan-400 font-semibold">
+                          {college.value} students
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
               {/* ✅ CLOSE GRID PROPERLY */}

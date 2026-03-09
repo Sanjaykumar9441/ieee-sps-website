@@ -198,6 +198,7 @@ const telegramRes = await axios.post(
 Team: *${teamName}*
 Event: ${eventName}
 Amount: ₹${correctAmount}
+Hostel Required: *${accommodationRequired ? "Yes" : "No"}*
 
 UTR: \`${userTransactionId}\`
 
@@ -270,7 +271,7 @@ await registration.save();
       ["Team Name", registration.teamName],
       ["Event", registration.eventName],
       ["Team Size", registration.teamSize],
-      ["Amount Paid", `₹${registration.expectedAmount}`],
+      ["Amount Paid", "Rs. " + registration.expectedAmount],
       ["Transaction ID", registration.payment.userTransactionId],
       ["Date", new Date(registration.createdAt).toLocaleDateString()],
       ["Time", new Date(registration.createdAt).toLocaleTimeString()],
@@ -1009,17 +1010,5 @@ Status: ❌ Rejected`,
   res.sendStatus(200);
 
 });
-router.get("/test-mail", async (req,res)=>{
 
-  await sendMail(
-    "ieee.club.aus@gmail.com",
-    "Test Email",
-    "<h1>Email working</h1>",
-    null,
-    null
-  );
-
-  res.send("Mail sent");
-
-});
 module.exports = router;
