@@ -542,6 +542,7 @@ const ArduinoDays = () => {
                     </li>
                     <li>Participation certificates will be provided.</li>
                     <li>Accommodation will be provided as per norms.</li>
+                    <li>Snacks will be provided during event.</li>
                   </ul>
                 </div>
 

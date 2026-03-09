@@ -764,7 +764,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
             {/* Accommodation */}
             <div className="mb-8">
               <label className="block mb-2">
-                Hostel Accommodation Required? (₹150 per person per day)
+                Hostel Accommodation Required? (₹150 per person/day — Includes Breakfast & Dinner)
               </label>
 
               <select
@@ -1101,7 +1101,7 @@ backdrop-blur-md"
                 </ol>
               </div>
               <div className="mb-4 text-yellow-400 text-sm text-center">
-                ⚠️ After payment, upload screenshot and enter correct UTR ID.
+                ⚠️ After payment, upload screenshot that contains UTR ID and enter correct UTR ID.
               </div>
 
               <input

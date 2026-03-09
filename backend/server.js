@@ -47,6 +47,7 @@ app.use(
 );
 
 app.use(express.json());
+app.set("trust proxy", 1);
 
 /* ===============================
    ✅ ROOT ROUTE

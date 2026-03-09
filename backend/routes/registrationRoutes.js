@@ -243,7 +243,8 @@ await registration.save();
     const pageWidth = doc.page.width;
 
     /* HEADER LOGO */
-    doc.image("public/titlelogo.png", pageWidth / 2 - 70, 20, { width: 140 });
+    const path = require("path");
+    doc.image(path.join(__dirname, "../public/titlelogo.png"),pageWidth / 2 - 70, 20, { width: 140 });
 
     doc.moveDown(3);
 

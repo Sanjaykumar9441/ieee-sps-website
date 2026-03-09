@@ -1279,7 +1279,7 @@ const Dashboard = () => {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="bg-zinc-900 p-6 rounded-xl border border-cyan-500/20 shadow-lg mb-10">
+                <div className="bg-zinc-900 p-5 rounded-xl border border-cyan-500/20 shadow-lg">     
                   <h3 className="text-lg text-cyan-400 mb-4">
                     🏫 Top Colleges
                   </h3>
