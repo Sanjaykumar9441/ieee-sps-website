@@ -39,14 +39,23 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://ieeespsaditya.vercel.app",
-    ],
+    origin: function (origin, callback) {
+      const allowed = [
+        "http://localhost:5173",
+        "https://ieeespsaditya.vercel.app"
+      ];
+
+      if (!origin || allowed.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS not allowed"));
+      }
+    },
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 /* ===============================
    ✅ ROOT ROUTE
 ================================= */

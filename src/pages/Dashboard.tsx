@@ -348,7 +348,13 @@ const Dashboard = () => {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      const registration = res.data.data;
+      await axios.put(
+  `https://ieee-sps-website.onrender.com/api/confirm/${id}`,
+  {},
+  { headers: { Authorization: `Bearer ${token}` } }
+);
+
+fetchRegistrations();
 
       fetchRegistrations();
     } catch (error) {
@@ -566,8 +572,6 @@ const Dashboard = () => {
         "Email",
         "Phone",
         "College",
-        "Entry Status",
-        "Entry Time",
       ]);
 
       data.forEach((reg) => {
@@ -584,10 +588,6 @@ const Dashboard = () => {
             member.email || "",
             member.phone || "",
             member.college || "",
-            member.checkedIn ? "YES" : "NO",
-            reg.entryTime
-              ? new Date(reg.entryTime).toLocaleTimeString("en-IN")
-              : "",
           ]);
         });
       });

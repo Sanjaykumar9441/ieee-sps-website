@@ -594,7 +594,7 @@ members.forEach((member, index) => {
     doc.setTextColor(200,0,0);
 
     doc.text(
-      "Status : Payment Submitted - Verification Pending",
+      "Status : Payment Submitted - Awaiting Verification",
       pageWidth/2,
       startY+10,
       {align:"center"}
@@ -1489,7 +1489,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
               <p className="mt-5 text-sm text-gray-300 max-w-md">
                 📧 After payment verification, a{" "}
                 <span className="text-cyan-400 font-semibold">
-                  confirmation email with your Entry QR Code
+                  confirmation email with your registration pass
                 </span>{" "}
                 will be sent to all registered team members.
               </p>

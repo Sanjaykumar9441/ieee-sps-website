@@ -7,7 +7,6 @@ const rateLimit = require("express-rate-limit");
 const PDFDocument = require("pdfkit");
 const axios = require("axios");
 const sendMail = require("../utils/mailer");
-const QRCode = require("qrcode");
 const path = require("path");
 const registerLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
@@ -342,27 +341,6 @@ const generateReceiptPDF = async (registration) => {
       doc.y += rowH;
     });
 
-    // 6. QR CODE (CENTERED)
-    if (registration.registrationStatus === "Confirmed") {
-      doc.moveDown(1.5);
-      const qrSize = 120;
-      const qrX = (pageWidth / 2) - (qrSize / 2);
-      
-      doc.fontSize(13).fillColor(themeColor).font("Helvetica-Bold").text("Event Entry QR Code", { align: "center" });
-      doc.moveDown(0.5);
-
-      const qrData = `https://ieee-sps-website.onrender.com/api/entry/${registration.registrationId}`;
-      const qrImage = await QRCode.toDataURL(qrData);
-      const qrBuffer = Buffer.from(qrImage.split(",")[1], "base64");
-
-      // QR Border
-      doc.roundedRect(qrX - 10, doc.y, qrSize + 20, qrSize + 20, 10).lineWidth(1.5).strokeColor(themeColor).stroke();
-      doc.image(qrBuffer, qrX, doc.y + 10, { width: qrSize });
-      
-      doc.y += qrSize + 30;
-      doc.fontSize(9).fillColor("gray").text("Show this QR code at the entrance for verification.", { align: "center" });
-    }
-
     // 7. STATUS & FOOTER
     doc.moveDown(1);
     const isConfirmed = registration.registrationStatus === "Confirmed";
@@ -392,10 +370,6 @@ router.put("/confirm/:id", verifyToken, async (req, res) => {
     if (registration.registrationStatus === "Confirmed") {
       return res.sendStatus(200);
     }
-
-    // Generate QR
-    const qrData = `https://ieee-sps-website.onrender.com/api/entry/${registration.registrationId}`;
-    const qrCodeImage = await QRCode.toDataURL(qrData);
 
     registration.registrationStatus = "Confirmed";
 
@@ -429,9 +403,9 @@ Status: ✅ Confirmed`,
       );
     }
     await axios.post(
-      "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
-      { registration, qrCodeImage },
-    );
+  "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+  { registration }
+);
 
     res.json({
       message: "Registration confirmed successfully",
@@ -460,34 +434,6 @@ router.delete("/:id", verifyToken, async (req, res) => {
   } catch (error) {
     console.error("DELETE ERROR:", error);
     res.status(500).json({ message: "Error deleting registration" });
-  }
-});
-
-/* =====================================
-   5️⃣ DOWNLOAD PDF
-===================================== */
-router.get("/pdf/:id", async (req, res) => {
-  try {
-    const registration = await Registration.findOne({
-      registrationId: req.params.id,
-    });
-
-    if (!registration) {
-      return res.status(404).json({ message: "Registration not found" });
-    }
-
-    const pdfBuffer = await generateReceiptPDF(registration);
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=${registration.registrationId}.pdf`,
-    );
-
-    res.send(pdfBuffer);
-  } catch (error) {
-    console.error("PDF ERROR:", error);
-    res.status(500).json({ message: "Error generating PDF" });
   }
 });
 
@@ -666,7 +612,6 @@ Aditya University, Surampalem
 `;
     }
 
-    // Generate PDF with QR
     const pdfBuffer = await generateReceiptPDF(registration);
 
     const emailPromises = registration.teamMembers
@@ -683,7 +628,7 @@ Aditya University, Surampalem
         })
       );
 
-    await Promise.all(emailPromises);
+    await Promise.allSettled(emailPromises);
 
     res.json({
       success: true,
@@ -698,172 +643,6 @@ Aditya University, Surampalem
       message: "Email sending failed",
     });
 
-  }
-});
-
-/* =====================================
-   8️⃣ ENTRY QR SCAN
-===================================== */
-
-router.get("/entry/:registrationId", async (req, res) => {
-  try {
-
-    const { registrationId } = req.params;
-    const { key } = req.query;
-
-    const registration = await Registration.findOne({ registrationId });
-
-    if (!registration) {
-      return res.send(`
-        <div style="font-family:Arial;text-align:center;padding:60px;">
-          <h1 style="color:red;">❌ Invalid QR Code</h1>
-        </div>
-      `);
-    }
-
-    /* PARTICIPANT SCAN (Google Lens etc) */
-    if (key !== process.env.ENTRY_SECRET) {
-      return res.send(`
-        <div style="font-family:Arial;text-align:center;padding:60px;">
-          <h1>👋 Welcome ${registration.teamName}</h1>
-          <p>Please show this QR code to the event staff for entry.</p>
-
-          <p style="margin-top:20px;color:gray;">
-          Registration ID: ${registration.registrationId}
-          </p>
-        </div>
-      `);
-    }
-
-    if (registration.registrationStatus !== "Confirmed") {
-      return res.send(`
-        <div style="font-family:Arial;text-align:center;padding:60px;">
-          <h1 style="color:red;">❌ Registration Not Confirmed</h1>
-          <p>Team: ${registration.teamName}</p>
-        </div>
-      `);
-    }
-
-    if (registration.entryTime) {
-      return res.send(`
-        <div style="font-family:Arial;text-align:center;padding:60px;">
-          <h1 style="color:red;">❌ Already Entered</h1>
-          <p><b>Team:</b> ${registration.teamName}</p>
-          <p>This team has already checked in.</p>
-        </div>
-      `);
-    }
-
-    registration.teamMembers.forEach((member) => {
-      member.checkedIn = true;
-    });
-
-    registration.entryTime = new Date();
-    await registration.save();
-
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
-
-    const entryTime = new Date().toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    const memberList = registration.teamMembers
-      .map((m, i) => `${i + 1}. ${m.fullName}`)
-      .join("\n");
-
-    /* COUNT PARTICIPANTS */
-    const totalParticipants = await Registration.aggregate([
-      { $group: { _id: null, total: { $sum: "$teamSize" } } },
-    ]);
-
-    const checkedInParticipants = await Registration.aggregate([
-      { $unwind: "$teamMembers" },
-      { $match: { "teamMembers.checkedIn": true } },
-      { $count: "count" },
-    ]);
-
-    const total = totalParticipants[0]?.total || 0;
-    const entered = checkedInParticipants[0]?.count || 0;
-    const remaining = total - entered;
-
-    /* SEND TELEGRAM MESSAGE */
-    await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-      chat_id: chatId,
-      text: `🎟 ENTRY SCANNED
-
-Team: ${registration.teamName}
-Registration ID: ${registration.registrationId}
-
-👥 Members
-${memberList}
-
-⏰ Time: ${entryTime}
-
-📊 Live Entry Stats
-Entered: ${entered}
-Remaining: ${remaining}
-Total Participants: ${total}`,
-    });
-
-    const membersHTML = registration.teamMembers
-      .map((m) => `<li>${m.fullName}</li>`)
-      .join("");
-
-    res.send(`
-      <div style="font-family:Arial;text-align:center;padding:50px;">
-        <h1 style="color:green;font-size:40px;">✅ ENTRY ALLOWED</h1>
-        <h2>${registration.teamName}</h2>
-
-        <p><b>Registration ID:</b> ${registration.registrationId}</p>
-
-        <h3>Team Members</h3>
-
-        <ul style="list-style:none;padding:0;font-size:18px;">
-          ${membersHTML}
-        </ul>
-
-        <p style="margin-top:30px;color:gray;">
-          Entry recorded successfully
-        </p>
-      </div>
-    `);
-
-  } catch (error) {
-    console.error("ENTRY ERROR:", error);
-    res.status(500).send("Server Error");
-  }
-});
-
-/* =====================================
-   ENTRY STATS
-===================================== */
-
-router.get("/entry-stats", async (req, res) => {
-  try {
-    const totalParticipants = await Registration.aggregate([
-      { $group: { _id: null, total: { $sum: "$teamSize" } } },
-    ]);
-
-    const checkedInParticipants = await Registration.aggregate([
-      { $unwind: "$teamMembers" },
-      { $match: { "teamMembers.checkedIn": true } },
-      { $count: "count" },
-    ]);
-
-    const total = totalParticipants[0]?.total || 0;
-    const entered = checkedInParticipants[0]?.count || 0;
-
-    res.json({
-      totalParticipants: total,
-      enteredParticipants: entered,
-      remainingParticipants: total - entered,
-    });
-  } catch (error) {
-    console.error("Entry stats error:", error);
-
-    res.status(500).json({ message: "Error fetching entry stats" });
   }
 });
 
@@ -1023,107 +802,6 @@ Status: ❌ Rejected`,
   }
 
   res.sendStatus(200);
-});
-
-router.get("/scan/:registrationId", verifyToken, async (req, res) => {
-  try {
-
-    const { registrationId } = req.params;
-
-    const registration = await Registration.findOne({ registrationId });
-
-    if (!registration) {
-      return res.json({
-        success:false
-      });
-    }
-
-    if (registration.registrationStatus !== "Confirmed") {
-      return res.json({
-        success:false,
-        reason:"not_confirmed",
-        teamName: registration.teamName
-      });
-    }
-
-    if (registration.entryTime) {
-      return res.json({
-        success:false,
-        reason:"already",
-        teamName: registration.teamName
-      });
-    }
-
-    registration.teamMembers.forEach((m)=>{
-      m.checkedIn = true;
-    });
-
-    registration.entryTime = new Date();
-
-    await registration.save();
-
-    res.json({
-      success:true,
-      teamName: registration.teamName,
-      members: registration.teamMembers.map(m => m.fullName)
-    });
-
-  } catch (error) {
-
-    console.error(error);
-
-    res.json({
-      success:false
-    });
-
-  }
-});
-
-router.post("/sync-entry", async (req, res) => {
-
-  try {
-
-    const { scans } = req.body;
-
-    let synced = [];
-
-    for (const registrationId of scans) {
-
-      const registration = await Registration.findOne({ registrationId });
-
-      if (!registration) continue;
-
-      if (!registration.entryTime) {
-
-        registration.teamMembers.forEach(m => {
-          m.checkedIn = true;
-        });
-
-        registration.entryTime = new Date();
-
-        await registration.save();
-
-        synced.push(registrationId);
-
-      }
-
-    }
-
-    res.json({
-      success:true,
-      synced
-    });
-
-  } catch (error) {
-
-    console.error(error);
-
-    res.status(500).json({
-      success:false
-    });
-
-  }
-
 });
 
 module.exports = router;

@@ -13,11 +13,6 @@ const memberSchema = new mongoose.Schema({
   collegePincode: String,
   collegeDistrict: String,
   collegeState: String,
-
-  checkedIn: {
-    type: Boolean,
-    default: false,
-  },
 });
 const registrationSchema = new mongoose.Schema(
 {
@@ -82,15 +77,10 @@ const registrationSchema = new mongoose.Schema(
 
     registrationStatus: {
       type: String,
-      enum: ["Pending", "Confirmed"],
+      enum: ["Pending", "Confirmed", "Rejected"],
       default: "Pending",
-    },
-    entryTime: {
-      type: Date,
-      default: null,
     },
   },
   { timestamps: true },
 );
-
 module.exports = mongoose.model("Registration", registrationSchema);
