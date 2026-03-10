@@ -118,13 +118,35 @@ const EditableEvent = ({ event, onUpdate, onDelete }: any) => {
 const Dashboard = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
-
+  const [registrationOpen, setRegistrationOpen] = useState(false);
   useEffect(() => {
     if (!token) {
       navigate("/");
     }
   }, [token, navigate]);
+  const fetchRegistrationStatus = async () => {
+    const res = await axios.get(
+      "https://ieee-sps-website.onrender.com/events/registration-status/combo",
+    );
 
+    setRegistrationOpen(res.data.registrationOpen);
+  };
+  useEffect(() => {
+    fetchRegistrationStatus();
+  }, []);
+  const toggleRegistration = async () => {
+    try {
+      const res = await axios.put(
+        "https://ieee-sps-website.onrender.com/events/toggle-registration/combo",
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      setRegistrationOpen(res.data.registrationOpen);
+    } catch (error) {
+      console.error("Toggle Error:", error);
+    }
+  };
   const [activeTab, setActiveTab] = useState(
     localStorage.getItem("adminTab") || "upload",
   );
@@ -307,7 +329,6 @@ const Dashboard = () => {
       console.error("Registration Fetch Error:", error);
     }
   };
-
 
   const confirmRegistration = async (id: string) => {
     if (!confirm("Confirm this registration?")) return;
@@ -1117,7 +1138,34 @@ const Dashboard = () => {
           {/* REGISTRATIONS */}
           {activeTab === "registrations" && (
             <>
+              <div className="mb-6 space-y-3">
+                {/* Registration Status Indicator */}
+                <div
+                  className={`inline-block px-4 py-2 rounded-full text-sm font-semibold
+  ${registrationOpen ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}
+                >
+                  {registrationOpen
+                    ? "🟢 Registrations Open"
+                    : "🔴 Registrations Closed"}
+                </div>
 
+                {/* Toggle Button */}
+                {registrationOpen ? (
+                  <button
+                    onClick={toggleRegistration}
+                    className="bg-red-500 hover:bg-red-600 px-5 py-2 rounded font-semibold transition"
+                  >
+                    Stop Registration
+                  </button>
+                ) : (
+                  <button
+                    onClick={toggleRegistration}
+                    className="bg-green-500 hover:bg-green-600 px-5 py-2 rounded font-semibold transition"
+                  >
+                    Start Registration
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-2 mb-4 text-green-400 text-sm">
                 {latestRegistrations.length > 0 && (
                   <div className="bg-zinc-900 border border-cyan-500/30 p-3 rounded mb-6">

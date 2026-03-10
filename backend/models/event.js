@@ -1,6 +1,13 @@
 const mongoose = require("mongoose");
 
 const eventSchema = new mongoose.Schema({
+  eventType: {
+    type: String,
+    enum: ["combo", "buildathon"],
+    required: true,
+    unique: true
+  },
+
   title: { type: String, required: true },
   description: { type: String, required: true },
 
@@ -11,6 +18,10 @@ const eventSchema = new mongoose.Schema({
     type: String,
     enum: ["Upcoming", "Completed"],
     default: "Upcoming"
+  },
+  registrationOpen: {
+    type: Boolean,
+    default: false
   },
 
   images: [String]

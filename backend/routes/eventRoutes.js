@@ -45,6 +45,57 @@ const verifyToken = (req, res, next) => {
   }
 };
 
+router.get("/registration-status/:eventType", async (req, res) => {
+
+  try {
+
+    const event = await Event.findOne({ eventType: req.params.eventType });
+
+    if (!event) {
+      return res.json({ registrationOpen: false });
+    }
+
+    res.json({ registrationOpen: event.registrationOpen });
+
+  } catch (error) {
+
+    res.status(500).json({ message: "Server error" });
+
+  }
+
+});
+
+router.put("/toggle-registration/:eventType", verifyToken, async (req, res) => {
+
+  try {
+
+    const event = await Event.findOne({ eventType: req.params.eventType });
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    event.registrationOpen = !event.registrationOpen;
+
+    await event.save();
+
+    res.json({
+      message: event.registrationOpen
+        ? "Registration Started"
+        : "Registration Stopped",
+      registrationOpen: event.registrationOpen
+    });
+
+  } catch (error) {
+
+    console.error("Toggle Error:", error);
+
+    res.status(500).json({ message: "Server error" });
+
+  }
+
+});
+
 /* ===============================
    ➕ ADD EVENT
 ================================= */

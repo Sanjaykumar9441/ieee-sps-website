@@ -108,7 +108,7 @@ const Register = () => {
   const event = searchParams.get("event") || "combo";
   const [loading, setLoading] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
-  const teamSize = 4;
+  const [teamSize, setTeamSize] = useState(4);
   const [teamName, setTeamName] = useState("");
   const [accommodationRequired, setAccommodationRequired] = useState(false);
   const [accommodationMembers, setAccommodationMembers] = useState<number[]>(
@@ -122,20 +122,56 @@ const Register = () => {
   const memberRefs = useRef<(HTMLDivElement | null)[]>([]);
   const nameInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [members, setMembers] = useState<Member[]>(
-    Array.from({ length: 4 }, createEmptyMember),
+    Array.from({ length: teamSize }, createEmptyMember),
   );
+  useEffect(() => {
+    setMembers(Array.from({ length: teamSize }, createEmptyMember));
+  }, [teamSize]);
   useEffect(() => {
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
   }, [showSummary, showPayment]);
+  useEffect(() => {
+
+  const handleShortcut = (e: KeyboardEvent) => {
+
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "t") {
+      e.preventDefault();
+      autoFillTestData();
+      alert("Test data auto-filled 🚀");
+    }
+
+  };
+
+  window.addEventListener("keydown", handleShortcut);
+
+  return () => window.removeEventListener("keydown", handleShortcut);
+
+}, [members]);
   const handleAccommodationToggle = (index: number) => {
     setAccommodationMembers((prev) =>
       prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index],
     );
   };
+  useEffect(() => {
 
+  const checkStatus = async () => {
+
+    const res = await axios.get(
+      "https://ieee-sps-website.onrender.com/events/registration-status/combo"
+    );
+
+    if (!res.data.registrationOpen) {
+      setRegistrationClosed(true);
+    }
+
+  };
+
+  checkStatus();
+
+}, []);
   const handleEnterNext = (
     e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -156,7 +192,36 @@ const Register = () => {
       if (next) next.focus();
     }
   };
+  const fetchPincodeDetails = async (pincode: string, index: number) => {
+    if (pincode.length !== 6) return;
 
+    try {
+      const res = await fetch(
+        `https://api.postalpincode.in/pincode/${pincode}`,
+      );
+
+      const data = await res.json();
+
+      if (data[0].Status === "Success") {
+        const postOffice = data[0].PostOffice[0];
+
+        setMembers((prev) =>
+          prev.map((member, i) =>
+            i === index
+              ? {
+                  ...member,
+                  collegeCity: postOffice.Block || "",
+                  collegeDistrict: postOffice.District || "",
+                  collegeState: postOffice.State || "",
+                }
+              : member,
+          ),
+        );
+      }
+    } catch (error) {
+      console.log("Pincode fetch error");
+    }
+  };
   const handleMemberChange = (
     index: number,
     field: keyof Member,
@@ -359,6 +424,31 @@ const Register = () => {
 
   const [transactionId, setTransactionId] = useState("");
   const [screenshot, setScreenshot] = useState<File | null>(null);
+  const autoFillTestData = () => {
+
+  const testMembers = members.map((_, i) => ({
+    fullName: `TEST MEMBER ${i + 1}`,
+    rollNo: `TEST${Math.floor(1000 + Math.random() * 9000)}`,
+    email: `test${i + 1}@mail.com`,
+    phone: `9${Math.floor(100000000 + Math.random() * 900000000)}`,
+    department: "ECE",
+    year: "3rd",
+    college: "Aditya University",
+    collegeCity: "Surampalem",
+    collegePincode: "533437",
+    collegeDistrict: "East Godavari",
+    collegeState: "Andhra Pradesh",
+    selectedCollege: "AUS"
+  }));
+
+  setTeamName(`TEST_TEAM_${Math.floor(Math.random() * 1000)}`);
+
+  setMembers(testMembers);
+
+  setTransactionId(`${Math.floor(100000000000 + Math.random() * 900000000000)}`);
+  
+  setScreenshot(new File(["test"], "test.png", { type: "image/png" }));
+};
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
   const successRef = useRef<HTMLDivElement | null>(null);
 
@@ -544,6 +634,20 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                   }
                 />
               </div>
+              {/* Team Size */}
+              <div className="mb-6">
+                <label className="block mb-2">Team Size</label>
+
+                <select
+                  value={teamSize}
+                  onChange={(e) => setTeamSize(Number(e.target.value))}
+                  className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+    focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none"
+                >
+                  <option value={3}>3 Members</option>
+                  <option value={4}>4 Members</option>
+                </select>
+              </div>
               <input
                 type="text"
                 name="website"
@@ -678,36 +782,35 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
 
                         <input
                           type="text"
-                          placeholder="City"
-                          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
-focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
-                          value={member.collegeCity}
-                          onChange={(e) =>
-                            handleMemberChange(
-                              index,
-                              "collegeCity",
-                              e.target.value,
-                            )
-                          }
-                          onKeyDown={handleEnterNext}
-                        />
-                        <input
-                          type="text"
                           placeholder="Pincode"
                           className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           value={member.collegePincode}
                           onChange={(e) => {
                             const value = e.target.value;
+
                             if (/^\d{0,6}$/.test(value)) {
                               handleMemberChange(
                                 index,
                                 "collegePincode",
                                 value,
                               );
+
+                              if (value.length === 6) {
+                                fetchPincodeDetails(value, index);
+                              }
                             }
                           }}
                           inputMode="numeric"
+                          onKeyDown={handleEnterNext}
+                        />
+                        <input
+                          type="text"
+                          placeholder="City"
+                          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
+                          value={member.collegeCity}
+                          readOnly
                           onKeyDown={handleEnterNext}
                         />
 
@@ -717,40 +820,18 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           value={member.collegeDistrict}
-                          onChange={(e) =>
-                            handleMemberChange(
-                              index,
-                              "collegeDistrict",
-                              e.target.value,
-                            )
-                          }
+                          readOnly
                           onKeyDown={handleEnterNext}
                         />
 
-                        <select
+                        <input
+                          type="text"
+                          placeholder="State"
                           className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           value={member.collegeState}
-                          onChange={(e) =>
-                            handleMemberChange(
-                              index,
-                              "collegeState",
-                              e.target.value,
-                            )
-                          }
-                        >
-                          <option value="">Select State</option>
-                          <option>Andhra Pradesh</option>
-                          <option>Telangana</option>
-                          <option>Tamil Nadu</option>
-                          <option>Karnataka</option>
-                          <option>Kerala</option>
-                          <option>Maharashtra</option>
-                          <option>Odisha</option>
-                          <option>West Bengal</option>
-                          <option>Delhi</option>
-                          <option>Gujarat</option>
-                        </select>
+                          readOnly
+                        />
                       </div>
                     )}
                   </div>
@@ -760,8 +841,8 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
               {/* Accommodation */}
               <div className="mb-8">
                 <label className="block mb-2">
-                  Hostel Accommodation Required? (₹150 per student/day — Includes
-                  Breakfast & Dinner)
+                  Hostel Accommodation Required? (₹150 per student/day —
+                  Includes Breakfast & Dinner)
                 </label>
 
                 <select
