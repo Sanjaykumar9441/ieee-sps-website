@@ -8,6 +8,8 @@ const PDFDocument = require("pdfkit");
 const axios = require("axios");
 const sendMail = require("../utils/mailer");
 const path = require("path");
+const puppeteer = require("puppeteer");
+const receiptTemplate = require("../utils/receiptTemplate");
 const registerLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 15, // max 15 registrations per IP
@@ -252,108 +254,28 @@ Registration ID: \`${registrationId}\`
     res.status(500).json({ message: "Error submitting registration" });
   }
 });
+
 const generateReceiptPDF = async (registration) => {
-  return new Promise(async (resolve) => {
-    const doc = new PDFDocument({ margin: 40, size: "A4" });
-    let buffers = [];
-    doc.on("data", buffers.push.bind(buffers));
-    doc.on("end", () => resolve(Buffer.concat(buffers)));
 
-    const pageWidth = doc.page.width;
-    const pageHeight = doc.page.height;
-    const themeColor = "#00979D";
+  const html = receiptTemplate(registration);
 
-    // 1. OUTER BORDER
-    doc.rect(20, 20, pageWidth - 40, pageHeight - 40)
-       .lineWidth(2)
-       .strokeColor(themeColor)
-       .stroke();
-
-    // 2. LOGO
-    try {
-      doc.image(path.join(__dirname, "../public/AD2026.png"), pageWidth / 2 - 50, 35, { width: 100 });
-    } catch (e) { console.log("Logo missing"); }
-
-    doc.moveDown(4.5);
-
-    // 3. HEADER
-    doc.fontSize(24).fillColor(themeColor).font("Helvetica-Bold").text("Arduino Days 2026", { align: "center" });
-    doc.fontSize(11).fillColor("gray").font("Helvetica").text("Official Event Pass", { align: "center" });
-
-    doc.moveDown(0.5);
-    doc.moveTo(100, doc.y).lineTo(pageWidth - 100, doc.y).lineWidth(1).strokeColor(themeColor).stroke();
-    doc.moveDown(1.5);
-
-    // 4. DETAILS BOX (FIXED ALIGNMENT)
-    const boxX = 80;
-    const boxWidth = pageWidth - 160;
-    const labelX = boxX + 20;
-    const valueX = boxX + 135; // The "anchor" for alignment
-    
-    doc.roundedRect(boxX, doc.y, boxWidth, 140, 8).fillOpacity(0.06).fill(themeColor).fillOpacity(1);
-    
-    let currentY = doc.y + 15;
-    const createdDate = new Date(registration.createdAt);
-    const details = [
-      ["Registration ID", registration.registrationId],
-      ["Team Name", registration.teamName],
-      ["Event", registration.eventName],
-      ["Team Size", registration.teamSize.toString()],
-      ["Amount Paid", `₹${registration.expectedAmount}`],
-      ["Transaction ID", registration.payment.userTransactionId],
-      ["Date", createdDate.toLocaleDateString("en-IN")],
-    ];
-
-    details.forEach(([label, value]) => {
-      doc.fillColor("black").font("Helvetica-Bold").fontSize(10).text(`${label}:`, labelX, currentY);
-      doc.font("Helvetica").text(value, valueX, currentY);
-      currentY += 17;
-    });
-
-    // 5. TEAM MEMBERS TABLE
-    doc.y = currentY + 15;
-    doc.fontSize(14).fillColor(themeColor).font("Helvetica-Bold").text("Team Members", { align: "center" });
-    doc.moveDown(0.8);
-
-    const tableX = 80;
-    const tableWidth = pageWidth - 160;
-    const col1 = tableX + 15; // No
-    const col2 = tableX + 60; // Name
-    const col3 = tableX + tableWidth - 110; // Roll No
-    const rowH = 22;
-
-    // Header Row
-    doc.roundedRect(tableX, doc.y, tableWidth, rowH, 5).fill(themeColor);
-    doc.fillColor("white").font("Helvetica-Bold").fontSize(10);
-    doc.text("No", col1, doc.y + 6);
-    doc.text("Name", col2, doc.y + 6);
-    doc.text("Roll No", col3, doc.y + 6);
-    doc.y += rowH + 2;
-
-    // Data Rows
-    registration.teamMembers.forEach((m, i) => {
-      if (i % 2 === 0) {
-        doc.roundedRect(tableX, doc.y, tableWidth, rowH, 4).fill("#F4F9F9");
-      }
-      doc.fillColor("black").font("Helvetica").text(i + 1, col1, doc.y + 6);
-      doc.text(m.fullName, col2, doc.y + 6);
-      doc.text(m.rollNo, col3, doc.y + 6);
-      doc.y += rowH;
-    });
-
-    // 7. STATUS & FOOTER
-    doc.moveDown(1);
-    const isConfirmed = registration.registrationStatus === "Confirmed";
-    doc.fontSize(12).fillColor(isConfirmed ? "green" : "#E67E22").font("Helvetica-Bold")
-       .text(`Status: ${isConfirmed ? "PAYMENT VERIFIED" : "VERIFICATION PENDING"}`, { align: "center" });
-
-    doc.moveDown(2);
-    doc.fontSize(9).fillColor("#7F8C8D").font("Helvetica")
-       .text("IEEE SPS Student Branch Chapter", { align: "center" })
-       .text("Aditya University, Surampalem", { align: "center" });
-
-    doc.end();
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"]
   });
+
+  const page = await browser.newPage();
+
+  await page.setContent(html, { waitUntil: "networkidle0" });
+
+  const pdf = await page.pdf({
+    format: "A4",
+    printBackground: true
+  });
+
+  await browser.close();
+
+  return pdf;
 };
 
 /* =====================================
@@ -458,7 +380,19 @@ router.post("/send-confirmation-email", async (req, res) => {
     if (registration.eventType === "combo") {
 
       htmlTemplate = `
-<div style="font-family:Arial,sans-serif;background:#f4f6f8;padding:30px;">
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Arduino Days 2026 Registration</title>
+</head>
+
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,sans-serif;">
+<span style="display:none;visibility:hidden;mso-hide:all;">
+Arduino Days 2026 – Registration Confirmed (Event Pass Attached)
+</span>
+
+<div style="padding:30px;">
 
 <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;border:1px solid #e5e7eb;padding:30px;">
 
@@ -516,7 +450,7 @@ Join WhatsApp Group
 
 </div>
 
-<hr style="margin:25px 0">
+<div style="border-top:1px solid #e5e7eb;margin:25px 0;"></div>
 
 <p style="font-size:14px;">
 For any queries contact:<br>
@@ -530,13 +464,26 @@ Aditya University, Surampalem
 </p>
 
 </div>
+
 </div>
+
+</body>
+</html>
 `;
     } 
     else {
 
       htmlTemplate = `
-<div style="font-family:Arial,sans-serif;background:#f4f6f8;padding:30px;">
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Arduino Days 2026 Registration</title>
+</head>
+
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,sans-serif;">
+
+<div style="padding:30px;">
 
 <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;border:1px solid #e5e7eb;padding:30px;">
 
@@ -608,7 +555,11 @@ Aditya University, Surampalem
 </p>
 
 </div>
+
 </div>
+
+</body>
+</html>
 `;
     }
 
@@ -619,7 +570,7 @@ Aditya University, Surampalem
       .map((member) =>
         sendMail(
           member.email,
-          "Arduino Days 2026 Registration Confirmed",
+          "Arduino Days 2026 – Registration Confirmed (Event Pass Attached)",
           htmlTemplate,
           pdfBuffer,
           `${registration.registrationId}.pdf`
