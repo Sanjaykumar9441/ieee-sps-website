@@ -760,7 +760,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
               {/* Accommodation */}
               <div className="mb-8">
                 <label className="block mb-2">
-                  Hostel Accommodation Required? (₹150 per person/day — Includes
+                  Hostel Accommodation Required? (₹150 per student/day — Includes
                   Breakfast & Dinner)
                 </label>
 
@@ -933,7 +933,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     Fee Breakdown
                   </h3>
 
-                  <p>Event Fee: ₹{perPersonFee} per person</p>
+                  <p>Event Fee: ₹{perPersonFee} per student</p>
                   <p>Team Size: {teamSize}</p>
 
                   <hr className="my-3 border-gray-600" />
@@ -1381,7 +1381,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       <ul className="list-disc list-inside space-y-1">
                         <li>Team registration is compulsory.</li>
                         <li>
-                          Students must be registered as a Team (2–4 members).
+                          Students must be registered as a Team (4 members).
                         </li>
                         <li>
                           The workshop covers Arduino and IoT Fundamentals.
@@ -1400,7 +1400,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       </h3>
                       <ul className="list-disc list-inside space-y-1">
                         <li>
-                          Students must be registered as a Team (2–4 members).
+                          Students must be registered as a Team (4 members).
                         </li>
                         <li>
                           Problem statements will be provided by the organizers.

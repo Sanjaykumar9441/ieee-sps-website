@@ -435,7 +435,7 @@ const ArduinoDays = () => {
                       {/* Event Fee */}
                       <p className="text-gray-300 mb-1 flex items-center gap-2">
                         <IndianRupee size={18} className="text-cyan-400" />
-                        <span>Event Fee: ₹200 per person</span>
+                        <span>Event Fee: ₹200 per student</span>
                       </p>
                       <p className="text-gray-400 text-sm mb-6">
                         All students from any branch can participate.
@@ -496,7 +496,7 @@ const ArduinoDays = () => {
                       {/* Event Fee */}
                       <p className="text-gray-300 mb-1 flex items-center gap-2">
                         <IndianRupee size={18} className="text-cyan-400" />
-                        <span>Event Fee: ₹100 per person</span>
+                        <span>Event Fee: ₹100 per student</span>
                       </p>
                       <p className="text-gray-400 text-sm mb-6">
                         All students from any branch can participate.
@@ -548,6 +548,16 @@ const ArduinoDays = () => {
                       </li>
                       <li>Participation certificates will be provided.</li>
                       <li>Accommodation will be provided as per norms.</li>
+                      <li>
+                        Download the latest version of Arduino IDE –
+                        <a
+                          href="https://www.arduino.cc/en/software"
+                          target="_blank"
+                          style={{ color: "#2563eb" }}
+                        >
+                          https://www.arduino.cc/en/software
+                        </a>
+                      </li>
                     </ul>
                   </div>
 
@@ -563,7 +573,7 @@ const ArduinoDays = () => {
                     <ul className="space-y-3 text-gray-300 text-base md:text-lg list-disc list-inside">
                       <li>Team registration is compulsory.</li>
                       <li>
-                        Students must be registered as a Team (2–4 members).
+                        Students must be registered as a Team (4 members).
                       </li>
                       <li>The workshop covers Arduino and IoT Fundamentals.</li>
                       <li>Active participation on both days is required.</li>
@@ -591,7 +601,7 @@ const ArduinoDays = () => {
 
                     <ul className="space-y-3 text-gray-300 text-base md:text-lg list-disc list-inside">
                       <li>
-                        Students must be registered as a Team (2–4 members).
+                        Students must be registered as a Team (4 members).
                       </li>
                       <li>
                         Problem statements will be provided by the organizers.
