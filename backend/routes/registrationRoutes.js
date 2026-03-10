@@ -602,12 +602,16 @@ router.get("/pdf/:id", async (req, res) => {
 ===================================== */
 router.post("/send-confirmation-email", async (req, res) => {
   try {
+
     const { registration } = req.body;
+
     if (!registration || !registration.teamMembers) {
       return res.status(400).json({ message: "Invalid registration data" });
     }
+
     const qrData = `https://ieee-sps-website.onrender.com/api/entry/${registration.registrationId}`;
-const qrCodeImage = await QRCode.toDataURL(qrData);
+
+    const qrCodeImage = await QRCode.toDataURL(qrData);
 
     const participants = registration.teamMembers
       .map((m, i) => `${i + 1}. ${m.fullName}`)
@@ -617,7 +621,7 @@ const qrCodeImage = await QRCode.toDataURL(qrData);
 
     if (registration.eventType === "combo") {
 
-htmlTemplate = `
+      htmlTemplate = `
 <div style="font-family:Arial,sans-serif;background:#f4f6f8;padding:30px;">
 
 <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;border:1px solid #e5e7eb;padding:30px;">
@@ -675,7 +679,7 @@ Show this QR code at the event entrance.
 
 <p>Join the official WhatsApp group for updates</p>
 
-<table align="center" cellpadding="0" cellspacing="0">
+<table align="center">
 <tr>
 <td bgcolor="#25D366" style="border-radius:6px;">
 <a href="https://chat.whatsapp.com/DruOGVhGlNc989mcDWTEYP"
@@ -704,10 +708,10 @@ Aditya University, Surampalem
 </div>
 </div>
 `;
+    } 
+    else {
 
-} else {
-
-htmlTemplate = `
+      htmlTemplate = `
 <div style="font-family:Arial,sans-serif;background:#f4f6f8;padding:30px;">
 
 <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;border:1px solid #e5e7eb;padding:30px;">
@@ -765,7 +769,7 @@ Please show this QR code at the event entrance.
 
 <p>Join the official Hackathon WhatsApp group</p>
 
-<table align="center" cellpadding="0" cellspacing="0">
+<table align="center">
 <tr>
 <td bgcolor="#25D366" style="border-radius:6px;">
 <a href="https://chat.whatsapp.com/Csy0z79Sxyz7kwKvwTEN8p"
@@ -794,28 +798,42 @@ Aditya University, Surampalem
 </div>
 </div>
 `;
-}
+    }
 
-   const emailPromises = registration.teamMembers
-  .filter((member) => member.email)
-  .map((member) =>
-    sendMail(
-      member.email,
-      "Arduino Days 2026 Registration Confirmed",
-      htmlTemplate
-    ).catch((err) => {
-      console.error("Email failed:", member.email);
-    })
-  );
+    /* GENERATE PDF ATTACHMENT */
 
-await Promise.all(emailPromises);
+    const pdfBuffer = await generateReceiptPDF(registration);
 
-res.json({ success: true, message: "Emails sent successfully" });
+    const emailPromises = registration.teamMembers
+      .filter((member) => member.email)
+      .map((member) =>
+        sendMail(
+          member.email,
+          "Arduino Days 2026 Registration Confirmed",
+          htmlTemplate,
+          pdfBuffer,
+          `${registration.registrationId}.pdf`
+        ).catch(() => {
+          console.error("Email failed:", member.email);
+        })
+      );
 
-} catch (error) {
-  console.error("Mail error:", error);
-  res.status(500).json({ message: "Email sending failed" });
-}
+    await Promise.all(emailPromises);
+
+    res.json({
+      success: true,
+      message: "Emails sent successfully",
+    });
+
+  } catch (error) {
+
+    console.error("Mail error:", error);
+
+    res.status(500).json({
+      message: "Email sending failed",
+    });
+
+  }
 });
 
 /* =====================================

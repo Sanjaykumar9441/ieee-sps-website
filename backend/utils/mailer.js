@@ -6,7 +6,7 @@ client.authentications["api-key"].apiKey = process.env.BREVO_API_KEY;
 
 const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
-const sendMail = async (to, subject, htmlContent) => {
+const sendMail = async (to, subject, htmlContent, pdfBuffer, filename) => {
 
   try {
 
@@ -20,8 +20,16 @@ const sendMail = async (to, subject, htmlContent) => {
 
       subject: subject,
 
-      htmlContent: htmlContent
+      htmlContent: htmlContent,
 
+      attachment: pdfBuffer
+        ? [
+            {
+              name: filename,
+              content: pdfBuffer.toString("base64"),
+            },
+          ]
+        : [],
     };
 
     await apiInstance.sendTransacEmail(email);
@@ -30,12 +38,13 @@ const sendMail = async (to, subject, htmlContent) => {
 
   } catch (error) {
 
-    console.error("❌ Brevo Mail error:", error.response?.body || error.message);
+    console.error(
+      "❌ Brevo Mail error:",
+      error.response?.body || error.message
+    );
 
     throw error;
-
   }
-
 };
 
 module.exports = sendMail;
