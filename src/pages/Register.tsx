@@ -310,22 +310,6 @@ const Register = () => {
         m.department &&
         m.year &&
         m.selectedCollege;
-
-      if (
-        completed &&
-        index < members.length - 1 &&
-        memberRefs.current[index + 1]
-      ) {
-        setTimeout(() => {
-          memberRefs.current[index + 1]?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-
-          nameInputRefs.current[index + 1]?.focus();
-        }, 300);
-      }
-
       return updated;
     });
   };
@@ -543,7 +527,7 @@ const Register = () => {
       ["Team Name", teamName],
       ["Event", event === "combo" ? "Skill Forze + Buildathon" : "Buildathon"],
       ["Team Size", teamSize],
-      ["Amount Paid", `₹${totalAmount}`],
+      ["Amount Paid", `Rs. ${totalAmount} /-`],
       ["Transaction ID", transactionId],
       ["Date", date],
       ["Time", time]
