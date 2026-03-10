@@ -8,8 +8,6 @@ const PDFDocument = require("pdfkit");
 const axios = require("axios");
 const sendMail = require("../utils/mailer");
 const path = require("path");
-const puppeteer = require("puppeteer");
-const receiptTemplate = require("../utils/receiptTemplate");
 const registerLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 15, // max 15 registrations per IP
@@ -256,30 +254,114 @@ Registration ID: \`${registrationId}\`
 });
 
 const generateReceiptPDF = async (registration) => {
+  return new Promise((resolve) => {
 
-  const html = receiptTemplate(registration);
+    const doc = new PDFDocument({ margin: 40, size: "A4" });
 
-  const browser = await puppeteer.launch({
-  headless: "new",
-  args: [
-    "--no-sandbox",
-    "--disable-setuid-sandbox",
-    "--disable-dev-shm-usage"
-  ]
-});
+    const buffers = [];
 
-  const page = await browser.newPage();
+    doc.on("data", buffers.push.bind(buffers));
 
-  await page.setContent(html, { waitUntil: "networkidle0" });
+    doc.on("end", () => resolve(Buffer.concat(buffers)));
 
-  const pdf = await page.pdf({
-    format: "A4",
-    printBackground: true
+    const themeColor = "#00979D";
+
+    /* HEADER */
+
+    doc
+      .fontSize(24)
+      .fillColor(themeColor)
+      .font("Helvetica-Bold")
+      .text("Arduino Days 2026", { align: "center" });
+
+    doc
+      .fontSize(11)
+      .fillColor("gray")
+      .font("Helvetica")
+      .text("Official Event Pass", { align: "center" });
+
+    doc.moveDown(2);
+
+    /* DETAILS */
+
+    const createdDate = new Date(registration.createdAt);
+
+    const details = [
+      ["Registration ID", registration.registrationId],
+      ["Team Name", registration.teamName],
+      ["Event", registration.eventName],
+      ["Team Size", registration.teamSize],
+      ["Amount Paid", `₹${registration.expectedAmount}`],
+      ["Transaction ID", registration.payment.userTransactionId],
+      ["Date", createdDate.toLocaleDateString("en-IN")],
+    ];
+
+    details.forEach(([label, value]) => {
+
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(11)
+        .fillColor("black")
+        .text(`${label}:`, { continued: true });
+
+      doc
+        .font("Helvetica")
+        .text(` ${value}`);
+
+    });
+
+    doc.moveDown(2);
+
+    /* TEAM MEMBERS */
+
+    doc
+      .fontSize(16)
+      .fillColor(themeColor)
+      .font("Helvetica-Bold")
+      .text("Team Members", { align: "center" });
+
+    doc.moveDown();
+
+    registration.teamMembers.forEach((m, i) => {
+
+      doc
+        .fontSize(11)
+        .font("Helvetica")
+        .fillColor("black")
+        .text(`${i + 1}. ${m.fullName} — ${m.rollNo}`);
+
+    });
+
+    doc.moveDown(2);
+
+    /* STATUS */
+
+    const isConfirmed = registration.registrationStatus === "Confirmed";
+
+    doc
+      .fontSize(12)
+      .fillColor(isConfirmed ? "green" : "#E67E22")
+      .font("Helvetica-Bold")
+      .text(
+        `Status: ${isConfirmed ? "PAYMENT VERIFIED" : "VERIFICATION PENDING"}`,
+        { align: "center" }
+      );
+
+    doc.moveDown(2);
+
+    /* FOOTER */
+
+    doc
+      .fontSize(9)
+      .fillColor("#7F8C8D")
+      .font("Helvetica")
+      .text("IEEE SPS Student Branch Chapter", { align: "center" });
+
+    doc.text("Aditya University, Surampalem", { align: "center" });
+
+    doc.end();
+
   });
-
-  await browser.close();
-
-  return pdf;
 };
 
 /* =====================================
@@ -660,43 +742,41 @@ router.post("/telegram-webhook", async (req, res) => {
   }
 
   const callbackData = data.callback_query.data;
-
-  const chatId = data.callback_query.message.chat.id;
-  const messageId = data.callback_query.message.message_id;
+const chatId = process.env.TELEGRAM_CHAT_ID;
 
   /* =========================
      CONFIRM REGISTRATION
   ========================= */
-  if (callbackData.startsWith("confirm_")) {
-    const registrationId = callbackData.split("_")[1];
+ if (callbackData.startsWith("confirm_")) {
 
-    const registration = await Registration.findOne({ registrationId });
+  const registrationId = callbackData.split("_")[1];
 
-    if (!registration) return res.sendStatus(200);
+  const registration = await Registration.findOne({ registrationId });
 
-    if (registration.registrationStatus === "Confirmed") {
-      return res.sendStatus(200);
-    }
+  if (!registration) return res.sendStatus(200);
 
-    registration.registrationStatus = "Confirmed";
+  if (registration.registrationStatus === "Confirmed") {
+    return res.sendStatus(200);
+  }
 
-    await registration.save();
-    await axios.post(
-  "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
-  { registration }
-);
+  registration.registrationStatus = "Confirmed";
+  await registration.save();
 
-    const members = registration.teamMembers
-      .map((m, i) => `${i + 1}. ${m.fullName}`)
-      .join("\n");
+  await axios.post(
+    "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+    { registration }
+  );
 
-    // 🔥 Update Telegram message
-    await axios.post(
-      `https://api.telegram.org/bot${token}/editMessageCaption`,
-      {
-        chat_id: chatId,
-        message_id: messageId,
-        caption: `✅ *Registration Confirmed*
+  const members = registration.teamMembers
+    .map((m, i) => `${i + 1}. ${m.fullName}`)
+    .join("\n");
+
+  await axios.post(
+    `https://api.telegram.org/bot${token}/editMessageCaption`,
+    {
+      chat_id: chatId,
+      message_id: registration.telegramMessageId,
+      caption: `✅ *Registration Confirmed*
 
 Team: *${registration.teamName}*
 Event: ${registration.eventName}
@@ -706,13 +786,15 @@ Registration ID: \`${registration.registrationId}\`
 ${members}
 
 Status: ✅ Confirmed`,
-        parse_mode: "Markdown",
-        reply_markup: { inline_keyboard: [] }, // removes buttons
-      },
-    );
+      parse_mode: "Markdown",
+      reply_markup: {
+        inline_keyboard: []   // removes buttons
+      }
+    }
+  );
 
-    console.log("✅ Confirmed via Telegram");
-  }
+  console.log("✅ Confirmed via Telegram");
+}
 
   /* =========================
      REJECT REGISTRATION
@@ -737,7 +819,7 @@ Status: ✅ Confirmed`,
       `https://api.telegram.org/bot${token}/editMessageCaption`,
       {
         chat_id: chatId,
-        message_id: messageId,
+        message_id: registration.telegramMessageId,
         caption: `❌ *Registration Rejected*
 
 Team: *${registration.teamName}*
