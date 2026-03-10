@@ -378,17 +378,19 @@ const generateReceiptPDF = async (registration) => {
 
       doc.moveDown(0.5);
 
-      doc.image(qrBuffer, pageWidth / 2 - 70, doc.y, {
-        width: 140,
-      });
+      const qrY = doc.y;
 
-      doc.moveDown(6);
+doc.image(qrBuffer, pageWidth / 2 - 70, qrY, {
+  width: 140,
+});
 
-      doc
-        .fontSize(10)
-        .fillColor("gray")
-        .text("Show this QR code at the event entrance", { align: "center" });
-    }
+doc.y = qrY + 160;
+
+doc
+  .fontSize(10)
+  .fillColor("gray")
+  .text("Show this QR code at the event entrance", { align: "center" });
+}
 
     doc.moveDown(1);
 
@@ -582,7 +584,7 @@ router.post("/send-confirmation-email", async (req, res) => {
 
     <div style="text-align:center;margin-top:30px;">
       <h3>Event Entry QR Code</h3>
-      <img src="${qrCodeImage}" width="180"/>
+      <img src="cid:qrimage" width="180"/>
       <p style="font-size:13px;color:#555;">
         Please show this QR code at the event entrance.
       </p>
@@ -651,7 +653,7 @@ router.post("/send-confirmation-email", async (req, res) => {
 
     <div style="text-align:center;margin-top:30px;">
       <h3>Event Entry QR Code</h3>
-      <img src="${qrCodeImage}" width="180"/>
+      <img src="cid:qrimage" width="180"/>
       <p style="font-size:13px;color:#555;">
         Please show this QR code at the event entrance.
       </p>
@@ -697,12 +699,13 @@ router.post("/send-confirmation-email", async (req, res) => {
       if (!member.email) continue;
 
       await sendMail(
-        member.email,
-        "Arduino Days 2026 Registration Confirmed",
-        htmlTemplate,
-        pdfBuffer,
-        `${registration.registrationId}.pdf`,
-      );
+  member.email,
+  "Arduino Days 2026 Registration Confirmed",
+  htmlTemplate,
+  pdfBuffer,
+  `${registration.registrationId}.pdf`,
+  qrCodeImage
+);
     }
 
     res.json({ success: true, message: "Emails sent successfully" });
