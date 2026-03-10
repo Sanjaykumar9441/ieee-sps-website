@@ -553,19 +553,21 @@ router.post("/send-confirmation-email", async (req, res) => {
 
     if (registration.eventType === "combo") {
       htmlTemplate = `
-<div style="font-family: Arial, sans-serif; background:#f4f6f8; padding:30px;">
+<div style="font-family:Arial;background:#f4f6f8;padding:30px;">
+  
   <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;border:1px solid #e5e7eb;padding:30px;">
 
-    <div style="text-align:center;margin-bottom:25px;">
-      <img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" width="160"/>
-      <h2 style="color:#0ea5e9;margin-top:10px;">Registration Confirmed 🎉</h2>
+    <div style="text-align:center;margin-bottom:20px;">
+      <img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" width="150"/>
+      <h2 style="color:#0ea5e9;">Registration Confirmed 🎉</h2>
     </div>
 
     <p>Hello <b>${registration.teamName}</b>,</p>
 
-    <p>Your registration for <b>Arduino Days 2026</b> has been successfully confirmed.</p>
+    <p>Your registration for <b>Arduino Days 2026</b> has been confirmed.</p>
 
     <h3>Registration Details</h3>
+
     <p>
       <b>Event:</b> Skill Forze Workshop + Buildathon<br>
       <b>Registration ID:</b> ${registration.registrationId}<br>
@@ -573,6 +575,7 @@ router.post("/send-confirmation-email", async (req, res) => {
     </p>
 
     <h3>Event Schedule</h3>
+
     <p>
       <b>Skill Forze:</b> 23rd & 24th March 2026<br>
       <b>Buildathon:</b> 25th March 2026<br>
@@ -580,32 +583,45 @@ router.post("/send-confirmation-email", async (req, res) => {
     </p>
 
     <h3>Team Members</h3>
+
     <p>${participants}</p>
 
-    <div style="text-align:center;margin-top:30px;">
+    <div style="text-align:center;margin-top:25px;">
+
       <h3>Event Entry QR Code</h3>
-      <img src="cid:qrimage" width="180"/>
+
+      <img src="cid:qrimage" width="180" style="margin:10px 0;"/>
+
       <p style="font-size:13px;color:#555;">
-        Please show this QR code at the event entrance.
+        Show this QR code at the event entrance.
       </p>
+
     </div>
 
     <h3>Important Instructions</h3>
+
     <ul>
-      <li>Carry your <b>Student ID Card</b>.</li>
-      <li>Bring a <b>Laptop with Arduino IDE installed</b>.</li>
-      <li>Teams must present a <b>working prototype</b> during Buildathon.</li>
+      <li>Carry your <b>Student ID Card</b></li>
+      <li>Bring a <b>Laptop with Arduino IDE installed</b></li>
+      <li>Teams must present a <b>working prototype</b></li>
     </ul>
 
     <div style="text-align:center;margin-top:25px;">
-      <p>Join the official WhatsApp group for updates</p>
-      <a href="https://chat.whatsapp.com/DruOGVhGlNc989mcDWTEYP?mode=gi_t"
-      style="background:#25D366;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">
-      Join WhatsApp Group
-      </a>
+
+      <table align="center" cellpadding="0" cellspacing="0">
+        <tr>
+          <td bgcolor="#25D366" style="border-radius:6px;">
+            <a href="https://chat.whatsapp.com/DruOGVhGlNc989mcDWTEYP"
+               style="color:#ffffff;font-family:Arial;padding:12px 22px;display:inline-block;text-decoration:none;">
+               Join WhatsApp Group
+            </a>
+          </td>
+        </tr>
+      </table>
+
     </div>
 
-    <hr style="margin:30px 0">
+    <hr style="margin:25px 0">
 
     <p style="font-size:14px;">
       For any queries contact:<br>
@@ -613,82 +629,127 @@ router.post("/send-confirmation-email", async (req, res) => {
       +91 7095009441
     </p>
 
-    <p style="font-size:13px;color:#666;">
+    <p style="font-size:13px;color:#777;">
       IEEE SPS Student Branch Chapter<br>
       Aditya University, Surampalem
     </p>
 
   </div>
+
 </div>
 `;
     } else {
       htmlTemplate = `
-<div style="font-family: Arial, sans-serif; background:#f4f6f8; padding:30px;">
-  <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;border:1px solid #e5e7eb;padding:30px;">
+<div style="font-family:Arial, sans-serif;background:#f4f6f8;padding:30px;">
 
-    <div style="text-align:center;margin-bottom:25px;">
-      <img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" width="160"/>
-      <h2 style="color:#8b5cf6;margin-top:10px;">Registration Confirmed 🎉</h2>
-    </div>
+  <table align="center" width="600" cellpadding="0" cellspacing="0"
+  style="background:#ffffff;border-radius:10px;border:1px solid #e5e7eb;padding:30px;">
 
-    <p>Hello <b>${registration.teamName}</b>,</p>
+    <tr>
+      <td align="center" style="padding-bottom:20px;">
+        <img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" width="150"/>
+        <h2 style="color:#8b5cf6;margin-top:10px;">Registration Confirmed 🎉</h2>
+      </td>
+    </tr>
 
-    <p>Your registration for the <b>Arduino Days Buildathon</b> has been successfully confirmed.</p>
+    <tr>
+      <td>
 
-    <h3>Registration Details</h3>
-    <p>
-      <b>Event:</b> Buildathon Hackathon<br>
-      <b>Registration ID:</b> ${registration.registrationId}<br>
-      <b>Team Size:</b> ${registration.teamSize} Members
-    </p>
+        <p>Hello <b>${registration.teamName}</b>,</p>
 
-    <h3>Event Details</h3>
-    <p>
-      <b>Date:</b> 25th March 2026<br>
-      <b>Venue:</b> Aditya University, Surampalem
-    </p>
+        <p>Your registration for the <b>Arduino Days Buildathon</b> has been successfully confirmed.</p>
 
-    <h3>Team Members</h3>
-    <p>${participants}</p>
+        <h3>Registration Details</h3>
 
-    <div style="text-align:center;margin-top:30px;">
-      <h3>Event Entry QR Code</h3>
-      <img src="cid:qrimage" width="180"/>
-      <p style="font-size:13px;color:#555;">
-        Please show this QR code at the event entrance.
-      </p>
-    </div>
+        <p>
+          <b>Event:</b> Buildathon Hackathon<br>
+          <b>Registration ID:</b> ${registration.registrationId}<br>
+          <b>Team Size:</b> ${registration.teamSize} Members
+        </p>
 
-    <h3>Participation Rules</h3>
-    <ul>
-      <li>Minimum <b>one laptop per team</b> is mandatory.</li>
-      <li>Problem statements will be revealed at the venue.</li>
-      <li>Projects must be developed during the event.</li>
-      <li>A functional prototype must be presented.</li>
-    </ul>
+        <h3>Event Details</h3>
 
-    <div style="text-align:center;margin-top:25px;">
-      <p>Join the official Hackathon WhatsApp group</p>
-      <a href="https://chat.whatsapp.com/Csy0z79Sxyz7kwKvwTEN8p?mode=gi_t"
-      style="background:#25D366;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">
-      Join WhatsApp Group
-      </a>
-    </div>
+        <p>
+          <b>Date:</b> 25th March 2026<br>
+          <b>Venue:</b> Aditya University, Surampalem
+        </p>
 
-    <hr style="margin:30px 0">
+        <h3>Team Members</h3>
 
-    <p style="font-size:14px;">
-      For any queries contact:<br>
-      <b>Chitturi Sanjay Kumar</b><br>
-      +91 7095009441
-    </p>
+        <p>${participants}</p>
 
-    <p style="font-size:13px;color:#666;">
-      IEEE SPS Student Branch Chapter<br>
-      Aditya University, Surampalem
-    </p>
+      </td>
+    </tr>
 
-  </div>
+    <tr>
+      <td align="center" style="padding-top:20px;">
+
+        <h3>Event Entry QR Code</h3>
+
+        <img src="cid:qrimage" width="180" style="margin:10px 0;" />
+
+        <p style="font-size:13px;color:#555;">
+          Please show this QR code at the event entrance.
+        </p>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+
+        <h3>Participation Rules</h3>
+
+        <ul>
+          <li>Minimum <b>one laptop per team</b> is mandatory.</li>
+          <li>Problem statements will be revealed at the venue.</li>
+          <li>Projects must be developed during the event.</li>
+          <li>A functional prototype must be presented.</li>
+        </ul>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td align="center" style="padding-top:20px;">
+
+        <p>Join the official Hackathon WhatsApp group</p>
+
+        <table cellpadding="0" cellspacing="0">
+          <tr>
+            <td bgcolor="#25D366" style="border-radius:6px;">
+              <a href="https://chat.whatsapp.com/Csy0z79Sxyz7kwKvwTEN8p"
+                 style="color:#ffffff;font-family:Arial;padding:12px 22px;display:inline-block;text-decoration:none;">
+                 Join WhatsApp Group
+              </a>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+
+        <hr style="margin:30px 0">
+
+        <p style="font-size:14px;">
+          For any queries contact:<br>
+          <b>Chitturi Sanjay Kumar</b><br>
+          +91 7095009441
+        </p>
+
+        <p style="font-size:13px;color:#666;">
+          IEEE SPS Student Branch Chapter<br>
+          Aditya University, Surampalem
+        </p>
+
+      </td>
+    </tr>
+
+  </table>
+
 </div>
 `;
     }
