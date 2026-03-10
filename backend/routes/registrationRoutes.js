@@ -255,230 +255,124 @@ Registration ID: \`${registrationId}\`
 });
 const generateReceiptPDF = async (registration) => {
   return new Promise(async (resolve) => {
-
-    const doc = new PDFDocument({ margin: 40 });
-
+    const doc = new PDFDocument({ margin: 40, size: "A4" });
     let buffers = [];
     doc.on("data", buffers.push.bind(buffers));
     doc.on("end", () => resolve(Buffer.concat(buffers)));
 
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
+    const themeColor = "#00979D";
 
-    /* EVENT BORDER */
+    // 1. OUTER BORDER
+    doc.rect(20, 20, pageWidth - 40, pageHeight - 40)
+       .lineWidth(2)
+       .strokeColor(themeColor)
+       .stroke();
 
-    doc
-      .rect(20, 20, pageWidth - 40, pageHeight - 40)
-      .lineWidth(2)
-      .strokeColor("#00979D") // Arduino theme
-      .stroke();
-
-    /* LOGO */
-
+    // 2. LOGO
     try {
-      doc.image(
-        path.join(__dirname, "../public/AD2026.png"),
-        pageWidth / 2 - 60,
-        35,
-        { width: 120 }
-      );
-    } catch {
-      console.log("Logo not found");
-    }
+      doc.image(path.join(__dirname, "../public/AD2026.png"), pageWidth / 2 - 50, 35, { width: 100 });
+    } catch (e) { console.log("Logo missing"); }
 
-    doc.moveDown(3);
+    doc.moveDown(4.5);
 
-    /* TITLE */
+    // 3. HEADER
+    doc.fontSize(24).fillColor(themeColor).font("Helvetica-Bold").text("Arduino Days 2026", { align: "center" });
+    doc.fontSize(11).fillColor("gray").font("Helvetica").text("Official Event Pass", { align: "center" });
 
-    doc
-      .fontSize(22)
-      .fillColor("#00979D")
-      .text("Arduino Days 2026", { align: "center" });
-
-    doc
-      .fontSize(12)
-      .fillColor("gray")
-      .text("Official Event Pass", { align: "center" });
-
-    doc.moveDown(1);
-
-    doc
-      .moveTo(80, doc.y)
-      .lineTo(pageWidth - 80, doc.y)
-      .strokeColor("#00979D")
-      .stroke();
-
+    doc.moveDown(0.5);
+    doc.moveTo(100, doc.y).lineTo(pageWidth - 100, doc.y).lineWidth(1).strokeColor(themeColor).stroke();
     doc.moveDown(1.5);
 
-    /* DETAILS BOX */
-
-   const boxHeight = 140;
-
-doc
-  .roundedRect(80, doc.y, pageWidth - 160, boxHeight, 8)
-  .fillOpacity(0.05)
-  .fill("#00979D")
-  .fillOpacity(1);
-
-    let y = doc.y + 15;
-
+    // 4. DETAILS BOX (FIXED ALIGNMENT)
+    const boxX = 80;
+    const boxWidth = pageWidth - 160;
+    const labelX = boxX + 20;
+    const valueX = boxX + 135; // The "anchor" for alignment
+    
+    doc.roundedRect(boxX, doc.y, boxWidth, 140, 8).fillOpacity(0.06).fill(themeColor).fillOpacity(1);
+    
+    let currentY = doc.y + 15;
     const createdDate = new Date(registration.createdAt);
-
-    const date = createdDate.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
-
-    const time = createdDate.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
     const details = [
       ["Registration ID", registration.registrationId],
       ["Team Name", registration.teamName],
       ["Event", registration.eventName],
-      ["Team Size", registration.teamSize],
+      ["Team Size", registration.teamSize.toString()],
       ["Amount Paid", `₹${registration.expectedAmount}`],
       ["Transaction ID", registration.payment.userTransactionId],
-      ["Date", date],
-      ["Time", time],
+      ["Date", createdDate.toLocaleDateString("en-IN")],
     ];
 
     details.forEach(([label, value]) => {
-      doc
-        .fillColor("black")
-        .font("Helvetica-Bold")
-        .text(`${label}: `, 100, y, { continued: true })
-        .font("Helvetica")
-        .text(value);
-
-      y += 15;
+      doc.fillColor("black").font("Helvetica-Bold").fontSize(10).text(`${label}:`, labelX, currentY);
+      doc.font("Helvetica").text(value, valueX, currentY);
+      currentY += 17;
     });
 
-    doc.y = y + 12;
+    // 5. TEAM MEMBERS TABLE
+    doc.y = currentY + 15;
+    doc.fontSize(14).fillColor(themeColor).font("Helvetica-Bold").text("Team Members", { align: "center" });
+    doc.moveDown(0.8);
 
-    /* TEAM MEMBERS */
+    const tableX = 80;
+    const tableWidth = pageWidth - 160;
+    const col1 = tableX + 15; // No
+    const col2 = tableX + 60; // Name
+    const col3 = tableX + tableWidth - 110; // Roll No
+    const rowH = 22;
 
-    doc
-      .fontSize(14)
-      .fillColor("#00979D")
-      .text("Team Members", { align: "center" });
+    // Header Row
+    doc.roundedRect(tableX, doc.y, tableWidth, rowH, 5).fill(themeColor);
+    doc.fillColor("white").font("Helvetica-Bold").fontSize(10);
+    doc.text("No", col1, doc.y + 6);
+    doc.text("Name", col2, doc.y + 6);
+    doc.text("Roll No", col3, doc.y + 6);
+    doc.y += rowH + 2;
 
-    doc.moveDown(0.5);
-
-    const tableX = 100;
-    let tableY = doc.y;
-
-    const tableWidth = pageWidth - 200;
-    const rowHeight = 22;
-
-    /* TABLE HEADER */
-
-    doc
-      .roundedRect(tableX, tableY, tableWidth, rowHeight, 6)
-      .fill("#00979D");
-
-    doc
-      .fillColor("white")
-      .fontSize(11)
-      .font("Helvetica-Bold")
-      .text("No", tableX + 15, tableY + 6)
-.text("Name", tableX + 60, tableY + 6)
-.text("Roll No", tableX + tableWidth - 120, tableY + 6);
-
-    tableY += rowHeight;
-
-    /* TABLE ROWS */
-
-    registration.teamMembers.forEach((member, i) => {
-
+    // Data Rows
+    registration.teamMembers.forEach((m, i) => {
       if (i % 2 === 0) {
-        doc
-          .roundedRect(tableX, tableY, tableWidth, rowHeight, 6)
-          .fill("#F2F9F9");
+        doc.roundedRect(tableX, doc.y, tableWidth, rowH, 4).fill("#F4F9F9");
       }
-
-      doc
-        .fillColor("black")
-        .font("Helvetica")
-        .text(i + 1, tableX + 15, tableY + 6)
-.text(member.fullName, tableX + 60, tableY + 6)
-.text(member.rollNo, tableX + tableWidth - 120, tableY + 6);
-
-      tableY += rowHeight;
-
+      doc.fillColor("black").font("Helvetica").text(i + 1, col1, doc.y + 6);
+      doc.text(m.fullName, col2, doc.y + 6);
+      doc.text(m.rollNo, col3, doc.y + 6);
+      doc.y += rowH;
     });
 
-    doc.y = tableY + 20;
-
-    /* QR CODE */
-
+    // 6. QR CODE (CENTERED)
     if (registration.registrationStatus === "Confirmed") {
+      doc.moveDown(1.5);
+      const qrSize = 120;
+      const qrX = (pageWidth / 2) - (qrSize / 2);
+      
+      doc.fontSize(13).fillColor(themeColor).font("Helvetica-Bold").text("Event Entry QR Code", { align: "center" });
+      doc.moveDown(0.5);
 
       const qrData = `https://ieee-sps-website.onrender.com/api/entry/${registration.registrationId}`;
-
       const qrImage = await QRCode.toDataURL(qrData);
       const qrBuffer = Buffer.from(qrImage.split(",")[1], "base64");
 
-      doc
-        .fontSize(14)
-        .fillColor("#00979D")
-        .text("Event Entry QR Code", { align: "center" });
-
-      doc.moveDown(0.5);
-
-      const qrY = doc.y;
-
-      /* QR BORDER BOX */
-
-      doc
-        .roundedRect(pageWidth / 2 - 90, qrY - 10, 180, 180, 10)
-        .lineWidth(2)
-        .strokeColor("#00979D")
-        .stroke();
-
-      doc.image(qrBuffer, pageWidth / 2 - 65, qrY + 5, {
-  width: 130,
-});
-
-      doc.y = qrY + 150;
-
-      doc
-        .fontSize(10)
-        .fillColor("gray")
-        .text("Show this QR code at the event entrance", { align: "center" });
+      // QR Border
+      doc.roundedRect(qrX - 10, doc.y, qrSize + 20, qrSize + 20, 10).lineWidth(1.5).strokeColor(themeColor).stroke();
+      doc.image(qrBuffer, qrX, doc.y + 10, { width: qrSize });
+      
+      doc.y += qrSize + 30;
+      doc.fontSize(9).fillColor("gray").text("Show this QR code at the entrance for verification.", { align: "center" });
     }
 
+    // 7. STATUS & FOOTER
     doc.moveDown(1);
-
-    /* STATUS */
-
-    const statusText =
-      registration.registrationStatus === "Confirmed"
-        ? "Payment Verified"
-        : "Payment Submitted - Verification Pending";
-
-    doc
-      .fontSize(12)
-      .fillColor(
-        registration.registrationStatus === "Confirmed"
-          ? "green"
-          : "orange"
-      )
-      .text(`Status: ${statusText}`, { align: "center" });
+    const isConfirmed = registration.registrationStatus === "Confirmed";
+    doc.fontSize(12).fillColor(isConfirmed ? "green" : "#E67E22").font("Helvetica-Bold")
+       .text(`Status: ${isConfirmed ? "PAYMENT VERIFIED" : "VERIFICATION PENDING"}`, { align: "center" });
 
     doc.moveDown(2);
-
-    /* FOOTER */
-
-    doc
-      .fontSize(10)
-      .fillColor("gray")
-      .text("IEEE SPS Student Branch Chapter", { align: "center" });
-
-    doc.text("Aditya University, Surampalem", { align: "center" });
+    doc.fontSize(9).fillColor("#7F8C8D").font("Helvetica")
+       .text("IEEE SPS Student Branch Chapter", { align: "center" })
+       .text("Aditya University, Surampalem", { align: "center" });
 
     doc.end();
   });
@@ -609,10 +503,6 @@ router.post("/send-confirmation-email", async (req, res) => {
       return res.status(400).json({ message: "Invalid registration data" });
     }
 
-    const qrData = `https://ieee-sps-website.onrender.com/api/entry/${registration.registrationId}`;
-
-    const qrCodeImage = await QRCode.toDataURL(qrData);
-
     const participants = registration.teamMembers
       .map((m, i) => `${i + 1}. ${m.fullName}`)
       .join("<br>");
@@ -654,18 +544,6 @@ router.post("/send-confirmation-email", async (req, res) => {
 <h3>Team Members</h3>
 
 <p>${participants}</p>
-
-<div style="text-align:center;margin-top:30px;">
-
-<h3>Event Entry QR Code</h3>
-
-<img src="${qrCodeImage}" width="180" style="margin:10px 0;" />
-
-<p style="font-size:13px;color:#555;">
-Show this QR code at the event entrance.
-</p>
-
-</div>
 
 <h3>Important Instructions</h3>
 
@@ -744,18 +622,6 @@ Aditya University, Surampalem
 
 <p>${participants}</p>
 
-<div style="text-align:center;margin-top:30px;">
-
-<h3>Event Entry QR Code</h3>
-
-<img src="${qrCodeImage}" width="180" style="margin:10px 0;" />
-
-<p style="font-size:13px;color:#555;">
-Please show this QR code at the event entrance.
-</p>
-
-</div>
-
 <h3>Participation Rules</h3>
 
 <ul>
@@ -800,8 +666,7 @@ Aditya University, Surampalem
 `;
     }
 
-    /* GENERATE PDF ATTACHMENT */
-
+    // Generate PDF with QR
     const pdfBuffer = await generateReceiptPDF(registration);
 
     const emailPromises = registration.teamMembers
@@ -842,7 +707,9 @@ Aditya University, Surampalem
 
 router.get("/entry/:registrationId", async (req, res) => {
   try {
+
     const { registrationId } = req.params;
+    const { key } = req.query;
 
     const registration = await Registration.findOne({ registrationId });
 
@@ -850,6 +717,20 @@ router.get("/entry/:registrationId", async (req, res) => {
       return res.send(`
         <div style="font-family:Arial;text-align:center;padding:60px;">
           <h1 style="color:red;">❌ Invalid QR Code</h1>
+        </div>
+      `);
+    }
+
+    /* PARTICIPANT SCAN (Google Lens etc) */
+    if (key !== process.env.ENTRY_SECRET) {
+      return res.send(`
+        <div style="font-family:Arial;text-align:center;padding:60px;">
+          <h1>👋 Welcome ${registration.teamName}</h1>
+          <p>Please show this QR code to the event staff for entry.</p>
+
+          <p style="margin-top:20px;color:gray;">
+          Registration ID: ${registration.registrationId}
+          </p>
         </div>
       `);
     }
@@ -948,6 +829,7 @@ Total Participants: ${total}`,
         </p>
       </div>
     `);
+
   } catch (error) {
     console.error("ENTRY ERROR:", error);
     res.status(500).send("Server Error");
