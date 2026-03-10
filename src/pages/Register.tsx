@@ -3,7 +3,6 @@ import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
-import jsPDF from "jspdf";
 type Member = {
   fullName: string;
   rollNo: string;
@@ -462,169 +461,6 @@ const Register = () => {
     }, 1500);
   };
 
-  const downloadReceipt = (registrationId: string) => {
-
-  const doc = new jsPDF();
-
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-
-  const now = new Date();
-
-  const date = now.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric"
-  });
-
-  const time = now.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-
-  /* BORDER */
-
-  doc.setDrawColor(0,180,255);
-  doc.setLineWidth(1.5);
-  doc.rect(10,10,pageWidth-20,pageHeight-20);
-
-  /* HEADER */
-
-  const logo = new Image();
-  logo.src = "/titlelogo.png";
-
-  logo.onload = () => {
-
-    doc.addImage(logo,"PNG",pageWidth/2-30,18,60,25);
-
-    doc.setFontSize(20);
-    doc.setTextColor(0,180,255);
-
-    doc.text("Arduino Days 2026",pageWidth/2,55,{align:"center"});
-
-    doc.setFontSize(12);
-    doc.setTextColor(120);
-
-    doc.text("Official Registration Receipt",pageWidth/2,62,{align:"center"});
-
-    /* DIVIDER */
-
-    doc.setDrawColor(200);
-    doc.line(20,70,pageWidth-20,70);
-
-    /* DETAILS BOX */
-
-    doc.setFillColor(240,248,255);
-    doc.roundedRect(20,80,pageWidth-40,70,4,4,"F");
-
-    doc.setTextColor(0);
-    doc.setFontSize(11);
-
-    let y = 90;
-
-    const details = [
-      ["Registration ID", registrationId],
-      ["Team Name", teamName],
-      ["Event", event === "combo" ? "Skill Forze + Buildathon" : "Buildathon"],
-      ["Team Size", teamSize],
-      ["Amount Paid", `Rs. ${totalAmount} /-`],
-      ["Transaction ID", transactionId],
-      ["Date", date],
-      ["Time", time]
-    ];
-
-    details.forEach(([label,value])=>{
-      doc.setFont("helvetica","bold");
-      doc.text(`${label}:`,30,y);
-
-      doc.setFont("helvetica","normal");
-      doc.text(String(value),70,y);
-
-      y+=8;
-    });
-
-    /* TEAM MEMBERS TABLE */
-
-doc.setFontSize(14);
-doc.setTextColor(0,180,255);
-doc.text("Team Members", pageWidth / 2, 165, { align: "center" });
-
-let startY = 175;
-const col1 = 30;
-const col2 = 50;
-const col3 = 120;
-const rowHeight = 10;
-
-/* HEADER */
-
-doc.setFillColor(0,180,255);
-doc.rect(col1, startY, pageWidth - 60, rowHeight, "F");
-
-doc.setTextColor(255);
-doc.setFontSize(11);
-doc.setFont("helvetica","bold");
-
-doc.text("No", col1 + 5, startY + 7);
-doc.text("Name", col2 + 5, startY + 7);
-doc.text("Roll Number", col3 + 5, startY + 7);
-
-startY += rowHeight;
-
-/* ROWS */
-
-doc.setFont("helvetica","normal");
-
-members.forEach((member, index) => {
-
-  doc.setTextColor(0);
-
-  doc.rect(col1, startY, pageWidth - 60, rowHeight);
-
-  doc.text(String(index + 1), col1 + 5, startY + 7);
-  doc.text(member.fullName, col2 + 5, startY + 7);
-  doc.text(member.rollNo, col3 + 5, startY + 7);
-
-  startY += rowHeight;
-
-});
-
-    /* STATUS */
-
-    doc.setFontSize(12);
-    doc.setTextColor(200,0,0);
-
-    doc.text(
-      "Status : Payment Submitted - Awaiting Verification",
-      pageWidth/2,
-      startY+10,
-      {align:"center"}
-    );
-
-    /* FOOTER */
-
-    doc.setFontSize(10);
-    doc.setTextColor(120);
-
-    doc.text(
-      "IEEE SPS Student Branch Chapter",
-      pageWidth/2,
-      pageHeight-25,
-      {align:"center"}
-    );
-
-    doc.text(
-      "Aditya University, Surampalem",
-      pageWidth/2,
-      pageHeight-18,
-      {align:"center"}
-    );
-
-    doc.save(`${teamName}_ArduinoDays_Receipt.pdf`);
-
-  };
-
-};
-
   if (checkingStatus) {
     return (
       <div className="min-h-screen flex items-center justify-center text-cyan-400">
@@ -807,18 +643,26 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
 
                       {/* If OTHER selected → show input */}
                       {member.department === "OTHER" && (
-  <input
-    type="text"
-    placeholder="Enter your Department"
-    className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                        <input
+                          type="text"
+                          placeholder="Enter your Department"
+                          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
-    value={member.department === "OTHER" ? "" : member.department}
-    onChange={(e) =>
-      handleMemberChange(index, "department", e.target.value.toUpperCase())
-    }
-    onKeyDown={handleEnterNext}
-  />
-)}
+                          value={
+                            member.department === "OTHER"
+                              ? ""
+                              : member.department
+                          }
+                          onChange={(e) =>
+                            handleMemberChange(
+                              index,
+                              "department",
+                              e.target.value.toUpperCase(),
+                            )
+                          }
+                          onKeyDown={handleEnterNext}
+                        />
+                      )}
                     </div>
 
                     <select
@@ -1478,24 +1322,12 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 Your payment has been received. Our team will verify it and send
                 the confirmation details to your email shortly.
               </p>
-              <button
-                onClick={() => downloadReceipt(registrationId)}
-                className="mt-6 bg-gradient-to-r from-cyan-400 to-blue-400
-  text-black px-6 py-3 rounded-lg font-semibold
-  hover:scale-105 hover:shadow-lg hover:shadow-cyan-400/30 transition"
-              >
-                Download Registration Receipt
-              </button>
-              <p className="mt-5 text-sm text-gray-300 max-w-md">
-                📧 After payment verification, a{" "}
+              <p className="mt-6 text-sm text-gray-300">
+                📧 After payment verification, a
                 <span className="text-cyan-400 font-semibold">
-                  confirmation email with your registration pass
-                </span>{" "}
+                  confirmation email with your event pass (PDF)
+                </span>
                 will be sent to all registered team members.
-              </p>
-
-              <p className="text-xs text-gray-500 mt-2">
-                Please check your inbox or spam folder.
               </p>
             </div>
           )}
