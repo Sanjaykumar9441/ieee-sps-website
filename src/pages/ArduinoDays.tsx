@@ -11,7 +11,6 @@ import { useSearchParams } from "react-router-dom";
 const MovingWaves = () => {
   return (
     <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-
       <img
         src="/freepik_arduino_background.jpg"
         alt="background"
@@ -19,7 +18,6 @@ const MovingWaves = () => {
       />
 
       <div className="absolute inset-0 bg-black/50" />
-
     </div>
   );
 };
@@ -69,11 +67,11 @@ const ArduinoDays = () => {
     };
   }, [active]);
   useEffect(() => {
-  window.scrollTo({
-    top: 0,
-    behavior: "auto"
-  });
-}, [active]);
+    window.scrollTo({
+      top: 0,
+      behavior: "auto",
+    });
+  }, [active]);
 
   const studentCoordinators = [
     {
@@ -147,10 +145,9 @@ const ArduinoDays = () => {
   };
 
   return (
-    
-<div className="min-h-screen bg-[#02060c] relative text-white overflow-x-hidden overflow-y-auto">
-    {/* 1. Add the moving waves here */}
-    <MovingWaves />
+    <div className="min-h-screen bg-[#02060c] relative text-white overflow-x-hidden overflow-y-auto">
+      {/* 1. Add the moving waves here */}
+      <MovingWaves />
 
       {/* Sidebar */}
       {/* Mobile Menu Button */}
@@ -170,7 +167,7 @@ const ArduinoDays = () => {
       <div
         ref={sidebarRef}
         className={`fixed top-0 left-0 h-screen w-64 bg-black/50 backdrop-blur-3xl border-r border-green-500/20 shadow-xl p-6 flex flex-col gap-8 z-50 transform transition-transform duration-300 ${
-        menuOpen ? "translate-x-0" : "-translate-x-full"
+          menuOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0`}
       >
         {/* ⚡ Subtle Circuit Overlay */}
@@ -320,16 +317,22 @@ const ArduinoDays = () => {
                   {/* Date */}
                   <div className="flex flex-wrap justify-center items-center gap-6">
                     <div className="flex items-center gap-2 px-6 py-3 rounded-full bg-green-500/20 border border-green-400 text-green-300 text-sm md:text-base">
-  <Calendar size={18} className="text-cyan-400 flex-shrink-0" />
-  <span>
-    March 23<sup>rd</sup> – 26<sup>th</sup>, 2026
-  </span>
-</div>
+                      <Calendar
+                        size={18}
+                        className="text-cyan-400 flex-shrink-0"
+                      />
+                      <span>
+                        March 23<sup>rd</sup> – 26<sup>th</sup>, 2026
+                      </span>
+                    </div>
 
                     <div className="flex items-center gap-2 px-6 py-3 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-sm md:text-base">
-  <MapPin size={18} className="text-pink-400 flex-shrink-0" />
-  <span>Aditya University</span>
-</div>
+                      <MapPin
+                        size={18}
+                        className="text-pink-400 flex-shrink-0"
+                      />
+                      <span>Aditya University</span>
+                    </div>
                   </div>
 
                   {/* Tagline */}
@@ -419,7 +422,7 @@ const ArduinoDays = () => {
                       {/* Team Size */}
                       <p className="text-gray-300 mb-2 flex items-center gap-2">
                         <Users size={18} className="text-cyan-400" />
-                        <span>Team Size: 2–4 Members</span>
+                        <span>Team size: 4 members (mandatory)</span>
                       </p>
 
                       <p className="text-gray-300 mb-2 flex items-center gap-2">
@@ -439,21 +442,23 @@ const ArduinoDays = () => {
                       </p>
                       <div className="mt-auto">
                         <button
-  onClick={() => {
-    setRegisterLoading("combo");
+                          onClick={() => {
+                            setRegisterLoading("combo");
 
-    setTimeout(() => {
-      navigate("/register?event=combo");
-    }, 600);
-  }}
-  className="inline-flex items-center gap-2 bg-white text-black font-semibold px-6 py-2 rounded-full"
->
-  {registerLoading === "combo" && (
-    <span className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full"></span>
-  )}
+                            setTimeout(() => {
+                              navigate("/register?event=combo");
+                            }, 600);
+                          }}
+                          className="inline-flex items-center gap-2 bg-white text-black font-semibold px-6 py-2 rounded-full"
+                        >
+                          {registerLoading === "combo" && (
+                            <span className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full"></span>
+                          )}
 
-  {registerLoading === "combo" ? "Opening..." : "Register Now"}
-</button>
+                          {registerLoading === "combo"
+                            ? "Opening..."
+                            : "Register Now"}
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -478,7 +483,7 @@ const ArduinoDays = () => {
                       {/* Team Size */}
                       <p className="text-gray-300 mb-2 flex items-center gap-2">
                         <Users size={18} className="text-cyan-400" />
-                        <span>Team Size: 2–4 Members</span>
+                        <span>Team size: 4 members (mandatory)</span>
                       </p>
 
                       <p className="text-gray-300 mb-2 flex items-center gap-2">
@@ -497,22 +502,24 @@ const ArduinoDays = () => {
                         All students from any branch can participate.
                       </p>
                       <div className="mt-auto">
-                         <button
-  onClick={() => {
-    setRegisterLoading("buildathon");
+                        <button
+                          onClick={() => {
+                            setRegisterLoading("buildathon");
 
-    setTimeout(() => {
-      navigate("/register?event=buildathon");
-    }, 600);
-  }}
-  className="inline-flex items-center gap-2 bg-white text-black font-semibold px-6 py-2 rounded-full"
->
-  {registerLoading === "buildathon" && (
-    <span className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full"></span>
-  )}
+                            setTimeout(() => {
+                              navigate("/register?event=buildathon");
+                            }, 600);
+                          }}
+                          className="inline-flex items-center gap-2 bg-white text-black font-semibold px-6 py-2 rounded-full"
+                        >
+                          {registerLoading === "buildathon" && (
+                            <span className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full"></span>
+                          )}
 
-  {registerLoading === "buildathon" ? "Opening..." : "Register Now"}
-</button>
+                          {registerLoading === "buildathon"
+                            ? "Opening..."
+                            : "Register Now"}
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -526,94 +533,99 @@ const ArduinoDays = () => {
                   Rules & Regulations
                 </h1>
                 <div className="grid md:grid-cols-3 gap-10 mt-12 items-stretch">
+                  {/* ================= GENERAL RULES ================= */}
+                  <div className="bg-white/5 backdrop-blur-xl border border-green-400/20 rounded-2xl p-8 flex flex-col">
+                    <h2 className="text-2xl font-semibold text-green-400">
+                      Event Rules & Guidelines
+                    </h2>
 
-                {/* ================= GENERAL RULES ================= */}
-                <div className="bg-white/5 backdrop-blur-xl border border-green-400/20 rounded-2xl p-8 flex flex-col">
-                  <h2 className="text-2xl font-semibold text-green-400">
-                    Event Rules & Guidelines
-                  </h2>
+                    <ul className="space-y-3 text-gray-300 text-base md:text-lg list-disc list-inside">
+                      <li>The event is open to all branches and all years.</li>
+                      <li>Participants must carry a valid student ID card.</li>
+                      <li>
+                        A working laptop is mandatory with the latest Arduino
+                        IDE installed before the event.
+                      </li>
+                      <li>Participation certificates will be provided.</li>
+                      <li>Accommodation will be provided as per norms.</li>
+                    </ul>
+                  </div>
 
-                  <ul className="space-y-3 text-gray-300 text-base md:text-lg list-disc list-inside">
-                    <li>The event is open to all branches and all years.</li>
-                    <li>Participants must carry a valid student ID card.</li>
-                    <li>
-                      A working laptop is mandatory with the latest Arduino IDE
-                      installed before the event.
-                    </li>
-                    <li>Participation certificates will be provided.</li>
-                    <li>Accommodation will be provided as per norms.</li>
-                    <li>Snacks will be provided during event.</li>
-                  </ul>
-                </div>
+                  {/* ================= SKILL FORZE ================= */}
+                  <div className="bg-white/5 backdrop-blur-xl border border-green-400/20 rounded-2xl p-8 flex flex-col">
+                    <h2 className="text-2xl font-semibold text-cyan-400">
+                      <span>
+                        Skill Forze (23<sup>rd</sup> & 24<sup>th</sup> March) –
+                        Workshop Guidelines
+                      </span>
+                    </h2>
 
-                {/* ================= SKILL FORZE ================= */}
-                <div className="bg-white/5 backdrop-blur-xl border border-green-400/20 rounded-2xl p-8 flex flex-col">
-                  <h2 className="text-2xl font-semibold text-cyan-400">
-                    <span>
-                      Skill Forze (23<sup>rd</sup> & 24<sup>th</sup> March) –
-                      Workshop Guidelines
-                    </span>
-                  </h2>
-
-                  <ul className="space-y-3 text-gray-300 text-base md:text-lg list-disc list-inside">
-                    <li>Team registration is compulsory.</li>
-                    <li>Team size: 2–4 members.</li>
-                    <li>The workshop covers Arduino and IoT Fundamentals.</li>
-                    <li>Active participation on both days is required.</li>
-                    <li>
-                      Teams are encouraged to participate in the Buildathon.
-                    </li>
-                    <div className="mt-auto pt-6 flex justify-center">
-                      <button
-                        onClick={() =>
-                          (navigate("/register?event=combo"))
-                        }
-                        className="px-6 py-3 rounded-lg bg-cyan-400 text-black font-semibold
+                    <ul className="space-y-3 text-gray-300 text-base md:text-lg list-disc list-inside">
+                      <li>Team registration is compulsory.</li>
+                      <li>
+                        Students must be registered as a Team (2–4 members).
+                      </li>
+                      <li>The workshop covers Arduino and IoT Fundamentals.</li>
+                      <li>Active participation on both days is required.</li>
+                      <li>
+                        Teams are encouraged to participate in the Buildathon.
+                      </li>
+                      <div className="mt-auto pt-6 flex justify-center">
+                        <button
+                          onClick={() => navigate("/register?event=combo")}
+                          className="px-6 py-3 rounded-lg bg-cyan-400 text-black font-semibold
              hover:scale-105 transition shadow-lg shadow-cyan-400/30
              animate-pulse"
-                      >
-                        Register for Skill Forze + Buildathon
-                      </button>
-                    </div>
-                  </ul>
-                </div>
+                        >
+                          Register for Skill Forze + Buildathon
+                        </button>
+                      </div>
+                    </ul>
+                  </div>
 
-                {/* ================= BUILDATHON ================= */}
-                <div className="bg-white/5 backdrop-blur-xl border border-green-400/20 rounded-2xl p-8 flex flex-col">
-                  <h2 className="text-2xl font-semibold text-yellow-400">
-                    Buildathon (25<sup>th</sup> March) – Hackathon Guidelines
-                  </h2>
+                  {/* ================= BUILDATHON ================= */}
+                  <div className="bg-white/5 backdrop-blur-xl border border-green-400/20 rounded-2xl p-8 flex flex-col">
+                    <h2 className="text-2xl font-semibold text-yellow-400">
+                      Buildathon (25<sup>th</sup> March) – Hackathon Guidelines
+                    </h2>
 
-                  <ul className="space-y-3 text-gray-300 text-base md:text-lg list-disc list-inside">
-                    <li>Team size: 2–4 members.</li>
-                    <li>
-                      Problem statements will be provided by the organizers.
-                    </li>
-                    <li>
-                      Projects must be original and developed during the event.
-                    </li>
-                    <li>Minimum one working laptop per team is mandatory.</li>
-                    <li>
-                      Participants may choose to attend only Buildathon if
-                      preferred.
-                    </li>
-                    <li>Teams must present a working prototype.</li>
-                    <li>Winners will receive prizes and merit certificates.</li>
-                    <div className="mt-auto pt-6 flex justify-center">
-                      <button
-                        onClick={() =>
-                          (window.location.href = "/register?event=buildathon")
-                        }
-                        className="px-6 py-3 rounded-lg bg-yellow-400 text-black font-semibold
+                    <ul className="space-y-3 text-gray-300 text-base md:text-lg list-disc list-inside">
+                      <li>
+                        Students must be registered as a Team (2–4 members).
+                      </li>
+                      <li>
+                        Problem statements will be provided by the organizers.
+                      </li>
+                      <li>
+                        Projects must be original and developed during the
+                        event.
+                      </li>
+                      <li>Minimum one working laptop per team is mandatory.</li>
+                      <li>
+                        Participants may choose to attend only Buildathon if
+                        preferred.
+                      </li>
+                      <li>Teams must present a working prototype.</li>
+                      <li>
+                        Winners will receive prizes and merit certificates.
+                      </li>
+                      <li>Snacks will be provided during event.</li>
+                      <div className="mt-auto pt-6 flex justify-center">
+                        <button
+                          onClick={() =>
+                            (window.location.href =
+                              "/register?event=buildathon")
+                          }
+                          className="px-6 py-3 rounded-lg bg-yellow-400 text-black font-semibold
              hover:scale-105 transition shadow-lg shadow-yellow-400/30
              animate-pulse"
-                      >
-                        Register for Buildathon
-                      </button>
-                    </div>
-                  </ul>
+                        >
+                          Register for Buildathon
+                        </button>
+                      </div>
+                    </ul>
+                  </div>
                 </div>
-              </div>
               </div>
             )}
 

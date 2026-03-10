@@ -16,11 +16,15 @@ const memberSchema = new mongoose.Schema({
 
   checkedIn: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 });
 const registrationSchema = new mongoose.Schema(
   {
+    registrationOpen: {
+      type: Boolean,
+      default: true,
+    },
     // combo | buildathon
     eventType: {
       type: String,
@@ -62,33 +66,33 @@ const registrationSchema = new mongoose.Schema(
 
     hostelMembers: [memberSchema],
 
-  payment: {
-  userTransactionId: {
-    type: String,
-    required: true
-  },
-  screenshotUrl: {
-    type: String,
-    required: true
-  },
-  verified: {
-    type: Boolean,
-    default: false
-  }
-},
-telegramMessageId: {
-  type: Number
-},
+    payment: {
+      userTransactionId: {
+        type: String,
+        required: true,
+      },
+      screenshotUrl: {
+        type: String,
+        required: true,
+      },
+      verified: {
+        type: Boolean,
+        default: false,
+      },
+    },
+    telegramMessageId: {
+      type: Number,
+    },
 
     registrationStatus: {
-  type: String,
-  enum: ["Pending", "Confirmed"],
-  default: "Pending",
-},
-entryTime: {
-  type: Date,
-  default: null
-},
+      type: String,
+      enum: ["Pending", "Confirmed"],
+      default: "Pending",
+    },
+    entryTime: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true },
 );

@@ -52,6 +52,26 @@ router.get("/check-team", async (req, res) => {
   }
 });
 
+router.put("/toggle-registration", verifyToken, async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    const event = await Event.findOneAndUpdate(
+      { eventType: "combo" }, // your event
+      { registrationOpen: status },
+      { new: true },
+    );
+
+    res.json({
+      message: status ? "Registrations Opened" : "Registrations Closed",
+      event,
+    });
+  } catch (error) {
+    console.error("Toggle error:", error);
+    res.status(500).json({ message: "Error updating registration status" });
+  }
+});
+
 /* =====================================
    2️⃣ CREATE REGISTRATION
 ===================================== */
@@ -61,6 +81,7 @@ router.post("/register", registerLimiter, async (req, res) => {
       message: "Spam detected",
     });
   }
+
   try {
     const {
       eventType,
@@ -74,10 +95,21 @@ router.post("/register", registerLimiter, async (req, res) => {
       userTransactionId,
       screenshotUrl,
     } = req.body;
+    const event = await Event.findOne({ eventType });
 
+    if (!event || !event.registrationOpen) {
+      return res.status(403).json({
+        message: "Registrations are currently closed.",
+      });
+    }
+    if (!teamMembers || teamMembers.length !== 4 || teamSize !== 4) {
+      return res.status(400).json({
+        message: "Team must contain exactly 4 members",
+      });
+    }
     // 🔐 Secure amount calculation (backend authority)
     const perPersonFee = eventType === "combo" ? 200 : 100;
-    const correctAmount = perPersonFee * teamSize;
+    const correctAmount = perPersonFee * 4;
 
     // 🚫 Prevent fake payment amounts
     if (frontendAmount !== correctAmount) {
@@ -237,50 +269,57 @@ Registration ID: \`${registrationId}\`
 });
 const generateReceiptPDF = async (registration) => {
   return new Promise(async (resolve) => {
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ margin: 40 });
 
     let buffers = [];
     doc.on("data", buffers.push.bind(buffers));
     doc.on("end", () => resolve(Buffer.concat(buffers)));
 
     const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
 
-    /* HEADER LOGO */
+    /* EVENT BORDER */
+    doc
+      .rect(20, 20, pageWidth - 40, pageHeight - 40)
+      .lineWidth(2)
+      .strokeColor("#0077cc")
+      .stroke();
+
+    /* LOGO */
     try {
       doc.image(
         path.join(__dirname, "../public/AD2026.png"),
-        pageWidth / 2 - 70,
-        20,
-        { width: 140 },
+        pageWidth / 2 - 60,
+        35,
+        { width: 120 },
       );
-    } catch (err) {
-      console.log("Logo not found, skipping logo");
+    } catch {
+      console.log("Logo not found");
     }
 
     doc.moveDown(3);
 
+    /* TITLE */
     doc
-      .fontSize(20)
+      .fontSize(22)
       .fillColor("#0077cc")
       .text("Arduino Days 2026", { align: "center" });
 
     doc
       .fontSize(12)
       .fillColor("gray")
-      .text("Registration Receipt", { align: "center" });
+      .text("Official Event Pass", { align: "center" });
 
-    doc.moveDown();
+    doc.moveDown(1);
 
-    /* LINE */
     doc
-      .moveTo(50, doc.y)
-      .lineTo(pageWidth - 50, doc.y)
+      .moveTo(80, doc.y)
+      .lineTo(pageWidth - 80, doc.y)
       .stroke();
 
     doc.moveDown(1.5);
 
-    /* DETAILS TABLE */
-
+    /* DATE TIME */
     const createdDate = new Date(registration.createdAt);
 
     const date = createdDate.toLocaleDateString("en-IN", {
@@ -293,6 +332,15 @@ const generateReceiptPDF = async (registration) => {
       hour: "2-digit",
       minute: "2-digit",
     });
+
+    /* DETAILS BOX */
+    doc
+      .rect(80, doc.y, pageWidth - 160, 120)
+      .fillOpacity(0.05)
+      .fill("#0077cc")
+      .fillOpacity(1);
+
+    let y = doc.y + 10;
 
     const details = [
       ["Registration ID", registration.registrationId],
@@ -307,50 +355,54 @@ const generateReceiptPDF = async (registration) => {
 
     details.forEach(([label, value]) => {
       doc
+        .fillColor("black")
         .font("Helvetica-Bold")
-        .text(label + " : ", { continued: true })
+        .text(`${label}: `, 100, y, { continued: true })
         .font("Helvetica")
         .text(value);
-
-      doc.moveDown(0.8);
+      y += 15;
     });
-    doc.moveDown();
 
+    doc.y = y + 10;
+
+    /* TEAM MEMBERS */
     doc
-      .fontSize(15)
+      .fontSize(14)
       .fillColor("#0077cc")
-      .text("Team Members", { align: "left" });
+      .text("Team Members", { align: "center" });
 
     doc.moveDown(0.5);
+
     registration.teamMembers.forEach((member, i) => {
       doc
         .fontSize(11)
         .fillColor("black")
-        .text(`${i + 1}. ${member.fullName} - ${member.rollNo}`);
+        .text(`${i + 1}. ${member.fullName} - ${member.rollNo}`, {
+          align: "center",
+        });
     });
 
-    doc.moveDown(2);
+    doc.moveDown(1.5);
+
+    /* QR CODE */
     if (registration.registrationStatus === "Confirmed") {
-      const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
+      const qrData = `https://ieee-sps-website.onrender.com/api/entry/${registration.registrationId}`;
 
       const qrImage = await QRCode.toDataURL(qrData);
-
       const qrBuffer = Buffer.from(qrImage.split(",")[1], "base64");
 
-      doc.moveDown(2);
-
       doc
-        .fontSize(15)
+        .fontSize(14)
         .fillColor("#0077cc")
         .text("Event Entry QR Code", { align: "center" });
 
-      doc.moveDown();
+      doc.moveDown(0.5);
 
-      doc.image(qrBuffer, pageWidth / 2 - 65, doc.y, {
-        width: 130,
+      doc.image(qrBuffer, pageWidth / 2 - 70, doc.y, {
+        width: 140,
       });
 
-      doc.moveDown(7);
+      doc.moveDown(6);
 
       doc
         .fontSize(10)
@@ -358,33 +410,30 @@ const generateReceiptPDF = async (registration) => {
         .text("Show this QR code at the event entrance", { align: "center" });
     }
 
-    /* STATUS BADGE */
+    doc.moveDown(1);
+
+    /* STATUS */
     const statusText =
       registration.registrationStatus === "Confirmed"
         ? "Payment Verified"
         : "Payment Submitted - Verification Pending";
 
-    doc.moveDown();
-
     doc
       .fontSize(12)
       .fillColor(
-        registration.registrationStatus === "Confirmed" ? "green" : "red",
+        registration.registrationStatus === "Confirmed" ? "green" : "orange",
       )
-      .text(`Status : ${statusText}`, { align: "center" });
+      .text(`Status: ${statusText}`, { align: "center" });
 
     doc.moveDown(2);
 
-    doc.moveDown(3);
-
     /* FOOTER */
-
     doc
       .fontSize(10)
       .fillColor("gray")
       .text("IEEE SPS Student Branch Chapter", { align: "center" });
 
-    doc.text("Aditya University", { align: "center" });
+    doc.text("Aditya University, Surampalem", { align: "center" });
 
     doc.end();
   });
@@ -406,7 +455,7 @@ router.put("/confirm/:id", verifyToken, async (req, res) => {
     }
 
     // Generate QR
-    const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
+    const qrData = `https://ieee-sps-website.onrender.com/api/entry/${registration.registrationId}`;
     const qrCodeImage = await QRCode.toDataURL(qrData);
 
     registration.registrationStatus = "Confirmed";
@@ -520,134 +569,148 @@ router.post("/send-confirmation-email", async (req, res) => {
 
     let htmlTemplate = "";
 
-    // Template Selection
     if (registration.eventType === "combo") {
       htmlTemplate = `
-        <div style="font-family: Arial, sans-serif; background:#f8fafc; padding:30px;">
-    <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(145deg, #18181b, #09090b); border: 1px solid #22d3ee; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 212, 255, 0.1);">
-        
-<div style="background: #0f172a; padding: 30px; text-align: center; border-bottom: 1px solid #22d3ee;">
-    <img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" 
-         alt="Arduino Days Logo" 
-         style="width: 180px; height: auto; display: block; margin: 0 auto;" />
-    <p style="margin-top: 12px; color: #22d3ee; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">
-        Registration Confirmed 🎉
-    </p>
-</div>
+<div style="font-family: Arial, sans-serif; background:#f4f6f8; padding:30px;">
+  <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;border:1px solid #e5e7eb;padding:30px;">
 
-        <div style="padding: 30px; line-height: 1.6;">
-            <p style="font-size: 18px;">Hello <b style="color: #22d3ee;">${registration.teamName}</b>,</p>
-            <p style="color: #a1a1aa;">Great news! Your team has successfully secured a spot for the premium technical experience at Aditya University.</p>
-            
-            <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 20px; border-left: 4px solid #22d3ee; margin: 25px 0;">
-                <p style="margin: 5px 0;"><strong>Event:</strong> Skill Forze Workshop + Buildathon</p>
-                <p style="margin: 5px 0;"><strong>Registration ID:</strong> <span style="color: #facc15;">${registration.registrationId}</span></p>
-                <p style="margin: 5px 0;"><strong>Team Size:</strong> ${registration.teamSize} Members</p>
-            </div>
-
-            <h3 style="color: #22d3ee; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">📅 Event Schedule</h3>
-            <p style="margin-bottom: 5px;"><strong>Skill Forze:</strong> 23<sup>rd</sup> & 24<sup>th</sup> March 2026</p>
-            <p style="margin-top: 0;"><strong>Buildathon:</strong> 25<sup>th</sup> March 2026</p>
-            <p><strong>Venue:</strong> Aditya University, Surampalem</p>
-
-            <h3 style="color: #22d3ee; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">👥 Team Members</h3>
-            <div style="color: #d4d4d8;">${participants}</div>
-            <div style="text-align:center;margin-top:30px;">
-  <p><b>Event Entry QR Code</b></p>
- <img src="${qrCodeImage}" width="200"/>
-  <p style="font-size:12px;color:#aaa">
-    Please show this QR code at the event entrance.
-  </p>
-</div>
-
-            <h3 style="color: #22d3ee; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">📢 Important Checklist</h3>
-            <ul style="color: #a1a1aa; padding-left: 20px;">
-                <li>Carry your <b>Student ID Card</b> for verification.</li>
-                <li>Bring a <b>Laptop</b> with Arduino IDE pre-installed.</li>
-                <li>Teams must present a <b>working prototype</b> for Buildathon.</li>
-            </ul>
-
-            <div style="text-align: center; margin-top: 40px; padding: 20px; background: rgba(37, 211, 102, 0.1); border-radius: 12px;">
-                <p style="margin-bottom: 15px; font-size: 14px;">Join the official group for live updates & coordination:</p>
-                <a href="https://chat.whatsapp.com/DruOGVhGlNc989mcDWTEYP?mode=gi_t" style="background: #25D366; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Join WhatsApp Group</a>
-            </div>
-        </div>
-
-        <div style="background: #111; padding: 20px; text-align: center; border-top: 1px solid #27272a;">
-    <p style="margin: 0; font-size: 14px; color: #71717a;">For any help or queries, contact:</p>
-    <p style="margin: 5px 0; color: #fff; font-size: 15px;">
-        <b>Chitturi Sanjay Kumar</b><br>
-        <a href="tel:+917095009441" style="color: #22d3ee; text-decoration: none;">+91 7095009441</a>
-    </p>
-    
-    <hr style="border: 0; border-top: 1px solid #27272a; width: 50%; margin: 15px auto;">
-    
-    <p style="margin: 5px 0; color: #22d3ee; font-weight: bold;">IEEE SPS Student Branch Chapter</p>
-    <p style="margin: 0; font-size: 12px; color: #52525b;">Aditya University, Surampalem</p>
-</div>
+    <div style="text-align:center;margin-bottom:25px;">
+      <img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" width="160"/>
+      <h2 style="color:#0ea5e9;margin-top:10px;">Registration Confirmed 🎉</h2>
     </div>
-</div>`;
+
+    <p>Hello <b>${registration.teamName}</b>,</p>
+
+    <p>Your registration for <b>Arduino Days 2026</b> has been successfully confirmed.</p>
+
+    <h3>Registration Details</h3>
+    <p>
+      <b>Event:</b> Skill Forze Workshop + Buildathon<br>
+      <b>Registration ID:</b> ${registration.registrationId}<br>
+      <b>Team Size:</b> ${registration.teamSize} Members
+    </p>
+
+    <h3>Event Schedule</h3>
+    <p>
+      <b>Skill Forze:</b> 23rd & 24th March 2026<br>
+      <b>Buildathon:</b> 25th March 2026<br>
+      <b>Venue:</b> Aditya University, Surampalem
+    </p>
+
+    <h3>Team Members</h3>
+    <p>${participants}</p>
+
+    <div style="text-align:center;margin-top:30px;">
+      <h3>Event Entry QR Code</h3>
+      <img src="${qrCodeImage}" width="180"/>
+      <p style="font-size:13px;color:#555;">
+        Please show this QR code at the event entrance.
+      </p>
+    </div>
+
+    <h3>Important Instructions</h3>
+    <ul>
+      <li>Carry your <b>Student ID Card</b>.</li>
+      <li>Bring a <b>Laptop with Arduino IDE installed</b>.</li>
+      <li>Teams must present a <b>working prototype</b> during Buildathon.</li>
+    </ul>
+
+    <div style="text-align:center;margin-top:25px;">
+      <p>Join the official WhatsApp group for updates</p>
+      <a href="https://chat.whatsapp.com/DruOGVhGlNc989mcDWTEYP?mode=gi_t"
+      style="background:#25D366;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">
+      Join WhatsApp Group
+      </a>
+    </div>
+
+    <hr style="margin:30px 0">
+
+    <p style="font-size:14px;">
+      For any queries contact:<br>
+      <b>Chitturi Sanjay Kumar</b><br>
+      +91 7095009441
+    </p>
+
+    <p style="font-size:13px;color:#666;">
+      IEEE SPS Student Branch Chapter<br>
+      Aditya University, Surampalem
+    </p>
+
+  </div>
+</div>
+`;
     } else {
       htmlTemplate = `
-       <div style="font-family: Arial, sans-serif; background:#f8fafc; padding:30px;">
-    <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(145deg, #18181b, #09090b); border: 1px solid #a855f7; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(168, 85, 247, 0.1);">
-        
-        <div style="background: #0f172a; padding: 30px; text-align: center; border-bottom: 1px solid #22d3ee;">
-    <img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" 
-         alt="Arduino Days Logo" 
-         style="width: 180px; height: auto; display: block; margin: 0 auto;" />
-    <p style="margin-top: 12px; color: #22d3ee; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">
-        Registration Confirmed 🎉
-    </p>
-</div>
+<div style="font-family: Arial, sans-serif; background:#f4f6f8; padding:30px;">
+  <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;border:1px solid #e5e7eb;padding:30px;">
 
-        <div style="padding: 30px; line-height: 1.6;">
-            <p style="font-size: 18px;">Hello <b style="color: #a855f7;">${registration.teamName}</b>,</p>
-            <p style="color: #a1a1aa;">Gear up! Your registration for the Buildathon challenge is officially confirmed.</p>
-            
-            <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 20px; border-left: 4px solid #a855f7; margin: 25px 0;">
-                <p style="margin: 5px 0;"><strong>Event:</strong> Buildathon Hackathon</p>
-                <p style="margin: 5px 0;"><strong>Registration ID:</strong> <span style="color: #facc15;">${registration.registrationId}</span></p>
-                <p style="margin: 5px 0;"><strong>Team Size:</strong> ${registration.teamSize} Members</p>
-            </div>
-
-            <h3 style="color: #a855f7; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">📅 Hackathon Details</h3>
-            <p style="margin-bottom: 5px;"><strong>Date:</strong> 25<sup>th</sup> March 2026</p>
-            <p><strong>Venue:</strong> Aditya University, Surampalem</p>
-
-            <h3 style="color: #a855f7; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">👥 Innovators</h3>
-            <div style="color: #d4d4d8;">${participants}</div>
-            <div style="text-align:center;margin-top:30px;">
-  <p><b>Event Entry QR Code</b></p>
-<img src="${qrCodeImage}" width="200"/>
-  <p style="font-size:12px;color:#aaa">
-    Please show this QR code at the event entrance.
-  </p>
-</div>
-
-            <h3 style="color: #a855f7; border-bottom: 1px solid #3f3f46; padding-bottom: 8px;">📢 Participation Rules</h3>
-            <ul style="color: #a1a1aa; padding-left: 20px;">
-                <li>Minimum <b>one laptop per team</b> is mandatory.</li>
-                <li>Problem statements will be revealed at the venue.</li>
-                <li>Projects must be developed <b>scratch</b> during the event.</li>
-                <li>A functional hardware prototype must be presented for judging.</li>
-            </ul>
-
-            <div style="text-align: center; margin-top: 40px; padding: 20px; background: rgba(37, 211, 102, 0.1); border-radius: 12px;">
-                <p style="margin-bottom: 15px; font-size: 14px;">Join the hackathon community for briefings:</p>
-                <a href="https://chat.whatsapp.com/Csy0z79Sxyz7kwKvwTEN8p?mode=gi_t" style="background: #25D366; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Join Hackathon Group</a>
-            </div>
-        </div>
-
-        <div style="background: #111; padding: 20px; text-align: center; border-top: 1px solid #27272a;">
-    <p style="margin: 0; font-size: 14px; color: #71717a;">For any help or queries, contact:</p>
-    <p style="margin: 5px 0; color: #fff; font-size: 15px;">
-        <b>Chitturi Sanjay Kumar</b><br>
-        <a href="tel:+917095009441" style="color: #22d3ee; text-decoration: none;">+91 7095009441</a>
-    </p>
+    <div style="text-align:center;margin-bottom:25px;">
+      <img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" width="160"/>
+      <h2 style="color:#8b5cf6;margin-top:10px;">Registration Confirmed 🎉</h2>
     </div>
-</div>`;
+
+    <p>Hello <b>${registration.teamName}</b>,</p>
+
+    <p>Your registration for the <b>Arduino Days Buildathon</b> has been successfully confirmed.</p>
+
+    <h3>Registration Details</h3>
+    <p>
+      <b>Event:</b> Buildathon Hackathon<br>
+      <b>Registration ID:</b> ${registration.registrationId}<br>
+      <b>Team Size:</b> ${registration.teamSize} Members
+    </p>
+
+    <h3>Event Details</h3>
+    <p>
+      <b>Date:</b> 25th March 2026<br>
+      <b>Venue:</b> Aditya University, Surampalem
+    </p>
+
+    <h3>Team Members</h3>
+    <p>${participants}</p>
+
+    <div style="text-align:center;margin-top:30px;">
+      <h3>Event Entry QR Code</h3>
+      <img src="${qrCodeImage}" width="180"/>
+      <p style="font-size:13px;color:#555;">
+        Please show this QR code at the event entrance.
+      </p>
+    </div>
+
+    <h3>Participation Rules</h3>
+    <ul>
+      <li>Minimum <b>one laptop per team</b> is mandatory.</li>
+      <li>Problem statements will be revealed at the venue.</li>
+      <li>Projects must be developed during the event.</li>
+      <li>A functional prototype must be presented.</li>
+    </ul>
+
+    <div style="text-align:center;margin-top:25px;">
+      <p>Join the official Hackathon WhatsApp group</p>
+      <a href="https://chat.whatsapp.com/Csy0z79Sxyz7kwKvwTEN8p?mode=gi_t"
+      style="background:#25D366;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">
+      Join WhatsApp Group
+      </a>
+    </div>
+
+    <hr style="margin:30px 0">
+
+    <p style="font-size:14px;">
+      For any queries contact:<br>
+      <b>Chitturi Sanjay Kumar</b><br>
+      +91 7095009441
+    </p>
+
+    <p style="font-size:13px;color:#666;">
+      IEEE SPS Student Branch Chapter<br>
+      Aditya University, Surampalem
+    </p>
+
+  </div>
+</div>
+`;
     }
+
     const pdfBuffer = await generateReceiptPDF(registration);
 
     for (const member of registration.teamMembers) {
@@ -679,42 +742,40 @@ router.get("/entry/:registrationId", async (req, res) => {
 
     const registration = await Registration.findOne({ registrationId });
 
-    // 1️⃣ Check QR validity
     if (!registration) {
       return res.send(`
-        <h2 style="color:red;text-align:center;">
-        ❌ Invalid QR Code
-        </h2>
+        <div style="font-family:Arial;text-align:center;padding:60px;">
+          <h1 style="color:red;">❌ Invalid QR Code</h1>
+        </div>
       `);
     }
 
-    // 3️⃣ Check registration confirmed
     if (registration.registrationStatus !== "Confirmed") {
       return res.send(`
-        <h2 style="color:red;text-align:center;">
-        ❌ Registration Not Confirmed
-        </h2>
+        <div style="font-family:Arial;text-align:center;padding:60px;">
+          <h1 style="color:red;">❌ Registration Not Confirmed</h1>
+          <p>Team: ${registration.teamName}</p>
+        </div>
       `);
     }
 
-    // 4️⃣ Prevent duplicate scans (multiple devices)
     if (registration.entryTime) {
-      return res.json({
-        success: false,
-        reason: "already",
-        teamName: registration.teamName,
-      });
+      return res.send(`
+        <div style="font-family:Arial;text-align:center;padding:60px;">
+          <h1 style="color:red;">❌ Already Entered</h1>
+          <p><b>Team:</b> ${registration.teamName}</p>
+          <p>This team has already checked in.</p>
+        </div>
+      `);
     }
 
-    // 5️⃣ Mark members as checked in
     registration.teamMembers.forEach((member) => {
       member.checkedIn = true;
     });
 
     registration.entryTime = new Date();
-
     await registration.save();
-    // Send Telegram entry notification
+
     const token = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
@@ -727,29 +788,64 @@ router.get("/entry/:registrationId", async (req, res) => {
       .map((m, i) => `${i + 1}. ${m.fullName}`)
       .join("\n");
 
+    /* COUNT PARTICIPANTS */
+    const totalParticipants = await Registration.aggregate([
+      { $group: { _id: null, total: { $sum: "$teamSize" } } },
+    ]);
+
+    const checkedInParticipants = await Registration.aggregate([
+      { $unwind: "$teamMembers" },
+      { $match: { "teamMembers.checkedIn": true } },
+      { $count: "count" },
+    ]);
+
+    const total = totalParticipants[0]?.total || 0;
+    const entered = checkedInParticipants[0]?.count || 0;
+    const remaining = total - entered;
+
+    /* SEND TELEGRAM MESSAGE */
     await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
       chat_id: chatId,
-      text: `🎟 Entry Scanned
+      text: `🎟 ENTRY SCANNED
 
 Team: ${registration.teamName}
 Registration ID: ${registration.registrationId}
-Event: ${registration.eventName}
 
-👥 Members:
+👥 Members
 ${memberList}
 
-⏰ Time: ${entryTime}`,
+⏰ Time: ${entryTime}
+
+📊 Live Entry Stats
+Entered: ${entered}
+Remaining: ${remaining}
+Total Participants: ${total}`,
     });
 
-    // 6️⃣ Success response
-    res.json({
-      success: true,
-      teamName: registration.teamName,
-      members: registration.teamMembers.map((m) => m.fullName),
-    });
+    const membersHTML = registration.teamMembers
+      .map((m) => `<li>${m.fullName}</li>`)
+      .join("");
+
+    res.send(`
+      <div style="font-family:Arial;text-align:center;padding:50px;">
+        <h1 style="color:green;font-size:40px;">✅ ENTRY ALLOWED</h1>
+        <h2>${registration.teamName}</h2>
+
+        <p><b>Registration ID:</b> ${registration.registrationId}</p>
+
+        <h3>Team Members</h3>
+
+        <ul style="list-style:none;padding:0;font-size:18px;">
+          ${membersHTML}
+        </ul>
+
+        <p style="margin-top:30px;color:gray;">
+          Entry recorded successfully
+        </p>
+      </div>
+    `);
   } catch (error) {
     console.error("ENTRY ERROR:", error);
-
     res.status(500).send("Server Error");
   }
 });
@@ -838,7 +934,7 @@ router.post("/telegram-webhook", async (req, res) => {
   /* =========================
      TELEGRAM BUTTON ACTIONS
   ========================= */
-
+  if (!data) return res.sendStatus(200);
   if (!data.callback_query) {
     return res.sendStatus(200);
   }
@@ -866,7 +962,7 @@ router.post("/telegram-webhook", async (req, res) => {
 
     await registration.save();
     // Generate QR for entry
-    const qrData = `https://ieee-sps-website.onrender.com/entry/${registration.registrationId}`;
+    const qrData = `https://ieee-sps-website.onrender.com/api/entry/${registration.registrationId}`;
 
     const qrCodeImage = await QRCode.toDataURL(qrData);
 

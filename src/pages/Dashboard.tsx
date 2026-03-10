@@ -159,6 +159,27 @@ const Dashboard = () => {
   const [selectedFullDetails, setSelectedFullDetails] = useState<any>(null);
   /* ================= REGISTRATIONS ================= */
   const [registrations, setRegistrations] = useState<any[]>([]);
+  const [registrationStatus, setRegistrationStatus] = useState(true);
+  const toggleRegistration = async (status) => {
+    try {
+      await axios.put(
+        "https://ieee-sps-website.onrender.com/api/toggle-registration",
+        { status },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      setRegistrationStatus(status);
+
+      alert(status ? "Registrations Opened" : "Registrations Closed");
+
+      fetchEvents(); // refresh event status
+    } catch (error) {
+      alert("Error updating registration status");
+    }
+  };
   const [latestRegistrations, setLatestRegistrations] = useState<any[]>([]);
   // 2. Verified Analytics Logic
   const totalCount = registrations.length;
@@ -244,6 +265,7 @@ const Dashboard = () => {
     fetchEvents();
     fetchMembers();
     fetchRegistrations();
+    fetchRegistrationStatus();
 
     // 🔁 Auto refresh every 10 seconds
     const interval = setInterval(() => {
@@ -305,6 +327,17 @@ const Dashboard = () => {
       }
 
       console.error("Registration Fetch Error:", error);
+    }
+  };
+  const fetchRegistrationStatus = async () => {
+    try {
+      const res = await axios.get(
+        "https://ieee-sps-website.onrender.com/api/registration-status",
+      );
+
+      setRegistrationStatus(res.data.registrationOpen);
+    } catch (error) {
+      console.error("Error fetching registration status");
     }
   };
 
@@ -1116,6 +1149,51 @@ const Dashboard = () => {
           {/* REGISTRATIONS */}
           {activeTab === "registrations" && (
             <>
+              {/* REGISTRATION STATUS */}
+
+              <div className="mb-4 text-lg font-semibold">
+                {registrationStatus ? (
+                  <span className="text-green-400">🟢 Registrations OPEN</span>
+                ) : (
+                  <span className="text-red-400">🔴 Registrations CLOSED</span>
+                )}
+              </div>
+
+              {/* REGISTRATION CONTROL BUTTONS */}
+
+              <div className="flex gap-4 mb-6">
+                <button
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-semibold transition"
+                  onClick={() => toggleRegistration(true)}
+                >
+                  Open Registration
+                </button>
+
+                <button
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-semibold transition"
+                  onClick={() => toggleRegistration(false)}
+                >
+                  Close Registration
+                </button>
+              </div>
+              {/* REGISTRATION CONTROL BUTTONS */}
+
+              <div className="flex gap-4 mb-6">
+                <button
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-semibold transition"
+                  onClick={() => toggleRegistration(true)}
+                >
+                  Open Registration
+                </button>
+
+                <button
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-semibold transition"
+                  onClick={() => toggleRegistration(false)}
+                >
+                  Close Registration
+                </button>
+              </div>
+
               <div className="flex items-center gap-2 mb-4 text-green-400 text-sm">
                 {latestRegistrations.length > 0 && (
                   <div className="bg-zinc-900 border border-cyan-500/30 p-3 rounded mb-6">
@@ -1279,7 +1357,7 @@ const Dashboard = () => {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="bg-zinc-900 p-5 rounded-xl border border-cyan-500/20 shadow-lg">     
+                <div className="bg-zinc-900 p-5 rounded-xl border border-cyan-500/20 shadow-lg">
                   <h3 className="text-lg text-cyan-400 mb-4">
                     🏫 Top Colleges
                   </h3>
@@ -1508,6 +1586,7 @@ const Dashboard = () => {
               ) : (
                 <>
                   {/* ================= CONFIRMED TABLE ================= */}
+
                   <div className="flex gap-4 mb-4">
                     <div className="flex gap-4 mb-4">
                       <button
