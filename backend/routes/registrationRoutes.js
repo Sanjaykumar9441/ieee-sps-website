@@ -52,52 +52,6 @@ router.get("/check-team", async (req, res) => {
   }
 });
 
- /* =====================================
-   GET REGISTRATION STATUS
-===================================== */
-
-router.get("/registration-status", async (req, res) => {
-  try {
-    const event = await Event.findOne({ eventType: "combo" });
-
-    if (!event) {
-      return res.status(404).json({
-        message: "Event not found",
-      });
-    }
-
-    res.json({
-      registrationOpen: event.registrationOpen,
-    });
-
-  } catch (error) {
-    console.error("Registration status error:", error);
-    res.status(500).json({
-      message: "Error fetching registration status",
-    });
-  }
-});
-
-router.put("/toggle-registration", verifyToken, async (req, res) => {
-  try {
-    const { status } = req.body;
-
-    const event = await Event.findOneAndUpdate(
-      { eventType: "combo" }, // your event
-      { registrationOpen: status },
-      { new: true },
-    );
-
-    res.json({
-      message: status ? "Registrations Opened" : "Registrations Closed",
-      event,
-    });
-  } catch (error) {
-    console.error("Toggle error:", error);
-    res.status(500).json({ message: "Error updating registration status" });
-  }
-});
-
 /* =====================================
    2️⃣ CREATE REGISTRATION
 ===================================== */
@@ -121,18 +75,13 @@ router.post("/register", registerLimiter, async (req, res) => {
       userTransactionId,
       screenshotUrl,
     } = req.body;
-        console.log("Incoming eventType:", eventType);
+        const event = await Event.findOne({ eventType });
 
-    const event = await Event.findOne({ eventType });
-
-    // 🔎 DEBUG LOG 2
-    console.log("Event from DB:", event);
-
-    if (!event || !event.registrationOpen) {
-      return res.status(403).json({
-        message: "Registrations are currently closed.",
-      });
-    }
+if (!event) {
+  return res.status(400).json({
+    message: "Invalid event type",
+  });
+}
     if (!teamMembers || teamMembers.length !== 4 || teamSize !== 4) {
       return res.status(400).json({
         message: "Team must contain exactly 4 members",

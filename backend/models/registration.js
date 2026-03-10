@@ -22,10 +22,11 @@ const memberSchema = new mongoose.Schema({
 const registrationSchema = new mongoose.Schema(
 {
     // combo | buildathon
-    eventType: {
-      type: String,
-      required: true,
-    },
+   eventType: {
+  type: String,
+  enum: ["combo", "buildathon"],
+  required: true,
+},
 
     eventName: {
       type: String,
