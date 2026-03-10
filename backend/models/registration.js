@@ -20,11 +20,7 @@ const memberSchema = new mongoose.Schema({
   },
 });
 const registrationSchema = new mongoose.Schema(
-  {
-    registrationOpen: {
-      type: Boolean,
-      default: true,
-    },
+{
     // combo | buildathon
     eventType: {
       type: String,
@@ -46,7 +42,6 @@ const registrationSchema = new mongoose.Schema(
     teamName: {
       type: String,
       required: true,
-      unique: true,
     },
 
     teamSize: {

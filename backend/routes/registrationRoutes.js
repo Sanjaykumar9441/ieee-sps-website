@@ -52,6 +52,32 @@ router.get("/check-team", async (req, res) => {
   }
 });
 
+ /* =====================================
+   GET REGISTRATION STATUS
+===================================== */
+
+router.get("/registration-status", async (req, res) => {
+  try {
+    const event = await Event.findOne({ eventType: "combo" });
+
+    if (!event) {
+      return res.status(404).json({
+        message: "Event not found",
+      });
+    }
+
+    res.json({
+      registrationOpen: event.registrationOpen,
+    });
+
+  } catch (error) {
+    console.error("Registration status error:", error);
+    res.status(500).json({
+      message: "Error fetching registration status",
+    });
+  }
+});
+
 router.put("/toggle-registration", verifyToken, async (req, res) => {
   try {
     const { status } = req.body;
@@ -95,7 +121,12 @@ router.post("/register", registerLimiter, async (req, res) => {
       userTransactionId,
       screenshotUrl,
     } = req.body;
+        console.log("Incoming eventType:", eventType);
+
     const event = await Event.findOne({ eventType });
+
+    // 🔎 DEBUG LOG 2
+    console.log("Event from DB:", event);
 
     if (!event || !event.registrationOpen) {
       return res.status(403).json({
