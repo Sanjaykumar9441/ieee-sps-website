@@ -161,25 +161,35 @@ const Dashboard = () => {
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [registrationStatus, setRegistrationStatus] = useState(true);
   const toggleRegistration = async (status) => {
-    try {
-      await axios.put(
-        "https://ieee-sps-website.onrender.com/api/toggle-registration",
-        { status },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+
+  const confirmAction = window.confirm(
+    status
+      ? "⚠ Are you sure you want to OPEN registrations?"
+      : "⚠ Are you sure you want to CLOSE registrations?"
+  );
+
+  if (!confirmAction) return;
+
+  try {
+
+    await axios.put(
+      "https://ieee-sps-website.onrender.com/api/toggle-registration",
+      { status },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      );
-      setRegistrationStatus(status);
+      }
+    );
 
-      alert(status ? "Registrations Opened" : "Registrations Closed");
+    setRegistrationStatus(status);
 
-      fetchEvents(); // refresh event status
-    } catch (error) {
-      alert("Error updating registration status");
-    }
-  };
+    alert(status ? "✅ Registrations Opened" : "❌ Registrations Closed");
+
+  } catch (error) {
+    alert("Error updating registration status");
+  }
+};
   const [latestRegistrations, setLatestRegistrations] = useState<any[]>([]);
   // 2. Verified Analytics Logic
   const totalCount = registrations.length;
@@ -1158,41 +1168,32 @@ const Dashboard = () => {
                   <span className="text-red-400">🔴 Registrations CLOSED</span>
                 )}
               </div>
-
+              
               {/* REGISTRATION CONTROL BUTTONS */}
 
               <div className="flex gap-4 mb-6">
-                <button
-                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-semibold transition"
-                  onClick={() => toggleRegistration(true)}
-                >
-                  Open Registration
-                </button>
 
-                <button
-                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-semibold transition"
-                  onClick={() => toggleRegistration(false)}
-                >
-                  Close Registration
-                </button>
-              </div>
-              {/* REGISTRATION CONTROL BUTTONS */}
+  {registrationStatus ? (
 
-              <div className="flex gap-4 mb-6">
-                <button
-                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-semibold transition"
-                  onClick={() => toggleRegistration(true)}
-                >
-                  Open Registration
-                </button>
+    <button
+      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-semibold transition"
+      onClick={() => toggleRegistration(false)}
+    >
+      Close Registration
+    </button>
 
-                <button
-                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-semibold transition"
-                  onClick={() => toggleRegistration(false)}
-                >
-                  Close Registration
-                </button>
-              </div>
+  ) : (
+
+    <button
+      className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-semibold transition"
+      onClick={() => toggleRegistration(true)}
+    >
+      Open Registration
+    </button>
+
+  )}
+
+</div>
 
               <div className="flex items-center gap-2 mb-4 text-green-400 text-sm">
                 {latestRegistrations.length > 0 && (
