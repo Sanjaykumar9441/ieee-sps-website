@@ -551,7 +551,7 @@ const Dashboard = () => {
 
     const combo = confirmed.filter((r) => r.eventType === "combo");
     const buildathon = confirmed.filter((r) => r.eventType === "buildathon");
-    const hostel = confirmed.filter((r) => r.accommodationRequired === true);
+    const hostel = confirmed.filter((r) => r.hostelMembers?.length > 0);
 
     const createRows = (data: any[]) => {
       const rows: any[] = [];
@@ -576,7 +576,9 @@ const Dashboard = () => {
             reg.registrationId,
             reg.teamName,
             reg.eventName,
-            reg.accommodationRequired ? "Yes" : "No",
+            reg.hostelMembers?.some((h: any) => h.fullName === member.fullName)
+  ? "Yes"
+  : "No",
             member.fullName || "",
             member.rollNo || "",
             member.email || "",

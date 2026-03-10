@@ -312,13 +312,15 @@ const generateReceiptPDF = async (registration) => {
 
     /* DETAILS BOX */
 
-    doc
-      .roundedRect(80, doc.y, pageWidth - 160, 120, 8)
-      .fillOpacity(0.05)
-      .fill("#00979D")
-      .fillOpacity(1);
+   const boxHeight = 140;
 
-    let y = doc.y + 12;
+doc
+  .roundedRect(80, doc.y, pageWidth - 160, boxHeight, 8)
+  .fillOpacity(0.05)
+  .fill("#00979D")
+  .fillOpacity(1);
+
+    let y = doc.y + 15;
 
     const createdDate = new Date(registration.createdAt);
 
@@ -382,9 +384,9 @@ const generateReceiptPDF = async (registration) => {
       .fillColor("white")
       .fontSize(11)
       .font("Helvetica-Bold")
-      .text("No", tableX + 10, tableY + 6)
-      .text("Name", tableX + 50, tableY + 6)
-      .text("Roll No", tableX + tableWidth - 100, tableY + 6);
+      .text("No", tableX + 15, tableY + 6)
+.text("Name", tableX + 60, tableY + 6)
+.text("Roll No", tableX + tableWidth - 120, tableY + 6);
 
     tableY += rowHeight;
 
@@ -401,9 +403,9 @@ const generateReceiptPDF = async (registration) => {
       doc
         .fillColor("black")
         .font("Helvetica")
-        .text(i + 1, tableX + 10, tableY + 6)
-        .text(member.fullName, tableX + 50, tableY + 6)
-        .text(member.rollNo, tableX + tableWidth - 100, tableY + 6);
+        .text(i + 1, tableX + 15, tableY + 6)
+.text(member.fullName, tableX + 60, tableY + 6)
+.text(member.rollNo, tableX + tableWidth - 120, tableY + 6);
 
       tableY += rowHeight;
 
@@ -437,9 +439,9 @@ const generateReceiptPDF = async (registration) => {
         .strokeColor("#00979D")
         .stroke();
 
-      doc.image(qrBuffer, pageWidth / 2 - 70, qrY, {
-        width: 140,
-      });
+      doc.image(qrBuffer, pageWidth / 2 - 65, qrY + 5, {
+  width: 130,
+});
 
       doc.y = qrY + 150;
 
@@ -798,13 +800,10 @@ Aditya University, Surampalem
     for (const member of registration.teamMembers) {
       if (!member.email) continue;
 
-      await sendMail(
+     await sendMail(
   member.email,
   "Arduino Days 2026 Registration Confirmed",
-  htmlTemplate,
-  pdfBuffer,
-  `${registration.registrationId}.pdf`,
-  qrCodeImage
+  htmlTemplate
 );
     }
 
