@@ -160,7 +160,7 @@ const Register = () => {
   const checkStatus = async () => {
 
     const res = await axios.get(
-      "https://ieee-sps-website.onrender.com/events/registration-status/combo"
+      "https://ieee-sps-website.onrender.com/events/registration-status"
     );
 
     if (!res.data.registrationOpen) {
@@ -446,7 +446,7 @@ const Register = () => {
   setMembers(testMembers);
 
   setTransactionId(`${Math.floor(100000000000 + Math.random() * 900000000000)}`);
-  
+
   setScreenshot(new File(["test"], "test.png", { type: "image/png" }));
 };
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
@@ -1462,7 +1462,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       <ul className="list-disc list-inside space-y-1">
                         <li>Team registration is compulsory.</li>
                         <li>
-                          Students must be registered as a Team (4 members).
+                          Students must be registered as a Team (3-4 members).
                         </li>
                         <li>
                           The workshop covers Arduino and IoT Fundamentals.
@@ -1481,7 +1481,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       </h3>
                       <ul className="list-disc list-inside space-y-1">
                         <li>
-                          Students must be registered as a Team (4 members).
+                          Students must be registered as a Team (3-4 members).
                         </li>
                         <li>
                           Problem statements will be provided by the organizers.

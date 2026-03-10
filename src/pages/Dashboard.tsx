@@ -119,6 +119,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const [registrationOpen, setRegistrationOpen] = useState(false);
+  const [toggleLoading, setToggleLoading] = useState(false);
   useEffect(() => {
     if (!token) {
       navigate("/");
@@ -126,7 +127,7 @@ const Dashboard = () => {
   }, [token, navigate]);
   const fetchRegistrationStatus = async () => {
     const res = await axios.get(
-      "https://ieee-sps-website.onrender.com/events/registration-status/combo",
+      "https://ieee-sps-website.onrender.com/events/registration-status",
     );
 
     setRegistrationOpen(res.data.registrationOpen);
@@ -135,9 +136,13 @@ const Dashboard = () => {
     fetchRegistrationStatus();
   }, []);
   const toggleRegistration = async () => {
+    if (toggleLoading) return;
+
+    setToggleLoading(true);
+
     try {
       const res = await axios.put(
-        "https://ieee-sps-website.onrender.com/events/toggle-registration/combo",
+        "https://ieee-sps-website.onrender.com/events/toggle-registration",
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -145,6 +150,8 @@ const Dashboard = () => {
       setRegistrationOpen(res.data.registrationOpen);
     } catch (error) {
       console.error("Toggle Error:", error);
+    } finally {
+      setToggleLoading(false);
     }
   };
   const [activeTab, setActiveTab] = useState(
@@ -1153,16 +1160,18 @@ const Dashboard = () => {
                 {registrationOpen ? (
                   <button
                     onClick={toggleRegistration}
-                    className="bg-red-500 hover:bg-red-600 px-5 py-2 rounded font-semibold transition"
+                    disabled={toggleLoading}
+                    className="bg-red-500 hover:bg-red-600 px-5 py-2 rounded font-semibold transition disabled:opacity-50"
                   >
-                    Stop Registration
+                    {toggleLoading ? "Stopping..." : "Stop Registration"}
                   </button>
                 ) : (
                   <button
                     onClick={toggleRegistration}
-                    className="bg-green-500 hover:bg-green-600 px-5 py-2 rounded font-semibold transition"
+                    disabled={toggleLoading}
+                    className="bg-green-500 hover:bg-green-600 px-5 py-2 rounded font-semibold transition disabled:opacity-50"
                   >
-                    Start Registration
+                    {toggleLoading ? "Starting..." : "Start Registration"}
                   </button>
                 )}
               </div>

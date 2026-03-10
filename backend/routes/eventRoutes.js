@@ -45,55 +45,58 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-router.get("/registration-status/:eventType", async (req, res) => {
+router.get("/registration-status", async (req, res) => {
 
   try {
 
-    const event = await Event.findOne({ eventType: req.params.eventType });
+    const event = await Event.findOne();
 
-    if (!event) {
-      return res.json({ registrationOpen: false });
-    }
-
-    res.json({ registrationOpen: event.registrationOpen });
+    res.json({
+      registrationOpen: event?.registrationOpen || false
+    });
 
   } catch (error) {
 
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({
+      message: "Error fetching status"
+    });
 
   }
 
 });
 
-router.put("/toggle-registration/:eventType", verifyToken, async (req, res) => {
-
+router.put("/toggle-registration", verifyToken, async (req, res) => {
   try {
 
-    const event = await Event.findOne({ eventType: req.params.eventType });
+    const events = await Event.find();
 
-    if (!event) {
-      return res.status(404).json({ message: "Event not found" });
+    if (!events.length) {
+      return res.status(404).json({
+        message: "No events found"
+      });
     }
 
-    event.registrationOpen = !event.registrationOpen;
+    const newState = !events[0].registrationOpen;
 
-    await event.save();
+    await Event.updateMany(
+      {},
+      { $set: { registrationOpen: newState } }
+    );
 
     res.json({
-      message: event.registrationOpen
-        ? "Registration Started"
-        : "Registration Stopped",
-      registrationOpen: event.registrationOpen
+      success: true,
+      registrationOpen: newState
     });
 
   } catch (error) {
 
     console.error("Toggle Error:", error);
 
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({
+      message: "Toggle failed"
+    });
 
   }
-
 });
 
 /* ===============================

@@ -422,7 +422,7 @@ const ArduinoDays = () => {
                       {/* Team Size */}
                       <p className="text-gray-300 mb-2 flex items-center gap-2">
                         <Users size={18} className="text-cyan-400" />
-                        <span>Team size: 4 members (mandatory)</span>
+                        <span>Team size: 3-4 members</span>
                       </p>
 
                       <p className="text-gray-300 mb-2 flex items-center gap-2">
@@ -483,7 +483,7 @@ const ArduinoDays = () => {
                       {/* Team Size */}
                       <p className="text-gray-300 mb-2 flex items-center gap-2">
                         <Users size={18} className="text-cyan-400" />
-                        <span>Team size: 4 members (mandatory)</span>
+                        <span>Team size: 3-4 members</span>
                       </p>
 
                       <p className="text-gray-300 mb-2 flex items-center gap-2">
@@ -573,7 +573,7 @@ const ArduinoDays = () => {
                     <ul className="space-y-3 text-gray-300 text-base md:text-lg list-disc list-inside">
                       <li>Team registration is compulsory.</li>
                       <li>
-                        Students must be registered as a Team (4 members).
+                        Students must be registered as a Team (3-4 members).
                       </li>
                       <li>The workshop covers Arduino and IoT Fundamentals.</li>
                       <li>Active participation on both days is required.</li>
@@ -601,7 +601,7 @@ const ArduinoDays = () => {
 
                     <ul className="space-y-3 text-gray-300 text-base md:text-lg list-disc list-inside">
                       <li>
-                        Students must be registered as a Team (4 members).
+                        Students must be registered as a Team (3-4 members).
                       </li>
                       <li>
                         Problem statements will be provided by the organizers.
