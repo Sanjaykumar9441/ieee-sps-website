@@ -54,7 +54,7 @@ router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
     const { title, description, date, status, location } = req.body;
 
     const images = req.files
-      ? req.files.map(file => file.path) // ✅ Cloudinary URL
+      ? req.files.map((file) => file.path) // ✅ Cloudinary URL
       : [];
 
     const newEvent = new Event({
@@ -63,13 +63,12 @@ router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
       date,
       location,
       status,
-      images
+      images,
     });
 
     await newEvent.save();
 
     res.json({ success: true, event: newEvent });
-
   } catch (err) {
     console.error("ADD EVENT ERROR:", err);
     res.status(500).json({ msg: "Error adding event" });
@@ -80,40 +79,41 @@ router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
    ✏️ UPDATE EVENT
 ================================= */
 
-router.put("/:id", verifyToken, upload.array("images", 10), async (req, res) => {
-  try {
-
-    const updateData = {
-      $set: {
-        title: req.body.title,
-        description: req.body.description,
-        status: req.body.status,
-        date: req.body.date,
-        location: req.body.location
-      }
-    };
-
-    if (req.files && req.files.length > 0) {
-      updateData.$push = {
-        images: {
-          $each: req.files.map(file => file.path) // ✅ Cloudinary URL
-        }
+router.put(
+  "/:id",
+  verifyToken,
+  upload.array("images", 10),
+  async (req, res) => {
+    try {
+      const updateData = {
+        $set: {
+          title: req.body.title,
+          description: req.body.description,
+          status: req.body.status,
+          date: req.body.date,
+          location: req.body.location,
+        },
       };
+
+      if (req.files && req.files.length > 0) {
+        updateData.$push = {
+          images: {
+            $each: req.files.map((file) => file.path), // ✅ Cloudinary URL
+          },
+        };
+      }
+
+      const updated = await Event.findByIdAndUpdate(req.params.id, updateData, {
+        new: true,
+      });
+
+      res.json(updated);
+    } catch (err) {
+      console.error("UPDATE ERROR:", err);
+      res.status(500).json({ msg: "Error updating event" });
     }
-
-    const updated = await Event.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true }
-    );
-
-    res.json(updated);
-
-  } catch (err) {
-    console.error("UPDATE ERROR:", err);
-    res.status(500).json({ msg: "Error updating event" });
-  }
-});
+  },
+);
 
 /* ===============================
    DELETE
@@ -134,7 +134,9 @@ router.delete("/:id", verifyToken, async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const events = await Event.find().sort({ createdAt: -1 });
+    const events = await Event.find({
+      title: { $exists: true },
+    }).sort({ createdAt: -1 });
     res.json(events);
   } catch (err) {
     res.status(500).json({ msg: "Error fetching events" });
