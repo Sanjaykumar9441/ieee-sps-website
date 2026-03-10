@@ -602,11 +602,12 @@ router.get("/pdf/:id", async (req, res) => {
 ===================================== */
 router.post("/send-confirmation-email", async (req, res) => {
   try {
-    const { registration, qrCodeImage } = req.body;
-
+    const { registration } = req.body;
     if (!registration || !registration.teamMembers) {
       return res.status(400).json({ message: "Invalid registration data" });
     }
+    const qrData = `https://ieee-sps-website.onrender.com/api/entry/${registration.registrationId}`;
+const qrCodeImage = await QRCode.toDataURL(qrData);
 
     const participants = registration.teamMembers
       .map((m, i) => `${i + 1}. ${m.fullName}`)
@@ -795,23 +796,26 @@ Aditya University, Surampalem
 `;
 }
 
-    const pdfBuffer = await generateReceiptPDF(registration);
+   const emailPromises = registration.teamMembers
+  .filter((member) => member.email)
+  .map((member) =>
+    sendMail(
+      member.email,
+      "Arduino Days 2026 Registration Confirmed",
+      htmlTemplate
+    ).catch((err) => {
+      console.error("Email failed:", member.email);
+    })
+  );
 
-    for (const member of registration.teamMembers) {
-      if (!member.email) continue;
+await Promise.all(emailPromises);
 
-     await sendMail(
-  member.email,
-  "Arduino Days 2026 Registration Confirmed",
-  htmlTemplate
-);
-    }
+res.json({ success: true, message: "Emails sent successfully" });
 
-    res.json({ success: true, message: "Emails sent successfully" });
-  } catch (error) {
-    console.error("Mail error:", error);
-    res.status(500).json({ message: "Email sending failed" });
-  }
+} catch (error) {
+  console.error("Mail error:", error);
+  res.status(500).json({ message: "Email sending failed" });
+}
 });
 
 /* =====================================
@@ -1043,21 +1047,10 @@ router.post("/telegram-webhook", async (req, res) => {
     registration.registrationStatus = "Confirmed";
 
     await registration.save();
-    // Generate QR for entry
-    const qrData = `https://ieee-sps-website.onrender.com/api/entry/${registration.registrationId}`;
-
-    const qrCodeImage = await QRCode.toDataURL(qrData);
-
-    // Send confirmation email
-    try {
-      await axios.post(
-        "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
-        { registration, qrCodeImage },
-      );
-      console.log("📧 Confirmation email sent");
-    } catch (err) {
-      console.error("Email sending failed:", err.message);
-    }
+    await axios.post(
+  "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+  { registration }
+);
 
     const members = registration.teamMembers
       .map((m, i) => `${i + 1}. ${m.fullName}`)
