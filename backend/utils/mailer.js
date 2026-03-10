@@ -6,28 +6,9 @@ client.authentications["api-key"].apiKey = process.env.BREVO_API_KEY;
 
 const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
-const sendMail = async (to, subject, html, pdfBuffer, filename, qrCodeImage) => {
+const sendMail = async (to, subject, htmlContent) => {
 
   try {
-
-    const attachments = [];
-
-    // PDF attachment
-    if (pdfBuffer) {
-      attachments.push({
-        name: filename,
-        content: pdfBuffer.toString("base64")
-      });
-    }
-
-    // QR image for email preview
-    if (qrCodeImage) {
-      attachments.push({
-        name: "qr.png",
-        content: qrCodeImage.split("base64,")[1],
-        cid: "qrimage"
-      });
-    }
 
     const email = {
       sender: {
@@ -39,9 +20,8 @@ const sendMail = async (to, subject, html, pdfBuffer, filename, qrCodeImage) => 
 
       subject: subject,
 
-      htmlContent: html,
+      htmlContent: htmlContent
 
-      attachment: attachments
     };
 
     await apiInstance.sendTransacEmail(email);
