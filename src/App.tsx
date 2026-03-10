@@ -64,7 +64,7 @@ function App() {
             <Route path="/team/:id" element={<TeamDetails />} />
             <Route path="/arduino-days" element={<ArduinoDays />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/scan" element={<Scanner />} />
+            <Route path="/admin/scanner" element={<Scanner />} />
           </Routes>
         </div>
 

@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
+import { useNavigate } from "react-router-dom";
 
 const Scanner = () => {
+
+  const navigate = useNavigate();
+  const token = localStorage.getItem("token");
 
   const [team, setTeam] = useState("");
   const [members, setMembers] = useState<string[]>([]);
@@ -12,6 +16,59 @@ const Scanner = () => {
   const [scanLock, setScanLock] = useState(false);
 
   useEffect(() => {
+
+    const saveOfflineScan = (id: string) => {
+
+  const stored = localStorage.getItem("offlineScans");
+
+  let scans = stored ? JSON.parse(stored) : [];
+
+  if (!scans.includes(id)) {
+    scans.push(id);
+  }
+
+  localStorage.setItem("offlineScans", JSON.stringify(scans));
+
+};
+
+const syncOfflineScans = async () => {
+
+  const stored = localStorage.getItem("offlineScans");
+
+  if (!stored) return;
+
+  const scans = JSON.parse(stored);
+
+  if (scans.length === 0) return;
+
+  try {
+
+    await fetch(
+      "https://ieee-sps-website.onrender.com/api/sync-entry",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":"application/json"
+        },
+        body: JSON.stringify({ scans })
+      }
+    );
+
+    localStorage.removeItem("offlineScans");
+
+    console.log("Offline scans synced");
+
+  } catch {
+    console.log("Sync failed");
+  }
+
+};
+
+window.addEventListener("online", syncOfflineScans);
+    if (!token) {
+    navigate("/");
+    return;
+  }
 
     const fetchStats = async () => {
 
@@ -39,81 +96,92 @@ const Scanner = () => {
     const scanner = new Html5Qrcode("reader");
 
     scanner.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: 250 },
+  { facingMode: "environment" },
+  { fps: 10, qrbox: 250 },
 
-      async (decodedText) => {
+  async (decodedText) => {
 
-  if (scanLock) return;
+    if (scanLock) return;
 
-  setScanLock(true);
+    setScanLock(true);
 
-        try {
+       const registrationId = decodedText.split("/").pop();
+    try {
 
-          const parts = decodedText.split("/");
-          const registrationId = parts[parts.length - 1];
-
-          const res = await fetch(
-            `https://ieee-sps-website.onrender.com/api/entry/${registrationId}`
-          );
-
-          const data = await res.json();
-
-          if (data.success) {
-
-            setColor("text-green-400");
-            setMessage("✅ ENTRY SUCCESS");
-
-            setTeam(data.teamName);
-            setMembers(data.members);
-
+      const res = await fetch(
+        `https://ieee-sps-website.onrender.com/api/scan/${registrationId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
           }
-
-          else if (data.reason === "already") {
-
-             const beep = new Audio("/beep.mp3");
-            beep.play();
-
-            setColor("text-red-400");
-            setMessage("⚠ ALREADY CHECKED IN");
-
-            setTeam(data.teamName);
-            setMembers([]);
-
-          }
-
-          else {
-
-            setColor("text-red-400");
-            setMessage("❌ INVALID QR");
-
-          }
-
-        } catch {
-
-          setColor("text-red-400");
-          setMessage("❌ SCAN ERROR");
-
         }
+      );
 
-        setTimeout(() => {
-  setTeam("");
-  setMembers([]);
-  setMessage("Scan QR Code");
-  setColor("text-white");
-  setScanLock(false); // unlock scanner
-}, 2500);
+      const data = await res.json();
 
-      },
+      if (data.success) {
 
-      () => {}
-    );
+        const beep = new Audio("/beep.mp3");
+        beep.play();
+
+        setColor("text-green-400");
+        setMessage("✅ ENTRY SUCCESS");
+
+        setTeam(data.teamName);
+        setMembers(data.members);
+
+      }
+
+      else if (data.reason === "already") {
+
+        const beep = new Audio("/beep.mp3");
+        beep.play();
+
+        setColor("text-red-400");
+        setMessage("⚠ ALREADY CHECKED IN");
+
+        setTeam(data.teamName);
+        setMembers([]);
+
+      }
+
+      else {
+
+        setColor("text-red-400");
+        setMessage("❌ INVALID QR");
+
+      }
+
+    } catch {
+
+      saveOfflineScan(registrationId);
+
+      setColor("text-yellow-400");
+      setMessage("📴 Offline Scan Saved");
+
+    }
+
+    setTimeout(() => {
+
+      setTeam("");
+      setMembers([]);
+      setMessage("Scan QR Code");
+      setColor("text-white");
+      setScanLock(false);
+
+    }, 1500);
+
+  },
+
+  () => {}
+);
 
     // CLEANUP
     return () => {
-      scanner.stop();
-      clearInterval(interval);
-    };
+  scanner.stop().catch(() => {});
+  scanner.clear();
+  clearInterval(interval);
+};
 
   }, []);
 

@@ -255,6 +255,7 @@ Registration ID: \`${registrationId}\`
 });
 const generateReceiptPDF = async (registration) => {
   return new Promise(async (resolve) => {
+
     const doc = new PDFDocument({ margin: 40 });
 
     let buffers = [];
@@ -265,19 +266,21 @@ const generateReceiptPDF = async (registration) => {
     const pageHeight = doc.page.height;
 
     /* EVENT BORDER */
+
     doc
       .rect(20, 20, pageWidth - 40, pageHeight - 40)
       .lineWidth(2)
-      .strokeColor("#0077cc")
+      .strokeColor("#00979D") // Arduino theme
       .stroke();
 
     /* LOGO */
+
     try {
       doc.image(
         path.join(__dirname, "../public/AD2026.png"),
         pageWidth / 2 - 60,
         35,
-        { width: 120 },
+        { width: 120 }
       );
     } catch {
       console.log("Logo not found");
@@ -286,9 +289,10 @@ const generateReceiptPDF = async (registration) => {
     doc.moveDown(3);
 
     /* TITLE */
+
     doc
       .fontSize(22)
-      .fillColor("#0077cc")
+      .fillColor("#00979D")
       .text("Arduino Days 2026", { align: "center" });
 
     doc
@@ -301,11 +305,21 @@ const generateReceiptPDF = async (registration) => {
     doc
       .moveTo(80, doc.y)
       .lineTo(pageWidth - 80, doc.y)
+      .strokeColor("#00979D")
       .stroke();
 
     doc.moveDown(1.5);
 
-    /* DATE TIME */
+    /* DETAILS BOX */
+
+    doc
+      .roundedRect(80, doc.y, pageWidth - 160, 120, 8)
+      .fillOpacity(0.05)
+      .fill("#00979D")
+      .fillOpacity(1);
+
+    let y = doc.y + 12;
+
     const createdDate = new Date(registration.createdAt);
 
     const date = createdDate.toLocaleDateString("en-IN", {
@@ -318,15 +332,6 @@ const generateReceiptPDF = async (registration) => {
       hour: "2-digit",
       minute: "2-digit",
     });
-
-    /* DETAILS BOX */
-    doc
-      .rect(80, doc.y, pageWidth - 160, 120)
-      .fillOpacity(0.05)
-      .fill("#0077cc")
-      .fillOpacity(1);
-
-    let y = doc.y + 10;
 
     const details = [
       ["Registration ID", registration.registrationId],
@@ -346,32 +351,70 @@ const generateReceiptPDF = async (registration) => {
         .text(`${label}: `, 100, y, { continued: true })
         .font("Helvetica")
         .text(value);
+
       y += 15;
     });
 
-    doc.y = y + 10;
+    doc.y = y + 12;
 
     /* TEAM MEMBERS */
+
     doc
       .fontSize(14)
-      .fillColor("#0077cc")
+      .fillColor("#00979D")
       .text("Team Members", { align: "center" });
 
     doc.moveDown(0.5);
 
+    const tableX = 100;
+    let tableY = doc.y;
+
+    const tableWidth = pageWidth - 200;
+    const rowHeight = 22;
+
+    /* TABLE HEADER */
+
+    doc
+      .roundedRect(tableX, tableY, tableWidth, rowHeight, 6)
+      .fill("#00979D");
+
+    doc
+      .fillColor("white")
+      .fontSize(11)
+      .font("Helvetica-Bold")
+      .text("No", tableX + 10, tableY + 6)
+      .text("Name", tableX + 50, tableY + 6)
+      .text("Roll No", tableX + tableWidth - 100, tableY + 6);
+
+    tableY += rowHeight;
+
+    /* TABLE ROWS */
+
     registration.teamMembers.forEach((member, i) => {
+
+      if (i % 2 === 0) {
+        doc
+          .roundedRect(tableX, tableY, tableWidth, rowHeight, 6)
+          .fill("#F2F9F9");
+      }
+
       doc
-        .fontSize(11)
         .fillColor("black")
-        .text(`${i + 1}. ${member.fullName} - ${member.rollNo}`, {
-          align: "center",
-        });
+        .font("Helvetica")
+        .text(i + 1, tableX + 10, tableY + 6)
+        .text(member.fullName, tableX + 50, tableY + 6)
+        .text(member.rollNo, tableX + tableWidth - 100, tableY + 6);
+
+      tableY += rowHeight;
+
     });
 
-    doc.moveDown(1.5);
+    doc.y = tableY + 20;
 
     /* QR CODE */
+
     if (registration.registrationStatus === "Confirmed") {
+
       const qrData = `https://ieee-sps-website.onrender.com/api/entry/${registration.registrationId}`;
 
       const qrImage = await QRCode.toDataURL(qrData);
@@ -379,31 +422,37 @@ const generateReceiptPDF = async (registration) => {
 
       doc
         .fontSize(14)
-        .fillColor("#0077cc")
+        .fillColor("#00979D")
         .text("Event Entry QR Code", { align: "center" });
 
       doc.moveDown(0.5);
 
       const qrY = doc.y;
-doc
-.rect(pageWidth / 2 - 90, qrY - 10, 180, 180)
-.strokeColor("#dddddd")
-.stroke();
-doc.image(qrBuffer, pageWidth / 2 - 80, qrY, {
-  width: 160,
-});
 
-doc.y = qrY + 160;
+      /* QR BORDER BOX */
 
-doc
-  .fontSize(10)
-  .fillColor("gray")
-  .text("Show this QR code at the event entrance", { align: "center" });
-}
+      doc
+        .roundedRect(pageWidth / 2 - 90, qrY - 10, 180, 180, 10)
+        .lineWidth(2)
+        .strokeColor("#00979D")
+        .stroke();
+
+      doc.image(qrBuffer, pageWidth / 2 - 70, qrY, {
+        width: 140,
+      });
+
+      doc.y = qrY + 150;
+
+      doc
+        .fontSize(10)
+        .fillColor("gray")
+        .text("Show this QR code at the event entrance", { align: "center" });
+    }
 
     doc.moveDown(1);
 
     /* STATUS */
+
     const statusText =
       registration.registrationStatus === "Confirmed"
         ? "Payment Verified"
@@ -412,13 +461,16 @@ doc
     doc
       .fontSize(12)
       .fillColor(
-        registration.registrationStatus === "Confirmed" ? "green" : "orange",
+        registration.registrationStatus === "Confirmed"
+          ? "green"
+          : "orange"
       )
       .text(`Status: ${statusText}`, { align: "center" });
 
     doc.moveDown(2);
 
     /* FOOTER */
+
     doc
       .fontSize(10)
       .fillColor("gray")
@@ -1079,6 +1131,107 @@ Status: ❌ Rejected`,
   }
 
   res.sendStatus(200);
+});
+
+router.get("/scan/:registrationId", verifyToken, async (req, res) => {
+  try {
+
+    const { registrationId } = req.params;
+
+    const registration = await Registration.findOne({ registrationId });
+
+    if (!registration) {
+      return res.json({
+        success:false
+      });
+    }
+
+    if (registration.registrationStatus !== "Confirmed") {
+      return res.json({
+        success:false,
+        reason:"not_confirmed",
+        teamName: registration.teamName
+      });
+    }
+
+    if (registration.entryTime) {
+      return res.json({
+        success:false,
+        reason:"already",
+        teamName: registration.teamName
+      });
+    }
+
+    registration.teamMembers.forEach((m)=>{
+      m.checkedIn = true;
+    });
+
+    registration.entryTime = new Date();
+
+    await registration.save();
+
+    res.json({
+      success:true,
+      teamName: registration.teamName,
+      members: registration.teamMembers.map(m => m.fullName)
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.json({
+      success:false
+    });
+
+  }
+});
+
+router.post("/sync-entry", async (req, res) => {
+
+  try {
+
+    const { scans } = req.body;
+
+    let synced = [];
+
+    for (const registrationId of scans) {
+
+      const registration = await Registration.findOne({ registrationId });
+
+      if (!registration) continue;
+
+      if (!registration.entryTime) {
+
+        registration.teamMembers.forEach(m => {
+          m.checkedIn = true;
+        });
+
+        registration.entryTime = new Date();
+
+        await registration.save();
+
+        synced.push(registrationId);
+
+      }
+
+    }
+
+    res.json({
+      success:true,
+      synced
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      success:false
+    });
+
+  }
+
 });
 
 module.exports = router;

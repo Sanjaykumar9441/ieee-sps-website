@@ -28,7 +28,7 @@ const departmentOptions = [
   { value: "EEE", label: "Electrical & Electronics Engineering" },
   { value: "MECH", label: "Mechanical Engineering" },
   { value: "CIVIL", label: "Civil Engineering" },
-  { value: "PETRO", label: "petroleum Engineering" },
+  { value: "PETRO", label: "Petroleum Engineering" },
   { value: "MIN", label: "Mining Engineering" },
   { value: "OTHER", label: "Other Department" },
 ];
@@ -479,124 +479,167 @@ const Register = () => {
   };
 
   const downloadReceipt = (registrationId: string) => {
-    const doc = new jsPDF();
 
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
+  const doc = new jsPDF();
 
-    const now = new Date();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
 
-    const date = now.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
+  const now = new Date();
+
+  const date = now.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric"
+  });
+
+  const time = now.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  /* BORDER */
+
+  doc.setDrawColor(0,180,255);
+  doc.setLineWidth(1.5);
+  doc.rect(10,10,pageWidth-20,pageHeight-20);
+
+  /* HEADER */
+
+  const logo = new Image();
+  logo.src = "/titlelogo.png";
+
+  logo.onload = () => {
+
+    doc.addImage(logo,"PNG",pageWidth/2-30,18,60,25);
+
+    doc.setFontSize(20);
+    doc.setTextColor(0,180,255);
+
+    doc.text("Arduino Days 2026",pageWidth/2,55,{align:"center"});
+
+    doc.setFontSize(12);
+    doc.setTextColor(120);
+
+    doc.text("Official Registration Receipt",pageWidth/2,62,{align:"center"});
+
+    /* DIVIDER */
+
+    doc.setDrawColor(200);
+    doc.line(20,70,pageWidth-20,70);
+
+    /* DETAILS BOX */
+
+    doc.setFillColor(240,248,255);
+    doc.roundedRect(20,80,pageWidth-40,70,4,4,"F");
+
+    doc.setTextColor(0);
+    doc.setFontSize(11);
+
+    let y = 90;
+
+    const details = [
+      ["Registration ID", registrationId],
+      ["Team Name", teamName],
+      ["Event", event === "combo" ? "Skill Forze + Buildathon" : "Buildathon"],
+      ["Team Size", teamSize],
+      ["Amount Paid", `₹${totalAmount}`],
+      ["Transaction ID", transactionId],
+      ["Date", date],
+      ["Time", time]
+    ];
+
+    details.forEach(([label,value])=>{
+      doc.setFont("helvetica","bold");
+      doc.text(`${label}:`,30,y);
+
+      doc.setFont("helvetica","normal");
+      doc.text(String(value),70,y);
+
+      y+=8;
     });
 
-    const time = now.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    /* TEAM MEMBERS TABLE */
 
-    // BORDER
-    doc.setDrawColor(0, 180, 255);
-    doc.setLineWidth(1.2);
-    doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
+doc.setFontSize(14);
+doc.setTextColor(0,180,255);
+doc.text("Team Members", pageWidth / 2, 165, { align: "center" });
 
-    // LOGO
-    const logo = new Image();
-    logo.src = "/titlelogo.png";
+let startY = 175;
+const col1 = 30;
+const col2 = 50;
+const col3 = 120;
+const rowHeight = 10;
 
-    logo.onload = () => {
-      doc.addImage(logo, "PNG", pageWidth / 2 - 30, 18, 60, 25);
+/* HEADER */
 
-      // TITLE
-      doc.setFontSize(18);
-      doc.setTextColor(0, 180, 255);
+doc.setFillColor(0,180,255);
+doc.rect(col1, startY, pageWidth - 60, rowHeight, "F");
 
-      doc.text("Arduino Days 2026 Registration Receipt", pageWidth / 2, 55, {
-        align: "center",
-      });
+doc.setTextColor(255);
+doc.setFontSize(11);
+doc.setFont("helvetica","bold");
 
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(12);
+doc.text("No", col1 + 5, startY + 7);
+doc.text("Name", col2 + 5, startY + 7);
+doc.text("Roll Number", col3 + 5, startY + 7);
 
-      // DETAILS
-      let y = 75;
+startY += rowHeight;
 
-      doc.text(`Registration ID : ${registrationId}`, 20, y);
-      y += 10;
+/* ROWS */
 
-      doc.text(`Team Name : ${teamName}`, 20, y);
-      y += 10;
+doc.setFont("helvetica","normal");
 
-      doc.text(
-        `Event : ${
-          event === "combo" ? "Skill Forze + Buildathon" : "Buildathon"
-        }`,
-        20,
-        y,
-      );
+members.forEach((member, index) => {
 
-      y += 10;
+  doc.setTextColor(0);
 
-      doc.text(`Team Size : ${teamSize}`, 20, y);
-      y += 10;
+  doc.rect(col1, startY, pageWidth - 60, rowHeight);
 
-      doc.text(`Amount Paid : ₹${totalAmount}`, 20, y);
-      y += 10;
+  doc.text(String(index + 1), col1 + 5, startY + 7);
+  doc.text(member.fullName, col2 + 5, startY + 7);
+  doc.text(member.rollNo, col3 + 5, startY + 7);
 
-      doc.text(`Transaction ID : ${transactionId}`, 20, y);
-      y += 10;
+  startY += rowHeight;
 
-      doc.text(`Date : ${date}`, 20, y);
-      y += 10;
+});
 
-      doc.text(`Time : ${time}`, 20, y);
+    /* STATUS */
 
-      // MEMBERS SECTION
-      y += 20;
+    doc.setFontSize(12);
+    doc.setTextColor(200,0,0);
 
-      doc.setFontSize(14);
-      doc.setTextColor(0, 180, 255);
+    doc.text(
+      "Status : Payment Submitted - Verification Pending",
+      pageWidth/2,
+      startY+10,
+      {align:"center"}
+    );
 
-      doc.text("Team Members", 20, y);
+    /* FOOTER */
 
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    doc.setTextColor(120);
 
-      y += 10;
+    doc.text(
+      "IEEE SPS Student Branch Chapter",
+      pageWidth/2,
+      pageHeight-25,
+      {align:"center"}
+    );
 
-      members.forEach((member, index) => {
-        doc.text(`${index + 1}. ${member.fullName} - ${member.rollNo}`, 25, y);
+    doc.text(
+      "Aditya University, Surampalem",
+      pageWidth/2,
+      pageHeight-18,
+      {align:"center"}
+    );
 
-        y += 8;
-      });
+    doc.save(`${teamName}_ArduinoDays_Receipt.pdf`);
 
-      // STATUS
-      y += 10;
-
-      doc.setTextColor(200, 0, 0);
-
-      doc.text("Status : Payment Submitted - Verification Pending", 20, y);
-
-      // FOOTER
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(10);
-
-      doc.text(
-        "IEEE SPS Student Branch Chapter",
-        pageWidth / 2,
-        pageHeight - 25,
-        { align: "center" },
-      );
-
-      doc.text("Aditya University", pageWidth / 2, pageHeight - 18, {
-        align: "center",
-      });
-
-      doc.save(`${teamName}_ArduinoDays_Receipt.pdf`);
-    };
   };
+
+};
 
   if (checkingStatus) {
     return (
@@ -780,21 +823,18 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
 
                       {/* If OTHER selected → show input */}
                       {member.department === "OTHER" && (
-                        <input
-                          type="text"
-                          placeholder="Enter your Department"
-                          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+  <input
+    type="text"
+    placeholder="Enter your Department"
+    className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
-                          onChange={(e) =>
-                            handleMemberChange(
-                              index,
-                              "department",
-                              e.target.value.toUpperCase(),
-                            )
-                          }
-                          onKeyDown={handleEnterNext}
-                        />
-                      )}
+    value={member.department === "OTHER" ? "" : member.department}
+    onChange={(e) =>
+      handleMemberChange(index, "department", e.target.value.toUpperCase())
+    }
+    onKeyDown={handleEnterNext}
+  />
+)}
                     </div>
 
                     <select

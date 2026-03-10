@@ -129,11 +129,28 @@ const ArduinoDays = () => {
 
   const sponsors = [
     {
-      name: "Arkance",
+      name: "Arkance In Pvt Ltd, Hyderabad",
       logo: "/arkance.jpg",
       description:
         "Arkance is a global technology partner providing digital transformation solutions for the architecture, engineering, and construction industries.",
       website: "https://www.arkance.world",
+    },
+    {
+      name: "Silicon Touch Technologies, Vijayawada",
+      logo: "/OIP.jpg",
+      description:
+        "Silicon Touch Technologies, Vijayawada is a technology partner delivering innovative software solutions and digital services that help organizations enhance efficiency and drive technological growth.",
+      website: "https://www.sttmani.com/home",
+    },
+    {
+      name: "Arihant Electronics, Kakinada",
+      description:
+        "Arihant Electronics is a premier technical partner in Kakinada, providing high-quality electronic components and industrial solutions for student projects, research, and engineering sectors.",
+    },
+    {
+      name: "Agripeuners, Visakhapatnam",
+      description:
+        "Agripeuners, Visakhapatnam is an organization promoting agricultural innovation and entrepreneurship by connecting technology, research, and sustainable farming practices.",
     },
   ];
 
