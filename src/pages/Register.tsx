@@ -137,7 +137,7 @@ const Register = () => {
 
   const handleShortcut = (e: KeyboardEvent) => {
 
-    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "t") {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "a") {
       e.preventDefault();
       autoFillTestData();
       alert("Test data auto-filled 🚀");
@@ -149,7 +149,7 @@ const Register = () => {
 
   return () => window.removeEventListener("keydown", handleShortcut);
 
-}, [members]);
+}, []);
   const handleAccommodationToggle = (index: number) => {
     setAccommodationMembers((prev) =>
       prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index],
