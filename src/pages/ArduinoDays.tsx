@@ -299,7 +299,20 @@ const ArduinoDays = () => {
                       className="h-10 md:h-14 object-contain"
                     />
                   </div>
+                  {/* Department + Association Text */}
+                  <div className="text-center space-y-2 mt-6">
+                    <p className="text-lg md:text-xl font-semibold text-gray-200">
+                      Department of Electronics and Communication Engineering
+                    </p>
 
+                    <p className="text-sm md:text-base text-gray-400">
+                      In Association with IEEE SPS Student Branch Chapter
+                    </p>
+
+                    <p className="text-base md:text-lg text-cyan-400 font-semibold tracking-wider">
+                      Presents
+                    </p>
+                  </div>
                   {/* Title */}
                   <div className="space-y-6">
                     <img

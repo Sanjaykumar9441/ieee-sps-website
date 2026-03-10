@@ -19,6 +19,20 @@ type Member = {
   selectedCollege: string; // AUS / ACET / OTHER
 };
 
+const departmentOptions = [
+  { value: "ECE", label: "Electronics & Communication Engineering" },
+  { value: "CSE", label: "Computer Science & Engineering (CSE)" },
+  { value: "CSE-DS", label: "CSE (Data Science)" },
+  { value: "AIML", label: "Artificial Intelligence & Machine Learning" },
+  { value: "IT", label: "Information Technology" },
+  { value: "EEE", label: "Electrical & Electronics Engineering" },
+  { value: "MECH", label: "Mechanical Engineering" },
+  { value: "CIVIL", label: "Civil Engineering" },
+  { value: "PETRO", label: "petroleum Engineering" },
+  { value: "MIN", label: "Mining Engineering" },
+  { value: "OTHER", label: "Other Department" },
+];
+
 const createEmptyMember = (): Member => ({
   fullName: "",
   rollNo: "",
@@ -76,7 +90,9 @@ const StepIndicator = ({
             <div
               className={`w-10 h-10 flex items-center justify-center rounded-full font-bold
               ${
-                active ? "bg-cyan-400 text-black" : "bg-gray-700 text-gray-300"
+                active
+                  ? "bg-cyan-400 text-black shadow-[0_0_10px_rgba(0,255,255,0.7)]"
+                  : "bg-gray-700 text-gray-300"
               }`}
             >
               {s}
@@ -104,6 +120,7 @@ const Register = () => {
   const [registrationId, setRegistrationId] = useState("");
   const [honeypot, setHoneypot] = useState("");
   const [registrationClosed, setRegistrationClosed] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
   const [searchParams] = useSearchParams();
   const event = searchParams.get("event") || "combo";
   const [loading, setLoading] = useState(false);
@@ -134,44 +151,42 @@ const Register = () => {
     });
   }, [showSummary, showPayment]);
   useEffect(() => {
+    const handleShortcut = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        autoFillTestData();
+        alert("Test data auto-filled 🚀");
+      }
+    };
 
-  const handleShortcut = (e: KeyboardEvent) => {
+    window.addEventListener("keydown", handleShortcut);
 
-    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "a") {
-      e.preventDefault();
-      autoFillTestData();
-      alert("Test data auto-filled 🚀");
-    }
-
-  };
-
-  window.addEventListener("keydown", handleShortcut);
-
-  return () => window.removeEventListener("keydown", handleShortcut);
-
-}, []);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
   const handleAccommodationToggle = (index: number) => {
     setAccommodationMembers((prev) =>
       prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index],
     );
   };
   useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const res = await axios.get(
+          "https://ieee-sps-website.onrender.com/events/registration-status",
+        );
 
-  const checkStatus = async () => {
+        if (!res.data.registrationOpen) {
+          setRegistrationClosed(true);
+        }
+      } catch (error) {
+        console.error("Status check failed");
+      } finally {
+        setCheckingStatus(false);
+      }
+    };
 
-    const res = await axios.get(
-      "https://ieee-sps-website.onrender.com/events/registration-status"
-    );
-
-    if (!res.data.registrationOpen) {
-      setRegistrationClosed(true);
-    }
-
-  };
-
-  checkStatus();
-
-}, []);
+    checkStatus();
+  }, []);
   const handleEnterNext = (
     e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -425,30 +440,31 @@ const Register = () => {
   const [transactionId, setTransactionId] = useState("");
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const autoFillTestData = () => {
+    const testMembers = members.map((_, i) => ({
+      fullName: `TEST MEMBER ${i + 1}`,
+      rollNo: `TEST${Math.floor(1000 + Math.random() * 9000)}`,
+      email: `test${i + 1}@mail.com`,
+      phone: `9${Math.floor(100000000 + Math.random() * 900000000)}`,
+      department: "ECE",
+      year: "3rd",
+      college: "Aditya University",
+      collegeCity: "Surampalem",
+      collegePincode: "533437",
+      collegeDistrict: "East Godavari",
+      collegeState: "Andhra Pradesh",
+      selectedCollege: "AUS",
+    }));
 
-  const testMembers = members.map((_, i) => ({
-    fullName: `TEST MEMBER ${i + 1}`,
-    rollNo: `TEST${Math.floor(1000 + Math.random() * 9000)}`,
-    email: `test${i + 1}@mail.com`,
-    phone: `9${Math.floor(100000000 + Math.random() * 900000000)}`,
-    department: "ECE",
-    year: "3rd",
-    college: "Aditya University",
-    collegeCity: "Surampalem",
-    collegePincode: "533437",
-    collegeDistrict: "East Godavari",
-    collegeState: "Andhra Pradesh",
-    selectedCollege: "AUS"
-  }));
+    setTeamName(`TEST_TEAM_${Math.floor(Math.random() * 1000)}`);
 
-  setTeamName(`TEST_TEAM_${Math.floor(Math.random() * 1000)}`);
+    setMembers(testMembers);
 
-  setMembers(testMembers);
+    setTransactionId(
+      `${Math.floor(100000000000 + Math.random() * 900000000000)}`,
+    );
 
-  setTransactionId(`${Math.floor(100000000000 + Math.random() * 900000000000)}`);
-
-  setScreenshot(new File(["test"], "test.png", { type: "image/png" }));
-};
+    setScreenshot(new File(["test"], "test.png", { type: "image/png" }));
+  };
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
   const successRef = useRef<HTMLDivElement | null>(null);
 
@@ -582,16 +598,34 @@ const Register = () => {
     };
   };
 
-  return (
-    <div className="min-h-screen relative text-white px-4 md:px-6 py-12 overflow-x-hidden">
-      {registrationClosed && (
-        <div className="text-center text-red-400 text-xl mt-10 mb-6">
-          🚫 Registrations Closed
-          <p className="text-gray-400 mt-2">
-            Thank you for your interest. Registrations will reopen soon.
+  if (checkingStatus) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-cyan-400">
+        Checking registration status...
+      </div>
+    );
+  }
+
+  if (registrationClosed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-center">
+        <div className="text-center mt-20">
+          <h1 className="text-4xl font-bold text-red-500 leading-relaxed">
+            🚫 Arduino Days 2026 Registrations Closed
+            <br />
+            Stay tuned for future IEEE SPS events.
+          </h1>
+
+          <p className="text-gray-400 mt-4">
+            Thank you for your interest. Registrations are currently closed.
           </p>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen relative text-white px-4 md:px-6 py-12 overflow-x-hidden">
       <BackgroundImage />
 
       <div className="relative z-10 max-w-4xl mx-auto w-full">
@@ -601,12 +635,12 @@ const Register = () => {
         <form
           autoComplete="off"
           onSubmit={(e) => e.preventDefault()}
-          className="relative z-10 max-w-4xl mx-auto w-full backdrop-blur-xl bg-black/50 border border-cyan-400/20 rounded-2xl p-8 shadow-[0_10px_40px_rgba(0,0,0,0.6)]"
+          className="relative z-10 max-w-4xl mx-auto w-full backdrop-blur-xl bg-black/50 border border-cyan-400/20 rounded-2xl p-5 md:p-8 shadow-[0_10px_40px_rgba(0,0,0,0.6)]"
         >
           {!showSummary && !showPayment && (
             <>
               <h1
-                className="text-3xl md:text-4xl font-bold mb-8 text-center 
+                className="text-2xl md:text-4xl font-bold mb-8 text-center 
 bg-gradient-to-r from-cyan-400 via-blue-400 to-green-400 
 bg-clip-text text-transparent"
               >
@@ -661,7 +695,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 <div
                   key={index}
                   ref={(el) => (memberRefs.current[index] = el)}
-                  className="mb-10 p-6 border border-cyan-400/20 rounded-xl bg-black/40 backdrop-blur-md"
+                  className="mb-10 p-5 md:p-6 border border-cyan-400/20 rounded-xl bg-gradient-to-br from-black/60 to-[#07111b] backdrop-blur-md shadow-lg"
                 >
                   <h2 className="text-xl font-semibold mb-4 text-cyan-300">
                     Member {index + 1}
@@ -720,17 +754,48 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       onKeyDown={handleEnterNext}
                     />
 
-                    <input
-                      type="text"
-                      placeholder="Department"
-                      className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                    {/* Department */}
+                    <div className="flex flex-col gap-2">
+                      <select
+                        className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
-                      value={member.department}
-                      onChange={(e) =>
-                        handleMemberChange(index, "department", e.target.value)
-                      }
-                      onKeyDown={handleEnterNext}
-                    />
+                        value={member.department}
+                        onChange={(e) =>
+                          handleMemberChange(
+                            index,
+                            "department",
+                            e.target.value,
+                          )
+                        }
+                        onKeyDown={handleEnterNext}
+                      >
+                        <option value="">Select Department</option>
+
+                        {departmentOptions.map((dept) => (
+                          <option key={dept.value} value={dept.value}>
+                            {dept.label}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* If OTHER selected → show input */}
+                      {member.department === "OTHER" && (
+                        <input
+                          type="text"
+                          placeholder="Enter your Department"
+                          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
+                          onChange={(e) =>
+                            handleMemberChange(
+                              index,
+                              "department",
+                              e.target.value.toUpperCase(),
+                            )
+                          }
+                          onKeyDown={handleEnterNext}
+                        />
+                      )}
+                    </div>
 
                     <select
                       className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
@@ -908,7 +973,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
               {members.map((member, index) => (
                 <div
                   key={index}
-                  className="mb-6 p-4 border border-gray-600 rounded"
+                  className="mb-6 p-5 border border-gray-600 rounded-lg bg-black/40"
                 >
                   <p>
                     <strong>Member {index + 1}</strong>
@@ -964,7 +1029,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 )}
               </div>
 
-              <div className="flex gap-4 mt-6">
+              <div className="flex flex-col md:flex-row gap-4 mt-6">
                 <button
                   className="flex-1 bg-red-400 text-black font-bold py-3 rounded"
                   onClick={() => setShowSummary(false)}
@@ -1004,7 +1069,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 </button>
               </div>
 
-              <div className="mt-10 p-8 border border-green-400/30 rounded-lg">
+              <div className="mt-10 p-5 md:p-8 border border-green-400/30 rounded-lg">
                 <h2 className="text-2xl font-bold text-green-400 mb-6 text-center">
                   Payment Section
                 </h2>
@@ -1045,7 +1110,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
 
                 {/* Payment Card */}
                 <div
-                  className="mb-8 p-8 rounded-2xl border border-cyan-400/30 
+                  className="mb-8 p-5 md:p-8 rounded-2xl border border-cyan-400/30 
 bg-gradient-to-br from-[#07111b] to-[#02060c]
 shadow-[0_10px_40px_rgba(0,0,0,0.6)]
 backdrop-blur-md"
@@ -1056,11 +1121,11 @@ backdrop-blur-md"
 
                   <div className="space-y-4">
                     {/* Account Name */}
-                    <div className="flex justify-between items-center bg-black/40 p-3 rounded">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 bg-black/40 p-3 rounded">
                       <span>Account Name</span>
 
                       <div className="flex items-center gap-3">
-                        <span className="text-cyan-300">
+                        <span className="text-cyan-300 break-words">
                           ADITYA UNIVERSITY / ADITYA ACADEMY
                         </span>
 
@@ -1071,7 +1136,7 @@ backdrop-blur-md"
                               "accountName",
                             )
                           }
-                          className="text-xs px-3 py-1 bg-cyan-400 text-black rounded hover:scale-105"
+                          className="text-xs md:text-sm px-2 md:px-3 py-1 bg-cyan-400 text-black rounded"
                         >
                           {copiedField === "accountName" ? "✓ copied" : "Copy"}
                         </button>
@@ -1079,7 +1144,7 @@ backdrop-blur-md"
                     </div>
 
                     {/* Account Number */}
-                    <div className="flex justify-between items-center bg-black/40 p-3 rounded">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 bg-black/40 p-3 rounded">
                       <span>Account Number</span>
 
                       <div className="flex items-center gap-3">
@@ -1091,7 +1156,7 @@ backdrop-blur-md"
                           onClick={() =>
                             copyToClipboard("120028094544", "accountNumber")
                           }
-                          className="text-xs px-3 py-1 bg-cyan-400 text-black rounded"
+                          className="text-xs md:text-sm px-2 md:px-3 py-1 bg-cyan-400 text-black rounded"
                         >
                           {copiedField === "accountNumber"
                             ? "Copied ✓"
@@ -1101,7 +1166,7 @@ backdrop-blur-md"
                     </div>
 
                     {/* IFSC */}
-                    <div className="flex justify-between items-center bg-black/40 p-3 rounded">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 bg-black/40 p-3 rounded">
                       <span>IFSC Code</span>
 
                       <div className="flex items-center gap-3">
@@ -1111,7 +1176,7 @@ backdrop-blur-md"
 
                         <button
                           onClick={() => copyToClipboard("CNRB0013268", "ifsc")}
-                          className="text-xs px-3 py-1 bg-cyan-400 text-black rounded"
+                          className="text-xs md:text-sm px-2 md:px-3 py-1 bg-cyan-400 text-black rounded"
                         >
                           {copiedField === "ifsc" ? "Copied ✓" : "Copy"}
                         </button>
@@ -1119,7 +1184,7 @@ backdrop-blur-md"
                     </div>
 
                     {/* Bank */}
-                    <div className="flex justify-between items-center bg-black/40 p-3 rounded">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 bg-black/40 p-3 rounded">
                       <span>Bank Name</span>
 
                       <div className="flex items-center gap-3">
@@ -1127,7 +1192,7 @@ backdrop-blur-md"
 
                         <button
                           onClick={() => copyToClipboard("CANARA BANK", "bank")}
-                          className="text-xs px-3 py-1 bg-cyan-400 text-black rounded"
+                          className="text-xs md:text-sm px-2 md:px-3 py-1 bg-cyan-400 text-black rounded"
                         >
                           {copiedField === "bank" ? "Copied ✓" : "Copy"}
                         </button>
@@ -1135,7 +1200,7 @@ backdrop-blur-md"
                     </div>
 
                     {/* Branch */}
-                    <div className="flex justify-between items-center bg-black/40 p-3 rounded">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 bg-black/40 p-3 rounded">
                       <span>Branch</span>
 
                       <div className="flex items-center gap-3">
@@ -1145,7 +1210,7 @@ backdrop-blur-md"
                           onClick={() =>
                             copyToClipboard("Surampalem", "branch")
                           }
-                          className="text-xs px-3 py-1 bg-cyan-400 text-black rounded"
+                          className="text-xs md:text-sm px-2 md:px-3 py-1 bg-cyan-400 text-black rounded"
                         >
                           {copiedField === "branch" ? "Copied ✓" : "Copy"}
                         </button>
