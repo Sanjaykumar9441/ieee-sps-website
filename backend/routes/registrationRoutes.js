@@ -529,8 +529,8 @@ router.post("/send-confirmation-email", async (req, res) => {
 </head>
 
 <body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,sans-serif;">
-<span style="display:none;visibility:hidden;mso-hide:all;">
-Arduino Days 2026 – Registration Confirmed (Event Pass Attached)
+<span style="display:none;max-height:0px;overflow:hidden;">
+Arduino Days 2026 – Registration Confirmed. Your event pass is attached.
 </span>
 
 <div style="padding:30px;">
@@ -552,6 +552,7 @@ Arduino Days 2026 – Registration Confirmed (Event Pass Attached)
 <b>Event:</b> Skill Forze Workshop + Buildathon<br>
 <b>Registration ID:</b> ${registration.registrationId}<br>
 <b>Team Size:</b> ${registration.teamSize} Members
+<br><b>Confirmed On:</b> ${new Date().toLocaleString("en-IN")}
 </p>
 
 <h3>Event Schedule</h3>
@@ -621,6 +622,9 @@ Aditya University, Surampalem
 </head>
 
 <body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,sans-serif;">
+<span style="display:none;max-height:0px;overflow:hidden;">
+Arduino Days 2026 – Registration Confirmed. Your event pass is attached.
+</span>
 
 <div style="padding:30px;">
 
@@ -641,6 +645,7 @@ Aditya University, Surampalem
 <b>Event:</b> Buildathon Hackathon<br>
 <b>Registration ID:</b> ${registration.registrationId}<br>
 <b>Team Size:</b> ${registration.teamSize} Members
+<br><b>Confirmed On:</b> ${new Date().toLocaleString("en-IN")}
 </p>
 
 <h3>Event Details</h3>

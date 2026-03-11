@@ -1467,7 +1467,9 @@ const Dashboard = () => {
                     if (registrationFilter === "all") return true;
 
                     if (registrationFilter === "startup") {
-                      return (reg.startupAnswer || "").toLowerCase() === "yes";
+                      return (
+                        (reg.startup?.answer || "").toLowerCase() === "yes"
+                      );
                     }
 
                     if (registrationFilter === "hostel") {
@@ -1492,7 +1494,7 @@ const Dashboard = () => {
 
                       if (registrationFilter === "startup") {
                         return (
-                          (reg.startupAnswer || "").toLowerCase() === "yes"
+                          (reg.startup?.answer || "").toLowerCase() === "yes"
                         );
                       }
 
@@ -1537,7 +1539,8 @@ const Dashboard = () => {
                         <p>
                           <b>Event:</b> {reg.eventName}
                         </p>
-                        {(reg.startupAnswer || "").toLowerCase() === "yes" && (
+                        {(reg.startup?.answer || "").toLowerCase() ===
+                          "yes" && (
                           <p className="text-pink-400 text-sm font-semibold">
                             Startup Team
                           </p>
@@ -1625,7 +1628,7 @@ const Dashboard = () => {
 
                             if (registrationFilter === "startup") {
                               return (
-                                (reg.startupAnswer || "").toLowerCase() ===
+                                (reg.startup?.answer || "").toLowerCase() ===
                                 "yes"
                               );
                             }
@@ -1779,13 +1782,13 @@ const Dashboard = () => {
                           ? "Yes"
                           : "No"}
                       </p>
-                      {selectedFullDetails.startupAnswer === "yes" && (
+                      {selectedFullDetails.startup?.answer === "yes" && (
                         <div className="mt-3 p-3 bg-zinc-800 rounded border border-cyan-500/20">
                           <p className="text-cyan-400 font-semibold">
                             Startup Idea
                           </p>
                           <p className="mt-1 text-gray-300">
-                            {selectedFullDetails.startupIdea}
+                            {selectedFullDetails.startup?.idea}
                           </p>
                         </div>
                       )}
