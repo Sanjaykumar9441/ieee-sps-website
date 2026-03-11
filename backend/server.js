@@ -27,16 +27,13 @@ const uploadDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
 }
-
 async function setTelegramCommands() {
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
 
     await axios.post(`https://api.telegram.org/bot${token}/setMyCommands`, {
       commands: [
-        { command: "stats", description: "Show Arduino Days statistics" },
-        { command: "open", description: "Open registrations" },
-        { command: "close", description: "Close registrations" },
+        { command: "stats", description: "Show Arduino Days statistics" }
       ],
       scope: { type: "all_private_chats" },
     });
