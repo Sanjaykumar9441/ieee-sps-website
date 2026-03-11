@@ -691,54 +691,71 @@ router.post("/telegram-webhook", async (req, res) => {
   if (data.message && data.message.text) {
     const command = data.message.text;
     const chatId = data.message.chat.id;
+
     if (chatId.toString() !== process.env.TELEGRAM_CHAT_ID) {
       return res.sendStatus(200);
     }
+
+    // OPEN REGISTRATIONS
     if (command === "/open") {
-      const event = await Event.findOne({ eventType: "combo" });
-
-      if (!event) return res.sendStatus(200);
-
-      event.registrationOpen = true;
-      await event.save();
+      await Event.updateMany(
+        { eventType: { $in: ["combo", "buildathon"] } },
+        { $set: { registrationOpen: true } },
+      );
 
       await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
         chat_id: chatId,
         text: "🟢 Registrations are now OPEN",
       });
+
+      return res.sendStatus(200);
     }
+
+    // CLOSE REGISTRATIONS
     if (command === "/close") {
-      const event = await Event.findOne({ eventType: "combo" });
-
-      if (!event) return res.sendStatus(200);
-
-      event.registrationOpen = false;
-      await event.save();
+      await Event.updateMany(
+        { eventType: { $in: ["combo", "buildathon"] } },
+        { $set: { registrationOpen: false } },
+      );
 
       await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
         chat_id: chatId,
         text: "🔴 Registrations are now CLOSED",
       });
+
+      return res.sendStatus(200);
     }
 
-    if (command === "/stats") {
-      const totalTeams = await Registration.countDocuments();
+    // STATS
+   if (command === "/stats") {
 
-      const totalParticipants = await Registration.aggregate([
-        { $group: { _id: null, total: { $sum: "$teamSize" } } },
-      ]);
+  // Total teams from both events
+  const totalTeams = await Registration.countDocuments({
+    eventType: { $in: ["combo", "buildathon"] }
+  });
 
-      const revenue = await Registration.aggregate([
-        { $group: { _id: null, total: { $sum: "$expectedAmount" } } },
-      ]);
+  // Total participants
+  const totalParticipants = await Registration.aggregate([
+    { $match: { eventType: { $in: ["combo", "buildathon"] } } },
+    { $group: { _id: null, total: { $sum: "$teamSize" } } },
+  ]);
 
-      // Get registration status
-      const event = await Event.findOne({ eventType: "combo" });
-      const registrationStatus = event?.registrationOpen
-        ? "🟢 OPEN"
-        : "🔴 CLOSED";
+  // Total revenue
+  const revenue = await Registration.aggregate([
+    { $match: { eventType: { $in: ["combo", "buildathon"] } } },
+    { $group: { _id: null, total: { $sum: "$expectedAmount" } } },
+  ]);
 
-      const statsMessage = `📊 Arduino Days Live Stats
+  // Check registration status of both events
+  const events = await Event.find({
+    eventType: { $in: ["combo", "buildathon"] }
+  });
+
+  const registrationStatus = events.some(e => e.registrationOpen)
+    ? "🟢 OPEN"
+    : "🔴 CLOSED";
+
+  const statsMessage = `📊 Arduino Days Live Stats
 
 👥 Teams: ${totalTeams}
 
@@ -749,14 +766,14 @@ router.post("/telegram-webhook", async (req, res) => {
 📥 Registrations: ${registrationStatus}
 `;
 
-      await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-        chat_id: chatId,
-        text: statsMessage,
-      });
-    }
-    return res.sendStatus(200);
-  }
+  await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+    chat_id: chatId,
+    text: statsMessage,
+  });
 
+  return res.sendStatus(200);
+}
+  }
   /* =========================
      TELEGRAM BUTTON ACTIONS
   ========================= */
