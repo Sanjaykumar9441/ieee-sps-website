@@ -1430,7 +1430,7 @@ const Dashboard = () => {
                         : "bg-zinc-800"
                     }`}
                   >
-                    🚀 Startups
+                    Startups
                   </button>
                 </div>
               </div>
@@ -1463,11 +1463,25 @@ const Dashboard = () => {
               <p className="mb-4 text-yellow-400 font-semibold">
                 Total:{" "}
                 {
-                  registrations.filter((reg) =>
-                    registrationFilter === "all"
-                      ? true
-                      : reg.eventType === registrationFilter,
-                  ).length
+                  registrations.filter((reg) => {
+                    if (registrationFilter === "all") return true;
+
+                    if (registrationFilter === "startup") {
+                      return (
+                        (reg.startup?.answer || "").toLowerCase() === "yes"
+                      );
+                    }
+
+                    if (registrationFilter === "hostel") {
+                      return (
+                        reg.accommodationRequired === true &&
+                        reg.hostelMembers &&
+                        reg.hostelMembers.length > 0
+                      );
+                    }
+
+                    return reg.eventType === registrationFilter;
+                  }).length
                 }
               </p>
               <h2 className="text-2xl text-cyan-400 mb-6">Registrations</h2>
@@ -1479,7 +1493,9 @@ const Dashboard = () => {
                       if (registrationFilter === "all") return true;
 
                       if (registrationFilter === "startup") {
-                        return reg.startup?.answer === "yes";
+                        return (
+                          (reg.startup?.answer || "").toLowerCase() === "yes"
+                        );
                       }
 
                       if (registrationFilter === "hostel") {
@@ -1525,7 +1541,7 @@ const Dashboard = () => {
                         </p>
                         {reg.startup?.answer === "yes" && (
                           <p className="text-pink-400 text-sm font-semibold">
-                            🚀 Startup Team
+                            Startup Team
                           </p>
                         )}
                         {reg.payment?.amountMismatch && (
@@ -1761,7 +1777,7 @@ const Dashboard = () => {
                       {selectedFullDetails.startup?.answer === "yes" && (
                         <div className="mt-3 p-3 bg-zinc-800 rounded border border-cyan-500/20">
                           <p className="text-cyan-400 font-semibold">
-                            🚀 Startup Idea
+                            Startup Idea
                           </p>
                           <p className="mt-1 text-gray-300">
                             {selectedFullDetails.startup.idea}

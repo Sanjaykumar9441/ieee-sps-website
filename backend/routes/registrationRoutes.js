@@ -267,63 +267,33 @@ const generateReceiptPDF = async (registration) => {
     doc.on("end", () => resolve(Buffer.concat(buffers)));
 
     const pageWidth = doc.page.width;
-    const themeColor = "#00979D"; // Arduino Teal
-    const secondaryColor = "#00AEEF"; // Sky Blue for Table Header
+    const secondaryColor = "#00AEEF"; // Sky Blue from screenshot
 
-    // 1. TOP COLORED BORDER
+    // 1. FRAME BORDER
     doc.rect(20, 20, pageWidth - 40, 10).fill(secondaryColor);
-    // SIDE BORDERS (Matching the image frame)
     doc.rect(20, 30, 2, doc.page.height - 50).fill(secondaryColor);
     doc.rect(pageWidth - 22, 30, 2, doc.page.height - 50).fill(secondaryColor);
     doc.rect(20, doc.page.height - 30, pageWidth - 40, 2).fill(secondaryColor);
 
     // 2. LOGO & HEADER
     try {
-      doc.image(
-        path.join(__dirname, "../public/AD2026.png"),
-        pageWidth / 2 - 45,
-        40,
-        { width: 90 },
-      );
-    } catch (e) {
-      console.log("Logo path error");
-    }
+      doc.image(path.join(__dirname, "../public/AD2026.png"), pageWidth / 2 - 45, 40, { width: 90 });
+    } catch (e) { console.log("Logo path error"); }
 
     doc.moveDown(5);
-    doc
-      .fontSize(22)
-      .fillColor(secondaryColor)
-      .font("Helvetica-Bold")
-      .text("Arduino Days 2026", { align: "center" });
-    doc
-      .fontSize(10)
-      .fillColor("gray")
-      .font("Helvetica")
-      .text("Official Registration Receipt", { align: "center" });
-
+    doc.fontSize(22).fillColor(secondaryColor).font("Helvetica-Bold").text("Arduino Days 2026", { align: "center" });
+    doc.fontSize(10).fillColor("gray").font("Helvetica").text("Official Registration Receipt", { align: "center" });
+    
     doc.moveDown(0.5);
-    doc
-      .moveTo(100, doc.y)
-      .lineTo(pageWidth - 100, doc.y)
-      .lineWidth(0.5)
-      .strokeColor("#ccc")
-      .stroke();
+    doc.moveTo(100, doc.y).lineTo(pageWidth - 100, doc.y).lineWidth(0.5).strokeColor("#ccc").stroke();
     doc.moveDown(1.5);
 
-    // 3. ROUNDED DETAILS BOX
+    // 3. DETAILS BOX
     const boxX = 60;
-    const boxWidth = pageWidth - 120;
-    const labelX = boxX + 25;
-    const valueX = boxX + 150;
-
-    // Draw the light blue background box
-    doc
-      .roundedRect(boxX, doc.y, boxWidth, 160, 10)
-      .fillOpacity(0.05)
-      .fill(secondaryColor)
-      .fillOpacity(1);
-
-    let currentY = doc.y + 20;
+    const boxTopY = doc.y;
+    doc.roundedRect(boxX, boxTopY, pageWidth - 120, 145, 10).fillOpacity(0.05).fill(secondaryColor).fillOpacity(1);
+    
+    let currentY = boxTopY + 15;
     const createdDate = new Date(registration.createdAt);
     const details = [
       ["Registration ID:", registration.registrationId],
@@ -332,97 +302,55 @@ const generateReceiptPDF = async (registration) => {
       ["Team Size:", registration.teamSize.toString()],
       ["Amount Paid:", `Rs. ${registration.expectedAmount} /-`],
       ["Transaction ID:", registration.payment.userTransactionId],
-      [
-        "Date:",
-        createdDate.toLocaleDateString("en-IN", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        }),
-      ],
-      [
-        "Time:",
-        createdDate
-          .toLocaleTimeString("en-IN", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-          })
-          .toLowerCase(),
-      ],
+      ["Date:", createdDate.toLocaleDateString("en-IN", { day: 'numeric', month: 'long', year: 'numeric' })],
+      ["Time:", createdDate.toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()],
     ];
 
     details.forEach(([label, value]) => {
-      doc
-        .fillColor("black")
-        .font("Helvetica-Bold")
-        .fontSize(10)
-        .text(label, labelX, currentY);
-      doc.font("Helvetica").text(value, valueX, currentY);
-      currentY += 16;
+      doc.fillColor("black").font("Helvetica-Bold").fontSize(9).text(label, boxX + 25, currentY);
+      doc.font("Helvetica").text(value, boxX + 150, currentY);
+      currentY += 15;
     });
 
-    // 4. TEAM MEMBERS SECTION
-    doc.y = currentY + 30;
-    doc
-      .fontSize(12)
-      .fillColor(secondaryColor)
-      .font("Helvetica-Bold")
-      .text("Team Members", { align: "center" });
-    doc.moveDown(1);
+    // 4. TEAM MEMBERS TABLE
+    doc.y = currentY + 25;
+    doc.fontSize(12).fillColor(secondaryColor).font("Helvetica-Bold").text("Team Members", { align: "center" });
+    doc.moveDown(0.8);
 
     const tableX = 80;
     const tableWidth = pageWidth - 160;
-    const col1X = tableX + 10; // No
-    const col2X = tableX + 50; // Name
-    const col3X = tableX + tableWidth - 120; // Roll Number
     const rowHeight = 25;
 
-    // Table Header
     doc.rect(tableX, doc.y, tableWidth, rowHeight).fill(secondaryColor);
     doc.fillColor("white").font("Helvetica-Bold").fontSize(10);
-    doc.text("No", col1X, doc.y + 8);
-    doc.text("Name", col2X, doc.y + 8);
-    doc.text("Roll Number", col3X, doc.y + 8);
+    doc.text("No", tableX + 10, doc.y + 8);
+    doc.text("Name", tableX + 50, doc.y + 8);
+    doc.text("Roll Number", tableX + tableWidth - 120, doc.y + 8);
     doc.y += rowHeight;
 
-    // Table Rows
     registration.teamMembers.forEach((m, i) => {
-      // Border for each cell
-      doc
-        .rect(tableX, doc.y, tableWidth, rowHeight)
-        .lineWidth(0.5)
-        .strokeColor("#ccc")
-        .stroke();
-
+      doc.rect(tableX, doc.y, tableWidth, rowHeight).lineWidth(0.5).strokeColor("#ccc").stroke();
       doc.fillColor("black").font("Helvetica").fontSize(9);
-      doc.text(i + 1, col1X, doc.y + 8);
-      doc.text(m.fullName.toUpperCase(), col2X, doc.y + 8);
-      doc.text(m.rollNo.toUpperCase(), col3X, doc.y + 8);
+      doc.text(i + 1, tableX + 10, doc.y + 8);
+      doc.text(m.fullName.toUpperCase(), tableX + 50, doc.y + 8);
+      doc.text(m.rollNo.toUpperCase(), tableX + tableWidth - 120, doc.y + 8);
       doc.y += rowHeight;
     });
 
-    // 5. STATUS
+    // 5. DYNAMIC STATUS
     doc.moveDown(2);
-    const statusText =
-      registration.registrationStatus === "Confirmed"
-        ? "Status : Payment Verified"
-        : "Status : Payment Submitted - Awaiting Verification";
+    const isConfirmed = registration.registrationStatus === "Confirmed";
+    doc.fontSize(11).fillColor(isConfirmed ? "green" : "red").font("Helvetica-Bold")
+       .text(`Status : ${isConfirmed ? "Payment Verified" : "Payment Submitted - Awaiting Verification"}`, { align: "right", indent: 40 });
 
-    doc
-      .fontSize(11)
-      .fillColor("red")
-      .font("Helvetica-Bold")
-      .text(statusText, { align: "center" });
-
-    // 6. FOOTER
-    doc.y = doc.page.height - 80;
-    doc
-      .fontSize(8)
-      .fillColor("gray")
-      .font("Helvetica")
-      .text("IEEE SPS Student Branch Chapter", { align: "center" })
-      .text("Aditya University, Surampalem", { align: "center" });
+    // 6. FOOTER WITH TIMESTAMP
+    const now = new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+    doc.y = doc.page.height - 85;
+    doc.fontSize(8).fillColor("gray").font("Helvetica")
+       .text("IEEE SPS Student Branch Chapter", { align: "center" })
+       .text("Aditya University, Surampalem", { align: "center" })
+       .moveDown(0.5)
+       .fontSize(7).text(`Generated on: ${now}`, { align: "center", fontStyle: "italic" });
 
     doc.end();
   });
@@ -752,6 +680,35 @@ router.post("/telegram-webhook", async (req, res) => {
   if (data.message && data.message.text) {
     const command = data.message.text;
     const chatId = data.message.chat.id;
+    if (chatId.toString() !== process.env.TELEGRAM_CHAT_ID) {
+      return res.sendStatus(200);
+    }
+    if (command === "/open") {
+      const event = await Event.findOne({ eventType: "combo" });
+
+      if (!event) return res.sendStatus(200);
+
+      event.registrationOpen = true;
+      await event.save();
+
+      await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+        chat_id: chatId,
+        text: "🟢 Registrations are now OPEN",
+      });
+    }
+    if (command === "/close") {
+      const event = await Event.findOne({ eventType: "combo" });
+
+      if (!event) return res.sendStatus(200);
+
+      event.registrationOpen = false;
+      await event.save();
+
+      await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+        chat_id: chatId,
+        text: "🔴 Registrations are now CLOSED",
+      });
+    }
 
     if (command === "/stats") {
       const totalTeams = await Registration.countDocuments();
@@ -760,15 +717,15 @@ router.post("/telegram-webhook", async (req, res) => {
         { $group: { _id: null, total: { $sum: "$teamSize" } } },
       ]);
 
-      const checkedIn = await Registration.aggregate([
-        { $unwind: "$teamMembers" },
-        { $match: { "teamMembers.checkedIn": true } },
-        { $count: "count" },
-      ]);
-
       const revenue = await Registration.aggregate([
         { $group: { _id: null, total: { $sum: "$expectedAmount" } } },
       ]);
+
+      // Get registration status
+      const event = await Event.findOne({ eventType: "combo" });
+      const registrationStatus = event?.registrationOpen
+        ? "🟢 OPEN"
+        : "🔴 CLOSED";
 
       const statsMessage = `📊 Arduino Days Live Stats
 
@@ -776,9 +733,9 @@ router.post("/telegram-webhook", async (req, res) => {
 
 🧑 Participants: ${totalParticipants[0]?.total || 0}
 
-🎟 Checked In: ${checkedIn[0]?.count || 0}
-
 💰 Revenue: ₹${revenue[0]?.total || 0}
+
+📥 Registrations: ${registrationStatus}
 `;
 
       await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -786,7 +743,6 @@ router.post("/telegram-webhook", async (req, res) => {
         text: statsMessage,
       });
     }
-
     return res.sendStatus(200);
   }
 

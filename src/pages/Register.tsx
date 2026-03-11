@@ -1,8 +1,7 @@
+import React, { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import confetti from "canvas-confetti";
 type Member = {
   fullName: string;
   rollNo: string;
@@ -52,7 +51,9 @@ const BackgroundImage = () => {
     <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
       {/* Background Image */}
       <img
-        src="/freepik_arduino_background.jpg"
+        src="/freepik_arduino_background.webp"
+        decoding="async"
+        loading="lazy"
         alt="background"
         className="absolute inset-0 w-full h-full object-cover"
       />
@@ -64,6 +65,30 @@ const BackgroundImage = () => {
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
     </div>
   );
+};
+
+const launchConfetti = async () => {
+  const confetti = (await import("canvas-confetti")).default;
+
+  confetti({
+    particleCount: 80,
+    spread: 70,
+    origin: { y: 0.6 },
+  });
+
+  confetti({
+    particleCount: 60,
+    angle: 60,
+    spread: 55,
+    origin: { x: 0 },
+  });
+
+  confetti({
+    particleCount: 60,
+    angle: 120,
+    spread: 55,
+    origin: { x: 1 },
+  });
 };
 
 const StepIndicator = ({
@@ -115,6 +140,59 @@ const StepIndicator = ({
   );
 };
 
+const MemberForm = React.memo(
+({
+  member,
+  index,
+  handleMemberChange,
+  handleEnterNext,
+  fetchPincodeDetails,
+  loadingPincode,
+  memberRefs,
+  nameInputRefs
+}: any) => {
+
+  return (
+    <div
+      ref={(el) => (memberRefs.current[index] = el)}
+      className="mb-10 p-5 md:p-6 border border-cyan-400/20 rounded-xl bg-gradient-to-br from-black/60 to-[#07111b] backdrop-blur-md shadow-lg"
+    >
+
+      <h2 className="text-xl font-semibold mb-4 text-cyan-300">
+        Member {index + 1}
+      </h2>
+
+      <div className="grid md:grid-cols-2 gap-4">
+
+        <input
+          ref={(el) => (nameInputRefs.current[index] = el)}
+          type="text"
+          placeholder="Full Name"
+          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg"
+          value={member.fullName}
+          onChange={(e) =>
+            handleMemberChange(index,"fullName",e.target.value)
+          }
+          onKeyDown={handleEnterNext}
+        />
+
+        <input
+          type="text"
+          placeholder="Roll Number"
+          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg"
+          value={member.rollNo}
+          onChange={(e) =>
+            handleMemberChange(index,"rollNo",e.target.value)
+          }
+          onKeyDown={handleEnterNext}
+        />
+
+      </div>
+
+    </div>
+  );
+});
+
 const Register = () => {
   const [registrationId, setRegistrationId] = useState("");
   const [honeypot, setHoneypot] = useState("");
@@ -137,6 +215,9 @@ const Register = () => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const memberRefs = useRef<(HTMLDivElement | null)[]>([]);
   const nameInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [loadingPincode, setLoadingPincode] = useState<number | null>(null);
+ const pincodeCache = useRef<Record<string, any>>({});
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const [members, setMembers] = useState<Member[]>(
     Array.from({ length: teamSize }, createEmptyMember),
   );
@@ -206,35 +287,73 @@ const Register = () => {
       if (next) next.focus();
     }
   };
-  const fetchPincodeDetails = async (pincode: string, index: number) => {
+  const fetchPincodeDetails = (pincode: string, index: number) => {
     if (pincode.length !== 6) return;
 
-    try {
-      const res = await fetch(
-        `https://api.postalpincode.in/pincode/${pincode}`,
+    // 🧠 Check cache first
+    if (pincodeCache.current[pincode]) {
+      const data = pincodeCache.current[pincode];
+
+      setMembers((prev) =>
+        prev.map((member, i) =>
+          i === index
+            ? {
+                ...member,
+                collegeCity: data.city,
+                collegeDistrict: data.district,
+                collegeState: data.state,
+              }
+            : member,
+        ),
       );
 
-      const data = await res.json();
-
-      if (data[0].Status === "Success") {
-        const postOffice = data[0].PostOffice[0];
-
-        setMembers((prev) =>
-          prev.map((member, i) =>
-            i === index
-              ? {
-                  ...member,
-                  collegeCity: postOffice.Block || "",
-                  collegeDistrict: postOffice.District || "",
-                  collegeState: postOffice.State || "",
-                }
-              : member,
-          ),
-        );
-      }
-    } catch (error) {
-      console.log("Pincode fetch error");
+      return;
     }
+
+    // ⏳ Debounce API calls
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+
+    debounceTimer.current = setTimeout(async () => {
+      try {
+        setLoadingPincode(index);
+
+        const res = await fetch(
+          `https://api.postalpincode.in/pincode/${pincode}`,
+        );
+
+        const data = await res.json();
+
+        if (data[0].Status === "Success") {
+          const postOffice = data[0].PostOffice[0];
+
+          const locationData = {
+            city: postOffice.Block || "",
+            district: postOffice.District || "",
+            state: postOffice.State || "",
+          };
+
+          // 💾 Save in cache
+          pincodeCache.current[pincode] = locationData;
+
+          setMembers((prev) =>
+            prev.map((member, i) =>
+              i === index
+                ? {
+                    ...member,
+                    collegeCity: locationData.city,
+                    collegeDistrict: locationData.district,
+                    collegeState: locationData.state,
+                  }
+                : member,
+            ),
+          );
+        }
+      } catch (error) {
+        console.log("Pincode fetch error");
+      } finally {
+        setLoadingPincode(null);
+      }
+    }, 400);
   };
   const handleMemberChange = (
     index: number,
@@ -431,7 +550,7 @@ const Register = () => {
       phone: `9${Math.floor(100000000 + Math.random() * 900000000)}`,
       department: "ECE",
       year: "3rd",
-      college: "Aditya University",
+      college: "Aditya University (AUS)",
       collegeCity: "Surampalem",
       collegePincode: "533437",
       collegeDistrict: "East Godavari",
@@ -740,12 +859,19 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                         />
                         <input
                           type="text"
-                          placeholder="City"
+                          placeholder={
+                            loadingPincode === index
+                              ? "Auto-detecting location..."
+                              : "City"
+                          }
                           className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
-focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
-                          value={member.collegeCity}
+  focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
+                          value={
+                            loadingPincode === index
+                              ? "Auto-detecting location..."
+                              : member.collegeCity
+                          }
                           readOnly
-                          onKeyDown={handleEnterNext}
                         />
 
                         <input
@@ -753,9 +879,12 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           placeholder="District"
                           className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
-                          value={member.collegeDistrict}
+                          value={
+                            loadingPincode === index
+                              ? "Auto-detecting location..."
+                              : member.collegeDistrict
+                          }
                           readOnly
-                          onKeyDown={handleEnterNext}
                         />
 
                         <input
@@ -763,7 +892,11 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           placeholder="State"
                           className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
-                          value={member.collegeState}
+                          value={
+                            loadingPincode === index
+                              ? "Auto-detecting location..."
+                              : member.collegeState
+                          }
                           readOnly
                         />
                       </div>
@@ -1260,27 +1393,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                         });
                         setRegistrationId(res.data.data.registrationId);
                       }, 200);
-
-                      // 🎉 Confetti burst
-                      confetti({
-                        particleCount: 80,
-                        spread: 70,
-                        origin: { y: 0.6 },
-                      });
-
-                      confetti({
-                        particleCount: 60,
-                        angle: 60,
-                        spread: 55,
-                        origin: { x: 0 },
-                      });
-
-                      confetti({
-                        particleCount: 60,
-                        angle: 120,
-                        spread: 55,
-                        origin: { x: 1 },
-                      });
+                      launchConfetti();
                       setLoading(false);
                     } catch (error: any) {
                       console.error("REGISTRATION ERROR:", error);
@@ -1310,10 +1423,12 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
           {paymentSubmitted && (
             <div
               ref={successRef}
-              className="mt-12 flex flex-col items-center justify-center text-center"
+              className="mt-12 w-full max-w-3xl mx-auto flex flex-col items-center justify-center text-center 
+  p-8 md:p-12 rounded-2xl border border-green-400/30 
+  bg-gradient-to-br from-[#07111b] to-[#02060c] shadow-xl"
             >
               {/* Animated Check Circle */}
-              <div className="w-24 h-24 rounded-full bg-green-400/20 flex items-center justify-center mb-6">
+              <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-green-400/20 flex items-center justify-center mb-6">
                 <motion.svg
                   viewBox="0 0 52 52"
                   className="w-16 h-16"
@@ -1345,11 +1460,13 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 </motion.svg>
               </div>
 
-              <h2 className="text-2xl font-bold text-green-400 mb-3">
+              <h2 className="text-3xl md:text-4xl font-bold text-green-400 mb-4">
                 Payment Submitted Successfully
               </h2>
-
-              <p className="text-gray-300 max-w-md">
+              <p className="mt-4 text-cyan-400 font-semibold">
+                Registration ID: {registrationId}
+              </p>
+              <p className="text-gray-300 max-w-xl text-lg">
                 Your payment has been received. Our team will verify it and send
                 the confirmation details to your email shortly.
               </p>

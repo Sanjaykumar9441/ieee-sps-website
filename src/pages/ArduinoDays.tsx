@@ -12,9 +12,11 @@ const MovingWaves = () => {
   return (
     <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
       <img
-        src="/freepik_arduino_background.jpg"
+        src="/freepik_arduino_background.webp"
+        decoding="async"
+        loading="lazy"
         alt="background"
-        className="absolute top-0 right-0 h-full w-full object-cover"
+        className="absolute inset-0 w-full h-full object-cover"
       />
 
       <div className="absolute inset-0 bg-black/50" />
@@ -571,7 +573,10 @@ const ArduinoDays = () => {
 
                     <ul className="space-y-3 text-gray-300 text-base md:text-lg list-disc list-inside">
                       <li>The event is open to all branches and all years.</li>
-                      <li>Students from different branches are allowed to register as a team.</li>
+                      <li>
+                        Students from different branches are allowed to register
+                        as a team.
+                      </li>
                       <li>Participants must carry a valid student ID card.</li>
                       <li>
                         A working laptop is mandatory with the latest Arduino
