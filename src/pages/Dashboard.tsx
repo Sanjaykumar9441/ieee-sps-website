@@ -1537,7 +1537,7 @@ const Dashboard = () => {
                         <p>
                           <b>Event:</b> {reg.eventName}
                         </p>
-                        {reg.startupAnswer === "yes" && (
+                        {(reg.startupAnswer || "").toLowerCase() === "yes" && (
                           <p className="text-pink-400 text-sm font-semibold">
                             Startup Team
                           </p>
@@ -1622,6 +1622,13 @@ const Dashboard = () => {
                         {registrations
                           .filter((reg) => {
                             if (registrationFilter === "all") return true;
+
+                            if (registrationFilter === "startup") {
+                              return (
+                                (reg.startupAnswer || "").toLowerCase() ===
+                                "yes"
+                              );
+                            }
 
                             if (registrationFilter === "hostel") {
                               return (
