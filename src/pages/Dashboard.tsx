@@ -341,20 +341,11 @@ const Dashboard = () => {
     if (!confirm("Confirm this registration?")) return;
 
     try {
-      // confirm registration first
-      const res = await axios.put(
+      await axios.put(
         `https://ieee-sps-website.onrender.com/api/confirm/${id}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       );
-
-      await axios.put(
-  `https://ieee-sps-website.onrender.com/api/confirm/${id}`,
-  {},
-  { headers: { Authorization: `Bearer ${token}` } }
-);
-
-fetchRegistrations();
 
       fetchRegistrations();
     } catch (error) {
@@ -581,8 +572,8 @@ fetchRegistrations();
             reg.teamName,
             reg.eventName,
             reg.hostelMembers?.some((h: any) => h.fullName === member.fullName)
-  ? "Yes"
-  : "No",
+              ? "Yes"
+              : "No",
             member.fullName || "",
             member.rollNo || "",
             member.email || "",
@@ -1431,6 +1422,16 @@ fetchRegistrations();
                   >
                     Hostel
                   </button>
+                  <button
+                    onClick={() => setRegistrationFilter("startup")}
+                    className={`px-4 py-2 rounded ${
+                      registrationFilter === "startup"
+                        ? "bg-cyan-500 text-black"
+                        : "bg-zinc-800"
+                    }`}
+                  >
+                    🚀 Startups
+                  </button>
                 </div>
               </div>
 
@@ -1477,6 +1478,10 @@ fetchRegistrations();
                     .filter((reg) => {
                       if (registrationFilter === "all") return true;
 
+                      if (registrationFilter === "startup") {
+                        return reg.startup?.answer === "yes";
+                      }
+
                       if (registrationFilter === "hostel") {
                         return (
                           reg.accommodationRequired === true &&
@@ -1518,6 +1523,11 @@ fetchRegistrations();
                         <p>
                           <b>Event:</b> {reg.eventName}
                         </p>
+                        {reg.startup?.answer === "yes" && (
+                          <p className="text-pink-400 text-sm font-semibold">
+                            🚀 Startup Team
+                          </p>
+                        )}
                         {reg.payment?.amountMismatch && (
                           <p className="text-red-400 text-sm">
                             ⚠ Amount mismatch detected
@@ -1748,6 +1758,16 @@ fetchRegistrations();
                           ? "Yes"
                           : "No"}
                       </p>
+                      {selectedFullDetails.startup?.answer === "yes" && (
+                        <div className="mt-3 p-3 bg-zinc-800 rounded border border-cyan-500/20">
+                          <p className="text-cyan-400 font-semibold">
+                            🚀 Startup Idea
+                          </p>
+                          <p className="mt-1 text-gray-300">
+                            {selectedFullDetails.startup.idea}
+                          </p>
+                        </div>
+                      )}
 
                       <p>
                         <b>Payment Screenshot Submitted</b>

@@ -571,6 +571,7 @@ const ArduinoDays = () => {
 
                     <ul className="space-y-3 text-gray-300 text-base md:text-lg list-disc list-inside">
                       <li>The event is open to all branches and all years.</li>
+                      <li>Students from different branches are allowed to register as a team.</li>
                       <li>Participants must carry a valid student ID card.</li>
                       <li>
                         A working laptop is mandatory with the latest Arduino

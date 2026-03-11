@@ -419,7 +419,8 @@ const Register = () => {
   const perPersonFee = event === "combo" ? 200 : 100;
   const baseFee = perPersonFee * teamSize;
   const totalAmount = baseFee;
-
+  const [startupAnswer, setStartupAnswer] = useState("");
+  const [startupIdea, setStartupIdea] = useState("");
   const [transactionId, setTransactionId] = useState("");
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const autoFillTestData = () => {
@@ -770,6 +771,34 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                   </div>
                 </div>
               ))}
+
+              {/* Startup Idea Question */}
+              <div className="mb-8">
+                <label className="block mb-2">
+                  Are you planning for any start-up?
+                </label>
+
+                <select
+                  className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
+                  value={startupAnswer}
+                  onChange={(e) => setStartupAnswer(e.target.value)}
+                >
+                  <option value="">Select</option>
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+
+                {startupAnswer === "yes" && (
+                  <textarea
+                    placeholder="Describe your start-up idea"
+                    className="mt-4 w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
+                    value={startupIdea}
+                    onChange={(e) => setStartupIdea(e.target.value)}
+                  />
+                )}
+              </div>
 
               {/* Accommodation */}
               <div className="mb-8">
@@ -1212,6 +1241,8 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           teamName,
                           teamSize,
                           teamMembers: members,
+                          startupAnswer,
+                          startupIdea,
                           honeypot,
                           accommodationRequired,
                           hostelMembers: selectedHostelMembers,

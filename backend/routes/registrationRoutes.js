@@ -68,30 +68,32 @@ router.post("/register", registerLimiter, async (req, res) => {
       teamName,
       teamSize,
       teamMembers,
+      startupAnswer,
+      startupIdea,
       accommodationRequired,
       hostelMembers,
       expectedAmount: frontendAmount, // This is what the frontend claims is the price
       userTransactionId,
       screenshotUrl,
     } = req.body;
-        
-const event = await Event.findOne({ eventType });
-if (!event) {
-  return res.status(400).json({
-    message: "Invalid event type",
-  });
-}
 
-if (!event.registrationOpen) {
-  return res.status(403).json({
-    message: "Registrations are currently closed."
-  });
-}
+    const event = await Event.findOne({ eventType });
+    if (!event) {
+      return res.status(400).json({
+        message: "Invalid event type",
+      });
+    }
+
+    if (!event.registrationOpen) {
+      return res.status(403).json({
+        message: "Registrations are currently closed.",
+      });
+    }
     if (!teamMembers || teamMembers.length !== teamSize) {
-  return res.status(400).json({
-    message: "Invalid team size"
-  });
-} 
+      return res.status(400).json({
+        message: "Invalid team size",
+      });
+    }
     // 🔐 Secure amount calculation (backend authority)
     const perPersonFee = eventType === "combo" ? 200 : 100;
     const correctAmount = perPersonFee * teamSize;
@@ -183,6 +185,10 @@ if (!event.registrationOpen) {
       teamName: teamName.toUpperCase(),
       teamSize,
       teamMembers,
+      startup: {
+        answer: startupAnswer,
+        idea: startupIdea,
+      },
       expectedAmount: correctAmount, // Save the verified amount
       accommodationRequired,
       hostelMembers,
@@ -273,15 +279,35 @@ const generateReceiptPDF = async (registration) => {
 
     // 2. LOGO & HEADER
     try {
-      doc.image(path.join(__dirname, "../public/AD2026.png"), pageWidth / 2 - 45, 40, { width: 90 });
-    } catch (e) { console.log("Logo path error"); }
+      doc.image(
+        path.join(__dirname, "../public/AD2026.png"),
+        pageWidth / 2 - 45,
+        40,
+        { width: 90 },
+      );
+    } catch (e) {
+      console.log("Logo path error");
+    }
 
     doc.moveDown(5);
-    doc.fontSize(22).fillColor(secondaryColor).font("Helvetica-Bold").text("Arduino Days 2026", { align: "center" });
-    doc.fontSize(10).fillColor("gray").font("Helvetica").text("Official Registration Receipt", { align: "center" });
-    
+    doc
+      .fontSize(22)
+      .fillColor(secondaryColor)
+      .font("Helvetica-Bold")
+      .text("Arduino Days 2026", { align: "center" });
+    doc
+      .fontSize(10)
+      .fillColor("gray")
+      .font("Helvetica")
+      .text("Official Registration Receipt", { align: "center" });
+
     doc.moveDown(0.5);
-    doc.moveTo(100, doc.y).lineTo(pageWidth - 100, doc.y).lineWidth(0.5).strokeColor("#ccc").stroke();
+    doc
+      .moveTo(100, doc.y)
+      .lineTo(pageWidth - 100, doc.y)
+      .lineWidth(0.5)
+      .strokeColor("#ccc")
+      .stroke();
     doc.moveDown(1.5);
 
     // 3. ROUNDED DETAILS BOX
@@ -289,10 +315,14 @@ const generateReceiptPDF = async (registration) => {
     const boxWidth = pageWidth - 120;
     const labelX = boxX + 25;
     const valueX = boxX + 150;
-    
+
     // Draw the light blue background box
-    doc.roundedRect(boxX, doc.y, boxWidth, 160, 10).fillOpacity(0.05).fill(secondaryColor).fillOpacity(1);
-    
+    doc
+      .roundedRect(boxX, doc.y, boxWidth, 160, 10)
+      .fillOpacity(0.05)
+      .fill(secondaryColor)
+      .fillOpacity(1);
+
     let currentY = doc.y + 20;
     const createdDate = new Date(registration.createdAt);
     const details = [
@@ -302,19 +332,43 @@ const generateReceiptPDF = async (registration) => {
       ["Team Size:", registration.teamSize.toString()],
       ["Amount Paid:", `Rs. ${registration.expectedAmount} /-`],
       ["Transaction ID:", registration.payment.userTransactionId],
-      ["Date:", createdDate.toLocaleDateString("en-IN", { day: 'numeric', month: 'long', year: 'numeric' })],
-      ["Time:", createdDate.toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()],
+      [
+        "Date:",
+        createdDate.toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }),
+      ],
+      [
+        "Time:",
+        createdDate
+          .toLocaleTimeString("en-IN", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          })
+          .toLowerCase(),
+      ],
     ];
 
     details.forEach(([label, value]) => {
-      doc.fillColor("black").font("Helvetica-Bold").fontSize(10).text(label, labelX, currentY);
+      doc
+        .fillColor("black")
+        .font("Helvetica-Bold")
+        .fontSize(10)
+        .text(label, labelX, currentY);
       doc.font("Helvetica").text(value, valueX, currentY);
       currentY += 16;
     });
 
     // 4. TEAM MEMBERS SECTION
     doc.y = currentY + 30;
-    doc.fontSize(12).fillColor(secondaryColor).font("Helvetica-Bold").text("Team Members", { align: "center" });
+    doc
+      .fontSize(12)
+      .fillColor(secondaryColor)
+      .font("Helvetica-Bold")
+      .text("Team Members", { align: "center" });
     doc.moveDown(1);
 
     const tableX = 80;
@@ -335,8 +389,12 @@ const generateReceiptPDF = async (registration) => {
     // Table Rows
     registration.teamMembers.forEach((m, i) => {
       // Border for each cell
-      doc.rect(tableX, doc.y, tableWidth, rowHeight).lineWidth(0.5).strokeColor("#ccc").stroke();
-      
+      doc
+        .rect(tableX, doc.y, tableWidth, rowHeight)
+        .lineWidth(0.5)
+        .strokeColor("#ccc")
+        .stroke();
+
       doc.fillColor("black").font("Helvetica").fontSize(9);
       doc.text(i + 1, col1X, doc.y + 8);
       doc.text(m.fullName.toUpperCase(), col2X, doc.y + 8);
@@ -346,18 +404,25 @@ const generateReceiptPDF = async (registration) => {
 
     // 5. STATUS
     doc.moveDown(2);
-    const statusText = registration.registrationStatus === "Confirmed" 
-      ? "Status : Payment Verified" 
-      : "Status : Payment Submitted - Awaiting Verification";
-    
-    doc.fontSize(11).fillColor("red").font("Helvetica-Bold")
-       .text(statusText, { align: "center" });
+    const statusText =
+      registration.registrationStatus === "Confirmed"
+        ? "Status : Payment Verified"
+        : "Status : Payment Submitted - Awaiting Verification";
+
+    doc
+      .fontSize(11)
+      .fillColor("red")
+      .font("Helvetica-Bold")
+      .text(statusText, { align: "center" });
 
     // 6. FOOTER
     doc.y = doc.page.height - 80;
-    doc.fontSize(8).fillColor("gray").font("Helvetica")
-       .text("IEEE SPS Student Branch Chapter", { align: "center" })
-       .text("Aditya University, Surampalem", { align: "center" });
+    doc
+      .fontSize(8)
+      .fillColor("gray")
+      .font("Helvetica")
+      .text("IEEE SPS Student Branch Chapter", { align: "center" })
+      .text("Aditya University, Surampalem", { align: "center" });
 
     doc.end();
   });
@@ -410,9 +475,9 @@ Status: ✅ Confirmed`,
       );
     }
     await axios.post(
-  "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
-  { registration }
-);
+      "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+      { registration },
+    );
 
     res.json({
       message: "Registration confirmed successfully",
@@ -449,7 +514,6 @@ router.delete("/:id", verifyToken, async (req, res) => {
 ===================================== */
 router.post("/send-confirmation-email", async (req, res) => {
   try {
-
     const { registration } = req.body;
 
     if (!registration || !registration.teamMembers) {
@@ -463,7 +527,6 @@ router.post("/send-confirmation-email", async (req, res) => {
     let htmlTemplate = "";
 
     if (registration.eventType === "combo") {
-
       htmlTemplate = `
 <!DOCTYPE html>
 <html>
@@ -555,9 +618,7 @@ Aditya University, Surampalem
 </body>
 </html>
 `;
-    } 
-    else {
-
+    } else {
       htmlTemplate = `
 <!DOCTYPE html>
 <html>
@@ -658,10 +719,10 @@ Aditya University, Surampalem
           "Arduino Days 2026 – Registration Confirmed (Event Pass Attached)",
           htmlTemplate,
           pdfBuffer,
-          `${registration.registrationId}.pdf`
+          `${registration.registrationId}.pdf`,
         ).catch(() => {
           console.error("Email failed:", member.email);
-        })
+        }),
       );
 
     await Promise.allSettled(emailPromises);
@@ -670,15 +731,12 @@ Aditya University, Surampalem
       success: true,
       message: "Emails sent successfully",
     });
-
   } catch (error) {
-
     console.error("Mail error:", error);
 
     res.status(500).json({
       message: "Email sending failed",
     });
-
   }
 });
 
@@ -741,41 +799,40 @@ router.post("/telegram-webhook", async (req, res) => {
   }
 
   const callbackData = data.callback_query.data;
-const chatId = process.env.TELEGRAM_CHAT_ID;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
 
   /* =========================
      CONFIRM REGISTRATION
   ========================= */
- if (callbackData.startsWith("confirm_")) {
+  if (callbackData.startsWith("confirm_")) {
+    const registrationId = callbackData.split("_")[1];
 
-  const registrationId = callbackData.split("_")[1];
+    const registration = await Registration.findOne({ registrationId });
 
-  const registration = await Registration.findOne({ registrationId });
+    if (!registration) return res.sendStatus(200);
 
-  if (!registration) return res.sendStatus(200);
+    if (registration.registrationStatus === "Confirmed") {
+      return res.sendStatus(200);
+    }
 
-  if (registration.registrationStatus === "Confirmed") {
-    return res.sendStatus(200);
-  }
+    registration.registrationStatus = "Confirmed";
+    await registration.save();
 
-  registration.registrationStatus = "Confirmed";
-  await registration.save();
+    await axios.post(
+      "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+      { registration },
+    );
 
-  await axios.post(
-    "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
-    { registration }
-  );
+    const members = registration.teamMembers
+      .map((m, i) => `${i + 1}. ${m.fullName}`)
+      .join("\n");
 
-  const members = registration.teamMembers
-    .map((m, i) => `${i + 1}. ${m.fullName}`)
-    .join("\n");
-
-  await axios.post(
-    `https://api.telegram.org/bot${token}/editMessageCaption`,
-    {
-      chat_id: chatId,
-      message_id: registration.telegramMessageId,
-      caption: `✅ *Registration Confirmed*
+    await axios.post(
+      `https://api.telegram.org/bot${token}/editMessageCaption`,
+      {
+        chat_id: chatId,
+        message_id: registration.telegramMessageId,
+        caption: `✅ *Registration Confirmed*
 
 Team: *${registration.teamName}*
 Event: ${registration.eventName}
@@ -785,15 +842,15 @@ Registration ID: \`${registration.registrationId}\`
 ${members}
 
 Status: ✅ Confirmed`,
-      parse_mode: "Markdown",
-      reply_markup: {
-        inline_keyboard: []   // removes buttons
-      }
-    }
-  );
+        parse_mode: "Markdown",
+        reply_markup: {
+          inline_keyboard: [], // removes buttons
+        },
+      },
+    );
 
-  console.log("✅ Confirmed via Telegram");
-}
+    console.log("✅ Confirmed via Telegram");
+  }
 
   /* =========================
      REJECT REGISTRATION
