@@ -298,7 +298,7 @@ const ArduinoDays = () => {
                   initial={{ opacity: 0, y: 40 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8 }}
-                  className="relative min-h-screen flex flex-col justify-center items-center px-6 md:px-12 text-center space-y-10 pb-24"
+                  className="relative min-h-[85vh] md:min-h-screen flex flex-col justify-center items-center px-6 md:px-10 text-center space-y-8 md:space-y-6 pb-16"
                 >
                   {/* Logos */}
                   <div className="flex flex-wrap justify-center items-center gap-8 md:gap-14">
@@ -337,10 +337,10 @@ const ArduinoDays = () => {
                     <img
                       src="/titlelogo.png"
                       alt="Arduino Days Logo"
-                      className="w-[85vw] sm:w-[550px] md:w-[750px] mx-auto object-contain"
+                      className="w-[85vw] sm:w-[520px] md:w-[620px] lg:w-[680px] mx-auto object-contain"
                     />
 
-                    <p className="text-sm sm:text-base md:text-lg text-gray-300 max-w-3xl mx-auto">
+                    <p className="text-sm sm:text-base md:text-lg text-gray-300 max-w-xl md:max-w-2xl mx-auto">
                       A 4-Day Technical Event focused on Arduino, IoT, Embedded
                       Systems, and Real-Time Project Development.
                     </p>
