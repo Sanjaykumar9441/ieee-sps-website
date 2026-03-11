@@ -376,16 +376,43 @@ const generateReceiptPDF = async (registration) => {
     doc.text("Roll Number", tableX + tableWidth - 120, doc.y + 8);
     doc.y += rowHeight;
 
+    const colNo = 40;
+    const colName = tableWidth - 160;
+    const colRoll = 120;
+
     registration.teamMembers.forEach((m, i) => {
       doc
         .rect(tableX, doc.y, tableWidth, rowHeight)
         .lineWidth(0.5)
         .strokeColor("#ccc")
         .stroke();
-      doc.fillColor("black").font("Helvetica").fontSize(8);
-      doc.text(i + 1, tableX + 10, doc.y + 5);
-      doc.text(m.fullName.toUpperCase(), tableX + 50, doc.y + 5);
-      doc.text(m.rollNo.toUpperCase(), tableX + tableWidth - 120, doc.y + 5);
+
+      doc.fillColor("black").font("Helvetica").fontSize(9);
+
+      // No
+      doc.text(i + 1, tableX + 10, doc.y + 5, {
+        width: colNo,
+        align: "left",
+      });
+
+      // Name
+      doc.text(m.fullName.toUpperCase(), tableX + colNo + 10, doc.y + 5, {
+        width: colName,
+        align: "left",
+        ellipsis: true,
+      });
+
+      // Roll Number
+      doc.text(
+        m.rollNo.toUpperCase(),
+        tableX + colNo + colName + 10,
+        doc.y + 5,
+        {
+          width: colRoll,
+          align: "right",
+        },
+      );
+
       doc.y += rowHeight;
     });
 
