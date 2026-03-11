@@ -49,27 +49,14 @@ async function setTelegramCommands() {
 /* ===============================
    ✅ CORS (Allow Vercel + Local)
 ================================= */
-const allowedOrigins = [
-  "http://localhost:8080",
-  "http://localhost:5173",
-  "https://ieeespsaditya.vercel.app",
-];
-
 app.use(
   cors({
-    origin: function (origin, callback) {
-      const allowed = [
-        "http://localhost:5173",
-        "https://ieeespsaditya.vercel.app",
-      ];
-
-      if (!origin || allowed.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("CORS not allowed"));
-      }
-    },
-  }),
+    origin: [
+      "http://localhost:5173",
+      "https://ieeespsaditya.vercel.app"
+    ],
+    credentials: true
+  })
 );
 app.use(compression());
 app.use(express.json({ limit: "10mb" }));

@@ -697,34 +697,52 @@ router.post("/telegram-webhook", async (req, res) => {
     }
 
     // OPEN REGISTRATIONS
-    if (command === "/open") {
-      await Event.updateMany(
-        { eventType: { $in: ["combo", "buildathon"] } },
-        { $set: { registrationOpen: true } },
-      );
+   if (command === "/open") {
 
-      await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-        chat_id: chatId,
-        text: "🟢 Registrations are now OPEN",
-      });
+  const combo = await Event.findOne({ eventType: "combo" });
+  const buildathon = await Event.findOne({ eventType: "buildathon" });
 
-      return res.sendStatus(200);
-    }
+  if (combo) {
+    combo.registrationOpen = true;
+    await combo.save();
+  }
+
+  if (buildathon) {
+    buildathon.registrationOpen = true;
+    await buildathon.save();
+  }
+
+  await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+    chat_id: chatId,
+    text: "🟢 Registrations are now OPEN",
+  });
+
+  return res.sendStatus(200);
+}
 
     // CLOSE REGISTRATIONS
-    if (command === "/close") {
-      await Event.updateMany(
-        { eventType: { $in: ["combo", "buildathon"] } },
-        { $set: { registrationOpen: false } },
-      );
+   if (command === "/close") {
 
-      await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-        chat_id: chatId,
-        text: "🔴 Registrations are now CLOSED",
-      });
+  const combo = await Event.findOne({ eventType: "combo" });
+  const buildathon = await Event.findOne({ eventType: "buildathon" });
 
-      return res.sendStatus(200);
-    }
+  if (combo) {
+    combo.registrationOpen = false;
+    await combo.save();
+  }
+
+  if (buildathon) {
+    buildathon.registrationOpen = false;
+    await buildathon.save();
+  }
+
+  await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+    chat_id: chatId,
+    text: "🔴 Registrations are now CLOSED",
+  });
+
+  return res.sendStatus(200);
+}
 
     // STATS
    if (command === "/stats") {

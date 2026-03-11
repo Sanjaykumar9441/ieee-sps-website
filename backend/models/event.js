@@ -8,17 +8,18 @@ const eventSchema = new mongoose.Schema({
     unique: true
   },
 
-  title: { type: String, required: true },
-  description: { type: String, required: true },
+  title: { type: String },
+  description: { type: String },
 
-  date: { type: String, required: true },
-  location: { type: String, required: true },
+  date: { type: String },
+  location: { type: String },
 
   status: {
     type: String,
     enum: ["Upcoming", "Completed"],
     default: "Upcoming"
   },
+
   registrationOpen: {
     type: Boolean,
     default: false
