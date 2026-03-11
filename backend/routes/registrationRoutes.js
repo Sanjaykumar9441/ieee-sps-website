@@ -259,7 +259,7 @@ Registration ID: \`${registrationId}\`
   }
 });
 
- const generateReceiptPDF = async (registration) => {
+const generateReceiptPDF = async (registration) => {
   return new Promise(async (resolve) => {
     const doc = new PDFDocument({ margin: 50, size: "A4" });
     const buffers = [];
@@ -272,18 +272,24 @@ Registration ID: \`${registrationId}\`
 
     // 1. LOGO & HEADER
     try {
-      doc.image(path.join(__dirname, "../public/AD2026.png"), 50, 50, { width: 70 });
-    } catch (e) { console.log("Logo skip"); }
+      doc.image(path.join(__dirname, "../public/AD2026.png"), 50, 50, {
+        width: 70,
+      });
+    } catch (e) {
+      console.log("Logo skip");
+    }
 
-    doc.fillColor(accentColor)
-       .font("Helvetica-Bold")
-       .fontSize(20)
-       .text("Arduino Days 2026", 135, 65);
-    
-    doc.fillColor("gray")
-       .font("Helvetica")
-       .fontSize(10)
-       .text("OFFICIAL REGISTRATION RECEIPT", 135, 90, { characterSpacing: 1 });
+    doc
+      .fillColor(accentColor)
+      .font("Helvetica-Bold")
+      .fontSize(20)
+      .text("Arduino Days 2026", 135, 65);
+
+    doc
+      .fillColor("gray")
+      .font("Helvetica")
+      .fontSize(10)
+      .text("OFFICIAL REGISTRATION RECEIPT", 135, 90, { characterSpacing: 1 });
 
     doc.moveDown(4);
 
@@ -293,62 +299,120 @@ Registration ID: \`${registrationId}\`
     let currentY = doc.y;
 
     const createdDate = new Date(registration.createdAt);
+    const istOptions = {
+      timeZone: "Asia/Kolkata",
+      hour12: true,
+      hour: "2-digit",
+      minute: "2-digit",
+    };
+
+    const dateOptions = {
+      timeZone: "Asia/Kolkata",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    };
     const details = [
       ["Registration ID", registration.registrationId],
       ["Team Name", registration.teamName],
       ["Event", registration.eventName],
+      ["Team Size:", registration.teamSize.toString()],
       ["Amount Paid", `Rs. ${registration.expectedAmount} /-`],
       ["Transaction ID", registration.payment.userTransactionId],
-      ["Issued On", `${createdDate.toLocaleDateString("en-IN")} at ${createdDate.toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' })}`]
+      [
+        "Issued On",
+        `${createdDate.toLocaleDateString("en-IN", dateOptions)} at ${createdDate.toLocaleTimeString("en-IN", istOptions).toLowerCase()}`,
+      ],
     ];
 
     details.forEach(([label, value]) => {
       // Label in light gray
-      doc.fontSize(9).fillColor("#7f8c8d").font("Helvetica").text(label.toUpperCase(), labelX, currentY);
+      doc
+        .fontSize(9)
+        .fillColor("#7f8c8d")
+        .font("Helvetica")
+        .text(label.toUpperCase(), labelX, currentY);
       // Value in bold black
-      doc.fontSize(11).fillColor("#2d3436").font("Helvetica-Bold").text(value, valueX, currentY);
-      
+      doc
+        .fontSize(11)
+        .fillColor("#2d3436")
+        .font("Helvetica-Bold")
+        .text(value, valueX, currentY);
+
       currentY += 28;
       // Very thin divider line
-      doc.moveTo(labelX, currentY - 10).lineTo(pageWidth - labelX, currentY - 10).lineWidth(0.3).strokeColor("#eee").stroke();
+      doc
+        .moveTo(labelX, currentY - 10)
+        .lineTo(pageWidth - labelX, currentY - 10)
+        .lineWidth(0.3)
+        .strokeColor("#eee")
+        .stroke();
     });
 
     // 3. TEAM MEMBERS (Neat Stacked List)
     doc.y = currentY + 20;
-    doc.fontSize(12).fillColor(accentColor).font("Helvetica-Bold").text("PARTICIPANTS", labelX);
+    doc
+      .fontSize(12)
+      .fillColor(accentColor)
+      .font("Helvetica-Bold")
+      .text("PARTICIPANTS", labelX);
     doc.moveDown(1.5);
 
     registration.teamMembers.forEach((m, i) => {
       const memberY = doc.y;
-      
+
       // Blue bullet point or number
-      doc.fillColor(accentColor).font("Helvetica-Bold").fontSize(11).text(`${i + 1}.`, labelX);
-      
+      doc
+        .fillColor(accentColor)
+        .font("Helvetica-Bold")
+        .fontSize(11)
+        .text(`${i + 1}.`, labelX);
+
       // Name (Bold)
-      doc.fillColor("#2d3436").font("Helvetica-Bold").fontSize(11).text(m.fullName.toUpperCase(), labelX + 30, memberY);
-      
+      doc
+        .fillColor("#2d3436")
+        .font("Helvetica-Bold")
+        .fontSize(11)
+        .text(m.fullName.toUpperCase(), labelX + 30, memberY);
+
       // Roll Number (Below name, gray)
-      doc.fillColor("#636e72").font("Helvetica").fontSize(10).text(`Roll No: ${m.rollNo.toUpperCase()}`, labelX + 30, memberY + 14);
-      
+      doc
+        .fillColor("#636e72")
+        .font("Helvetica")
+        .fontSize(10)
+        .text(`Roll No: ${m.rollNo.toUpperCase()}`, labelX + 30, memberY + 14);
+
       doc.moveDown(2.5);
     });
 
     // 4. STATUS INDICATOR (Modern Pill Style)
     doc.y = doc.page.height - 150;
-    const statusLabel = isConfirmed ? "PAYMENT VERIFIED" : "VERIFICATION PENDING";
+    const statusLabel = isConfirmed
+      ? "PAYMENT VERIFIED"
+      : "VERIFICATION PENDING";
     const statusColor = isConfirmed ? "#27ae60" : "#e67e22";
 
-    doc.fillColor(statusColor)
-       .font("Helvetica-Bold")
-       .fontSize(12)
-       .text(statusLabel, { align: "right", indent: 20 });
+    doc
+      .fillColor(statusColor)
+      .font("Helvetica-Bold")
+      .fontSize(12)
+      .text(statusLabel, { align: "right", indent: 20 });
 
     // 5. FOOTER
-    const now = new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+    const now = new Date().toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
     doc.y = doc.page.height - 70;
-    doc.fontSize(8).fillColor("#b2bec3").font("Helvetica")
-       .text("IEEE SPS Student Branch Chapter | Aditya University, Surampalem", { align: "center" })
-       .text(`System Generated on ${now}`, { align: "center" });
+    doc
+      .fontSize(8)
+      .fillColor("#b2bec3")
+      .font("Helvetica")
+      .text("IEEE SPS Student Branch Chapter | Aditya University, Surampalem", {
+        align: "center",
+      })
+      .text(`System Generated on ${now}`, { align: "center" });
 
     doc.end();
   });
@@ -453,142 +517,151 @@ router.post("/send-confirmation-email", async (req, res) => {
     let htmlTemplate = "";
 
     if (registration.eventType === "combo") {
-      htmlTemplate = `
-<div style="font-family:Arial,sans-serif;line-height:1.6">
+     const confirmedOn = new Date().toLocaleString("en-IN", {
+  timeZone: "Asia/Kolkata",
+  dateStyle: "medium",
+  timeStyle: "short"
+});
 
-<div style="text-align:center;margin-bottom:20px">
-<img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" width="140">
-</div>
+htmlTemplate = `
+<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
 
-<p>Hello <b>${registration.teamName}</b>,</p>
+    <div style="text-align: center; margin-bottom: 20px;">
+        <img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" width="140" alt="Arduino Days Logo">
+        <h2 style="color: #00AEEF; margin-top: 10px;">Registration Confirmed! 🎉</h2>
+    </div>
 
-<p>Your registration for <b>Arduino Days 2026</b> has been <b>confirmed</b>.</p>
+    <p>Hello <b>${registration.teamName}</b>,</p>
 
-<h3>Registration Details</h3>
+    <p>Great news! Your registration for <b>Arduino Days 2026</b> is officially confirmed. We are excited to have your team join us.</p>
 
-<p>
-<b>Event:</b> Skill Forze Workshop + Buildathon<br>
-<b>Registration ID:</b> ${registration.registrationId}<br>
-<b>Team Size:</b> ${registration.teamSize} Members<br>
-<b>Confirmed On:</b> ${new Date().toLocaleString("en-IN")}
-</p>
+    <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="margin-top: 0; color: #555; font-size: 16px;">Registration Summary</h3>
+        <p style="margin: 5px 0; font-size: 14px;">
+            <b>Event:</b> Skill Forze Workshop + Buildathon<br>
+            <b>Registration ID:</b> <code style="background: #eee; padding: 2px 4px;">${registration.registrationId}</code><br>
+            <b>Team Size:</b> ${registration.teamSize} Members<br>
+            <b>Confirmed On:</b> ${confirmedOn}
+        </p>
+    </div>
 
-<h3>Team Members</h3>
+    <h3 style="color: #444; font-size: 16px;">Team Members</h3>
+    <ul style="padding-left: 20px; font-size: 14px;">
+        ${registration.teamMembers.map((m) => `<li>${m.fullName.toUpperCase()}</li>`).join("")}
+    </ul>
 
-<ul>
-${registration.teamMembers.map((m) => `<li>${m.fullName}</li>`).join("")}
-</ul>
+    <h3 style="color: #444; font-size: 16px;">Event Schedule & Venue</h3>
+    <p style="font-size: 14px;">
+        <b>Skill Forze:</b> 23rd & 24th March 2026<br>
+        <b>Buildathon:</b> 25th March 2026<br>
+        <b>Venue:</b> Aditya University, Surampalem
+    </p>
 
-<h3>Event Schedule</h3>
+    <div style="border-left: 4px solid #25D366; padding-left: 15px; margin: 25px 0;">
+        <h3 style="margin-top: 0; color: #25D366; font-size: 16px;">Action Required: Join WhatsApp Group</h3>
+        <p style="font-size: 14px; margin-bottom: 15px;">
+            Please join the official group for real-time updates, problem statements, and instructions.
+        </p>
+        <a href="https://chat.whatsapp.com/DruOGVhGlNc989mcDWTEYP" 
+           style="background: #25D366; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+           Join WhatsApp Group
+        </a>
+    </div>
 
-<p>
-<b>Skill Forze:</b> 23rd & 24th March 2026<br>
-<b>Buildathon:</b> 25th March 2026<br>
-<b>Venue:</b> Aditya University, Surampalem
-</p>
+    <h3 style="color: #444; font-size: 16px;">Important Instructions</h3>
+    <ul style="font-size: 13px; color: #555;">
+        <li>Carry your <b>Student ID card</b> for entry.</li>
+        <li>Bring at least one <b>laptop per team</b> with Arduino IDE installed.</li>
+        <li>Your team must present a working prototype during the Buildathon.</li>
+    </ul>
 
-<h3>Important Instructions</h3>
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
 
-<ul>
-<li>Carry your Student ID card</li>
-<li>Bring a laptop with Arduino IDE installed</li>
-<li>Teams must present a working prototype</li>
-</ul>
-<h3>WhatsApp Updates</h3>
-<p>
-Join the official Skill Forze + Buildathon WhatsApp group for announcements and instructions.
-</p>
+    <p style="font-size: 14px;">
+        For any queries, feel free to contact:<br>
+        <b>Chitturi Sanjay Kumar</b> (Organizer)<br>
+        <a href="tel:+917095009441" style="color: #00AEEF; text-decoration: none;">+91 7095009441</a>
+    </p>
 
-<p style="margin-top:10px;">
-<a href="https://chat.whatsapp.com/DruOGVhGlNc989mcDWTEYP" 
-style="background:#25D366;color:white;padding:10px 18px;text-decoration:none;border-radius:5px;display:inline-block;">
-Join WhatsApp Group
-</a>
-</p>
-
-<hr>
-
-<p>
-For queries contact:<br>
-<b>Chitturi Sanjay Kumar</b><br>
-+91 7095009441
-</p>
-
-<p style="color:gray;font-size:13px">
-IEEE SPS Student Branch Chapter<br>
-Aditya University, Surampalem
-</p>
+    <p style="color: gray; font-size: 12px; text-align: center; margin-top: 20px;">
+        IEEE SPS Student Branch Chapter<br>
+        Aditya University, Surampalem
+    </p>
 
 </div>
 `;
     } else {
-      htmlTemplate = `
-<div style="font-family:Arial,sans-serif;line-height:1.6">
+     const confirmedOn = new Date().toLocaleString("en-IN", {
+  timeZone: "Asia/Kolkata",
+  dateStyle: "medium",
+  timeStyle: "short"
+});
 
-<div style="text-align:center;margin-bottom:20px">
-<img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" width="140">
-</div>
+htmlTemplate = `
+<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0f2fe; border-radius: 12px; background-color: #ffffff;">
 
-<p>Hello <b>${registration.teamName}</b>,</p>
+    <div style="text-align: center; margin-bottom: 25px;">
+        <img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" width="140" alt="Arduino Days Logo">
+        <h2 style="color: #0369a1; margin-top: 10px; font-size: 22px;">Buildathon Confirmed! 🚀</h2>
+    </div>
 
-<p>Your registration for the <b>Arduino Days Buildathon</b> has been <b>confirmed</b>.</p>
+    <p>Hello <b>${registration.teamName}</b>,</p>
+    <p>Your team is officially registered for the <b>Arduino Days Buildathon</b>. Get ready to innovate and build!</p>
 
-<h3>Registration Details</h3>
+    <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #bae6fd;">
+        <h3 style="margin-top: 0; color: #0369a1; font-size: 16px;">Registration Summary</h3>
+        <p style="margin: 5px 0; font-size: 14px;">
+            <b>Event:</b> Buildathon Hackathon<br>
+            <b>Registration ID:</b> <code style="background: #fff; padding: 2px 4px; border: 1px solid #ddd;">${registration.registrationId}</code><br>
+            <b>Team Size:</b> ${registration.teamSize} Members<br>
+            <b>Confirmed On:</b> ${confirmedOn}
+        </p>
+    </div>
 
-<p>
-<b>Event:</b> Buildathon Hackathon<br>
-<b>Registration ID:</b> ${registration.registrationId}<br>
-<b>Team Size:</b> ${registration.teamSize} Members<br>
-<b>Confirmed On:</b> ${new Date().toLocaleString("en-IN")}
-</p>
+    <h3 style="color: #444; font-size: 16px; margin-bottom: 10px;">Team Members</h3>
+    <ul style="padding-left: 20px; font-size: 14px; color: #555;">
+        ${registration.teamMembers.map((m) => `<li>${m.fullName.toUpperCase()}</li>`).join("")}
+    </ul>
 
-<h3>Team Members</h3>
+    <h3 style="color: #444; font-size: 16px; margin-top: 20px;">Event Details</h3>
+    <p style="font-size: 14px; background: #fafafa; padding: 10px; border-radius: 5px;">
+        📅 <b>Date:</b> 25th March 2026<br>
+        📍 <b>Venue:</b> Aditya University, Surampalem
+    </p>
 
-<ul>
-${registration.teamMembers.map((m) => `<li>${m.fullName}</li>`).join("")}
-</ul>
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 8px; margin: 25px 0; text-align: center;">
+        <h3 style="margin-top: 0; color: #166534; font-size: 16px;">Official Buildathon Group</h3>
+        <p style="font-size: 13px; color: #374151; margin-bottom: 15px;">
+            Join for problem statements, technical support, and real-time announcements.
+        </p>
+        <a href="https://chat.whatsapp.com/Csy0z79Sxyz7kwKvwTEN8p" 
+           style="background: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 14px;">
+           Join WhatsApp Group
+        </a>
+    </div>
 
-<h3>Event Details</h3>
+    <h3 style="color: #444; font-size: 16px;">Buildathon Rules</h3>
+    <ul style="font-size: 13px; color: #666; line-height: 1.8;">
+        <li>Minimum <b>one laptop per team</b> is mandatory.</li>
+        <li>Problem statements will be revealed exclusively at the venue.</li>
+        <li>All projects must be developed from scratch during the event hours.</li>
+        <li>Teams must present a <b>functional prototype</b> to the jury.</li>
+    </ul>
 
-<p>
-<b>Date:</b> 25th March 2026<br>
-<b>Venue:</b> Aditya University, Surampalem
-</p>
+    <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 30px 0;">
 
-<h3>Rules</h3>
+    <p style="font-size: 13px; color: #444;">
+        For queries, reach out to:<br>
+        <b>Chitturi Sanjay Kumar</b><br>
+        <a href="tel:+917095009441" style="color: #0369a1; text-decoration: none; font-weight: bold;">+91 7095009441</a>
+    </p>
 
-<ul>
-<li>Minimum one laptop per team</li>
-<li>Problem statements will be revealed at the venue</li>
-<li>Projects must be developed during the event</li>
-<li>Teams must present a functional prototype</li>
-</ul>
-
-<h3>WhatsApp Updates</h3>
-
-<p>
-Join the official Buildathon WhatsApp group for announcements and instructions.
-</p>
-
-<p style="margin-top:10px;">
-<a href="https://chat.whatsapp.com/Csy0z79Sxyz7kwKvwTEN8p" 
-style="background:#25D366;color:white;padding:10px 18px;text-decoration:none;border-radius:5px;display:inline-block;">
-Join WhatsApp Group
-</a>
-</p>
-
-<hr>
-
-<p>
-For queries contact:<br>
-<b>Chitturi Sanjay Kumar</b><br>
-+91 7095009441
-</p>
-
-<p style="color:gray;font-size:13px">
-IEEE SPS Student Branch Chapter<br>
-Aditya University, Surampalem
-</p>
+    <div style="text-align: center; margin-top: 25px;">
+        <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+            IEEE SPS Student Branch Chapter<br>
+            Aditya University, Surampalem
+        </p>
+    </div>
 
 </div>
 `;
@@ -643,35 +716,34 @@ router.post("/telegram-webhook", async (req, res) => {
     }
 
     // STATS
-   if (command === "/stats") {
+    if (command === "/stats") {
+      // Total teams from both events
+      const totalTeams = await Registration.countDocuments({
+        eventType: { $in: ["combo", "buildathon"] },
+      });
 
-  // Total teams from both events
-  const totalTeams = await Registration.countDocuments({
-    eventType: { $in: ["combo", "buildathon"] }
-  });
+      // Total participants
+      const totalParticipants = await Registration.aggregate([
+        { $match: { eventType: { $in: ["combo", "buildathon"] } } },
+        { $group: { _id: null, total: { $sum: "$teamSize" } } },
+      ]);
 
-  // Total participants
-  const totalParticipants = await Registration.aggregate([
-    { $match: { eventType: { $in: ["combo", "buildathon"] } } },
-    { $group: { _id: null, total: { $sum: "$teamSize" } } },
-  ]);
+      // Total revenue
+      const revenue = await Registration.aggregate([
+        { $match: { eventType: { $in: ["combo", "buildathon"] } } },
+        { $group: { _id: null, total: { $sum: "$expectedAmount" } } },
+      ]);
 
-  // Total revenue
-  const revenue = await Registration.aggregate([
-    { $match: { eventType: { $in: ["combo", "buildathon"] } } },
-    { $group: { _id: null, total: { $sum: "$expectedAmount" } } },
-  ]);
+      // Check registration status of both events
+      const events = await Event.find({
+        eventType: { $in: ["combo", "buildathon"] },
+      });
 
-  // Check registration status of both events
-  const events = await Event.find({
-    eventType: { $in: ["combo", "buildathon"] }
-  });
+      const registrationStatus = events.some((e) => e.registrationOpen)
+        ? "🟢 OPEN"
+        : "🔴 CLOSED";
 
-  const registrationStatus = events.some(e => e.registrationOpen)
-    ? "🟢 OPEN"
-    : "🔴 CLOSED";
-
-  const statsMessage = `📊 Arduino Days Live Stats
+      const statsMessage = `📊 Arduino Days Live Stats
 
 👥 Teams: ${totalTeams}
 
@@ -682,13 +754,13 @@ router.post("/telegram-webhook", async (req, res) => {
 📥 Registrations: ${registrationStatus}
 `;
 
-  await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-    chat_id: chatId,
-    text: statsMessage,
-  });
+      await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+        chat_id: chatId,
+        text: statsMessage,
+      });
 
-  return res.sendStatus(200);
-}
+      return res.sendStatus(200);
+    }
   }
   /* =========================
      TELEGRAM BUTTON ACTIONS
