@@ -259,111 +259,96 @@ Registration ID: \`${registrationId}\`
   }
 });
 
-const generateReceiptPDF = async (registration) => {
+ const generateReceiptPDF = async (registration) => {
   return new Promise(async (resolve) => {
-    const doc = new PDFDocument({ margin: 40, size: "A4" });
+    const doc = new PDFDocument({ margin: 50, size: "A4" });
     const buffers = [];
     doc.on("data", buffers.push.bind(buffers));
     doc.on("end", () => resolve(Buffer.concat(buffers)));
 
     const pageWidth = doc.page.width;
-    const secondaryColor = "#00AEEF"; // Sky Blue
+    const accentColor = "#00AEEF"; // Sky Blue
     const isConfirmed = registration.registrationStatus === "Confirmed";
 
-    // 1. FRAME BORDER
-    doc.rect(20, 20, pageWidth - 40, 10).fill(secondaryColor);
-    doc.rect(20, 30, 2, doc.page.height - 50).fill(secondaryColor);
-    doc.rect(pageWidth - 22, 30, 2, doc.page.height - 50).fill(secondaryColor);
-    doc.rect(20, doc.page.height - 30, pageWidth - 40, 2).fill(secondaryColor);
-
-    // 2. LOGO & HEADER
+    // 1. LOGO & HEADER
     try {
-      doc.image(path.join(__dirname, "../public/AD2026.png"), pageWidth / 2 - 45, 40, { width: 90 });
-    } catch (e) { console.log("Logo path error"); }
+      doc.image(path.join(__dirname, "../public/AD2026.png"), 50, 50, { width: 70 });
+    } catch (e) { console.log("Logo skip"); }
 
-    doc.moveDown(5);
-    doc.fontSize(22).fillColor(secondaryColor).font("Helvetica-Bold").text("Arduino Days 2026", { align: "center" });
-    doc.fontSize(10).fillColor("gray").font("Helvetica").text("Official Registration Receipt", { align: "center" });
+    doc.fillColor(accentColor)
+       .font("Helvetica-Bold")
+       .fontSize(20)
+       .text("Arduino Days 2026", 135, 65);
     
-    doc.moveDown(0.5);
-    doc.moveTo(100, doc.y).lineTo(pageWidth - 100, doc.y).lineWidth(0.5).strokeColor("#ccc").stroke();
-    doc.moveDown(1.5);
+    doc.fillColor("gray")
+       .font("Helvetica")
+       .fontSize(10)
+       .text("OFFICIAL REGISTRATION RECEIPT", 135, 90, { characterSpacing: 1 });
 
-    // 3. DETAILS BOX
-    const boxX = 60;
-    const boxTopY = doc.y;
-    doc.roundedRect(boxX, boxTopY, pageWidth - 120, 145, 10).fillOpacity(0.05).fill(secondaryColor).fillOpacity(1);
-    
-    let currentY = boxTopY + 15;
+    doc.moveDown(4);
+
+    // 2. REGISTRATION SUMMARY (Clean List Style)
+    const labelX = 60;
+    const valueX = 200;
+    let currentY = doc.y;
+
     const createdDate = new Date(registration.createdAt);
     const details = [
-      ["Registration ID:", registration.registrationId],
-      ["Team Name:", registration.teamName],
-      ["Event:", registration.eventName],
-      ["Team Size:", registration.teamSize.toString()],
-      ["Amount Paid:", `Rs. ${registration.expectedAmount} /-`],
-      ["Transaction ID:", registration.payment.userTransactionId],
-      ["Date:", createdDate.toLocaleDateString("en-IN", { day: 'numeric', month: 'long', year: 'numeric' })],
-      ["Time:", createdDate.toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()],
+      ["Registration ID", registration.registrationId],
+      ["Team Name", registration.teamName],
+      ["Event", registration.eventName],
+      ["Amount Paid", `Rs. ${registration.expectedAmount} /-`],
+      ["Transaction ID", registration.payment.userTransactionId],
+      ["Issued On", `${createdDate.toLocaleDateString("en-IN")} at ${createdDate.toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' })}`]
     ];
 
     details.forEach(([label, value]) => {
-      doc.fillColor("black").font("Helvetica-Bold").fontSize(9).text(label, boxX + 25, currentY);
-      doc.font("Helvetica").text(value, boxX + 150, currentY);
-      currentY += 15;
+      // Label in light gray
+      doc.fontSize(9).fillColor("#7f8c8d").font("Helvetica").text(label.toUpperCase(), labelX, currentY);
+      // Value in bold black
+      doc.fontSize(11).fillColor("#2d3436").font("Helvetica-Bold").text(value, valueX, currentY);
+      
+      currentY += 28;
+      // Very thin divider line
+      doc.moveTo(labelX, currentY - 10).lineTo(pageWidth - labelX, currentY - 10).lineWidth(0.3).strokeColor("#eee").stroke();
     });
 
-    // 4. TEAM MEMBERS TABLE
-    doc.y = currentY + 25;
-    doc.fontSize(12).fillColor(secondaryColor).font("Helvetica-Bold").text("Team Members", { align: "center" });
-    doc.moveDown(0.8);
+    // 3. TEAM MEMBERS (Neat Stacked List)
+    doc.y = currentY + 20;
+    doc.fontSize(12).fillColor(accentColor).font("Helvetica-Bold").text("PARTICIPANTS", labelX);
+    doc.moveDown(1.5);
 
-    const tableX = 80;
-    const tableWidth = pageWidth - 160;
-    const rowHeight = 25;
-
-    // Header Row
-    doc.rect(tableX, doc.y, tableWidth, rowHeight).fill(secondaryColor);
-    doc.fillColor("white").font("Helvetica-Bold").fontSize(10);
-    doc.text("No", tableX + 10, doc.y + 8);
-    doc.text("Name", tableX + 50, doc.y + 8);
-    doc.text("Roll Number", tableX + tableWidth - 120, doc.y + 8);
-    doc.y += rowHeight;
-
-    // Data Rows
     registration.teamMembers.forEach((m, i) => {
-      doc.rect(tableX, doc.y, tableWidth, rowHeight).lineWidth(0.5).strokeColor("#ccc").stroke();
-      doc.fillColor("black").font("Helvetica").fontSize(9);
-      doc.text(i + 1, tableX + 10, doc.y + 8);
-      doc.text(m.fullName.toUpperCase(), tableX + 50, doc.y + 8);
-      doc.text(m.rollNo.toUpperCase(), tableX + tableWidth - 120, doc.y + 8);
-      doc.y += rowHeight;
+      const memberY = doc.y;
+      
+      // Blue bullet point or number
+      doc.fillColor(accentColor).font("Helvetica-Bold").fontSize(11).text(`${i + 1}.`, labelX);
+      
+      // Name (Bold)
+      doc.fillColor("#2d3436").font("Helvetica-Bold").fontSize(11).text(m.fullName.toUpperCase(), labelX + 30, memberY);
+      
+      // Roll Number (Below name, gray)
+      doc.fillColor("#636e72").font("Helvetica").fontSize(10).text(`Roll No: ${m.rollNo.toUpperCase()}`, labelX + 30, memberY + 14);
+      
+      doc.moveDown(2.5);
     });
 
-    // 5. STATUS SECTION (With Icon Logic)
-    doc.moveDown(2);
-    const statusText = isConfirmed 
-      ? "Status : Payment Verified" 
-      : "Status : Payment Submitted - Awaiting Verification";
-    
-    doc.fontSize(11).fillColor(isConfirmed ? "green" : "red").font("Helvetica-Bold")
-       .text(statusText, { align: "right", indent: 40 });
+    // 4. STATUS INDICATOR (Modern Pill Style)
+    doc.y = doc.page.height - 150;
+    const statusLabel = isConfirmed ? "PAYMENT VERIFIED" : "VERIFICATION PENDING";
+    const statusColor = isConfirmed ? "#27ae60" : "#e67e22";
 
-    // 6. OFFICIAL FOOTER AREA
+    doc.fillColor(statusColor)
+       .font("Helvetica-Bold")
+       .fontSize(12)
+       .text(statusLabel, { align: "right", indent: 20 });
+
+    // 5. FOOTER
     const now = new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
-    
-    // Add a signature line on the right
-    const sigY = doc.page.height - 110;
-    doc.moveTo(pageWidth - 180, sigY).lineTo(pageWidth - 60, sigY).lineWidth(0.5).strokeColor("gray").stroke();
-    doc.fontSize(8).fillColor("black").text("Authorized Signatory", pageWidth - 180, sigY + 5, { width: 120, align: "center" });
-
-    // Centered Chapter Info
-    doc.y = doc.page.height - 80;
-    doc.fontSize(8).fillColor("gray").font("Helvetica")
-       .text("IEEE SPS Student Branch Chapter", { align: "center" })
-       .text("Aditya University, Surampalem", { align: "center" })
-       .moveDown(0.5)
-       .fontSize(7).text(`Generated on: ${now}`, { align: "center", fontStyle: "italic" });
+    doc.y = doc.page.height - 70;
+    doc.fontSize(8).fillColor("#b2bec3").font("Helvetica")
+       .text("IEEE SPS Student Branch Chapter | Aditya University, Surampalem", { align: "center" })
+       .text(`System Generated on ${now}`, { align: "center" });
 
     doc.end();
   });
@@ -509,13 +494,14 @@ ${registration.teamMembers.map((m) => `<li>${m.fullName}</li>`).join("")}
 <li>Bring a laptop with Arduino IDE installed</li>
 <li>Teams must present a working prototype</li>
 </ul>
-
+<h3>WhatsApp Updates</h3>
 <p>
-Join WhatsApp group for updates:
+Join the official Skill Forze + Buildathon WhatsApp group for announcements and instructions.
 </p>
 
-<p>
-<a href="https://chat.whatsapp.com/DruOGVhGlNc989mcDWTEYP">
+<p style="margin-top:10px;">
+<a href="https://chat.whatsapp.com/DruOGVhGlNc989mcDWTEYP" 
+style="background:#25D366;color:white;padding:10px 18px;text-decoration:none;border-radius:5px;display:inline-block;">
 Join WhatsApp Group
 </a>
 </p>
@@ -578,12 +564,15 @@ ${registration.teamMembers.map((m) => `<li>${m.fullName}</li>`).join("")}
 <li>Teams must present a functional prototype</li>
 </ul>
 
-<p>
-Join the official Buildathon WhatsApp group:
-</p>
+<h3>WhatsApp Updates</h3>
 
 <p>
-<a href="https://chat.whatsapp.com/Csy0z79Sxyz7kwKvwTEN8p">
+Join the official Buildathon WhatsApp group for announcements and instructions.
+</p>
+
+<p style="margin-top:10px;">
+<a href="https://chat.whatsapp.com/Csy0z79Sxyz7kwKvwTEN8p" 
+style="background:#25D366;color:white;padding:10px 18px;text-decoration:none;border-radius:5px;display:inline-block;">
 Join WhatsApp Group
 </a>
 </p>
