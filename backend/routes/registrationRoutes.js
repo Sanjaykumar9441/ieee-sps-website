@@ -356,68 +356,32 @@ const generateReceiptPDF = async (registration) => {
       currentY += 15;
     });
 
-    // 4. TEAM MEMBERS TABLE
-    doc.y = currentY + 25;
+    // 4. TEAM MEMBERS LIST (Simple Layout)
+
+    doc.moveDown(2);
+
     doc
       .fontSize(12)
       .fillColor(secondaryColor)
       .font("Helvetica-Bold")
       .text("Team Members", { align: "center" });
-    doc.moveDown(0.3);
 
-    const tableX = 80;
-    const tableWidth = pageWidth - 160;
-    const rowHeight = 18;
+    doc.moveDown(1);
 
-    doc.rect(tableX, doc.y, tableWidth, rowHeight).fill(secondaryColor);
-    doc.fillColor("white").font("Helvetica-Bold").fontSize(10);
-    doc.text("No", tableX + 10, doc.y + 8);
-    doc.text("Name", tableX + 50, doc.y + 8);
-    doc.text("Roll Number", tableX + tableWidth - 120, doc.y + 8);
-    doc.y += rowHeight;
-
-    const colNo = 40;
-    const colName = tableWidth - 160;
-    const colRoll = 120;
+    doc.fillColor("black").font("Helvetica").fontSize(10);
 
     registration.teamMembers.forEach((m, i) => {
-      doc
-        .rect(tableX, doc.y, tableWidth, rowHeight)
-        .lineWidth(0.5)
-        .strokeColor("#ccc")
-        .stroke();
-
-      doc.fillColor("black").font("Helvetica").fontSize(9);
-
-      // No
-      doc.text(i + 1, tableX + 10, doc.y + 5, {
-        width: colNo,
-        align: "left",
-      });
-
-      // Name
-      doc.text(m.fullName.toUpperCase(), tableX + colNo + 10, doc.y + 5, {
-        width: colName,
-        align: "left",
-        ellipsis: true,
-      });
-
-      // Roll Number
       doc.text(
-        m.rollNo.toUpperCase(),
-        tableX + colNo + colName + 10,
-        doc.y + 5,
+        `${i + 1}. ${m.fullName.toUpperCase()}  -  ${m.rollNo.toUpperCase()}`,
         {
-          width: colRoll,
-          align: "right",
+          align: "left",
         },
       );
 
-      doc.y += rowHeight;
+      doc.moveDown(0.5);
     });
-
     // 5. DYNAMIC STATUS
-    doc.moveDown(2);
+    doc.moveDown(3);
     const isConfirmed = registration.registrationStatus === "Confirmed";
     doc
       .fontSize(11)
@@ -548,39 +512,30 @@ router.post("/send-confirmation-email", async (req, res) => {
 
     if (registration.eventType === "combo") {
       htmlTemplate = `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Arduino Days 2026 Registration</title>
-</head>
+<div style="font-family:Arial,sans-serif;line-height:1.6">
 
-<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,sans-serif;">
-<span style="display:none;max-height:0px;overflow:hidden;">
-Arduino Days 2026 – Registration Confirmed. Your event pass is attached.
-</span>
-
-<div style="padding:30px;">
-
-<div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;border:1px solid #e5e7eb;padding:30px;">
-
-<div style="text-align:center;margin-bottom:20px;">
-<img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" width="150"/>
-<h2 style="color:#0ea5e9;">Registration Confirmed 🎉</h2>
+<div style="text-align:center;margin-bottom:20px">
+<img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" width="140">
 </div>
 
 <p>Hello <b>${registration.teamName}</b>,</p>
 
-<p>Your registration for <b>Arduino Days 2026</b> has been confirmed.</p>
+<p>Your registration for <b>Arduino Days 2026</b> has been <b>confirmed</b>.</p>
 
 <h3>Registration Details</h3>
 
 <p>
 <b>Event:</b> Skill Forze Workshop + Buildathon<br>
 <b>Registration ID:</b> ${registration.registrationId}<br>
-<b>Team Size:</b> ${registration.teamSize} Members
-<br><b>Confirmed On:</b> ${new Date().toLocaleString("en-IN")}
+<b>Team Size:</b> ${registration.teamSize} Members<br>
+<b>Confirmed On:</b> ${new Date().toLocaleString("en-IN")}
 </p>
+
+<h3>Team Members</h3>
+
+<ul>
+${registration.teamMembers.map((m) => `<li>${m.fullName}</li>`).join("")}
+</ul>
 
 <h3>Event Schedule</h3>
 
@@ -590,90 +545,65 @@ Arduino Days 2026 – Registration Confirmed. Your event pass is attached.
 <b>Venue:</b> Aditya University, Surampalem
 </p>
 
-<h3>Team Members</h3>
-
-<p>${participants}</p>
-
 <h3>Important Instructions</h3>
 
 <ul>
-<li>Carry your <b>Student ID Card</b></li>
-<li>Bring a <b>Laptop with Arduino IDE installed</b></li>
-<li>Teams must present a <b>working prototype</b></li>
+<li>Carry your Student ID card</li>
+<li>Bring a laptop with Arduino IDE installed</li>
+<li>Teams must present a working prototype</li>
 </ul>
 
-<div style="text-align:center;margin-top:25px;">
+<p>
+Join WhatsApp group for updates:
+</p>
 
-<p>Join the official WhatsApp group for updates</p>
-
-<table align="center">
-<tr>
-<td bgcolor="#25D366" style="border-radius:6px;">
-<a href="https://chat.whatsapp.com/DruOGVhGlNc989mcDWTEYP"
-style="color:#ffffff;font-family:Arial;padding:12px 22px;display:inline-block;text-decoration:none;">
+<p>
+<a href="https://chat.whatsapp.com/DruOGVhGlNc989mcDWTEYP">
 Join WhatsApp Group
 </a>
-</td>
-</tr>
-</table>
+</p>
 
-</div>
+<hr>
 
-<div style="border-top:1px solid #e5e7eb;margin:25px 0;"></div>
-
-<p style="font-size:14px;">
-For any queries contact:<br>
+<p>
+For queries contact:<br>
 <b>Chitturi Sanjay Kumar</b><br>
 +91 7095009441
 </p>
 
-<p style="font-size:13px;color:#777;">
+<p style="color:gray;font-size:13px">
 IEEE SPS Student Branch Chapter<br>
 Aditya University, Surampalem
 </p>
 
 </div>
-
-</div>
-
-</body>
-</html>
 `;
     } else {
       htmlTemplate = `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Arduino Days 2026 Registration</title>
-</head>
+<div style="font-family:Arial,sans-serif;line-height:1.6">
 
-<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,sans-serif;">
-<span style="display:none;max-height:0px;overflow:hidden;">
-Arduino Days 2026 – Registration Confirmed. Your event pass is attached.
-</span>
-
-<div style="padding:30px;">
-
-<div style="max-width:600px;margin:auto;background:#ffffff;border-radius:10px;border:1px solid #e5e7eb;padding:30px;">
-
-<div style="text-align:center;margin-bottom:20px;">
-<img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" width="150"/>
-<h2 style="color:#8b5cf6;">Registration Confirmed 🎉</h2>
+<div style="text-align:center;margin-bottom:20px">
+<img src="https://res.cloudinary.com/dlzs0cgfd/image/upload/v1772826744/titlelogo_k0cdzv.png" width="140">
 </div>
 
 <p>Hello <b>${registration.teamName}</b>,</p>
 
-<p>Your registration for the <b>Arduino Days Buildathon</b> has been successfully confirmed.</p>
+<p>Your registration for the <b>Arduino Days Buildathon</b> has been <b>confirmed</b>.</p>
 
 <h3>Registration Details</h3>
 
 <p>
 <b>Event:</b> Buildathon Hackathon<br>
 <b>Registration ID:</b> ${registration.registrationId}<br>
-<b>Team Size:</b> ${registration.teamSize} Members
-<br><b>Confirmed On:</b> ${new Date().toLocaleString("en-IN")}
+<b>Team Size:</b> ${registration.teamSize} Members<br>
+<b>Confirmed On:</b> ${new Date().toLocaleString("en-IN")}
 </p>
+
+<h3>Team Members</h3>
+
+<ul>
+${registration.teamMembers.map((m) => `<li>${m.fullName}</li>`).join("")}
+</ul>
 
 <h3>Event Details</h3>
 
@@ -682,55 +612,39 @@ Arduino Days 2026 – Registration Confirmed. Your event pass is attached.
 <b>Venue:</b> Aditya University, Surampalem
 </p>
 
-<h3>Team Members</h3>
-
-<p>${participants}</p>
-
-<h3>Participation Rules</h3>
+<h3>Rules</h3>
 
 <ul>
-<li>Minimum <b>one laptop per team</b> is mandatory.</li>
-<li>Problem statements will be revealed at the venue.</li>
-<li>Projects must be developed during the event.</li>
-<li>A functional prototype must be presented.</li>
+<li>Minimum one laptop per team</li>
+<li>Problem statements will be revealed at the venue</li>
+<li>Projects must be developed during the event</li>
+<li>Teams must present a functional prototype</li>
 </ul>
 
-<div style="text-align:center;margin-top:25px;">
+<p>
+Join the official Buildathon WhatsApp group:
+</p>
 
-<p>Join the official Hackathon WhatsApp group</p>
-
-<table align="center">
-<tr>
-<td bgcolor="#25D366" style="border-radius:6px;">
-<a href="https://chat.whatsapp.com/Csy0z79Sxyz7kwKvwTEN8p"
-style="color:#ffffff;font-family:Arial;padding:12px 22px;display:inline-block;text-decoration:none;">
+<p>
+<a href="https://chat.whatsapp.com/Csy0z79Sxyz7kwKvwTEN8p">
 Join WhatsApp Group
 </a>
-</td>
-</tr>
-</table>
+</p>
 
-</div>
+<hr>
 
-<hr style="margin:30px 0">
-
-<p style="font-size:14px;">
-For any queries contact:<br>
+<p>
+For queries contact:<br>
 <b>Chitturi Sanjay Kumar</b><br>
 +91 7095009441
 </p>
 
-<p style="font-size:13px;color:#666;">
+<p style="color:gray;font-size:13px">
 IEEE SPS Student Branch Chapter<br>
 Aditya University, Surampalem
 </p>
 
 </div>
-
-</div>
-
-</body>
-</html>
 `;
     }
 
