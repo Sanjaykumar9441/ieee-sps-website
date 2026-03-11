@@ -1467,9 +1467,7 @@ const Dashboard = () => {
                     if (registrationFilter === "all") return true;
 
                     if (registrationFilter === "startup") {
-                      return (
-                        (reg.startup?.answer || "").toLowerCase() === "yes"
-                      );
+                      return (reg.startupAnswer || "").toLowerCase() === "yes";
                     }
 
                     if (registrationFilter === "hostel") {
@@ -1494,7 +1492,7 @@ const Dashboard = () => {
 
                       if (registrationFilter === "startup") {
                         return (
-                          (reg.startup?.answer || "").toLowerCase() === "yes"
+                          (reg.startupAnswer || "").toLowerCase() === "yes"
                         );
                       }
 
@@ -1539,7 +1537,7 @@ const Dashboard = () => {
                         <p>
                           <b>Event:</b> {reg.eventName}
                         </p>
-                        {reg.startup?.answer === "yes" && (
+                        {reg.startupAnswer === "yes" && (
                           <p className="text-pink-400 text-sm font-semibold">
                             Startup Team
                           </p>
@@ -1774,13 +1772,13 @@ const Dashboard = () => {
                           ? "Yes"
                           : "No"}
                       </p>
-                      {selectedFullDetails.startup?.answer === "yes" && (
+                      {selectedFullDetails.startupAnswer === "yes" && (
                         <div className="mt-3 p-3 bg-zinc-800 rounded border border-cyan-500/20">
                           <p className="text-cyan-400 font-semibold">
                             Startup Idea
                           </p>
                           <p className="mt-1 text-gray-300">
-                            {selectedFullDetails.startup.idea}
+                            {selectedFullDetails.startupIdea}
                           </p>
                         </div>
                       )}
