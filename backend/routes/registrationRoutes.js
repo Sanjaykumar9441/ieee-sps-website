@@ -504,6 +504,35 @@ router.delete("/:id", verifyToken, async (req, res) => {
       return res.status(404).json({ message: "Registration not found" });
     }
 
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+
+    if (registration.telegramMessageId) {
+      const members = registration.teamMembers
+        .map((m, i) => `${i + 1}. ${m.fullName}`)
+        .join("\n");
+
+      await axios.post(
+        `https://api.telegram.org/bot${token}/editMessageCaption`,
+        {
+          chat_id: chatId,
+          message_id: registration.telegramMessageId,
+          caption: `❌ *Registration Rejected*
+
+Team: *${registration.teamName}*
+Event: ${registration.eventName}
+Registration ID: \`${registration.registrationId}\`
+
+👥 *Members*
+${members}
+
+Status: ❌ Rejected`,
+          parse_mode: "Markdown",
+          reply_markup: { inline_keyboard: [] },
+        },
+      );
+    }
+
     await Registration.findByIdAndDelete(req.params.id);
 
     res.json({ message: "Registration deleted successfully" });
