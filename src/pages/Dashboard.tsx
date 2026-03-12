@@ -1375,7 +1375,7 @@ const Dashboard = () => {
                       >
                         <span>
                           {index + 1}.{" "}
-                          {collegeMap[college.name] || college.name}
+                          {collegeMap[normalizeCollege(college.name)] || college.name}
                         </span>
 
                         <span className="text-cyan-400 font-semibold">
