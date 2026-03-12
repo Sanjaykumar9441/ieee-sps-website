@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
+import { Calendar } from "lucide-react";
 type Member = {
   fullName: string;
   rollNo: string;
@@ -1061,15 +1062,22 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       </label>
 
                       <div className="flex flex-col md:flex-row gap-3">
-                        <input
-                          type="date"
-                          min="2026-03-22"
-                          max="2026-03-26"
-                          value={arrivalDate}
-                          onChange={(e) => setArrivalDate(e.target.value)}
-                          onFocus={(e) => e.target.showPicker()} // 👈 forces calendar popup
-                          className="p-2 bg-black/70 border border-yellow-400/20 rounded cursor-pointer"
-                        />
+                        <div className="relative w-full md:w-auto">
+                          <Calendar
+                            size={18}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none md:hidden"
+                          />
+
+                          <input
+                            type="date"
+                            min="2026-03-22"
+                            max="2026-03-26"
+                            value={arrivalDate}
+                            onChange={(e) => setArrivalDate(e.target.value)}
+                            onFocus={(e) => e.target.showPicker()}
+                            className="p-2 pl-9 bg-black/70 border border-yellow-400/20 rounded cursor-pointer w-full md:w-auto"
+                          />
+                        </div>
 
                         <input
                           type="text"
@@ -1092,15 +1100,22 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       </label>
 
                       <div className="flex flex-col md:flex-row gap-3">
-                        <input
-                          type="date"
-                          min="2026-03-22"
-                          max="2026-03-26"
-                          value={departureDate}
-                          onChange={(e) => setDepartureDate(e.target.value)}
-                          onFocus={(e) => e.target.showPicker()}
-                          className="p-2 bg-black/70 border border-yellow-400/20 rounded"
-                        />
+                        <div className="relative w-full md:w-auto">
+                          <Calendar
+                            size={18}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none md:hidden"
+                          />
+
+                          <input
+                            type="date"
+                            min="2026-03-22"
+                            max="2026-03-26"
+                            value={departureDate}
+                            onChange={(e) => setDepartureDate(e.target.value)}
+                            onFocus={(e) => e.target.showPicker()}
+                            className="p-2 pl-9 bg-black/70 border border-yellow-400/20 rounded cursor-pointer w-full md:w-auto"
+                          />
+                        </div>
                         <input
                           type="text"
                           placeholder="Example: 7:30 AM or 730pm"
