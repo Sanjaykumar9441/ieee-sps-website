@@ -341,7 +341,7 @@ const ArduinoDays = () => {
                     />
 
                     <p className="text-sm sm:text-base md:text-lg text-gray-300 max-w-xl md:max-w-2xl mx-auto">
-                      A 4-Day Technical Event focused on Arduino, IoT, Embedded
+                      A 3-Day Technical Event focused on Arduino, IoT, Embedded
                       Systems, and Real-Time Project Development.
                     </p>
                   </div>
@@ -354,7 +354,7 @@ const ArduinoDays = () => {
                         className="text-cyan-400 flex-shrink-0"
                       />
                       <span>
-                        March 23<sup>rd</sup> – 26<sup>th</sup>, 2026
+                        March 23<sup>rd</sup> – 25<sup>th</sup>, 2026
                       </span>
                     </div>
 
@@ -822,7 +822,7 @@ const ArduinoDays = () => {
                     <span className="text-green-400 font-semibold">
                       Arduino Days 2026
                     </span>
-                    is a 4-day technical event designed to inspire innovation,
+                    is a 3-day technical event designed to inspire innovation,
                     creativity, and hands-on learning in the fields of Arduino,
                     IoT, Embedded Systems, and Real-Time Project Development.
                   </p>

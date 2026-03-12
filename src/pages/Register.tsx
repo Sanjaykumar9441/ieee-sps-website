@@ -937,7 +937,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
               <div className="mb-8">
                 <label className="block mb-2">
                   Hostel Accommodation Required? (₹150 per student/day —
-                  Includes Breakfast & Dinner)
+                  Includes Breakfast, Lunch & Dinner)
                 </label>
 
                 <select
