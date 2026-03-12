@@ -578,6 +578,7 @@ const Dashboard = () => {
       const rows: any[] = [];
 
       rows.push([
+        "Date & Time",
         "Reg ID",
         "Event",
         "Team",
@@ -607,6 +608,10 @@ const Dashboard = () => {
           );
 
           rows.push([
+            index === 0
+              ? `${formatDate(reg.createdAt)}, ${new Date(reg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+              : "",
+
             index === 0 ? reg.registrationId : "",
             index === 0 ? reg.eventName : "",
             index === 0 ? reg.teamName : "",
@@ -1671,6 +1676,7 @@ const Dashboard = () => {
                     <table className="w-full bg-zinc-900 rounded-lg overflow-hidden">
                       <thead className="bg-zinc-800 text-cyan-400">
                         <tr>
+                          <th className="p-3 text-left">Date & Time</th>
                           <th className="p-3 text-left">Reg ID</th>
                           <th className="p-3 text-left">Team</th>
                           <th className="p-3 text-left">Members</th>
@@ -1723,6 +1729,12 @@ const Dashboard = () => {
                               key={reg._id}
                               className="border-t border-zinc-700"
                             >
+                              <td className="p-3">
+                                {reg.createdAt
+                                  ? `${formatDate(reg.createdAt)}, ${new Date(reg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                                  : "-"}
+                              </td>
+
                               <td className="p-3 text-green-400 font-semibold">
                                 {reg.registrationId}
                               </td>
@@ -1773,15 +1785,6 @@ const Dashboard = () => {
                                 >
                                   Delete
                                 </button>
-
-                                <a
-                                  href={`https://ieee-sps-website.onrender.com/api/pdf/${reg.registrationId}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="bg-purple-500 px-3 py-1 rounded"
-                                >
-                                  PDF
-                                </a>
                               </td>
                             </tr>
                           ))}
@@ -1822,6 +1825,12 @@ const Dashboard = () => {
                     </h3>
 
                     <div className="space-y-1 mb-4">
+                      <p>
+                        <b>Registered On:</b>{" "}
+                        {selectedFullDetails.createdAt
+                          ? `${formatDate(selectedFullDetails.createdAt)}, ${new Date(selectedFullDetails.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                          : "-"}
+                      </p>
                       <p>
                         <b>Registration ID:</b>{" "}
                         {selectedFullDetails.registrationId}

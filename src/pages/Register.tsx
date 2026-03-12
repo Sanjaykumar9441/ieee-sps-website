@@ -226,6 +226,23 @@ const Register = () => {
   const [arrivalTime, setArrivalTime] = useState("");
   const [departureDate, setDepartureDate] = useState("");
   const [departureTime, setDepartureTime] = useState("");
+  const formatTimeInput = (value: string) => {
+    let v = value.toLowerCase().replace(/\s+/g, "");
+
+    const match = v.match(/^(\d{1,2})(\d{2})(am|pm)$/);
+
+    if (!match) return value.toUpperCase();
+
+    let hour = parseInt(match[1]);
+    let minute = match[2];
+    let period = match[3].toUpperCase();
+
+    if (hour >= 1 && hour <= 12 && parseInt(minute) <= 59) {
+      return `${hour}:${minute} ${period}`;
+    }
+
+    return value.toUpperCase();
+  };
   const [accommodationMembers, setAccommodationMembers] = useState<number[]>(
     [],
   );
@@ -533,42 +550,41 @@ const Register = () => {
       return false;
     }
 
-if (accommodationRequired) {
+    if (accommodationRequired) {
+      if (accommodationMembers.length === 0) {
+        alert("Please select at least one member for hostel accommodation.");
+        return false;
+      }
 
-  if (accommodationMembers.length === 0) {
-    alert("Please select at least one member for hostel accommodation.");
-    return false;
-  }
+      if (!arrivalDate || !arrivalTime || !departureDate || !departureTime) {
+        alert("Please select arrival and departure date & time.");
+        return false;
+      }
 
-  if (!arrivalDate || !arrivalTime || !departureDate || !departureTime) {
-    alert("Please select arrival and departure date & time.");
-    return false;
-  }
+      const arrival = new Date(`${arrivalDate}T${arrivalTime}`);
+      const departure = new Date(`${departureDate}T${departureTime}`);
 
-  const arrival = new Date(`${arrivalDate}T${arrivalTime}`);
-  const departure = new Date(`${departureDate}T${departureTime}`);
+      const eventStart = new Date("2026-03-22T00:00");
+      const eventEnd = new Date("2026-03-26T23:59");
 
-  const eventStart = new Date("2026-03-22T00:00");
-  const eventEnd = new Date("2026-03-26T23:59");
+      if (arrival < eventStart || arrival > eventEnd) {
+        alert("Arrival date must be between 22-03-2026 and 26-03-2026.");
+        return false;
+      }
 
-  if (arrival < eventStart || arrival > eventEnd) {
-    alert("Arrival date must be between 22-03-2026 and 26-03-2026.");
-    return false;
-  }
+      if (departure < eventStart || departure > eventEnd) {
+        alert("Departure date must be between 22-03-2026 and 26-03-2026.");
+        return false;
+      }
 
-  if (departure < eventStart || departure > eventEnd) {
-    alert("Departure date must be between 22-03-2026 and 26-03-2026.");
-    return false;
-  }
+      if (departure <= arrival) {
+        alert("Departure must be after arrival.");
+        return false;
+      }
+    }
 
-  if (departure <= arrival) {
-    alert("Departure must be after arrival.");
-    return false;
-  }
-}
-
-return true;
-};
+    return true;
+  };
 
   const handleNext = async () => {
     if (loading) return;
@@ -1056,10 +1072,14 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                         />
 
                         <input
-                          type="time"
+                          type="text"
+                          placeholder="Example: 7:30 AM or 730pm"
                           value={arrivalTime}
+                          onBlur={(e) =>
+                            setArrivalTime(formatTimeInput(e.target.value))
+                          }
                           onChange={(e) => setArrivalTime(e.target.value)}
-                          onFocus={(e) => e.target.showPicker()}
+                          pattern="(0?[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM)"
                           className="p-2 bg-black/70 border border-yellow-400/20 rounded"
                         />
                       </div>
@@ -1081,12 +1101,15 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           onFocus={(e) => e.target.showPicker()}
                           className="p-2 bg-black/70 border border-yellow-400/20 rounded"
                         />
-
                         <input
-                          type="time"
+                          type="text"
+                          placeholder="Example: 7:30 AM or 730pm"
                           value={departureTime}
+                          onBlur={(e) =>
+                            setDepartureTime(formatTimeInput(e.target.value))
+                          }
                           onChange={(e) => setDepartureTime(e.target.value)}
-                          onFocus={(e) => e.target.showPicker()}
+                          pattern="(0?[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM)"
                           className="p-2 bg-black/70 border border-yellow-400/20 rounded"
                         />
                       </div>
@@ -1458,7 +1481,19 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       alert("Please upload payment screenshot.");
                       return;
                     }
+                    const timeRegex = /^(0?[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM)$/;
 
+                    if (accommodationRequired) {
+                      if (!timeRegex.test(arrivalTime)) {
+                        alert("Arrival time must be in format hh:mm AM/PM");
+                        return false;
+                      }
+
+                      if (!timeRegex.test(departureTime)) {
+                        alert("Departure time must be in format hh:mm AM/PM");
+                        return false;
+                      }
+                    }
                     try {
                       setLoading(true);
 
