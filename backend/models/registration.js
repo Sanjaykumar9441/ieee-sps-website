@@ -62,6 +62,11 @@ const registrationSchema = new mongoose.Schema(
 
     hostelMembers: [memberSchema],
 
+    arrivalDate: String,
+    arrivalTime: String,
+    departureDate: String,
+    departureTime: String,
+
     payment: {
       userTransactionId: {
         type: String,

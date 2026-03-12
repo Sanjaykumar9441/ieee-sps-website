@@ -222,6 +222,10 @@ const Register = () => {
   const [teamSize, setTeamSize] = useState(4);
   const [teamName, setTeamName] = useState("");
   const [accommodationRequired, setAccommodationRequired] = useState(false);
+  const [arrivalDate, setArrivalDate] = useState("");
+  const [arrivalTime, setArrivalTime] = useState("");
+  const [departureDate, setDepartureDate] = useState("");
+  const [departureTime, setDepartureTime] = useState("");
   const [accommodationMembers, setAccommodationMembers] = useState<number[]>(
     [],
   );
@@ -528,7 +532,34 @@ const Register = () => {
       alert("Duplicate roll numbers are not allowed in the same team.");
       return false;
     }
+    // Hostel arrival/departure validation
+    if (accommodationRequired) {
+      if (!arrivalDate || !arrivalTime || !departureDate || !departureTime) {
+        alert("Please select arrival and departure date & time.");
+        return false;
+      }
 
+      const arrival = new Date(`${arrivalDate}T${arrivalTime}`);
+      const departure = new Date(`${departureDate}T${departureTime}`);
+
+      const eventStart = new Date("2026-03-22T00:00");
+      const eventEnd = new Date("2026-03-26T23:59");
+
+      if (arrival < eventStart || arrival > eventEnd) {
+        alert("Arrival date must be between 22-03-2026 and 26-03-2026.");
+        return false;
+      }
+
+      if (departure < eventStart || departure > eventEnd) {
+        alert("Departure date must be between 22-03-2026 and 26-03-2026.");
+        return false;
+      }
+
+      if (departure <= arrival) {
+        alert("Departure must be after arrival.");
+        return false;
+      }
+    }
     return true;
   };
 
@@ -999,6 +1030,56 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                         {member.fullName || `Member ${index + 1}`}
                       </label>
                     ))}
+
+                    {/* Arrival Date & Time */}
+                    <div className="mt-6">
+                      <label className="block text-yellow-300 mb-2">
+                        Arrival Date & Time
+                      </label>
+
+                      <div className="flex gap-3">
+                        <input
+                          type="date"
+                          min="2026-03-22"
+                          max="2026-03-26"
+                          value={arrivalDate}
+                          onChange={(e) => setArrivalDate(e.target.value)}
+                          className="p-2 bg-black/70 border border-yellow-400/20 rounded"
+                        />
+
+                        <input
+                          type="time"
+                          value={arrivalTime}
+                          onChange={(e) => setArrivalTime(e.target.value)}
+                          className="p-2 bg-black/70 border border-yellow-400/20 rounded"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Departure Date & Time */}
+                    <div className="mt-4">
+                      <label className="block text-yellow-300 mb-2">
+                        Departure Date & Time
+                      </label>
+
+                      <div className="flex gap-3">
+                        <input
+                          type="date"
+                          min="2026-03-22"
+                          max="2026-03-26"
+                          value={departureDate}
+                          onChange={(e) => setDepartureDate(e.target.value)}
+                          className="p-2 bg-black/70 border border-yellow-400/20 rounded"
+                        />
+
+                        <input
+                          type="time"
+                          value={departureTime}
+                          onChange={(e) => setDepartureTime(e.target.value)}
+                          className="p-2 bg-black/70 border border-yellow-400/20 rounded"
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1325,7 +1406,7 @@ backdrop-blur-md"
                   pattern="\d{12}"
                   inputMode="numeric"
                   onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "")
+                    const value = e.target.value.replace(/\D/g, "");
                     if (/^\d*$/.test(value)) {
                       setTransactionId(value);
                     }
@@ -1416,6 +1497,20 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           honeypot,
                           accommodationRequired,
                           hostelMembers: selectedHostelMembers,
+
+                          arrivalDate: accommodationRequired
+                            ? arrivalDate
+                            : null,
+                          arrivalTime: accommodationRequired
+                            ? arrivalTime
+                            : null,
+                          departureDate: accommodationRequired
+                            ? departureDate
+                            : null,
+                          departureTime: accommodationRequired
+                            ? departureTime
+                            : null,
+
                           expectedAmount: totalAmount,
                           userTransactionId: transactionId,
                           screenshotUrl: screenshotUrl,

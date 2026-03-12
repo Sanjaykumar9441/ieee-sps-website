@@ -554,7 +554,17 @@ const Dashboard = () => {
     setEditMember(null);
     fetchMembers();
   };
+  const formatDate = (date: string) => {
+    if (!date) return "-";
 
+    const d = new Date(date);
+
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = String(d.getFullYear()).slice(-2);
+
+    return `${day}-${month}-${year}`;
+  };
   const exportRegistrations = () => {
     const confirmed = registrations.filter(
       (r) => r.registrationStatus === "Confirmed",
@@ -579,6 +589,8 @@ const Dashboard = () => {
         "Team Phone Numbers",
         "Team Emails",
         "Hostel Members",
+        "Arrival date and time",
+        "Departure date and time",
         "Startup",
         "Idea",
         "UTR",
@@ -605,7 +617,13 @@ const Dashboard = () => {
             member.email || "",
 
             hostelRoll,
+            index === 0 && reg.arrivalDate
+              ? `${formatDate(reg.arrivalDate)}, ${reg.arrivalTime}`
+              : "-",
 
+            index === 0 && reg.departureDate
+              ? `${formatDate(reg.departureDate)}, ${reg.departureTime}`
+              : "-",
             index === 0 ? reg.startup?.answer || "No" : "",
             index === 0 ? reg.startup?.idea || "-" : "",
             index === 0 ? "'" + (reg.payment?.userTransactionId || "") : "",
@@ -1375,7 +1393,8 @@ const Dashboard = () => {
                       >
                         <span>
                           {index + 1}.{" "}
-                          {collegeMap[normalizeCollege(college.name)] || college.name}
+                          {collegeMap[normalizeCollege(college.name)] ||
+                            college.name}
                         </span>
 
                         <span className="text-cyan-400 font-semibold">
@@ -1814,6 +1833,23 @@ const Dashboard = () => {
                           ? "Yes"
                           : "No"}
                       </p>
+                      {selectedFullDetails.accommodationRequired && (
+                        <>
+                          <p>
+                            <b>Arrival Date & Time:</b>{" "}
+                            {selectedFullDetails.arrivalDate
+                              ? `${formatDate(selectedFullDetails.arrivalDate)}, ${selectedFullDetails.arrivalTime}`
+                              : "-"}
+                          </p>
+
+                          <p>
+                            <b>Departure Date & Time:</b>{" "}
+                            {selectedFullDetails.departureDate
+                              ? `${formatDate(selectedFullDetails.departureDate)}, ${selectedFullDetails.departureTime}`
+                              : "-"}
+                          </p>
+                        </>
+                      )}
                       {selectedFullDetails.startup?.answer === "yes" && (
                         <div className="mt-3 p-3 bg-zinc-800 rounded border border-cyan-500/20">
                           <p className="text-cyan-400 font-semibold">
@@ -1826,7 +1862,16 @@ const Dashboard = () => {
                       )}
 
                       <p>
-                        <b>Payment Screenshot Submitted</b>
+                        <b>Transaction ID:</b>{" "}
+                        {selectedFullDetails.payment?.userTransactionId ||
+                          "Not Available"}
+                      </p>
+
+                      <p>
+                        <b>Payment Screenshot:</b>{" "}
+                        {selectedFullDetails.payment?.screenshotUrl
+                          ? "Submitted"
+                          : "Not Submitted"}
                       </p>
                     </div>
                     {selectedFullDetails.hostelMembers &&

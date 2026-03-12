@@ -72,7 +72,11 @@ router.post("/register", registerLimiter, async (req, res) => {
       startupIdea,
       accommodationRequired,
       hostelMembers,
-      expectedAmount: frontendAmount, // This is what the frontend claims is the price
+      arrivalDate,
+      arrivalTime,
+      departureDate,
+      departureTime,
+      expectedAmount: frontendAmount,
       userTransactionId,
       screenshotUrl,
     } = req.body;
@@ -185,18 +189,28 @@ router.post("/register", registerLimiter, async (req, res) => {
       teamName: teamName.toUpperCase(),
       teamSize,
       teamMembers,
+
       startup: {
         answer: startupAnswer,
         idea: startupIdea,
       },
-      expectedAmount: correctAmount, // Save the verified amount
+
+      expectedAmount: correctAmount,
+
       accommodationRequired,
       hostelMembers,
+
+      arrivalDate,
+      arrivalTime,
+      departureDate,
+      departureTime,
+
       payment: {
         userTransactionId,
         screenshotUrl,
         verified: false,
       },
+
       registrationStatus: "Pending",
     });
 
