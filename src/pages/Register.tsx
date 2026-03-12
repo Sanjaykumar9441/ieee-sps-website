@@ -532,36 +532,43 @@ const Register = () => {
       alert("Duplicate roll numbers are not allowed in the same team.");
       return false;
     }
-    // Hostel arrival/departure validation
-    if (accommodationRequired) {
-      if (!arrivalDate || !arrivalTime || !departureDate || !departureTime) {
-        alert("Please select arrival and departure date & time.");
-        return false;
-      }
 
-      const arrival = new Date(`${arrivalDate}T${arrivalTime}`);
-      const departure = new Date(`${departureDate}T${departureTime}`);
+if (accommodationRequired) {
 
-      const eventStart = new Date("2026-03-22T00:00");
-      const eventEnd = new Date("2026-03-26T23:59");
+  if (accommodationMembers.length === 0) {
+    alert("Please select at least one member for hostel accommodation.");
+    return false;
+  }
 
-      if (arrival < eventStart || arrival > eventEnd) {
-        alert("Arrival date must be between 22-03-2026 and 26-03-2026.");
-        return false;
-      }
+  if (!arrivalDate || !arrivalTime || !departureDate || !departureTime) {
+    alert("Please select arrival and departure date & time.");
+    return false;
+  }
 
-      if (departure < eventStart || departure > eventEnd) {
-        alert("Departure date must be between 22-03-2026 and 26-03-2026.");
-        return false;
-      }
+  const arrival = new Date(`${arrivalDate}T${arrivalTime}`);
+  const departure = new Date(`${departureDate}T${departureTime}`);
 
-      if (departure <= arrival) {
-        alert("Departure must be after arrival.");
-        return false;
-      }
-    }
-    return true;
-  };
+  const eventStart = new Date("2026-03-22T00:00");
+  const eventEnd = new Date("2026-03-26T23:59");
+
+  if (arrival < eventStart || arrival > eventEnd) {
+    alert("Arrival date must be between 22-03-2026 and 26-03-2026.");
+    return false;
+  }
+
+  if (departure < eventStart || departure > eventEnd) {
+    alert("Departure date must be between 22-03-2026 and 26-03-2026.");
+    return false;
+  }
+
+  if (departure <= arrival) {
+    alert("Departure must be after arrival.");
+    return false;
+  }
+}
+
+return true;
+};
 
   const handleNext = async () => {
     if (loading) return;
@@ -1044,13 +1051,15 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           max="2026-03-26"
                           value={arrivalDate}
                           onChange={(e) => setArrivalDate(e.target.value)}
-                          className="p-2 bg-black/70 border border-yellow-400/20 rounded"
+                          onFocus={(e) => e.target.showPicker()} // 👈 forces calendar popup
+                          className="p-2 bg-black/70 border border-yellow-400/20 rounded cursor-pointer"
                         />
 
                         <input
                           type="time"
                           value={arrivalTime}
                           onChange={(e) => setArrivalTime(e.target.value)}
+                          onFocus={(e) => e.target.showPicker()}
                           className="p-2 bg-black/70 border border-yellow-400/20 rounded"
                         />
                       </div>
@@ -1069,6 +1078,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           max="2026-03-26"
                           value={departureDate}
                           onChange={(e) => setDepartureDate(e.target.value)}
+                          onFocus={(e) => e.target.showPicker()}
                           className="p-2 bg-black/70 border border-yellow-400/20 rounded"
                         />
 
@@ -1076,6 +1086,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           type="time"
                           value={departureTime}
                           onChange={(e) => setDepartureTime(e.target.value)}
+                          onFocus={(e) => e.target.showPicker()}
                           className="p-2 bg-black/70 border border-yellow-400/20 rounded"
                         />
                       </div>

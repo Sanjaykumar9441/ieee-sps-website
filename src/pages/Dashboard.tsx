@@ -600,8 +600,11 @@ const Dashboard = () => {
       data.forEach((reg) => {
         reg.teamMembers.forEach((member: any, index: number) => {
           const hostelRoll =
-            reg.hostelMembers?.find((h: any) => h.fullName === member.fullName)
+            reg.hostelMembers?.find((h: any) => h.rollNo === member.rollNo)
               ?.rollNo || "-";
+          const isHostelMember = reg.hostelMembers?.some(
+            (h: any) => h.rollNo === member.rollNo,
+          );
 
           rows.push([
             index === 0 ? reg.registrationId : "",
@@ -617,11 +620,11 @@ const Dashboard = () => {
             member.email || "",
 
             hostelRoll,
-            index === 0 && reg.arrivalDate
+            isHostelMember && reg.arrivalDate
               ? `${formatDate(reg.arrivalDate)}, ${reg.arrivalTime}`
               : "-",
 
-            index === 0 && reg.departureDate
+            isHostelMember && reg.departureDate
               ? `${formatDate(reg.departureDate)}, ${reg.departureTime}`
               : "-",
             index === 0 ? reg.startup?.answer || "No" : "",
@@ -1590,6 +1593,11 @@ const Dashboard = () => {
                         <p>
                           <b>Event:</b> {reg.eventName}
                         </p>
+                        {reg.accommodationRequired && (
+                          <p className="text-yellow-400 font-semibold text-sm">
+                            Hostel: Yes
+                          </p>
+                        )}
                         {(reg.startup?.answer || "").toLowerCase() ===
                           "yes" && (
                           <p className="text-pink-400 text-sm font-semibold">
