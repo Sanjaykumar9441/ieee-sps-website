@@ -8,6 +8,7 @@ type Member = {
   email: string;
   phone: string;
   department: string;
+  otherDepartment?: string;
   year: string;
   college: string; // Final college value
   collegeCity: string;
@@ -18,18 +19,33 @@ type Member = {
 };
 
 const departmentOptions = [
-  { value: "ECE", label: "Electronics & Communication Engineering" },
+  { value: "ECE", label: "Electronics & Communication Engineering (ECE)" },
   { value: "CSE", label: "Computer Science & Engineering (CSE)" },
   { value: "CSE-DS", label: "CSE (Data Science)" },
-  { value: "AIML", label: "Artificial Intelligence & Machine Learning" },
-  { value: "IT", label: "Information Technology" },
-  { value: "EEE", label: "Electrical & Electronics Engineering" },
+  { value: "AIML", label: "Artificial Intelligence & Machine Learning (AIML)" },
+  { value: "IT", label: "Information Technology (IT)" },
+  { value: "CSE-CS", label: "Cyber Security (CSE)" },
+  { value: "EEE", label: "Electrical & Electronics Engineering (EEE)" },
   { value: "MECH", label: "Mechanical Engineering" },
   { value: "CIVIL", label: "Civil Engineering" },
   { value: "PETRO", label: "Petroleum Engineering" },
   { value: "MIN", label: "Mining Engineering" },
   { value: "OTHER", label: "Other Department" },
 ];
+
+const departmentMap: Record<string, string> = {
+  ECE: "Electronics and Communication Engineering (ECE)",
+  CSE: "Computer Science and Engineering (CSE)",
+  "CSE-DS": "CSE (Data Science)",
+  AIML: "Artificial Intelligence and Machine Learning (AIML)",
+  IT: "Information Technology (IT)",
+  "CSE-CS": "Cyber Security (CSE)",
+  EEE: "Electrical and Electronics Engineering (EEE)",
+  MECH: "Mechanical Engineering",
+  CIVIL: "Civil Engineering",
+  PETRO: "Petroleum Engineering",
+  MIN: "Mining Engineering",
+};
 
 const createEmptyMember = (): Member => ({
   fullName: "",
@@ -141,57 +157,53 @@ const StepIndicator = ({
 };
 
 const MemberForm = React.memo(
-({
-  member,
-  index,
-  handleMemberChange,
-  handleEnterNext,
-  fetchPincodeDetails,
-  loadingPincode,
-  memberRefs,
-  nameInputRefs
-}: any) => {
+  ({
+    member,
+    index,
+    handleMemberChange,
+    handleEnterNext,
+    fetchPincodeDetails,
+    loadingPincode,
+    memberRefs,
+    nameInputRefs,
+  }: any) => {
+    return (
+      <div
+        ref={(el) => (memberRefs.current[index] = el)}
+        className="mb-10 p-5 md:p-6 border border-cyan-400/20 rounded-xl bg-gradient-to-br from-black/60 to-[#07111b] backdrop-blur-md shadow-lg"
+      >
+        <h2 className="text-xl font-semibold mb-4 text-cyan-300">
+          Member {index + 1}
+        </h2>
 
-  return (
-    <div
-      ref={(el) => (memberRefs.current[index] = el)}
-      className="mb-10 p-5 md:p-6 border border-cyan-400/20 rounded-xl bg-gradient-to-br from-black/60 to-[#07111b] backdrop-blur-md shadow-lg"
-    >
+        <div className="grid md:grid-cols-2 gap-4">
+          <input
+            ref={(el) => (nameInputRefs.current[index] = el)}
+            type="text"
+            placeholder="Full Name"
+            className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg"
+            value={member.fullName}
+            onChange={(e) =>
+              handleMemberChange(index, "fullName", e.target.value)
+            }
+            onKeyDown={handleEnterNext}
+          />
 
-      <h2 className="text-xl font-semibold mb-4 text-cyan-300">
-        Member {index + 1}
-      </h2>
-
-      <div className="grid md:grid-cols-2 gap-4">
-
-        <input
-          ref={(el) => (nameInputRefs.current[index] = el)}
-          type="text"
-          placeholder="Full Name"
-          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg"
-          value={member.fullName}
-          onChange={(e) =>
-            handleMemberChange(index,"fullName",e.target.value)
-          }
-          onKeyDown={handleEnterNext}
-        />
-
-        <input
-          type="text"
-          placeholder="Roll Number"
-          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg"
-          value={member.rollNo}
-          onChange={(e) =>
-            handleMemberChange(index,"rollNo",e.target.value)
-          }
-          onKeyDown={handleEnterNext}
-        />
-
+          <input
+            type="text"
+            placeholder="Roll Number"
+            className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg"
+            value={member.rollNo}
+            onChange={(e) =>
+              handleMemberChange(index, "rollNo", e.target.value)
+            }
+            onKeyDown={handleEnterNext}
+          />
+        </div>
       </div>
-
-    </div>
-  );
-});
+    );
+  },
+);
 
 const Register = () => {
   const [registrationId, setRegistrationId] = useState("");
@@ -216,7 +228,7 @@ const Register = () => {
   const memberRefs = useRef<(HTMLDivElement | null)[]>([]);
   const nameInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [loadingPincode, setLoadingPincode] = useState<number | null>(null);
- const pincodeCache = useRef<Record<string, any>>({});
+  const pincodeCache = useRef<Record<string, any>>({});
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const [members, setMembers] = useState<Member[]>(
     Array.from({ length: teamSize }, createEmptyMember),
@@ -400,6 +412,7 @@ const Register = () => {
       "rollNo",
       "department",
       "college",
+      "otherDepartment",
     ];
 
     let updatedValue = value;
@@ -451,6 +464,10 @@ const Register = () => {
         return false;
       }
 
+      if (member.department === "OTHER" && !member.otherDepartment?.trim()) {
+        alert("Please enter your department.");
+        return false;
+      }
       // 🔴 If OTHER college selected → require extra fields
       if (member.selectedCollege === "OTHER") {
         if (
@@ -466,7 +483,17 @@ const Register = () => {
           return false;
         }
       }
+      // Startup question must be answered
+      if (!startupAnswer) {
+        alert("Please answer: Are you planning for any start-up? *");
+        return false;
+      }
 
+      // If YES → idea required
+      if (startupAnswer === "yes" && !startupIdea.trim()) {
+        alert("Please describe your startup idea.");
+        return false;
+      }
       // Phone validation
       if (!/^\d{10}$/.test(member.phone)) {
         alert("Phone number must be exactly 10 digits.");
@@ -766,18 +793,13 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                         <input
                           type="text"
                           placeholder="Enter your Department"
-                          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
-focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
-                          value={
-                            member.department === "OTHER"
-                              ? ""
-                              : member.department
-                          }
+                          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg"
+                          value={member.otherDepartment || ""}
                           onChange={(e) =>
                             handleMemberChange(
                               index,
-                              "department",
-                              e.target.value.toUpperCase(),
+                              "otherDepartment",
+                              e.target.value,
                             )
                           }
                           onKeyDown={handleEnterNext}
@@ -908,7 +930,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
               {/* Startup Idea Question */}
               <div className="mb-8">
                 <label className="block mb-2">
-                  Are you planning for any start-up?
+                  Are you planning for any start-up? *
                 </label>
 
                 <select
@@ -1012,7 +1034,12 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                   <p>Roll No: {member.rollNo}</p>
                   <p>Email: {member.email}</p>
                   <p>Phone: {member.phone}</p>
-                  <p>Department: {member.department}</p>
+                  <p>
+                    Department:{" "}
+                    {member.department === "OTHER"
+                      ? member.otherDepartment
+                      : departmentMap[member.department] || member.department}
+                  </p>
                   <p>Year: {member.year}</p>
                   <p>College: {member.college}</p>
                 </div>
@@ -1270,7 +1297,7 @@ backdrop-blur-md"
                     </li>
 
                     <li>
-                      Add Note: <b>ArduinoDays + TeamName</b>
+                      Add Note: <b>Your TeamName</b>
                     </li>
 
                     <li>Complete the payment</li>
@@ -1291,6 +1318,7 @@ backdrop-blur-md"
                   value={transactionId}
                   maxLength={16}
                   pattern="\d{12,16}"
+                  inputMode="numeric"
                   onChange={(e) => {
                     const value = e.target.value;
 
@@ -1373,7 +1401,13 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                               : "Buildathon",
                           teamName,
                           teamSize,
-                          teamMembers: members,
+                          teamMembers: members.map((m) => ({
+                            ...m,
+                            department:
+                              m.department === "OTHER"
+                                ? m.otherDepartment
+                                : m.department,
+                          })),
                           startupAnswer,
                           startupIdea,
                           honeypot,

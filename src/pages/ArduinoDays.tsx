@@ -298,7 +298,7 @@ const ArduinoDays = () => {
                   initial={{ opacity: 0, y: 40 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8 }}
-                  className="relative min-h-[85vh] md:min-h-screen flex flex-col justify-center items-center px-6 md:px-10 text-center space-y-8 md:space-y-6 pb-16"
+                  className="relative min-h-[85vh] md:min-h-screen flex flex-col justify-center items-center px-6 md:px-10 pt-16 md:pt-0 text-center space-y-8 md:space-y-6 pb-16"
                 >
                   {/* Logos */}
                   <div className="flex flex-wrap justify-center items-center gap-8 md:gap-14">
@@ -358,12 +358,44 @@ const ArduinoDays = () => {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 px-6 py-3 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-sm md:text-base">
+                    <div className="relative group flex items-center gap-3 px-6 py-3 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-sm md:text-base">
                       <MapPin
                         size={18}
                         className="text-pink-400 flex-shrink-0"
                       />
-                      <span>Aditya University</span>
+
+                      <a
+                        href="https://maps.app.goo.gl/hFCpjSyJV1oPQzEZ8"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium hover:text-cyan-200"
+                      >
+                        Aditya University
+                      </a>
+
+                      <span className="text-xs text-green-400 underline">
+                        Click here to get map
+                      </span>
+
+                      {/* MAP PREVIEW POPUP */}
+                      <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 hidden group-hover:block z-40">
+                        <div className="bg-black/90 backdrop-blur-lg border border-cyan-400/30 rounded-xl p-3 shadow-xl w-[260px]">
+                          <img
+                            src="/map.png"
+                            alt="Aditya University Map"
+                            className="rounded-lg mb-2"
+                          />
+
+                          <a
+                            href="https://maps.app.goo.gl/hFCpjSyJV1oPQzEZ8"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block text-center text-sm text-cyan-400 hover:text-cyan-200"
+                          >
+                            Open in Google Maps →
+                          </a>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
