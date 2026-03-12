@@ -1060,7 +1060,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                         Arrival Date & Time
                       </label>
 
-                      <div className="flex gap-3">
+                      <div className="flex flex-col md:flex-row gap-3">
                         <input
                           type="date"
                           min="2026-03-22"
@@ -1091,7 +1091,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                         Departure Date & Time
                       </label>
 
-                      <div className="flex gap-3">
+                      <div className="flex flex-col md:flex-row gap-3">
                         <input
                           type="date"
                           min="2026-03-22"
