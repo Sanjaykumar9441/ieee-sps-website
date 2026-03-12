@@ -105,12 +105,12 @@ router.post("/register", registerLimiter, async (req, res) => {
       });
     }
 
-    // 🚫 Prevent invalid UTR format
-    const utrRegex = /^[A-Za-z0-9]{12,22}$/;
+    // 🚫 UPI UTR must be exactly 12 digits
+    const utrRegex = /^\d{12}$/;
 
     if (!userTransactionId || !utrRegex.test(userTransactionId)) {
       return res.status(400).json({
-        message: "Invalid UTR ID format",
+        message: "UPI UTR must be exactly 12 digits",
       });
     }
     // 🚫 Prevent repeated fake UTR numbers
@@ -517,13 +517,13 @@ router.post("/send-confirmation-email", async (req, res) => {
     let htmlTemplate = "";
 
     if (registration.eventType === "combo") {
-     const confirmedOn = new Date().toLocaleString("en-IN", {
-  timeZone: "Asia/Kolkata",
-  dateStyle: "medium",
-  timeStyle: "short"
-});
+      const confirmedOn = new Date().toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
 
-htmlTemplate = `
+      htmlTemplate = `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
 
     <div style="text-align: center; margin-bottom: 20px;">
@@ -591,13 +591,13 @@ htmlTemplate = `
 </div>
 `;
     } else {
-     const confirmedOn = new Date().toLocaleString("en-IN", {
-  timeZone: "Asia/Kolkata",
-  dateStyle: "medium",
-  timeStyle: "short"
-});
+      const confirmedOn = new Date().toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
 
-htmlTemplate = `
+      htmlTemplate = `
 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0f2fe; border-radius: 12px; background-color: #ffffff;">
 
     <div style="text-align: center; margin-bottom: 25px;">

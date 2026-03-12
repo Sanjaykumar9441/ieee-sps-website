@@ -47,6 +47,11 @@ const departmentMap: Record<string, string> = {
   MIN: "Mining Engineering",
 };
 
+const collegeMap = {
+  AUS: "Aditya University (AUS)",
+  ACET: "Aditya College of Engineering & Technology (ACET)",
+};
+
 const createEmptyMember = (): Member => ({
   fullName: "",
   rollNo: "",
@@ -959,7 +964,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
               <div className="mb-8">
                 <label className="block mb-2">
                   Hostel Accommodation Required? (₹150 per student/day —
-                  Includes Breakfast, Lunch & Dinner)
+                  Includes Breakfast, Lunch & Dinner) *
                 </label>
 
                 <select
@@ -1041,7 +1046,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       : departmentMap[member.department] || member.department}
                   </p>
                   <p>Year: {member.year}</p>
-                  <p>College: {member.college}</p>
+                  <p>College: {collegeMap[member.college] || member.college}</p>
                 </div>
               ))}
 
@@ -1314,14 +1319,13 @@ backdrop-blur-md"
 
                 <input
                   type="text"
-                  placeholder="Enter 12-16 digit UTR ID"
+                  placeholder="Enter 12 digit UTR ID"
                   value={transactionId}
-                  maxLength={16}
-                  pattern="\d{12,16}"
+                  maxLength={12}
+                  pattern="\d{12}"
                   inputMode="numeric"
                   onChange={(e) => {
-                    const value = e.target.value;
-
+                    const value = e.target.value.replace(/\D/g, "")
                     if (/^\d*$/.test(value)) {
                       setTransactionId(value);
                     }
@@ -1354,11 +1358,10 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                   }`}
                   onClick={async () => {
                     // Validate UTR ID
-                    if (!/^\d{12,16}$/.test(transactionId)) {
-                      alert("UTR ID must be exactly 12 to 16 digits.");
+                    if (!/^\d{12}$/.test(transactionId)) {
+                      alert("UPI UTR ID must be exactly 12 digits.");
                       return;
                     }
-
                     if (!screenshot) {
                       alert("Please upload payment screenshot.");
                       return;

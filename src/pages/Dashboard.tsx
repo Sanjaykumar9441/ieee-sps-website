@@ -1,5 +1,19 @@
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
+const collegeMap: Record<string, string> = {
+  AUS: "Aditya University (AUS)",
+  ACET: "Aditya College of Engineering & Technology (ACET)",
+};
+const normalizeCollege = (college: string) => {
+  if (!college) return "Unknown";
+
+  if (college === "AUS" || college.includes("Aditya University")) return "AUS";
+
+  if (college === "ACET" || college.includes("Engineering & Technology"))
+    return "ACET";
+
+  return college;
+};
 import { Calendar, Mail, Upload, LogOut, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
@@ -252,7 +266,7 @@ const Dashboard = () => {
 
     registrations.forEach((reg) => {
       reg.teamMembers?.forEach((member: any) => {
-        const college = member.college || "Unknown";
+        const college = normalizeCollege(member.college) || "Unknown";
         collegeCounts[college] = (collegeCounts[college] || 0) + 1;
       });
     });
@@ -554,31 +568,48 @@ const Dashboard = () => {
       const rows: any[] = [];
 
       rows.push([
-        "Registration ID",
-        "Team Name",
+        "Reg ID",
         "Event",
-        "Accommodation",
-        "Member Name",
-        "Roll No",
-        "Email",
-        "Phone",
-        "College",
+        "Team",
+        "Members",
+        "Team Members",
+        "Team Roll Numbers",
+        "Team Years",
+        "Team Colleges",
+        "Team Phone Numbers",
+        "Team Emails",
+        "Hostel Members",
+        "Startup",
+        "Idea",
+        "UTR",
+        "Status",
       ]);
 
       data.forEach((reg) => {
-        reg.teamMembers.forEach((member: any) => {
+        reg.teamMembers.forEach((member: any, index: number) => {
+          const hostelRoll =
+            reg.hostelMembers?.find((h: any) => h.fullName === member.fullName)
+              ?.rollNo || "-";
+
           rows.push([
-            reg.registrationId,
-            reg.teamName,
-            reg.eventName,
-            reg.hostelMembers?.some((h: any) => h.fullName === member.fullName)
-              ? "Yes"
-              : "No",
+            index === 0 ? reg.registrationId : "",
+            index === 0 ? reg.eventName : "",
+            index === 0 ? reg.teamName : "",
+            index === 0 ? reg.teamSize : "",
+
             member.fullName || "",
             member.rollNo || "",
-            member.email || "",
-            member.phone || "",
+            member.year || "",
             member.college || "",
+            member.phone || "",
+            member.email || "",
+
+            hostelRoll,
+
+            index === 0 ? reg.startup?.answer || "No" : "",
+            index === 0 ? reg.startup?.idea || "-" : "",
+            index === 0 ? "'" + (reg.payment?.userTransactionId || "") : "",
+            index === 0 ? reg.registrationStatus : "",
           ]);
         });
       });
@@ -1343,7 +1374,8 @@ const Dashboard = () => {
                         className="flex justify-between items-center bg-zinc-800 px-4 py-2 rounded"
                       >
                         <span>
-                          {index + 1}. {college.name}
+                          {index + 1}.{" "}
+                          {collegeMap[college.name] || college.name}
                         </span>
 
                         <span className="text-cyan-400 font-semibold">

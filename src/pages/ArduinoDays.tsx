@@ -48,6 +48,11 @@ const ArduinoDays = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [menuOpen]);
+  
+  const collegeMap: Record<string, string> = {
+  AUS: "Aditya University (AUS)",
+  ACET: "Aditya College of Engineering & Technology (ACET)",
+};
 
   useEffect(() => {
     const handleScroll = () => {
