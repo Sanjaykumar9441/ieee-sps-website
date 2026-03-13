@@ -471,6 +471,32 @@ const Register = () => {
       return updated;
     });
   };
+  const copyCollegeFromPreviousMember = (index: number) => {
+    const previousMember = members.find(
+      (m, i) => i < index && m.selectedCollege === "OTHER" && m.college,
+    );
+
+    if (!previousMember) {
+      alert("Previous member must fill college details first.");
+      return;
+    }
+
+    setMembers((prev) =>
+      prev.map((member, i) =>
+        i === index
+          ? {
+              ...member,
+              selectedCollege: "OTHER",
+              college: previousMember.college,
+              collegeCity: previousMember.collegeCity,
+              collegePincode: previousMember.collegePincode,
+              collegeDistrict: previousMember.collegeDistrict,
+              collegeState: previousMember.collegeState,
+            }
+          : member,
+      ),
+    );
+  };
   const validateForm = () => {
     if (!teamName.trim() || teamName.length < 3) {
       alert("Team name is required.");
@@ -902,85 +928,106 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       <option value="OTHER">Other College</option>
                     </select>
                     {member.selectedCollege === "OTHER" && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                        <input
-                          type="text"
-                          placeholder="College Name"
-                          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
-focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
-                          value={member.college}
-                          onChange={(e) =>
-                            handleMemberChange(index, "college", e.target.value)
-                          }
-                          onKeyDown={handleEnterNext}
-                        />
+                      <div className="mt-3">
+                        {members.some(
+                          (m, i) =>
+                            i < index &&
+                            m.selectedCollege === "OTHER" &&
+                            m.college,
+                        ) && (
+                          <button
+                            type="button"
+                            onClick={() => copyCollegeFromPreviousMember(index)}
+                            className="mb-3 text-xs px-3 py-1 bg-yellow-400 text-black rounded hover:bg-yellow-300"
+                          >
+                            Use Previous Member College Details
+                          </button>
+                        )}
 
-                        <input
-                          type="text"
-                          placeholder="Pincode"
-                          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <input
+                            type="text"
+                            placeholder="College Name"
+                            className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
-                          value={member.collegePincode}
-                          onChange={(e) => {
-                            const value = e.target.value;
-
-                            if (/^\d{0,6}$/.test(value)) {
+                            value={member.college}
+                            onChange={(e) =>
                               handleMemberChange(
                                 index,
-                                "collegePincode",
-                                value,
-                              );
-
-                              if (value.length === 6) {
-                                fetchPincodeDetails(value, index);
-                              }
+                                "college",
+                                e.target.value,
+                              )
                             }
-                          }}
-                          inputMode="numeric"
-                          onKeyDown={handleEnterNext}
-                        />
-                        <input
-                          type="text"
-                          placeholder={
-                            loadingPincode === index
-                              ? "Auto-detecting location..."
-                              : "City"
-                          }
-                          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                            onKeyDown={handleEnterNext}
+                          />
+
+                          <input
+                            type="text"
+                            placeholder="Pincode"
+                            className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
+                            value={member.collegePincode}
+                            onChange={(e) => {
+                              const value = e.target.value;
+
+                              if (/^\d{0,6}$/.test(value)) {
+                                handleMemberChange(
+                                  index,
+                                  "collegePincode",
+                                  value,
+                                );
+
+                                if (value.length === 6) {
+                                  fetchPincodeDetails(value, index);
+                                }
+                              }
+                            }}
+                            inputMode="numeric"
+                            onKeyDown={handleEnterNext}
+                          />
+                          <input
+                            type="text"
+                            placeholder={
+                              loadingPincode === index
+                                ? "Auto-detecting location..."
+                                : "City"
+                            }
+                            className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
   focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
-                          value={
-                            loadingPincode === index
-                              ? "Auto-detecting location..."
-                              : member.collegeCity
-                          }
-                          readOnly
-                        />
+                            value={
+                              loadingPincode === index
+                                ? "Auto-detecting location..."
+                                : member.collegeCity
+                            }
+                            readOnly
+                          />
 
-                        <input
-                          type="text"
-                          placeholder="District"
-                          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                          <input
+                            type="text"
+                            placeholder="District"
+                            className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
-                          value={
-                            loadingPincode === index
-                              ? "Auto-detecting location..."
-                              : member.collegeDistrict
-                          }
-                          readOnly
-                        />
+                            value={
+                              loadingPincode === index
+                                ? "Auto-detecting location..."
+                                : member.collegeDistrict
+                            }
+                            readOnly
+                          />
 
-                        <input
-                          type="text"
-                          placeholder="State"
-                          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                          <input
+                            type="text"
+                            placeholder="State"
+                            className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
-                          value={
-                            loadingPincode === index
-                              ? "Auto-detecting location..."
-                              : member.collegeState
-                          }
-                          readOnly
-                        />
+                            value={
+                              loadingPincode === index
+                                ? "Auto-detecting location..."
+                                : member.collegeState
+                            }
+                            readOnly
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
