@@ -26,7 +26,7 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white">
+    <div className="relative z-50 min-h-screen flex flex-col items-center justify-center bg-black text-white">
 
       <h1 className="text-3xl mb-6">Admin Login</h1>
 
@@ -43,7 +43,7 @@ const AdminLogin = () => {
         onChange={e => setPassword(e.target.value)}
       />
 
-      <button onClick={handleLogin} className="bg-blue-500 px-4 py-2">
+     <button type="button" onClick={handleLogin} className="bg-blue-500 px-4 py-2">
         Login
       </button>
 
