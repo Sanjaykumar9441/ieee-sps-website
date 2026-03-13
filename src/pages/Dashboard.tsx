@@ -1841,66 +1841,68 @@ const Dashboard = () => {
 
                     <div className="space-y-1 mb-4">
                       <p>
-                        <b>Registered On:</b>{" "}
+                        <span className="text-cyan-400 font-semibold">
+                          Registered On:
+                        </span>{" "}
                         {selectedFullDetails.createdAt
-                          ? `${formatDate(selectedFullDetails.createdAt)}, ${new Date(selectedFullDetails.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                          ? `${formatDate(selectedFullDetails.createdAt)}, ${new Date(
+                              selectedFullDetails.createdAt,
+                            ).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}`
                           : "-"}
                       </p>
+
                       <p>
-                        <b>Registration ID:</b>{" "}
+                        <span className="text-cyan-400 font-semibold">
+                          Registration ID:
+                        </span>{" "}
                         {selectedFullDetails.registrationId}
                       </p>
+
                       <p>
-                        <b>Team Name:</b> {selectedFullDetails.teamName}
+                        <span className="text-cyan-400 font-semibold">
+                          Team Name:
+                        </span>{" "}
+                        {selectedFullDetails.teamName}
                       </p>
+
                       <p>
-                        <b>Event:</b> {selectedFullDetails.eventName}
+                        <span className="text-cyan-400 font-semibold">
+                          Event:
+                        </span>{" "}
+                        {selectedFullDetails.eventName}
                       </p>
+
                       <p>
-                        <b>Event Type:</b> {selectedFullDetails.eventType}
+                        <span className="text-cyan-400 font-semibold">
+                          Event Type:
+                        </span>{" "}
+                        {selectedFullDetails.eventType}
                       </p>
+
                       <p>
-                        <b>Accommodation Required:</b>{" "}
+                        <span className="text-cyan-400 font-semibold">
+                          Accommodation Required:
+                        </span>{" "}
                         {selectedFullDetails.accommodationRequired
                           ? "Yes"
                           : "No"}
                       </p>
-                      {selectedFullDetails.accommodationRequired && (
-                        <>
-                          <p>
-                            <b>Arrival Date & Time:</b>{" "}
-                            {selectedFullDetails.arrivalDate
-                              ? `${formatDate(selectedFullDetails.arrivalDate)}, ${selectedFullDetails.arrivalTime}`
-                              : "-"}
-                          </p>
-
-                          <p>
-                            <b>Departure Date & Time:</b>{" "}
-                            {selectedFullDetails.departureDate
-                              ? `${formatDate(selectedFullDetails.departureDate)}, ${selectedFullDetails.departureTime}`
-                              : "-"}
-                          </p>
-                        </>
-                      )}
-                      {selectedFullDetails.startup?.answer === "yes" && (
-                        <div className="mt-3 p-3 bg-zinc-800 rounded border border-cyan-500/20">
-                          <p className="text-cyan-400 font-semibold">
-                            Startup Idea
-                          </p>
-                          <p className="mt-1 text-gray-300">
-                            {selectedFullDetails.startup?.idea}
-                          </p>
-                        </div>
-                      )}
 
                       <p>
-                        <b>Transaction ID:</b>{" "}
+                        <span className="text-cyan-400 font-semibold">
+                          Transaction ID:
+                        </span>{" "}
                         {selectedFullDetails.payment?.userTransactionId ||
                           "Not Available"}
                       </p>
 
                       <p>
-                        <b>Payment Screenshot:</b>{" "}
+                        <span className="text-cyan-400 font-semibold">
+                          Payment Screenshot:
+                        </span>{" "}
                         {selectedFullDetails.payment?.screenshotUrl
                           ? "Submitted"
                           : "Not Submitted"}
@@ -1929,37 +1931,80 @@ const Dashboard = () => {
                         (m: any, i: number) => (
                           <div key={i} className="mt-2 p-2 bg-zinc-800 rounded">
                             <p>
-                              <b>Name:</b> {m.fullName}
+                              <span className="text-cyan-400 font-semibold">
+                                Name:
+                              </span>{" "}
+                              {m.fullName}
                             </p>
+
                             <p>
-                              <b>Roll No:</b> {m.rollNo || "N/A"}
+                              <span className="text-cyan-400 font-semibold">
+                                Roll No:
+                              </span>{" "}
+                              {m.rollNo || "N/A"}
                             </p>
+
                             <p>
-                              <b>Email:</b> {m.email || "N/A"}
+                              <span className="text-cyan-400 font-semibold">
+                                Email:
+                              </span>{" "}
+                              {m.email || "N/A"}
                             </p>
+
                             <p>
-                              <b>Phone:</b> {m.phone || "N/A"}
+                              <span className="text-cyan-400 font-semibold">
+                                Phone:
+                              </span>{" "}
+                              {m.phone || "N/A"}
                             </p>
+
                             <p>
-                              <b>Department:</b> {m.department}
+                              <span className="text-cyan-400 font-semibold">
+                                Department:
+                              </span>{" "}
+                              {m.department}
                             </p>
+
                             <p>
-                              <b>Year:</b> {m.year}
+                              <span className="text-cyan-400 font-semibold">
+                                Year:
+                              </span>{" "}
+                              {m.year}
                             </p>
+
                             <p>
-                              <b>College:</b> {m.college}
+                              <span className="text-cyan-400 font-semibold">
+                                College:
+                              </span>{" "}
+                              {m.college}
                             </p>
+
                             <p>
-                              <b>City:</b> {m.collegeCity || "N/A"}
+                              <span className="text-cyan-400 font-semibold">
+                                City:
+                              </span>{" "}
+                              {m.collegeCity || "N/A"}
                             </p>
+
                             <p>
-                              <b>Pincode:</b> {m.collegePincode || "N/A"}
+                              <span className="text-cyan-400 font-semibold">
+                                Pincode:
+                              </span>{" "}
+                              {m.collegePincode || "N/A"}
                             </p>
+
                             <p>
-                              <b>District:</b> {m.collegeDistrict || "N/A"}
+                              <span className="text-cyan-400 font-semibold">
+                                District:
+                              </span>{" "}
+                              {m.collegeDistrict || "N/A"}
                             </p>
+
                             <p>
-                              <b>State:</b> {m.collegeState || "N/A"}
+                              <span className="text-cyan-400 font-semibold">
+                                State:
+                              </span>{" "}
+                              {m.collegeState || "N/A"}
                             </p>
                           </div>
                         ),
