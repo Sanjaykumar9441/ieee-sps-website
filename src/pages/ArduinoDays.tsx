@@ -48,11 +48,11 @@ const ArduinoDays = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [menuOpen]);
-  
+
   const collegeMap: Record<string, string> = {
-  AUS: "Aditya University (AUS)",
-  ACET: "Aditya College of Engineering & Technology (ACET)",
-};
+    AUS: "Aditya University (AUS)",
+    ACET: "Aditya College of Engineering & Technology (ACET)",
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -470,8 +470,8 @@ const ArduinoDays = () => {
                     <div className="absolute -inset-[3px] rounded-2xl bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 blur opacity-90 transition duration-500"></div>
 
                     <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10 h-full flex flex-col">
-                      <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                        ★ Best Value
+                      <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse">
+                        🔥 Few Seats Remaining
                       </div>
                       <h2 className="text-2xl font-bold mb-4 text-white">
                         Skill Forze + Buildathon
@@ -537,6 +537,9 @@ const ArduinoDays = () => {
                     <div className="absolute -inset-[2px] rounded-2xl bg-gradient-to-r from-green-400 via-purple-500 to-yellow-400 blur opacity-70 group-hover:opacity-100 transition duration-500 animate-gradient"></div>
 
                     <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10 h-full flex flex-col">
+                    <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse">
+                        🔥 Few Seats Remaining
+                      </div>
                       <h2 className="text-2xl font-bold mb-4 text-white">
                         Buildathon
                       </h2>
