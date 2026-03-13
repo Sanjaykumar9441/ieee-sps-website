@@ -9,7 +9,10 @@ const normalizeCollege = (college: string) => {
 
   if (college === "AUS" || college.includes("Aditya University")) return "AUS";
 
-  if (college === "ACET" || college.includes("Engineering & Technology"))
+  if (
+    college === "ACET" ||
+    college.includes("Aditya College of Engineering & Technology")
+  )
     return "ACET";
 
   return college;
@@ -290,7 +293,9 @@ const Dashboard = () => {
 
     // 🔁 Auto refresh every 10 seconds
     const interval = setInterval(() => {
-      fetchRegistrations();
+      if (activeTab === "registrations") {
+        fetchRegistrations();
+      }
     }, 10000);
 
     return () => clearInterval(interval);
@@ -1745,11 +1750,21 @@ const Dashboard = () => {
                                 {registrationFilter === "hostel"
                                   ? reg.hostelMembers?.map(
                                       (m: any, i: number) => (
-                                        <div key={i}>{m.fullName}</div>
+                                        <div key={i} className="flex gap-1">
+                                          <span className="text-cyan-400 font-semibold">
+                                            {i + 1}.
+                                          </span>
+                                          <span>{m.fullName}</span>
+                                        </div>
                                       ),
                                     )
                                   : reg.teamMembers.map((m: any, i: number) => (
-                                      <div key={i}>{m.fullName}</div>
+                                      <div key={i} className="flex gap-1">
+                                        <span className="text-cyan-400 font-semibold">
+                                          {i + 1}.
+                                        </span>
+                                        <span>{m.fullName}</span>
+                                      </div>
                                     ))}
                               </td>
 
