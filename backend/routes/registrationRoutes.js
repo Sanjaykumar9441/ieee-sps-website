@@ -760,6 +760,7 @@ router.post("/telegram-webhook", async (req, res) => {
     if (command === "/stats") {
       // Total teams from both events
       const totalTeams = await Registration.countDocuments({
+        registrationStatus: "Confirmed",
         eventType: { $in: ["combo", "buildathon"] },
       });
 
@@ -886,13 +887,12 @@ Status: ✅ Confirmed`,
 
     if (!registration) return res.sendStatus(200);
 
-    registration.registrationStatus = "Rejected";
-
-    await registration.save();
-
     const members = registration.teamMembers
       .map((m, i) => `${i + 1}. ${m.fullName}`)
       .join("\n");
+
+    // Delete registration from database
+    await Registration.deleteOne({ registrationId });
 
     await axios.post(
       `https://api.telegram.org/bot${token}/editMessageCaption`,
@@ -914,7 +914,7 @@ Status: ❌ Rejected`,
       },
     );
 
-    console.log("❌ Rejected via Telegram");
+    console.log("❌ Rejected via Telegram and deleted from DB");
   }
 
   res.sendStatus(200);
