@@ -261,7 +261,9 @@ Registration ID: \`${registrationId}\`
       },
     );
     // Save telegram message ID
-    registration.telegramMessageId = telegramRes.data.result.message_id;
+    if (telegramRes) {
+  registration.telegramMessageId = telegramRes.data.result.message_id;
+}
     await registration.save();
     res.status(201).json({
       message: "Registration submitted successfully",
@@ -394,7 +396,11 @@ const generateReceiptPDF = async (registration) => {
         .fillColor("#636e72")
         .font("Helvetica")
         .fontSize(10)
-        .text(`Roll No: ${(m.rollNo || "N/A").toUpperCase()}`, labelX + 30, memberY + 14);
+        .text(
+          `Roll No: ${(m.rollNo || "N/A").toUpperCase()}`,
+          labelX + 30,
+          memberY + 14,
+        );
 
       doc.moveDown(2.5);
     });
@@ -775,8 +781,18 @@ router.post("/telegram-webhook", async (req, res) => {
 
       // Total revenue
       const revenue = await Registration.aggregate([
-        { $match: { eventType: { $in: ["combo", "buildathon"] } } },
-        { $group: { _id: null, total: { $sum: "$expectedAmount" } } },
+        {
+          $match: {
+            eventType: { $in: ["combo", "buildathon"] },
+            registrationStatus: "Confirmed",
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$expectedAmount" },
+          },
+        },
       ]);
 
       // Check registration status of both events
