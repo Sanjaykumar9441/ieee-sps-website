@@ -1586,6 +1586,7 @@ const Dashboard = () => {
 
                       return teamMatch || rollMatch;
                     })
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                     .map((reg) => (
                       <div
                         key={reg._id}
@@ -1730,14 +1731,15 @@ const Dashboard = () => {
 
                             return teamMatch || rollMatch;
                           })
+                          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                           .map((reg, index) => (
                             <tr
                               key={reg._id}
                               className="border-t border-zinc-700"
                             >
                               <td className="p-3 text-cyan-400 font-semibold">
-                                {registrations.length - index}
-                              </td> 
+                                {index + 1}
+                              </td>
 
                               <td className="p-3">
                                 {reg.createdAt

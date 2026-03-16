@@ -478,9 +478,13 @@ Status: ✅ Confirmed`,
         },
       );
     }
+    const freshRegistration = await Registration.findById(
+      registration._id,
+    ).lean();
+
     await axios.post(
       "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
-      { registration },
+      { registration: freshRegistration },
     );
 
     res.json({
@@ -833,15 +837,11 @@ router.post("/telegram-webhook", async (req, res) => {
     registration.registrationStatus = "Confirmed";
     await registration.save();
 
-    await axios.post(
-      "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
-      { registration },
-    );
-
     const members = registration.teamMembers
       .map((m, i) => `${i + 1}. ${m.fullName}`)
       .join("\n");
 
+    /* UPDATE TELEGRAM MESSAGE FIRST */
     await axios.post(
       `https://api.telegram.org/bot${token}/editMessageCaption`,
       {
@@ -859,9 +859,19 @@ ${members}
 Status: ✅ Confirmed`,
         parse_mode: "Markdown",
         reply_markup: {
-          inline_keyboard: [], // removes buttons
+          inline_keyboard: [],
         },
       },
+    );
+
+    /* THEN SEND EMAIL */
+    const freshRegistration = await Registration.findById(
+      registration._id,
+    ).lean();
+
+    await axios.post(
+      "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+      { registration: freshRegistration },
     );
 
     console.log("✅ Confirmed via Telegram");
