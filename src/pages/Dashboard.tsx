@@ -1586,7 +1586,11 @@ const Dashboard = () => {
 
                       return teamMatch || rollMatch;
                     })
-                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .sort(
+                      (a, b) =>
+                        new Date(b.createdAt).getTime() -
+                        new Date(a.createdAt).getTime(),
+                    )
                     .map((reg) => (
                       <div
                         key={reg._id}
@@ -1611,9 +1615,15 @@ const Dashboard = () => {
                         )}
                         {(reg.startup?.answer || "").toLowerCase() ===
                           "yes" && (
-                          <p className="text-pink-400 text-sm font-semibold">
-                            Startup Team
-                          </p>
+                          <div className="mt-1">
+                            <p className="text-pink-400 text-sm font-semibold">
+                              Startup Team
+                            </p>
+
+                            <p className="text-gray-300 text-sm mt-1">
+                              Idea: {reg.startup?.idea || "Not Provided"}
+                            </p>
+                          </div>
                         )}
                         {reg.payment?.amountMismatch && (
                           <p className="text-red-400 text-sm">
@@ -1731,7 +1741,11 @@ const Dashboard = () => {
 
                             return teamMatch || rollMatch;
                           })
-                          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                          .sort(
+                            (a, b) =>
+                              new Date(b.createdAt).getTime() -
+                              new Date(a.createdAt).getTime(),
+                          )
                           .map((reg, index) => (
                             <tr
                               key={reg._id}
@@ -1930,7 +1944,23 @@ const Dashboard = () => {
                         {selectedFullDetails.payment?.userTransactionId ||
                           "Not Available"}
                       </p>
+                      <p>
+                        <span className="text-cyan-400 font-semibold">
+                          Startup Team:
+                        </span>{" "}
+                        {selectedFullDetails.startup?.answer || "No"}
+                      </p>
 
+                      {(
+                        selectedFullDetails.startup?.answer || ""
+                      ).toLowerCase() === "yes" && (
+                        <p>
+                          <span className="text-cyan-400 font-semibold">
+                            Startup Idea:
+                          </span>{" "}
+                          {selectedFullDetails.startup?.idea || "-"}
+                        </p>
+                      )}
                       <p>
                         <span className="text-cyan-400 font-semibold">
                           Payment Screenshot:
