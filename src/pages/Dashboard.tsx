@@ -1398,8 +1398,8 @@ const Dashboard = () => {
                     🏫 Top Colleges
                   </h3>
 
-                  <div className="space-y-2">
-                    {collegeAnalytics.slice(0, 10).map((college, index) => (
+                  <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-cyan-500 scrollbar-track-zinc-800">
+                    {collegeAnalytics.map((college, index) => (
                       <div
                         key={index}
                         className="flex justify-between items-center bg-zinc-800 px-4 py-2 rounded"
@@ -1681,6 +1681,7 @@ const Dashboard = () => {
                     <table className="w-full bg-zinc-900 rounded-lg overflow-hidden">
                       <thead className="bg-zinc-800 text-cyan-400">
                         <tr>
+                          <th className="p-3 text-left">S.No</th>
                           <th className="p-3 text-left">Date & Time</th>
                           <th className="p-3 text-left">Reg ID</th>
                           <th className="p-3 text-left">Team</th>
@@ -1729,11 +1730,15 @@ const Dashboard = () => {
 
                             return teamMatch || rollMatch;
                           })
-                          .map((reg) => (
+                          .map((reg, index) => (
                             <tr
                               key={reg._id}
                               className="border-t border-zinc-700"
                             >
+                              <td className="p-3 text-cyan-400 font-semibold">
+                                {registrations.length - index}
+                              </td> 
+
                               <td className="p-3">
                                 {reg.createdAt
                                   ? `${formatDate(reg.createdAt)}, ${new Date(reg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
