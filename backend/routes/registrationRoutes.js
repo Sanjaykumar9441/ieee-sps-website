@@ -261,9 +261,7 @@ Registration ID: \`${registrationId}\`
       },
     );
     // Save telegram message ID
-    if (telegramRes) {
-  registration.telegramMessageId = telegramRes.data.result.message_id;
-}
+    registration.telegramMessageId = telegramRes.data.result.message_id;
     await registration.save();
     res.status(201).json({
       message: "Registration submitted successfully",
@@ -396,11 +394,7 @@ const generateReceiptPDF = async (registration) => {
         .fillColor("#636e72")
         .font("Helvetica")
         .fontSize(10)
-        .text(
-          `Roll No: ${(m.rollNo || "N/A").toUpperCase()}`,
-          labelX + 30,
-          memberY + 14,
-        );
+        .text(`Roll No: ${m.rollNo.toUpperCase()}`, labelX + 30, memberY + 14);
 
       doc.moveDown(2.5);
     });
@@ -484,11 +478,9 @@ Status: ✅ Confirmed`,
         },
       );
     }
-    const freshRegistration = await Registration.findById(registration._id);
-
     await axios.post(
       "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
-      { registration: freshRegistration },
+      { registration },
     );
 
     res.json({
@@ -781,18 +773,8 @@ router.post("/telegram-webhook", async (req, res) => {
 
       // Total revenue
       const revenue = await Registration.aggregate([
-        {
-          $match: {
-            eventType: { $in: ["combo", "buildathon"] },
-            registrationStatus: "Confirmed",
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: "$expectedAmount" },
-          },
-        },
+        { $match: { eventType: { $in: ["combo", "buildathon"] } } },
+        { $group: { _id: null, total: { $sum: "$expectedAmount" } } },
       ]);
 
       // Check registration status of both events
@@ -851,11 +833,15 @@ router.post("/telegram-webhook", async (req, res) => {
     registration.registrationStatus = "Confirmed";
     await registration.save();
 
+    await axios.post(
+      "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+      { registration },
+    );
+
     const members = registration.teamMembers
       .map((m, i) => `${i + 1}. ${m.fullName}`)
       .join("\n");
 
-    /* UPDATE TELEGRAM MESSAGE FIRST */
     await axios.post(
       `https://api.telegram.org/bot${token}/editMessageCaption`,
       {
@@ -873,17 +859,9 @@ ${members}
 Status: ✅ Confirmed`,
         parse_mode: "Markdown",
         reply_markup: {
-          inline_keyboard: [],
+          inline_keyboard: [], // removes buttons
         },
       },
-    );
-
-    /* THEN SEND EMAIL */
-    const freshRegistration = await Registration.findById(registration._id);
-
-    await axios.post(
-      "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
-      { registration: freshRegistration },
     );
 
     console.log("✅ Confirmed via Telegram");
