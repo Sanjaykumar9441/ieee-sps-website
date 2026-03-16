@@ -261,7 +261,9 @@ Registration ID: \`${registrationId}\`
       },
     );
     // Save telegram message ID
-    registration.telegramMessageId = telegramRes.data.result.message_id;
+    if (telegramRes) {
+      registration.telegramMessageId = telegramRes.data.result.message_id;
+    }
     await registration.save();
     res.status(201).json({
       message: "Registration submitted successfully",
@@ -754,10 +756,6 @@ router.post("/telegram-webhook", async (req, res) => {
     const command = data.message.text;
     const chatId = data.message.chat.id;
 
-    if (chatId.toString() !== process.env.TELEGRAM_CHAT_ID) {
-      return res.sendStatus(200);
-    }
-
     // STATS
     if (command === "/stats") {
       // Total teams from both events
@@ -773,8 +771,18 @@ router.post("/telegram-webhook", async (req, res) => {
 
       // Total revenue
       const revenue = await Registration.aggregate([
-        { $match: { eventType: { $in: ["combo", "buildathon"] } } },
-        { $group: { _id: null, total: { $sum: "$expectedAmount" } } },
+        {
+          $match: {
+            eventType: { $in: ["combo", "buildathon"] },
+            registrationStatus: "Confirmed",
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$expectedAmount" },
+          },
+        },
       ]);
 
       // Check registration status of both events
