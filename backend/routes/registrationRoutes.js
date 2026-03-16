@@ -394,7 +394,7 @@ const generateReceiptPDF = async (registration) => {
         .fillColor("#636e72")
         .font("Helvetica")
         .fontSize(10)
-        .text(`Roll No: ${m.rollNo.toUpperCase()}`, labelX + 30, memberY + 14);
+        .text(`Roll No: ${(m.rollNo || "N/A").toUpperCase()}`, labelX + 30, memberY + 14);
 
       doc.moveDown(2.5);
     });
@@ -478,9 +478,7 @@ Status: ✅ Confirmed`,
         },
       );
     }
-    const freshRegistration = await Registration.findById(
-      registration._id,
-    ).lean();
+    const freshRegistration = await Registration.findById(registration._id);
 
     await axios.post(
       "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
@@ -865,9 +863,7 @@ Status: ✅ Confirmed`,
     );
 
     /* THEN SEND EMAIL */
-    const freshRegistration = await Registration.findById(
-      registration._id,
-    ).lean();
+    const freshRegistration = await Registration.findById(registration._id);
 
     await axios.post(
       "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
