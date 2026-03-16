@@ -1890,6 +1890,31 @@ const Dashboard = () => {
                           ? "Yes"
                           : "No"}
                       </p>
+                      {selectedFullDetails.accommodationRequired && (
+                        <>
+                          <p>
+                            <span className="text-cyan-400 font-semibold">
+                              Arrival Date & Time:
+                            </span>{" "}
+                            {selectedFullDetails.arrivalDate
+                              ? `${formatDate(selectedFullDetails.arrivalDate)}, ${
+                                  selectedFullDetails.arrivalTime || "-"
+                                }`
+                              : "-"}
+                          </p>
+
+                          <p>
+                            <span className="text-cyan-400 font-semibold">
+                              Departure Date & Time:
+                            </span>{" "}
+                            {selectedFullDetails.departureDate
+                              ? `${formatDate(selectedFullDetails.departureDate)}, ${
+                                  selectedFullDetails.departureTime || "-"
+                                }`
+                              : "-"}
+                          </p>
+                        </>
+                      )}
 
                       <p>
                         <span className="text-cyan-400 font-semibold">
