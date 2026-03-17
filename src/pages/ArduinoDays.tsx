@@ -7,6 +7,24 @@ import { Menu } from "lucide-react";
 import { Users, IndianRupee, Calendar } from "lucide-react";
 import { MapPin } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+const [daysLeft, setDaysLeft] = useState(0);
+
+useEffect(() => {
+  const deadline = new Date("2026-03-21"); // 🔥 last registration date
+
+  const updateCountdown = () => {
+    const today = new Date();
+    const diff = deadline.getTime() - today.getTime();
+
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    setDaysLeft(days > 0 ? days : 0);
+  };
+
+  updateCountdown();
+  const interval = setInterval(updateCountdown, 1000 * 60 * 60); // update hourly
+
+  return () => clearInterval(interval);
+}, []);
 
 const MovingWaves = () => {
   return (
@@ -463,6 +481,18 @@ const ArduinoDays = () => {
                 <h1 className="text-3xl md:text-5xl font-bold text-center mb-16 bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
                   Events
                 </h1>
+                {daysLeft > 0 && (
+                  <div className="flex justify-center mb-10">
+                    <div
+                      className="px-6 py-3 rounded-full 
+      bg-gradient-to-r from-red-500 to-orange-500 
+      text-white font-semibold text-sm md:text-base
+      shadow-lg animate-pulse border border-red-300"
+                    >
+                      🚨 Only {daysLeft} Days Left – Register Now!
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid md:grid-cols-2 gap-10 items-stretch">
                   {/* ================== Skill Forze + Buildathon ============ */}
@@ -537,7 +567,7 @@ const ArduinoDays = () => {
                     <div className="absolute -inset-[2px] rounded-2xl bg-gradient-to-r from-green-400 via-purple-500 to-yellow-400 blur opacity-70 group-hover:opacity-100 transition duration-500 animate-gradient"></div>
 
                     <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10 h-full flex flex-col">
-                    <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse">
+                      <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse">
                         🔥 Few Seats Remaining
                       </div>
                       <h2 className="text-2xl font-bold mb-4 text-white">

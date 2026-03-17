@@ -239,6 +239,18 @@ const Dashboard = () => {
   const confirmedRegistrations = registrations.filter(
     (r) => r.registrationStatus === "Confirmed",
   );
+  const totalMembers = registrations.reduce(
+    (sum, r) => sum + (r.teamMembers?.length || 0),
+    0,
+  );
+
+  const comboMembers = registrations
+    .filter((r) => r.eventType === "combo")
+    .reduce((sum, r) => sum + (r.teamMembers?.length || 0), 0);
+
+  const buildathonMembers = registrations
+    .filter((r) => r.eventType === "buildathon")
+    .reduce((sum, r) => sum + (r.teamMembers?.length || 0), 0);
 
   const totalRevenue = confirmedRegistrations.reduce(
     (sum, r) => sum + (r.expectedAmount || 0),
@@ -1248,6 +1260,7 @@ const Dashboard = () => {
                 Live Updates Enabled
               </div>
               {/* ANALYTICS CARDS */}
+
               <div>
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-10">
                   <div className="bg-zinc-900 p-4 rounded border border-emerald-500/20">
@@ -1309,24 +1322,24 @@ const Dashboard = () => {
                     </p>
                   </div>
 
-                  <div className="bg-zinc-900 p-4 rounded border border-green-500/20">
-                    <p className="text-gray-400 text-sm">Confirmed</p>
-                    <p className="text-2xl font-bold text-green-400">
-                      {confirmedCount}
+                  <div className="bg-zinc-900 p-4 rounded border border-cyan-500/20">
+                    <p className="text-gray-400 text-sm">Total Members</p>
+                    <p className="text-2xl font-bold text-cyan-400">
+                      {totalMembers}
                     </p>
                   </div>
 
                   <div className="bg-zinc-900 p-4 rounded border border-blue-500/20">
-                    <p className="text-gray-400 text-sm">Combo</p>
+                    <p className="text-gray-400 text-sm">Combo Members</p>
                     <p className="text-2xl font-bold text-blue-400">
-                      {comboCount}
+                      {comboMembers}
                     </p>
                   </div>
 
                   <div className="bg-zinc-900 p-4 rounded border border-purple-500/20">
-                    <p className="text-gray-400 text-sm">Buildathon</p>
+                    <p className="text-gray-400 text-sm">Buildathon Members</p>
                     <p className="text-2xl font-bold text-purple-400">
-                      {buildathonCount}
+                      {buildathonMembers}
                     </p>
                   </div>
 
