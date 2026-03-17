@@ -7,24 +7,6 @@ import { Menu } from "lucide-react";
 import { Users, IndianRupee, Calendar } from "lucide-react";
 import { MapPin } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-const [daysLeft, setDaysLeft] = useState(0);
-
-useEffect(() => {
-  const deadline = new Date("2026-03-21"); // 🔥 last registration date
-
-  const updateCountdown = () => {
-    const today = new Date();
-    const diff = deadline.getTime() - today.getTime();
-
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    setDaysLeft(days > 0 ? days : 0);
-  };
-
-  updateCountdown();
-  const interval = setInterval(updateCountdown, 1000 * 60 * 60); // update hourly
-
-  return () => clearInterval(interval);
-}, []);
 
 const MovingWaves = () => {
   return (
@@ -44,12 +26,30 @@ const MovingWaves = () => {
 
 const ArduinoDays = () => {
   const navigate = useNavigate();
+  const [daysLeft, setDaysLeft] = useState(0);
   const [registerLoading, setRegisterLoading] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const active = searchParams.get("section") || "home";
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const deadline = new Date("2026-03-21"); // 🔥 last registration date
+
+    const updateCountdown = () => {
+      const today = new Date();
+      const diff = deadline.getTime() - today.getTime();
+
+      const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+      setDaysLeft(days > 0 ? days : 0);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000 * 60 * 60); // update hourly
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
