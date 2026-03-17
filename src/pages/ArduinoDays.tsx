@@ -477,22 +477,25 @@ const ArduinoDays = () => {
 
             {/* EVENTS */}
             {active === "events" && (
-              <div className="w-full max-w-6xl px-4 md:px-10 pt-24 pb-16 mx-auto relative z-30">
-                <h1 className="text-3xl md:text-5xl font-bold text-center mb-16 bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
-                  Events
-                </h1>
+              <div className="w-full max-w-6xl px-4 md:px-10 pt-20 md:pt-24 pb-16 mx-auto relative z-30">
+                {/* 🔥 MOVED UP: Countdown Banner */}
                 {daysLeft > 0 && (
-                  <div className="flex justify-center mb-10">
+                  <div className="flex justify-center mb-6 md:mb-8">
                     <div
                       className="px-6 py-3 rounded-full 
-      bg-gradient-to-r from-red-500 to-orange-500 
-      text-white font-semibold text-sm md:text-base
-      shadow-lg animate-pulse border border-red-300"
+          bg-gradient-to-r from-red-500 to-orange-500 
+          text-white font-semibold text-sm md:text-base
+          shadow-lg animate-pulse border border-red-300"
                     >
                       🚨 Only {daysLeft} Days Left – Register Now!
                     </div>
                   </div>
                 )}
+
+                {/* Heading now appears below the banner */}
+                <h1 className="text-3xl md:text-5xl font-bold text-center mb-16 bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
+                  Events
+                </h1>
 
                 <div className="grid md:grid-cols-2 gap-10 items-stretch">
                   {/* ================== Skill Forze + Buildathon ============ */}
