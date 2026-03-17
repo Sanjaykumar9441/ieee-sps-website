@@ -1301,10 +1301,10 @@ const Dashboard = () => {
                     </p>
                   </div>
 
-                  <div className="bg-zinc-900 p-4 rounded border border-orange-500/20">
-                    <p className="text-gray-400 text-sm">Hostel Students</p>
+                   <div className="bg-zinc-900 p-4 rounded border border-orange-500/20">
+                    <p className="text-gray-400 text-sm">Hostel</p>
                     <p className="text-2xl font-bold text-orange-400">
-                      {hostelStudents}
+                      {hostelCount}
                     </p>
                   </div>
 
@@ -1344,9 +1344,9 @@ const Dashboard = () => {
                   </div>
 
                   <div className="bg-zinc-900 p-4 rounded border border-orange-500/20">
-                    <p className="text-gray-400 text-sm">Hostel</p>
+                    <p className="text-gray-400 text-sm">Hostel Students</p>
                     <p className="text-2xl font-bold text-orange-400">
-                      {hostelCount}
+                      {hostelStudents}
                     </p>
                   </div>
                 </div>
