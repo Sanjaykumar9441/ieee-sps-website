@@ -26,30 +26,12 @@ const MovingWaves = () => {
 
 const ArduinoDays = () => {
   const navigate = useNavigate();
-  const [daysLeft, setDaysLeft] = useState(0);
   const [registerLoading, setRegisterLoading] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const active = searchParams.get("section") || "home";
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const sidebarRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const deadline = new Date("2026-03-21"); // 🔥 last registration date
-
-    const updateCountdown = () => {
-      const today = new Date();
-      const diff = deadline.getTime() - today.getTime();
-
-      const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-      setDaysLeft(days > 0 ? days : 0);
-    };
-
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000 * 60 * 60); // update hourly
-
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -479,18 +461,18 @@ const ArduinoDays = () => {
             {active === "events" && (
               <div className="w-full max-w-6xl px-4 md:px-10 pt-20 md:pt-24 pb-16 mx-auto relative z-30">
                 {/* 🔥 MOVED UP: Countdown Banner */}
-                {daysLeft > 0 && (
-                  <div className="flex justify-center mb-6 md:mb-8">
-                    <div
-                      className="px-6 py-3 rounded-full 
-          bg-gradient-to-r from-red-500 to-orange-500 
-          text-white font-semibold text-sm md:text-base
-          shadow-lg animate-pulse border border-red-300"
-                    >
-                      🚨 Only {daysLeft} Days Left – Register Now!
-                    </div>
+
+                <div className="flex justify-center mb-6 md:mb-8">
+                  <div
+                    className="px-6 py-3 rounded-full 
+bg-gradient-to-r from-red-500 to-orange-500 
+text-white font-semibold text-sm md:text-base
+animate-pulse border border-red-300
+shadow-[0_0_20px_rgba(255,80,0,0.6)]"
+                  >
+                    🚨 Limited Seats Left – Hurry Up!
                   </div>
-                )}
+                </div>
 
                 {/* Heading now appears below the banner */}
                 <h1 className="text-3xl md:text-5xl font-bold text-center mb-16 bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
