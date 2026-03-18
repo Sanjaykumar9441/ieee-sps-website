@@ -706,14 +706,22 @@ const Register = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-center">
         <div className="text-center mt-20">
-          <h1 className="text-4xl font-bold text-red-500 leading-relaxed">
-            🚫 Arduino Days 2026 Registrations Closed
-            <br />
-            Stay tuned for future IEEE SPS events.
+          <h1 className="text-3xl md:text-4xl font-bold text-red-500 leading-tight">
+            🚫 Arduino Days 2026 Registrations are Temporarily Closed
           </h1>
 
-          <p className="text-gray-400 mt-4">
-            Thank you for your interest. Registrations are currently closed.
+          <p className="text-xl text-gray-300 mt-4 italic">
+            Stay tuned for updates...
+          </p>
+
+          <p className="text-gray-400 mt-6 border-t border-white/10 pt-4">
+            Thank you for your interest. For any queries, please contact:
+            <a
+              href="tel:7095009441"
+              className="text-red-400 font-semibold ml-1 hover:underline"
+            >
+              7095009441
+            </a>
           </p>
         </div>
       </div>
