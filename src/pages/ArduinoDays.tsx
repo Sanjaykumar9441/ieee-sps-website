@@ -665,16 +665,6 @@ shadow-[0_0_20px_rgba(255,80,0,0.6)]"
                       <li>
                         Teams are encouraged to participate in the Buildathon.
                       </li>
-                      <div className="mt-auto pt-6 flex justify-center">
-                        <button
-                          onClick={() => navigate("/register?event=combo")}
-                          className="px-6 py-3 rounded-lg bg-cyan-400 text-black font-semibold
-             hover:scale-105 transition shadow-lg shadow-cyan-400/30
-             animate-pulse"
-                        >
-                          Register for Skill Forze + Buildathon
-                        </button>
-                      </div>
                     </ul>
                   </div>
 
@@ -705,19 +695,6 @@ shadow-[0_0_20px_rgba(255,80,0,0.6)]"
                         Winners will receive prizes and merit certificates.
                       </li>
                       <li>Snacks will be provided during event.</li>
-                      <div className="mt-auto pt-6 flex justify-center">
-                        <button
-                          onClick={() =>
-                            (window.location.href =
-                              "/register?event=buildathon")
-                          }
-                          className="px-6 py-3 rounded-lg bg-yellow-400 text-black font-semibold
-             hover:scale-105 transition shadow-lg shadow-yellow-400/30
-             animate-pulse"
-                        >
-                          Register for Buildathon
-                        </button>
-                      </div>
                     </ul>
                   </div>
                 </div>
