@@ -135,11 +135,7 @@ const EditableEvent = ({ event, onUpdate, onDelete }: any) => {
 const Dashboard = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
-  const [registrationStatus, setRegistrationStatus] = useState({
-    combo: false,
-    buildathon: false,
-  });
-  const overallOpen = registrationStatus.combo || registrationStatus.buildathon;
+  const [registrationOpen, setRegistrationOpen] = useState(false);
   const [toggleLoading, setToggleLoading] = useState(false);
   useEffect(() => {
     if (!token) {
@@ -151,27 +147,24 @@ const Dashboard = () => {
       "https://ieee-sps-website.onrender.com/events/registration-status",
     );
 
-    setRegistrationStatus(res.data);
+    setRegistrationOpen(res.data.registrationOpen);
   };
   useEffect(() => {
     fetchRegistrationStatus();
   }, []);
-  const toggleRegistration = async (eventType: string) => {
+  const toggleRegistration = async () => {
     if (toggleLoading) return;
 
     setToggleLoading(true);
 
     try {
       const res = await axios.put(
-        `https://ieee-sps-website.onrender.com/events/toggle-registration/${eventType}`,
+        "https://ieee-sps-website.onrender.com/events/toggle-registration",
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      setRegistrationStatus((prev) => ({
-        ...prev,
-        [eventType]: res.data.registrationOpen,
-      }));
+      setRegistrationOpen(res.data.registrationOpen);
     } catch (error) {
       console.error("Toggle Error:", error);
     } finally {
@@ -1223,64 +1216,31 @@ const Dashboard = () => {
                 {/* Registration Status Indicator */}
                 <div
                   className={`inline-block px-4 py-2 rounded-full text-sm font-semibold
-        ${overallOpen ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}
+  ${registrationOpen ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}
                 >
-                  {overallOpen
+                  {registrationOpen
                     ? "🟢 Registrations Open"
                     : "🔴 Registrations Closed"}
                 </div>
 
                 {/* Toggle Button */}
-                <div className="flex flex-col gap-4">
-                  {/* COMBO */}
-                  <div className="flex items-center gap-4">
-                    <span
-                      className={`px-4 py-2 rounded ${
-                        registrationStatus.combo
-                          ? "bg-green-500/20 text-green-400"
-                          : "bg-red-500/20 text-red-400"
-                      }`}
-                    >
-                      Combo: {registrationStatus.combo ? "OPEN" : "CLOSED"}
-                    </span>
-
-                    <button
-                      onClick={() => toggleRegistration("combo")}
-                      className={`px-4 py-2 rounded ${
-                        registrationStatus.combo ? "bg-red-500" : "bg-green-500"
-                      }`}
-                    >
-                      {registrationStatus.combo ? "Stop Combo" : "Start Combo"}
-                    </button>
-                  </div>
-
-                  {/* BUILDATHON */}
-                  <div className="flex items-center gap-4">
-                    <span
-                      className={`px-4 py-2 rounded ${
-                        registrationStatus.buildathon
-                          ? "bg-green-500/20 text-green-400"
-                          : "bg-red-500/20 text-red-400"
-                      }`}
-                    >
-                      Buildathon:{" "}
-                      {registrationStatus.buildathon ? "OPEN" : "CLOSED"}
-                    </span>
-
-                    <button
-                      onClick={() => toggleRegistration("buildathon")}
-                      className={`px-4 py-2 rounded ${
-                        registrationStatus.buildathon
-                          ? "bg-red-500"
-                          : "bg-green-500"
-                      }`}
-                    >
-                      {registrationStatus.buildathon
-                        ? "Stop Buildathon"
-                        : "Start Buildathon"}
-                    </button>
-                  </div>
-                </div>
+                {registrationOpen ? (
+                  <button
+                    onClick={toggleRegistration}
+                    disabled={toggleLoading}
+                    className="bg-red-500 hover:bg-red-600 px-5 py-2 rounded font-semibold transition disabled:opacity-50"
+                  >
+                    {toggleLoading ? "Stopping..." : "Stop Registration"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={toggleRegistration}
+                    disabled={toggleLoading}
+                    className="bg-green-500 hover:bg-green-600 px-5 py-2 rounded font-semibold transition disabled:opacity-50"
+                  >
+                    {toggleLoading ? "Starting..." : "Start Registration"}
+                  </button>
+                )}
               </div>
               <div className="flex items-center gap-2 mb-4 text-green-400 text-sm">
                 {latestRegistrations.length > 0 && (
@@ -1341,7 +1301,7 @@ const Dashboard = () => {
                     </p>
                   </div>
 
-                  <div className="bg-zinc-900 p-4 rounded border border-orange-500/20">
+                   <div className="bg-zinc-900 p-4 rounded border border-orange-500/20">
                     <p className="text-gray-400 text-sm">Hostel</p>
                     <p className="text-2xl font-bold text-orange-400">
                       {hostelCount}
