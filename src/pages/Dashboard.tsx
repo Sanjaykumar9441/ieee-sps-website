@@ -611,7 +611,8 @@ const Dashboard = () => {
         "Departure date and time",
         "Startup",
         "Idea",
-        "UTR",
+        "Transaction ID",
+        "Amount",
         "Status",
       ]);
 
@@ -652,6 +653,7 @@ const Dashboard = () => {
             index === 0 ? reg.startup?.answer || "No" : "",
             index === 0 ? reg.startup?.idea || "-" : "",
             index === 0 ? "'" + (reg.payment?.userTransactionId || "") : "",
+            index === 0 ? reg.expectedAmount || "" : "",
             index === 0 ? reg.registrationStatus : "",
           ]);
         });
@@ -1301,7 +1303,7 @@ const Dashboard = () => {
                     </p>
                   </div>
 
-                   <div className="bg-zinc-900 p-4 rounded border border-orange-500/20">
+                  <div className="bg-zinc-900 p-4 rounded border border-orange-500/20">
                     <p className="text-gray-400 text-sm">Hostel</p>
                     <p className="text-2xl font-bold text-orange-400">
                       {hostelCount}
