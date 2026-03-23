@@ -20,7 +20,7 @@ const EventDetails = () => {
   const particlesInit = async (main: any) => {
     await loadFull(main);
   };
-
+  
   if (!event) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center text-foreground">

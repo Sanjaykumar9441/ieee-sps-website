@@ -28,7 +28,10 @@ const ArduinoDays = () => {
   const navigate = useNavigate();
   const [registerLoading, setRegisterLoading] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const active = searchParams.get("section") || "home";
+  const rawSection = searchParams.get("section") || "home";
+
+  // ❌ Block events completely
+  const active = rawSection === "events" ? "home" : rawSection;
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -222,7 +225,6 @@ const ArduinoDays = () => {
 
           {[
             { id: "home", icon: <Home size={20} />, label: "Home" },
-            { id: "events", icon: <Calendar size={20} />, label: "Events" },
             {
               id: "rules",
               icon: <FileText size={20} />,
@@ -456,157 +458,6 @@ const ArduinoDays = () => {
             )}
 
             {/* 🌍 Community Event Section */}
-
-            {/* EVENTS */}
-            {active === "events" && (
-              <div className="w-full max-w-6xl px-4 md:px-10 pt-20 md:pt-24 pb-16 mx-auto relative z-30">
-                {/* 🔥 MOVED UP: Countdown Banner */}
-
-                <div className="flex justify-center mb-6 md:mb-8">
-                  <div
-                    className="px-6 py-3 rounded-full 
-bg-gradient-to-r from-red-500 to-orange-500 
-text-white font-semibold text-sm md:text-base
-animate-pulse border border-red-300
-shadow-[0_0_20px_rgba(255,80,0,0.6)]"
-                  >
-                    🚨 Registrations are closed
-                  </div>
-                </div>
-
-                {/* Heading now appears below the banner */}
-                <h1 className="text-3xl md:text-5xl font-bold text-center mb-16 bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
-                  Events
-                </h1>
-
-                <div className="grid md:grid-cols-2 gap-10 items-stretch">
-                  {/* ================== Skill Forze + Buildathon ============ */}
-                  <div className="relative group">
-                    <div className="absolute -inset-[3px] rounded-2xl bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 blur opacity-90 transition duration-500"></div>
-
-                    <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10 h-full flex flex-col">
-                      <h2 className="text-2xl font-bold mb-4 text-white">
-                        Skill Forze + Buildathon
-                      </h2>
-
-                      <p className="text-gray-300 mb-2">
-                        • Two-Day Workshop on Arduino and IoT Fundamentals
-                      </p>
-
-                      <p className="text-gray-300 mb-2">
-                        • Full-Day Hackathon on Embedded/IoT Solutions
-                      </p>
-
-                      <p className="text-gray-300 mb-2">
-                        • Project Expo showcasing hackathon outcomes
-                      </p>
-                      {/* Team Size */}
-                      <p className="text-gray-300 mb-2 flex items-center gap-2">
-                        <Users size={18} className="text-cyan-400" />
-                        <span>Team size: 3-4 members</span>
-                      </p>
-
-                      <p className="text-gray-300 mb-2 flex items-center gap-2">
-                        <Calendar size={18} className="text-cyan-400" />
-                        <span>
-                          23<sup>rd</sup> – 25<sup>th</sup> March 2026
-                        </span>
-                      </p>
-
-                      {/* Event Fee */}
-                      <p className="text-gray-300 mb-1 flex items-center gap-2">
-                        <IndianRupee size={18} className="text-cyan-400" />
-                        <span>Event Fee: ₹200 per student</span>
-                      </p>
-                      <p className="text-gray-400 text-sm mb-6">
-                        All students from any branch can participate.
-                      </p>
-                      <div className="mt-auto">
-                        <button
-                          onClick={() => {
-                            setRegisterLoading("combo");
-
-                            setTimeout(() => {
-                              navigate("/register?event=combo");
-                            }, 600);
-                          }}
-                          className="inline-flex items-center gap-2 bg-white text-black font-semibold px-6 py-2 rounded-full"
-                        >
-                          {registerLoading === "combo" && (
-                            <span className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full"></span>
-                          )}
-
-                          {registerLoading === "combo"
-                            ? "Opening..."
-                            : "Register Now"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ================= Buildathon ================= */}
-                  <div className="relative group">
-                    <div className="absolute -inset-[2px] rounded-2xl bg-gradient-to-r from-green-400 via-purple-500 to-yellow-400 blur opacity-70 group-hover:opacity-100 transition duration-500 animate-gradient"></div>
-
-                    <div className="relative bg-black/80 backdrop-blur-md rounded-2xl p-8 z-10 h-full flex flex-col">
-                      <h2 className="text-2xl font-bold mb-4 text-white">
-                        Buildathon
-                      </h2>
-
-                      <p className="text-gray-300 mb-2">
-                        • Full-Day Hackathon on Embedded/IoT Solutions
-                      </p>
-
-                      <p className="text-gray-300 mb-2">
-                        • Project Expo showcasing hackathon outcomes
-                      </p>
-
-                      {/* Team Size */}
-                      <p className="text-gray-300 mb-2 flex items-center gap-2">
-                        <Users size={18} className="text-cyan-400" />
-                        <span>Team size: 3-4 members</span>
-                      </p>
-
-                      <p className="text-gray-300 mb-2 flex items-center gap-2">
-                        <Calendar size={18} className="text-cyan-400" />
-                        <span>
-                          25<sup>th</sup> March 2026
-                        </span>
-                      </p>
-
-                      {/* Event Fee */}
-                      <p className="text-gray-300 mb-1 flex items-center gap-2">
-                        <IndianRupee size={18} className="text-cyan-400" />
-                        <span>Event Fee: ₹100 per student</span>
-                      </p>
-                      <p className="text-gray-400 text-sm mb-6">
-                        All students from any branch can participate.
-                      </p>
-                      <div className="mt-auto">
-                        <button
-                          onClick={() => {
-                            setRegisterLoading("buildathon");
-
-                            setTimeout(() => {
-                              navigate("/register?event=buildathon");
-                            }, 600);
-                          }}
-                          className="inline-flex items-center gap-2 bg-white text-black font-semibold px-6 py-2 rounded-full"
-                        >
-                          {registerLoading === "buildathon" && (
-                            <span className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full"></span>
-                          )}
-
-                          {registerLoading === "buildathon"
-                            ? "Opening..."
-                            : "Register Now"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {active === "rules" && (
               <div className="w-full max-w-7xl px-6 md:px-10 py-16 mx-auto">
