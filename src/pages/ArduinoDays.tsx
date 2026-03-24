@@ -50,7 +50,7 @@ const ArduinoDays = () => {
     {
       title: "Arduino-Based 360° Smart Radar Scanning System",
       description:
-        "cost-effective Arduino-based radar scanning system that can perform 360° monitoring by rotating an ultrasonic sensor, detect objects within a defined range, generate alerts, and display real-time information such as angle, distance, and detection status in a structured and user-friendly format.",
+        "cost-effective Arduino-based radar scanning system that can perform 360° monitoring by rotating an ultrasonic sensor, detect objects within a defined range, generate alerts, and display real-time information such as angle, distance, and detection status in a structured and user-friendly format using any communication module.",
     },
     {
       title: "Arduino-Based Smart Greenhouse Monitoring and Control System",
@@ -60,7 +60,7 @@ const ArduinoDays = () => {
     {
       title: "Arduino-Based Smart Multi-Sensor Domestic Security Alert System",
       description:
-        "Develop a low-cost Arduino-based multi-sensor security system that detects different types of intrusions and provides real-time alerts and automated responses.",
+        "Develop a low-cost Arduino-based multi-sensor security system that detects different types of intrusions and provides real-time alerts and automated responses with any communication module.",
     },
     {
       title:
@@ -77,12 +77,12 @@ const ArduinoDays = () => {
     {
       title: "Arduino-Based Multi-Mode Smart Switchboard with Usage Monitoring",
       description:
-        "Develop an Arduino-based smart switchboard with multiple control methods and real-time usage tracking for efficient and user-friendly home automation.",
+        "Develop an Arduino-based smart switchboard with multiple control methods and real-time usage tracking for efficient and user-friendly home automation (you can use any wireless communication module).",
     },
     {
       title: "Arduino-Based Smart Car Parking Management System",
       description:
-        "Develop an Arduino-based system to monitor parking space availability and guide vehicles for efficient parking management.",
+        "Develop an Arduino-based system to monitor parking space availability and guide vehicles for efficient parking management.(use a sensor per slot).",
     },
     {
       title: "Arduino-Based Smart Weather Monitoring System with GSM Alerts",
