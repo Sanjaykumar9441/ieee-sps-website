@@ -336,6 +336,11 @@ const ArduinoDays = () => {
               label: "Components Available",
             },
             {
+              id: "ppt",
+              icon: <FileText size={20} />,
+              label: "Presentation PPT",
+            },
+            {
               id: "rules",
               icon: <FileText size={20} />,
               label: "Rules & Regulations",
@@ -699,6 +704,49 @@ const ArduinoDays = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {active === "ppt" && (
+              <div className="w-full max-w-5xl px-6 md:px-10 py-20 mx-auto text-center">
+                {/* HEADER */}
+                <h1
+                  className="text-4xl md:text-5xl font-bold mb-10 
+    bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 
+    bg-clip-text text-transparent tracking-wide"
+                >
+                  Presentation Format (PPT)
+                </h1>
+
+                {/* CARD */}
+                <div
+                  className="relative p-[1px] rounded-xl 
+    bg-gradient-to-r from-cyan-500/40 via-green-400/40 to-cyan-500/40
+    hover:shadow-[0_0_25px_rgba(0,255,200,0.6)] transition duration-500"
+                >
+                  <div className="bg-black/80 backdrop-blur-xl rounded-xl p-10">
+                    {/* ICON */}
+                    <div className="text-5xl mb-6">📊</div>
+
+                    {/* TEXT */}
+                    <p className="text-gray-300 text-lg mb-8">
+                      Use this PPT format to present your idea or prototype
+                      clearly during the event.
+                    </p>
+
+                    {/* DOWNLOAD BUTTON */}
+                    <a
+                      href="/Arduinodays2026-IDEA-Presentation-Format.pptx" // 👉 Put your file in public folder
+                      download
+                      className="inline-block px-8 py-3 rounded-full 
+          bg-gradient-to-r from-green-400 to-cyan-400 
+          text-black font-semibold 
+          hover:scale-105 transition duration-300"
+                    >
+                      Download PPT
+                    </a>
+                  </div>
                 </div>
               </div>
             )}
