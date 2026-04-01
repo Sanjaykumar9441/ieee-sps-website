@@ -42,6 +42,7 @@ const ArduinoDays = () => {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [previewFile, setPreviewFile] = useState<string | null>(null);
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -586,35 +587,42 @@ const ArduinoDays = () => {
                   {/* ERROR */}
                   {error && <p className="text-red-400 mt-4">{error}</p>}
 
-                  {/* DOWNLOAD */}
-                  <div className="mt-8 grid md:grid-cols-2 gap-8 items-start">
+                  <div className="mt-10 grid md:grid-cols-2 gap-10">
                     {certificates.map((file, index) => (
                       <div
                         key={index}
-                        className="p-6 bg-black/60 border border-cyan-400/20 rounded-xl 
-hover:shadow-[0_0_20px_rgba(0,255,200,0.4)] transition"
+                        className="p-8 bg-black/70 border border-cyan-400/20 rounded-2xl 
+      hover:shadow-[0_0_25px_rgba(0,255,200,0.4)] transition flex flex-col items-center"
                       >
-                        {/* PREVIEW */}
-                        <p className="text-sm text-gray-400 mb-3">
+                        {/* TITLE */}
+                        <p className="text-lg text-gray-300 mb-6 font-semibold">
                           {file.includes("merit")
                             ? "🏆 Merit Certificate"
                             : "🎓 Participation Certificate"}
                         </p>
-                        <iframe
-                          src={`${file}#toolbar=0&navpanes=0&scrollbar=0`}
-                          title={`Certificate ${index}`}
-                          className="w-full aspect-[16/9] rounded-lg mb-6 border border-gray-700 bg-white"
-                        />
 
-                        {/* DOWNLOAD BUTTON */}
-                        <a
-                          href={file}
-                          download
-                          className="inline-block px-6 py-2 rounded-full 
-      bg-green-500 text-black font-semibold hover:scale-105 transition"
-                        >
-                          Download Certificate {index + 1}
-                        </a>
+                        {/* BUTTONS */}
+                        <div className="flex gap-4">
+                          {/* PREVIEW BUTTON */}
+                          <button
+                            onClick={() => setPreviewFile(file)}
+                            className="px-5 py-2 rounded-full 
+          bg-gradient-to-r from-cyan-400 to-green-400 
+          text-black font-semibold hover:scale-105 transition"
+                          >
+                            Preview
+                          </button>
+
+                          {/* DOWNLOAD BUTTON */}
+                          <a
+                            href={file}
+                            download
+                            className="px-5 py-2 rounded-full 
+          bg-green-500 text-black font-semibold hover:scale-105 transition"
+                          >
+                            Download
+                          </a>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -838,6 +846,31 @@ hover:shadow-[0_0_20px_rgba(0,255,200,0.4)] transition"
             )}
           </motion.div>
         </AnimatePresence>
+        {/* ================= PREVIEW MODAL ================= */}
+        {previewFile && (
+          <div className="fixed inset-0 z-50 bg-black/90 flex flex-col animate-fadeIn">
+            {/* TOP BAR */}
+            <div className="flex justify-between items-center p-4 border-b border-gray-700">
+              <h2 className="text-lg text-white font-semibold">
+                Certificate Preview
+              </h2>
+
+              <button
+                onClick={() => setPreviewFile(null)}
+                className="text-red-400 font-semibold hover:scale-105 transition"
+              >
+                Close ✕
+              </button>
+            </div>
+
+            {/* PDF VIEW */}
+            <iframe
+              src={`${previewFile}#toolbar=1`}
+              className="w-full h-full"
+              title="Certificate Preview"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
