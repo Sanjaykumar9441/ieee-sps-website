@@ -547,29 +547,39 @@ const ArduinoDays = () => {
                   >
                     Get Certificate
                   </button>
-
                   {loading && (
-                    <div className="mt-4 text-cyan-400 animate-pulse">
-                      🔄 Fetching certificates...
-                    </div>
-                  )}
-                  {loading && (
-                    <div className="mt-6 w-full">
-                      {/* TEXT */}
-                      <p className="text-cyan-400 mb-2 text-sm animate-pulse">
-                        🔍 Verifying certificate...
+                    <div className="mt-8 w-full text-left">
+                      {/* STATUS TEXT */}
+                      <p className="text-cyan-400 text-sm mb-3 animate-pulse">
+                        {progress < 30 && "🔍 Checking database..."}
+                        {progress >= 30 &&
+                          progress < 70 &&
+                          "⚙️ Verifying certificate..."}
+                        {progress >= 70 && "📄 Preparing your certificate..."}
                       </p>
 
                       {/* PROGRESS BAR */}
-                      <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden relative">
+                        {/* MAIN BAR */}
                         <div
-                          className="h-full bg-gradient-to-r from-green-400 to-cyan-400 transition-all duration-300"
+                          className="h-full bg-gradient-to-r from-green-400 via-cyan-400 to-green-400 
+    relative overflow-hidden transition-all duration-300 
+    shadow-[0_0_15px_rgba(0,255,200,0.8)]"
                           style={{ width: `${progress}%` }}
-                        ></div>
+                        >
+                          {/* SHIMMER EFFECT */}
+                          <div
+                            className="absolute inset-0 
+      bg-gradient-to-r from-transparent via-white/30 to-transparent 
+      animate-shimmer"
+                          ></div>
+                        </div>
                       </div>
 
                       {/* PERCENT */}
-                      <p className="text-xs text-gray-400 mt-1">{progress}%</p>
+                      <p className="text-xs text-gray-400 mt-2">
+                        {progress}% completed
+                      </p>
                     </div>
                   )}
 
@@ -577,17 +587,23 @@ const ArduinoDays = () => {
                   {error && <p className="text-red-400 mt-4">{error}</p>}
 
                   {/* DOWNLOAD */}
-                  <div className="mt-6 grid md:grid-cols-2 gap-6">
+                  <div className="mt-8 flex flex-col gap-8">
                     {certificates.map((file, index) => (
                       <div
                         key={index}
-                        className="p-4 bg-black/60 border border-cyan-400/20 rounded-xl"
+                        className="p-6 bg-black/60 border border-cyan-400/20 rounded-xl 
+hover:shadow-[0_0_20px_rgba(0,255,200,0.4)] transition"
                       >
                         {/* PREVIEW */}
+                        <p className="text-sm text-gray-400 mb-3">
+                          {file.includes("merit")
+                            ? "🏆 Merit Certificate"
+                            : "🎓 Participation Certificate"}
+                        </p>
                         <iframe
                           src={file}
                           title={`Certificate ${index}`}
-                          className="w-full h-64 rounded-lg mb-4"
+                          className="w-full h-[420px] rounded-lg mb-6 border border-gray-700"
                         />
 
                         {/* DOWNLOAD BUTTON */}
