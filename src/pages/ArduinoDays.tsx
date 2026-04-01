@@ -35,6 +35,13 @@ const ArduinoDays = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const [rollNo, setRollNo] = useState("");
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [certificates, setCertificates] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [progress, setProgress] = useState(0);
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -170,6 +177,53 @@ const ArduinoDays = () => {
     }
   };
 
+  const handleFetchCertificate = () => {
+    if (!rollNo) return;
+
+    setSearched(true);
+    setLoading(true);
+    setCertificates([]);
+    setProgress(0);
+
+    const base = rollNo.trim();
+
+    const files = [
+      `/certificates/${base}_participation.pdf`,
+      `/certificates/${base}_merit.pdf`,
+    ];
+
+    // 🔥 Animate progress
+    let current = 0;
+    const interval = setInterval(() => {
+      current += 10;
+      setProgress(current);
+      if (current >= 90) clearInterval(interval); // stop at 90%
+    }, 200);
+
+    Promise.all(
+      files.map((url) =>
+        fetch(url)
+          .then((res) => {
+            const contentType = res.headers.get("content-type");
+            if (res.ok && contentType?.includes("application/pdf")) {
+              return url;
+            }
+            return null;
+          })
+          .catch(() => null),
+      ),
+    ).then((results) => {
+      const validFiles = results.filter(Boolean) as string[];
+
+      setTimeout(() => {
+        clearInterval(interval);
+        setProgress(100); // complete
+
+        setCertificates(validFiles);
+        setLoading(false);
+      }, 3000);
+    });
+  };
   return (
     <div className="min-h-screen bg-[#02060c] relative text-white overflow-x-hidden overflow-y-auto">
       {/* 1. Add the moving waves here */}
@@ -224,6 +278,11 @@ const ArduinoDays = () => {
 
           {[
             { id: "home", icon: <Home size={20} />, label: "Home" },
+            {
+              id: "certificate",
+              icon: <FileText size={20} />,
+              label: "Download Certificate",
+            },
             { id: "help", icon: <HelpCircle size={20} />, label: "Help Desk" },
             { id: "about", icon: <Info size={20} />, label: "About" },
             {
@@ -450,7 +509,126 @@ const ArduinoDays = () => {
                 </section>
               </>
             )}
+            {active === "certificate" && (
+              <div className="w-full max-w-xl px-6 py-20 mx-auto text-center">
+                {/* HEADER */}
+                <h1
+                  className="text-4xl md:text-5xl font-bold mb-10 
+    bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 
+    bg-clip-text text-transparent tracking-wide"
+                >
+                  Download Certificate
+                </h1>
 
+                {/* CARD */}
+                <div className="bg-black/80 backdrop-blur-xl rounded-xl p-8 border border-cyan-400/20">
+                  {/* INPUT */}
+                  <input
+                    type="text"
+                    placeholder="Enter Roll Number"
+                    value={rollNo}
+                    onChange={(e) => {
+                      setRollNo(e.target.value.toUpperCase());
+                      setSearched(false);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleFetchCertificate();
+                      }
+                    }}
+                    className="w-full p-3 mb-6 rounded-lg bg-black border border-gray-600 text-white focus:outline-none"
+                  />
+
+                  {/* BUTTON */}
+                  <button
+                    onClick={handleFetchCertificate}
+                    disabled={loading}
+                    className="px-6 py-2 rounded-lg bg-gradient-to-r from-green-400 to-cyan-400 text-black font-semibold disabled:opacity-50"
+                  >
+                    Get Certificate
+                  </button>
+
+                  {loading && (
+                    <div className="mt-4 text-cyan-400 animate-pulse">
+                      🔄 Fetching certificates...
+                    </div>
+                  )}
+                  {loading && (
+                    <div className="mt-6 w-full">
+                      {/* TEXT */}
+                      <p className="text-cyan-400 mb-2 text-sm animate-pulse">
+                        🔍 Verifying certificate...
+                      </p>
+
+                      {/* PROGRESS BAR */}
+                      <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-green-400 to-cyan-400 transition-all duration-300"
+                          style={{ width: `${progress}%` }}
+                        ></div>
+                      </div>
+
+                      {/* PERCENT */}
+                      <p className="text-xs text-gray-400 mt-1">{progress}%</p>
+                    </div>
+                  )}
+
+                  {/* ERROR */}
+                  {error && <p className="text-red-400 mt-4">{error}</p>}
+
+                  {/* DOWNLOAD */}
+                  <div className="mt-6 grid md:grid-cols-2 gap-6">
+                    {certificates.map((file, index) => (
+                      <div
+                        key={index}
+                        className="p-4 bg-black/60 border border-cyan-400/20 rounded-xl"
+                      >
+                        {/* PREVIEW */}
+                        <iframe
+                          src={file}
+                          title={`Certificate ${index}`}
+                          className="w-full h-64 rounded-lg mb-4"
+                        />
+
+                        {/* DOWNLOAD BUTTON */}
+                        <a
+                          href={file}
+                          download
+                          className="inline-block px-6 py-2 rounded-full 
+      bg-green-500 text-black font-semibold hover:scale-105 transition"
+                        >
+                          Download Certificate {index + 1}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                  {!loading && searched && certificates.length === 0 && (
+                    <div className="space-y-4">
+                      <p className="text-red-400 mt-4">
+                        No certificate found for this roll number
+                      </p>
+                      <div className="mt-8 text-sm text-gray-300">
+                        <p>
+                          If you attended the event but your certificate is not
+                          available, please contact:
+                        </p>
+
+                        <p className="mt-2 text-green-400 font-semibold">
+                          Sanjay Kumar
+                        </p>
+
+                        <a
+                          href="tel:7095009441"
+                          className="text-cyan-400 underline"
+                        >
+                          📞 7095009441
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             {/* HELP DESK */}
             {active === "help" && (
               <div className="w-full max-w-6xl px-6 md:px-10 py-16 mx-auto space-y-20">
