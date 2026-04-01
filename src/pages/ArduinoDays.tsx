@@ -587,7 +587,7 @@ const ArduinoDays = () => {
                   {error && <p className="text-red-400 mt-4">{error}</p>}
 
                   {/* DOWNLOAD */}
-                  <div className="mt-8 flex flex-col gap-8">
+                  <div className="mt-8 grid md:grid-cols-2 gap-8">
                     {certificates.map((file, index) => (
                       <div
                         key={index}

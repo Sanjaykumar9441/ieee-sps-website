@@ -314,7 +314,6 @@ background-size:cover;
     transform: translateX(100%);
   }
 }
-
 .animate-shimmer {
   animation: shimmer 1.5s infinite;
 }
