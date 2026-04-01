@@ -587,7 +587,7 @@ const ArduinoDays = () => {
                   {error && <p className="text-red-400 mt-4">{error}</p>}
 
                   {/* DOWNLOAD */}
-                  <div className="mt-8 grid md:grid-cols-2 gap-8">
+                  <div className="mt-8 grid md:grid-cols-2 gap-8 items-start">
                     {certificates.map((file, index) => (
                       <div
                         key={index}
@@ -601,9 +601,9 @@ hover:shadow-[0_0_20px_rgba(0,255,200,0.4)] transition"
                             : "🎓 Participation Certificate"}
                         </p>
                         <iframe
-                          src={`${file}#zoom=100`}
+                          src={`${file}#toolbar=0&navpanes=0&scrollbar=0`}
                           title={`Certificate ${index}`}
-                          className="w-full aspect-[4/3] rounded-lg mb-6 border border-gray-700"
+                          className="w-full aspect-[16/9] rounded-lg mb-6 border border-gray-700 bg-white"
                         />
 
                         {/* DOWNLOAD BUTTON */}
