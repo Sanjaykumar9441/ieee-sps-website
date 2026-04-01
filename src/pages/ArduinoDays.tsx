@@ -601,9 +601,9 @@ hover:shadow-[0_0_20px_rgba(0,255,200,0.4)] transition"
                             : "🎓 Participation Certificate"}
                         </p>
                         <iframe
-                          src={file}
+                          src={`${file}#zoom=100`}
                           title={`Certificate ${index}`}
-                          className="w-full h-[420px] rounded-lg mb-6 border border-gray-700"
+                          className="w-full aspect-[4/3] rounded-lg mb-6 border border-gray-700"
                         />
 
                         {/* DOWNLOAD BUTTON */}
