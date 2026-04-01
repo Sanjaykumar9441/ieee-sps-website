@@ -510,7 +510,7 @@ const ArduinoDays = () => {
               </>
             )}
             {active === "certificate" && (
-              <div className="w-full max-w-xl px-6 py-20 mx-auto text-center">
+              <div className="w-full max-w-6xl px-6 py-20 mx-auto text-center">
                 {/* HEADER */}
                 <h1
                   className="text-4xl md:text-5xl font-bold mb-10 
@@ -521,7 +521,7 @@ const ArduinoDays = () => {
                 </h1>
 
                 {/* CARD */}
-                <div className="bg-black/80 backdrop-blur-xl rounded-xl p-8 border border-cyan-400/20">
+                <div className="bg-black/80 backdrop-blur-xl rounded-xl p-10 border border-cyan-400/20">
                   {/* INPUT */}
                   <input
                     type="text"
@@ -586,12 +586,12 @@ const ArduinoDays = () => {
                   {/* ERROR */}
                   {error && <p className="text-red-400 mt-4">{error}</p>}
 
-                  <div className="mt-10 grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                  <div className="mt-10 grid md:grid-cols-2 gap-10 max-w-5xl mx-auto place-items-center">
                     {certificates.map((file, index) => (
                       <div
                         key={index}
-                        className="p-6 bg-black/70 border border-cyan-400/20 rounded-xl 
-      hover:shadow-[0_0_20px_rgba(0,255,200,0.4)] transition flex flex-col items-center w-full"
+                        className="p-6 w-full max-w-md bg-black/70 border border-cyan-400/20 rounded-xl 
+hover:shadow-[0_0_20px_rgba(0,255,200,0.4)] transition flex flex-col items-center"
                       >
                         {/* TITLE */}
                         <p className="text-base text-gray-300 mb-4 font-semibold text-center">
@@ -601,13 +601,13 @@ const ArduinoDays = () => {
                         </p>
 
                         {/* BUTTONS */}
-                        <div className="flex gap-4">
+                        <div className="flex gap-4 w-full">
                           {/* PREVIEW */}
                           <button
                             onClick={() => window.open(file, "_blank")}
-                            className="px-5 py-2 rounded-full 
-          bg-gradient-to-r from-cyan-400 to-green-400 
-          text-black font-semibold hover:scale-105 transition"
+                            className="w-full py-2 rounded-full 
+bg-gradient-to-r from-cyan-400 to-green-400 
+text-black font-semibold hover:scale-105 transition text-center"
                           >
                             Preview
                           </button>
@@ -616,8 +616,9 @@ const ArduinoDays = () => {
                           <a
                             href={file}
                             download
-                            className="px-5 py-2 rounded-full 
-          bg-green-500 text-black font-semibold hover:scale-105 transition"
+                            className="w-full py-2 rounded-full 
+bg-gradient-to-r from-cyan-400 to-green-400 
+text-black font-semibold hover:scale-105 transition text-center"
                           >
                             Download
                           </a>
