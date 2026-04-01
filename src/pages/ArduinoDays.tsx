@@ -42,7 +42,6 @@ const ArduinoDays = () => {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [previewFile, setPreviewFile] = useState<string | null>(null);
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -587,15 +586,15 @@ const ArduinoDays = () => {
                   {/* ERROR */}
                   {error && <p className="text-red-400 mt-4">{error}</p>}
 
-                  <div className="mt-10 grid md:grid-cols-2 gap-10">
+                  <div className="mt-10 grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                     {certificates.map((file, index) => (
                       <div
                         key={index}
-                        className="p-8 bg-black/70 border border-cyan-400/20 rounded-2xl 
-      hover:shadow-[0_0_25px_rgba(0,255,200,0.4)] transition flex flex-col items-center"
+                        className="p-6 bg-black/70 border border-cyan-400/20 rounded-xl 
+      hover:shadow-[0_0_20px_rgba(0,255,200,0.4)] transition flex flex-col items-center w-full"
                       >
                         {/* TITLE */}
-                        <p className="text-lg text-gray-300 mb-6 font-semibold">
+                        <p className="text-base text-gray-300 mb-4 font-semibold text-center">
                           {file.includes("merit")
                             ? "🏆 Merit Certificate"
                             : "🎓 Participation Certificate"}
@@ -603,9 +602,9 @@ const ArduinoDays = () => {
 
                         {/* BUTTONS */}
                         <div className="flex gap-4">
-                          {/* PREVIEW BUTTON */}
+                          {/* PREVIEW */}
                           <button
-                            onClick={() => setPreviewFile(file)}
+                            onClick={() => window.open(file, "_blank")}
                             className="px-5 py-2 rounded-full 
           bg-gradient-to-r from-cyan-400 to-green-400 
           text-black font-semibold hover:scale-105 transition"
@@ -613,7 +612,7 @@ const ArduinoDays = () => {
                             Preview
                           </button>
 
-                          {/* DOWNLOAD BUTTON */}
+                          {/* DOWNLOAD */}
                           <a
                             href={file}
                             download
@@ -846,31 +845,6 @@ const ArduinoDays = () => {
             )}
           </motion.div>
         </AnimatePresence>
-        {/* ================= PREVIEW MODAL ================= */}
-        {previewFile && (
-          <div className="fixed inset-0 z-50 bg-black/90 flex flex-col animate-fadeIn">
-            {/* TOP BAR */}
-            <div className="flex justify-between items-center p-4 border-b border-gray-700">
-              <h2 className="text-lg text-white font-semibold">
-                Certificate Preview
-              </h2>
-
-              <button
-                onClick={() => setPreviewFile(null)}
-                className="text-red-400 font-semibold hover:scale-105 transition"
-              >
-                Close ✕
-              </button>
-            </div>
-
-            {/* PDF VIEW */}
-            <iframe
-              src={`${previewFile}#toolbar=1`}
-              className="w-full h-full"
-              title="Certificate Preview"
-            />
-          </div>
-        )}
       </div>
     </div>
   );
