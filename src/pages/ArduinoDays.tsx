@@ -586,7 +586,8 @@ const ArduinoDays = () => {
                   {/* ERROR */}
                   {error && <p className="text-red-400 mt-4">{error}</p>}
 
-                  <div className="mt-10 grid md:grid-cols-2 gap-10 max-w-5xl mx-auto place-items-center">
+                  <div className={`mt-10 grid gap-10 max-w-5xl mx-auto place-items-center 
+  ${certificates.length === 1 ? "grid-cols-1 justify-items-center" : "md:grid-cols-2"}`}>
                     {certificates.map((file, index) => (
                       <div
                         key={index}
