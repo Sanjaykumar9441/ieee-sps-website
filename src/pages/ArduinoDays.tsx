@@ -190,6 +190,7 @@ const ArduinoDays = () => {
     const files = [
       `/certificates/${base}_participation.pdf`,
       `/certificates/${base}_merit.pdf`,
+      `/certificates/${base}_volunteer.pdf`,
     ];
 
     // 🔥 Animate progress
@@ -586,8 +587,10 @@ const ArduinoDays = () => {
                   {/* ERROR */}
                   {error && <p className="text-red-400 mt-4">{error}</p>}
 
-                  <div className={`mt-10 grid gap-10 max-w-5xl mx-auto place-items-center 
-  ${certificates.length === 1 ? "grid-cols-1 justify-items-center" : "md:grid-cols-2"}`}>
+                  <div
+                    className={`mt-10 grid gap-10 max-w-5xl mx-auto place-items-center 
+  ${certificates.length === 1 ? "grid-cols-1 justify-items-center" : "md:grid-cols-2"}`}
+                  >
                     {certificates.map((file, index) => (
                       <div
                         key={index}
@@ -598,7 +601,9 @@ hover:shadow-[0_0_20px_rgba(0,255,200,0.4)] transition flex flex-col items-cente
                         <p className="text-base text-gray-300 mb-4 font-semibold text-center">
                           {file.includes("merit")
                             ? "🏆 Merit Certificate"
-                            : "🎓 Participation Certificate"}
+                            : file.includes("volunteer")
+                              ? "🤝 Volunteer Certificate"
+                              : "🎓 Participation Certificate"}
                         </p>
 
                         {/* BUTTONS */}
