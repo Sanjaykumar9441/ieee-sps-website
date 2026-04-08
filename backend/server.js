@@ -134,11 +134,21 @@ async function ensureAdmin() {
 ================================= */
 const PORT = process.env.PORT || 5000;
 
-connectDB().then(async () => {
-  await ensureAdmin();
-  await setTelegramCommands();
+console.log("🚀 Server file started");
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-  });
+// START SERVER FIRST
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
+
+// THEN connect DB
+connectDB()
+  .then(async () => {
+    console.log("✅ DB Connected");
+    await ensureAdmin();
+    // TEMP disable this
+    // await setTelegramCommands();
+  })
+  .catch(err => {
+    console.error("❌ DB Error:", err);
+  });
