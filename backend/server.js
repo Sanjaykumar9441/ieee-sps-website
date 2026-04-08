@@ -76,6 +76,10 @@ app.get("/test-events", (req, res) => {
   res.json({ message: "Events route working" });
 });
 
+app.get("/ping", (req, res) => {
+  res.send("pong");
+});
+
 /* ===============================
    ✅ Routes
 ================================= */
@@ -134,11 +138,26 @@ async function ensureAdmin() {
 ================================= */
 const PORT = process.env.PORT;
 
-if (!PORT) {
-  console.error("❌ PORT not found");
-  process.exit(1);
-}
+console.log("🚀 Starting server...");
 
+// ✅ START SERVER IMMEDIATELY
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
+// ✅ RUN OTHER TASKS IN BACKGROUND
+(async () => {
+  try {
+    await connectDB();
+    console.log("✅ DB Connected");
+
+    await ensureAdmin();
+    console.log("✅ Admin ensured");
+
+    // ❗ TEMP DISABLE THIS
+    // await setTelegramCommands();
+
+  } catch (err) {
+    console.error("❌ Background error:", err);
+  }
+})();
