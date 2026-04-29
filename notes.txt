@@ -85,7 +85,7 @@ const ArduinoDays = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex items-start justify-center z-30 relative overflow-y-auto">
+      <div className="flex-1 flex items-start justify-center z-30 relative overflow-y-hidden">
 
         {/* HOME */}
         {active === "home" && (
