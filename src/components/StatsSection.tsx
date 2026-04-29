@@ -10,24 +10,24 @@ const StatsSection = () => {
       <div className="max-w-6xl mx-auto px-6 text-center">
 
         <motion.div
-  initial={{ opacity: 0, y: 30 }}
-  whileInView={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.8 }}
-  className="text-center mb-16"
->
-<h2 className="text-2xl sm:text-3xl md:text-5xl font-semibold tracking-tight mb-4 sm:mb-6">
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-2xl sm:text-3xl md:text-5xl font-semibold tracking-tight mb-4 sm:mb-6">
             Chapter Impact
           </h2>
-  <div className="w-20 h-[2px] bg-primary mx-auto" />
-</motion.div>
-        
+          <div className="w-20 h-[2px] bg-primary mx-auto" />
+        </motion.div>
+
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
 
-          <Stat number="10+" label="Active Members" />
-          <Stat number="0" label="Technical Events" />
+          <Stat number="20+" label="Active Members" />
+          <Stat number="1" label="Technical Events" />
           <Stat number="1" label="Workshops Conducted" />
-          <Stat number="0" label="Research Initiatives" />
+          <Stat number="1" label="Research Initiatives" />
 
         </div>
       </div>

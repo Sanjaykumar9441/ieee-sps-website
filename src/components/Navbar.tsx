@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import ThemeToggle from "./ThemeToggle";
+import LoadingScreen from "./LoadingScreen";
 
 import ieeeLogo from "../assets/logos/ieee.png";
 import spsLogo from "../assets/logos/sps.png";
@@ -17,6 +18,16 @@ const links = [
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState("home");
+  const [loading, setLoading] = useState(false);
+
+  const handleNavClick = (id: string) => {
+    setLoading(true);
+
+    setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+      setLoading(false);
+    }, 1000);
+  };
 
   useEffect(() => {
     const sections = document.querySelectorAll("section");
@@ -41,6 +52,7 @@ const Navbar = () => {
 
   return (
     <>
+      {loading && <LoadingScreen />}
       {/* ================= LOGOS ================= */}
       <div className="absolute top-6 left-0 right-0 flex justify-center md:justify-start md:left-12 z-50 gap-6">
         <a
@@ -71,11 +83,11 @@ const Navbar = () => {
         </a>
       </div>
 
-      
-      {/* ================= MOBILE CONTROLS (Combined) ================= */}
-<div className="md:hidden absolute top-24 left-0 right-0 flex justify-center z-50">
 
-  <div className="flex items-center gap-3
+      {/* ================= MOBILE CONTROLS (Combined) ================= */}
+      <div className="md:hidden absolute top-24 left-0 right-0 flex justify-center z-50">
+
+        <div className="flex items-center gap-3
                 px-4 py-1.5
                 rounded-full
                 backdrop-blur-md
@@ -83,28 +95,28 @@ const Navbar = () => {
                 border border-white/20
                 shadow-md">
 
-    {/* Theme Toggle */}
-    <ThemeToggle />
+          {/* Theme Toggle */}
+          <ThemeToggle />
 
-    {/* Divider */}
-    <div className="w-px h-5 bg-white/30" />
+          {/* Divider */}
+          <div className="w-px h-5 bg-white/30" />
 
-    {/* Hamburger */}
-    <button
-      onClick={() => setOpen(!open)}
-      className="transition-all duration-300"
-    >
-      {open ? <X size={18} /> : <Menu size={18} />}
-    </button>
+          {/* Hamburger */}
+          <button
+            onClick={() => setOpen(!open)}
+            className="transition-all duration-300"
+          >
+            {open ? <X size={18} /> : <Menu size={18} />}
+          </button>
 
-  </div>
-</div>
+        </div>
+      </div>
 
-    
+
       {/* ================= PREMIUM DESKTOP NAV ================= */}
-<nav className="fixed top-6 right-12 z-50 hidden md:flex items-center gap-4">
+      <nav className="fixed top-6 right-12 z-50 hidden md:flex items-center gap-4">
 
-  <div className="flex items-center gap-4 
+        <div className="flex items-center gap-4 
                 px-6 py-2.5 
                 rounded-full 
                 backdrop-blur-2xl 
@@ -118,42 +130,41 @@ const Navbar = () => {
                 
                 transition-all duration-500">
 
-    <ThemeToggle />
+          <ThemeToggle />
 
-    <div className="flex gap-2 text-sm font-semibold tracking-wide items-center">
+          <div className="flex gap-2 text-sm font-semibold tracking-wide items-center">
 
-      {links.map((l) => {
-        const sectionId = l.href.replace("#", "");
+            {links.map((l) => {
+              const sectionId = l.href.replace("#", "");
 
-        return (
-          <a
-            key={l.label}
-            href={l.href}
-            className={`relative px-4 py-1.5 rounded-full transition-all duration-300 ${
-              active === sectionId
-  ? "text-white bg-cyan-500 shadow-lg"
-  : "text-black dark:text-white/80 hover:text-black dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10"
-            }`}
-          >
-            {l.label}
-          </a>
-        );
-      })}
+              return (
+                <button
+                  key={l.label}
+                  onClick={() => handleNavClick(sectionId)}
+                  className={`relative px-4 py-1.5 rounded-full transition-all duration-300 ${active === sectionId
+                    ? "text-white bg-cyan-500 shadow-lg"
+                    : "text-black dark:text-white/80 hover:text-black dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10"
+                    }`}
+                >
+                  {l.label}
+                </button>
+              );
+            })}
 
-      <Link to="/admin-login" className="ml-3">
-        <button className="px-4 py-1.5 text-xs font-semibold tracking-wider
+            <Link to="/admin-login" className="ml-3">
+              <button className="px-4 py-1.5 text-xs font-semibold tracking-wider
                            bg-gradient-to-r from-cyan-500 to-blue-600
                            text-white rounded-full
                            hover:scale-105
                            transition-all duration-300
                            shadow-lg shadow-cyan-500/30">
-          Admin
-        </button>
-      </Link>
+                Admin
+              </button>
+            </Link>
 
-    </div>
-  </div>
-</nav>
+          </div>
+        </div>
+      </nav>
 
       {/* ================= MOBILE MENU ================= */}
       {open && (
@@ -171,18 +182,19 @@ const Navbar = () => {
             const sectionId = l.href.replace("#", "");
 
             return (
-              <a
+              <button
                 key={l.label}
-                href={l.href}
-                onClick={() => setOpen(false)}
-                className={`block text-center px-4 py-2 rounded-lg transition-all duration-300 ${
-                  active === sectionId
-                    ? "bg-primary text-primary-foreground"
-                    : "text-foreground hover:bg-muted"
-                }`}
+                onClick={() => {
+                  handleNavClick(sectionId);
+                  setOpen(false);
+                }}
+                className={`relative px-4 py-1.5 rounded-full transition-all duration-300 ${active === sectionId
+                  ? "text-white bg-cyan-500 shadow-lg"
+                  : "text-black dark:text-white/80 hover:text-black dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10"
+                  }`}
               >
                 {l.label}
-              </a>
+              </button>
             );
           })}
 

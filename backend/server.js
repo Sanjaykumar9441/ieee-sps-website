@@ -23,6 +23,7 @@ const fs = require("fs");
 const path = require("path");
 
 const uploadDir = path.join(__dirname, "uploads");
+const galleryRoutes = require("./routes/galleryRoutes");
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
@@ -89,6 +90,7 @@ app.use("/contact", contactRoutes);
 app.use("/team", teamRoutes);
 app.use("/api", registrationRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api", galleryRoutes);
 /* ===============================
    📂 Serve Uploaded Images
 ================================= */

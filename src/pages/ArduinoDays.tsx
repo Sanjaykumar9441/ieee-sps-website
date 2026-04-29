@@ -1,12 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { Home, HelpCircle, Info, Handshake } from "lucide-react";
+import { Home, HelpCircle, Info, Handshake, FileText, Menu, MapPin, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { Menu } from "lucide-react";
-import { Users, IndianRupee, Calendar } from "lucide-react";
-import { MapPin } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 const MovingWaves = () => {
   return (
@@ -26,7 +21,6 @@ const MovingWaves = () => {
 
 const ArduinoDays = () => {
   const navigate = useNavigate();
-  const [registerLoading, setRegisterLoading] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const rawSection = searchParams.get("section") || "home";
 
@@ -35,13 +29,6 @@ const ArduinoDays = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const [rollNo, setRollNo] = useState("");
-  const [fileUrl, setFileUrl] = useState<string | null>(null);
-  const [error, setError] = useState("");
-  const [certificates, setCertificates] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
-  const [progress, setProgress] = useState(0);
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -58,9 +45,162 @@ const ArduinoDays = () => {
     };
   }, [menuOpen]);
 
-  const collegeMap: Record<string, string> = {
-    AUS: "Aditya University (AUS)",
-    ACET: "Aditya College of Engineering & Technology (ACET)",
+  const GalleryTabs = () => {
+    const [day, setDay] = useState("day1");
+    const [images, setImages] = useState<string[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+    const handleDownload = async () => {
+      if (selectedIndex === null) return;
+
+      const url = images[selectedIndex];
+
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const fileName = url.split("/").pop();
+      const link = document.createElement("a");
+      link.href = window.URL.createObjectURL(blob);
+      link.download = fileName || "image.jpg";
+      link.click();
+    };
+
+    const nextImage = () => {
+      if (selectedIndex === null) return;
+      setSelectedIndex((selectedIndex + 1) % images.length);
+    };
+
+    const prevImage = () => {
+      if (selectedIndex === null) return;
+      setSelectedIndex(
+        (selectedIndex - 1 + images.length) % images.length
+      );
+    };
+
+    useEffect(() => {
+      fetchImages();
+    }, [day]);
+
+    useEffect(() => {
+      const handleKey = (e: KeyboardEvent) => {
+        if (selectedIndex === null) return;
+
+        if (e.key === "ArrowRight") nextImage();
+        if (e.key === "ArrowLeft") prevImage();
+        if (e.key === "Escape") setSelectedIndex(null);
+      };
+
+      window.addEventListener("keydown", handleKey);
+      return () => window.removeEventListener("keydown", handleKey);
+    }, [selectedIndex, images]);
+
+    const fetchImages = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`https://ieee-sps-website.onrender.com/api/gallery/${day}`)
+        const data = await res.json();
+        setImages(data);
+      } catch (err) {
+        console.log(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return (
+      <>
+        {/* Buttons */}
+        <div className="flex justify-center gap-4 mb-8">
+          {["day1", "day2", "day3"].map((d) => (
+            <button
+              key={d}
+              onClick={() => setDay(d)}
+              className={`px-5 py-2 rounded-full text-sm ${day === d
+                ? "bg-cyan-500 text-white"
+                : "bg-white/10 text-gray-300"
+                }`}
+            >
+              {d.toUpperCase()}
+            </button>
+          ))}
+        </div>
+
+        {/* Images */}
+        {loading ? (
+          <p className="text-center text-gray-400">Loading...</p>
+        ) : images.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {images.map((img, i) => (
+              <motion.img
+                key={img}
+                src={img}
+                alt="gallery"
+                onClick={() => setSelectedIndex(i)}
+                className="rounded-lg object-cover h-40 md:h-56 w-full 
+             hover:scale-105 transition cursor-pointer"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-gray-400">No images found</p>
+        )}
+        {selectedIndex !== null && (
+          <motion.div
+            className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedIndex(null)}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedIndex(null)}
+              className="absolute top-5 right-5 text-white text-2xl"
+            >
+              ✕
+            </button>
+
+            {/* Prev Button */}
+            <button
+              onClick={prevImage}
+              className="absolute left-5 text-white text-3xl"
+            >
+              ‹
+            </button>
+
+            {/* Image */}
+            <motion.img
+              src={images[selectedIndex]}
+              alt="preview"
+              className="max-w-[90%] max-h-[90%] rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+            />
+
+            {/* Next Button */}
+            <button
+              onClick={nextImage}
+              className="absolute right-5 text-white text-3xl"
+            >
+              ›
+            </button>
+            <button
+              onClick={handleDownload}
+              className="absolute bottom-6 right-6 
+             bg-white/10 backdrop-blur-md 
+             px-4 py-2 rounded-full 
+             text-white text-sm
+             hover:bg-white/20 transition"
+            >
+              ⬇ Download
+            </button>
+          </motion.div>
+        )}
+      </>
+    );
   };
 
   useEffect(() => {
@@ -94,43 +234,31 @@ const ArduinoDays = () => {
       name: "B. Navya",
       designation: "Chair",
       department: "ECE",
-      roll: "24B11EC037",
-      phone: " 6301443410",
     },
     {
       name: "Ch. Sanjay Kumar",
       designation: "Vice Chair",
       department: "ECE",
-      roll: "24B11EC057",
-      phone: "7095009441",
     },
     {
       name: "S. Veneela",
       designation: "Secretary",
       department: "ECE",
-      roll: "24B11EC279",
-      phone: "7995971239",
     },
     {
       name: "J. Rakesh",
       designation: "Treasurer",
       department: "ECE",
-      roll: "24B11EC115",
-      phone: "8309873938",
     },
     {
       name: "Ch. Harini",
       designation: "Web Master",
       department: "ECE",
-      roll: "24B11EC055",
-      phone: "6302041984",
     },
     {
       name: "Ch. Naveen Sai",
       designation: "IEEE Member",
       department: "ECE",
-      roll: "24B11EC048",
-      phone: "7842443089",
     },
   ];
 
@@ -139,7 +267,6 @@ const ArduinoDays = () => {
       name: "Mr. S. Jagadeesh",
       designation: "Assistant Professor",
       department: "ECE",
-      phone: "9440722720",
     },
   ];
 
@@ -153,7 +280,7 @@ const ArduinoDays = () => {
     },
     {
       name: "Silicon Touch Technologies, Vijayawada",
-      logo: "/OIP.jpg",
+      logo: "/OIP.png",
       description:
         "Silicon Touch Technologies, Vijayawada is a technology partner delivering innovative software solutions and digital services that help organizations enhance efficiency and drive technological growth.",
       website: "https://www.sttmani.com/home",
@@ -175,55 +302,6 @@ const ArduinoDays = () => {
     if (section) {
       section.scrollIntoView({ behavior: "smooth" });
     }
-  };
-
-  const handleFetchCertificate = () => {
-    if (!rollNo) return;
-
-    setSearched(true);
-    setLoading(true);
-    setCertificates([]);
-    setProgress(0);
-
-    const base = rollNo.trim();
-
-    const files = [
-      `/certificates/${base}_participation.pdf`,
-      `/certificates/${base}_merit.pdf`,
-      `/certificates/${base}_volunteer.pdf`,
-    ];
-
-    // 🔥 Animate progress
-    let current = 0;
-    const interval = setInterval(() => {
-      current += 10;
-      setProgress(current);
-      if (current >= 90) clearInterval(interval); // stop at 90%
-    }, 200);
-
-    Promise.all(
-      files.map((url) =>
-        fetch(url)
-          .then((res) => {
-            const contentType = res.headers.get("content-type");
-            if (res.ok && contentType?.includes("application/pdf")) {
-              return url;
-            }
-            return null;
-          })
-          .catch(() => null),
-      ),
-    ).then((results) => {
-      const validFiles = results.filter(Boolean) as string[];
-
-      setTimeout(() => {
-        clearInterval(interval);
-        setProgress(100); // complete
-
-        setCertificates(validFiles);
-        setLoading(false);
-      }, 3000);
-    });
   };
   return (
     <div className="min-h-screen bg-[#02060c] relative text-white overflow-x-hidden overflow-y-auto">
@@ -247,9 +325,8 @@ const ArduinoDays = () => {
 
       <div
         ref={sidebarRef}
-        className={`fixed top-0 left-0 h-screen w-64 bg-black/50 backdrop-blur-3xl border-r border-green-500/20 shadow-xl p-6 flex flex-col gap-8 z-50 transform transition-transform duration-300 ${
-          menuOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0`}
+        className={`fixed top-0 left-0 h-screen w-64 bg-black/50 backdrop-blur-3xl border-r border-green-500/20 shadow-xl p-6 flex flex-col gap-8 z-50 transform transition-transform duration-300 ${menuOpen ? "translate-x-0" : "-translate-x-full"
+          } md:translate-x-0`}
       >
         {/* ⚡ Subtle Circuit Overlay */}
         <div className="absolute inset-0 opacity-10 pointer-events-none">
@@ -279,11 +356,7 @@ const ArduinoDays = () => {
 
           {[
             { id: "home", icon: <Home size={20} />, label: "Home" },
-            {
-              id: "certificate",
-              icon: <FileText size={20} />,
-              label: "Download Certificate",
-            },
+            { id: "gallery", icon: <FileText size={20} />, label: "Gallery" },
             { id: "help", icon: <HelpCircle size={20} />, label: "Help Desk" },
             { id: "about", icon: <Info size={20} />, label: "About" },
             {
@@ -317,21 +390,19 @@ const ArduinoDays = () => {
               )}
 
               <span
-                className={`transition-all duration-300 ${
-                  active === item.id
-                    ? "text-green-400"
-                    : "text-gray-400 group-hover:text-green-300"
-                }`}
+                className={`transition-all duration-300 ${active === item.id
+                  ? "text-green-400"
+                  : "text-gray-400 group-hover:text-green-300"
+                  }`}
               >
                 {item.icon}
               </span>
 
               <span
-                className={`font-medium transition-all duration-300 ${
-                  active === item.id
-                    ? "text-green-400"
-                    : "text-gray-400 group-hover:text-green-300"
-                }`}
+                className={`font-medium transition-all duration-300 ${active === item.id
+                  ? "text-green-400"
+                  : "text-gray-400 group-hover:text-green-300"
+                  }`}
               >
                 {item.label}
               </span>
@@ -510,155 +581,35 @@ const ArduinoDays = () => {
                 </section>
               </>
             )}
-            {active === "certificate" && (
-              <div className="w-full max-w-6xl px-6 py-20 mx-auto text-center">
-                {/* HEADER */}
-                <h1
-                  className="text-4xl md:text-5xl font-bold mb-10 
-    bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 
-    bg-clip-text text-transparent tracking-wide"
-                >
-                  Download Certificate
+            {/* GALLARY */}
+            {active === "gallery" && (
+              <div className="w-full max-w-6xl px-6 md:px-10 py-16 mx-auto">
+
+                {/* Title */}
+                <h1 className="text-4xl md:text-5xl font-bold text-center mb-10
+      bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 
+      bg-clip-text text-transparent">
+                  Gallery
                 </h1>
 
-                {/* CARD */}
-                <div className="bg-black/80 backdrop-blur-xl rounded-xl p-10 border border-cyan-400/20">
-                  {/* INPUT */}
-                  <input
-                    type="text"
-                    placeholder="Enter Roll Number"
-                    value={rollNo}
-                    onChange={(e) => {
-                      setRollNo(e.target.value.toUpperCase());
-                      setSearched(false);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleFetchCertificate();
-                      }
-                    }}
-                    className="w-full p-3 mb-6 rounded-lg bg-black border border-gray-600 text-white focus:outline-none"
-                  />
-
-                  {/* BUTTON */}
-                  <button
-                    onClick={handleFetchCertificate}
-                    disabled={loading}
-                    className="px-6 py-2 rounded-lg bg-gradient-to-r from-green-400 to-cyan-400 text-black font-semibold disabled:opacity-50"
-                  >
-                    Get Certificate
-                  </button>
-                  {loading && (
-                    <div className="mt-8 w-full text-left">
-                      {/* STATUS TEXT */}
-                      <p className="text-cyan-400 text-sm mb-3 animate-pulse">
-                        {progress < 30 && "🔍 Checking database..."}
-                        {progress >= 30 &&
-                          progress < 70 &&
-                          "⚙️ Verifying certificate..."}
-                        {progress >= 70 && "📄 Preparing your certificate..."}
-                      </p>
-
-                      {/* PROGRESS BAR */}
-                      <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden relative">
-                        {/* MAIN BAR */}
-                        <div
-                          className="h-full bg-gradient-to-r from-green-400 via-cyan-400 to-green-400 
-    relative overflow-hidden transition-all duration-300 
-    shadow-[0_0_15px_rgba(0,255,200,0.8)]"
-                          style={{ width: `${progress}%` }}
-                        >
-                          {/* SHIMMER EFFECT */}
-                          <div
-                            className="absolute inset-0 
-      bg-gradient-to-r from-transparent via-white/30 to-transparent 
-      animate-shimmer"
-                          ></div>
-                        </div>
-                      </div>
-
-                      {/* PERCENT */}
-                      <p className="text-xs text-gray-400 mt-2">
-                        {progress}% completed
-                      </p>
-                    </div>
-                  )}
-
-                  {/* ERROR */}
-                  {error && <p className="text-red-400 mt-4">{error}</p>}
-
-                  <div
-                    className={`mt-10 grid gap-10 max-w-5xl mx-auto place-items-center 
-  ${certificates.length === 1 ? "grid-cols-1 justify-items-center" : "md:grid-cols-2"}`}
-                  >
-                    {certificates.map((file, index) => (
-                      <div
-                        key={index}
-                        className="p-6 w-full max-w-md bg-black/70 border border-cyan-400/20 rounded-xl 
-hover:shadow-[0_0_20px_rgba(0,255,200,0.4)] transition flex flex-col items-center"
-                      >
-                        {/* TITLE */}
-                        <p className="text-base text-gray-300 mb-4 font-semibold text-center">
-                          {file.includes("merit")
-                            ? "🏆 Merit Certificate"
-                            : file.includes("volunteer")
-                              ? "🤝 Volunteer Certificate"
-                              : "🎓 Participation Certificate"}
-                        </p>
-
-                        {/* BUTTONS */}
-                        <div className="flex gap-4 w-full">
-                          {/* PREVIEW */}
-                          <button
-                            onClick={() => window.open(file, "_blank")}
-                            className="w-full py-2 rounded-full 
-bg-gradient-to-r from-cyan-400 to-green-400 
-text-black font-semibold hover:scale-105 transition text-center"
-                          >
-                            Preview
-                          </button>
-
-                          {/* DOWNLOAD */}
-                          <a
-                            href={file}
-                            download
-                            className="w-full py-2 rounded-full 
-bg-gradient-to-r from-cyan-400 to-green-400 
-text-black font-semibold hover:scale-105 transition text-center"
-                          >
-                            Download
-                          </a>
-                        </div>
-                      </div>
-                    ))}
+                {/* YouTube Video */}
+                <div className="mb-12">
+                  <div className="aspect-video rounded-xl overflow-hidden border border-cyan-400/30">
+                    <iframe
+                      className="w-full h-full"
+                      src="https://www.youtube.com/embed/zaR2MDoh3OE"
+                      title="Gallery Video"
+                      allowFullScreen
+                    />
                   </div>
-                  {!loading && searched && certificates.length === 0 && (
-                    <div className="space-y-4">
-                      <p className="text-red-400 mt-4">
-                        No certificate found for this roll number
-                      </p>
-                      <div className="mt-8 text-sm text-gray-300">
-                        <p>
-                          If you attended the event but your certificate is not
-                          available, please contact:
-                        </p>
-
-                        <p className="mt-2 text-green-400 font-semibold">
-                          Sanjay Kumar
-                        </p>
-
-                        <a
-                          href="tel:7095009441"
-                          className="text-cyan-400 underline"
-                        >
-                          📞 7095009441
-                        </a>
-                      </div>
-                    </div>
-                  )}
                 </div>
+
+                {/* Tabs */}
+                <GalleryTabs />
+
               </div>
             )}
+
             {/* HELP DESK */}
             {active === "help" && (
               <div className="w-full max-w-6xl px-6 md:px-10 py-16 mx-auto space-y-20">
@@ -687,14 +638,6 @@ text-black font-semibold hover:scale-105 transition text-center"
                         <p className="text-sm text-gray-400">
                           {member.department}
                         </p>
-                        <p className="text-sm text-gray-400">{member.roll}</p>
-
-                        <a
-                          href={`tel:${member.phone}`}
-                          className="text-green-400 font-semibold mt-4 block"
-                        >
-                          📞 {member.phone}
-                        </a>
                       </div>
                     ))}
                   </div>
@@ -721,13 +664,6 @@ text-black font-semibold hover:scale-105 transition text-center"
                         <p className="text-sm text-gray-400">
                           {faculty.department}
                         </p>
-
-                        <a
-                          href={`tel:${faculty.phone}`}
-                          className="text-cyan-400 font-semibold mt-4 block"
-                        >
-                          📞 {faculty.phone}
-                        </a>
                       </div>
                     ))}
                   </div>

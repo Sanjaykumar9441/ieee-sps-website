@@ -20,7 +20,7 @@ const EventDetails = () => {
   const particlesInit = async (main: any) => {
     await loadFull(main);
   };
-  
+
   if (!event) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center text-foreground">
@@ -77,8 +77,8 @@ const EventDetails = () => {
 
               <span className={`px-3 py-1 rounded-full text-xs font-medium
                 ${event.status === "Upcoming"
-  ? "bg-primary text-primary-foreground"
-  : "bg-green-600 text-white dark:text-white"}`}>
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-green-600 text-white dark:text-white"}`}>
                 {event.status}
               </span>
 
@@ -87,7 +87,7 @@ const EventDetails = () => {
             </div>
 
             <div className="bg-card border border-border rounded-xl p-6 max-w-3xl shadow-sm">
-                <p className="text-muted-foreground leading-relaxed">
+              <p className="text-muted-foreground leading-relaxed">
                 {event.description}
               </p>
             </div>
@@ -103,24 +103,24 @@ const EventDetails = () => {
               <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
 
                 {event.images.map((img: string, index: number) => (
-  <div
-    key={index}
-    className="relative group rounded-xl p-[2px] 
+                  <div
+                    key={index}
+                    className="relative group rounded-xl p-[2px] 
                bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 
                hover:shadow-[0_0_30px_rgba(0,255,255,0.6)] 
                transition-all duration-500"
-  >
-    <div className="overflow-hidden rounded-xl bg-card">
-      <img
-        src={img}
-        alt="Event"
-        className="w-full h-64 object-cover 
+                  >
+                    <div className="overflow-hidden rounded-xl bg-card">
+                      <img
+                        src={img}
+                        alt="Event"
+                        className="w-full h-64 object-cover 
                    group-hover:scale-110 
                    transition-transform duration-700"
-      />
-    </div>
-  </div>
-))}
+                      />
+                    </div>
+                  </div>
+                ))}
 
               </div>
             </>
