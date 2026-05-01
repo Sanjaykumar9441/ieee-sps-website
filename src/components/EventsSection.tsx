@@ -27,26 +27,26 @@ const EventsSection = () => {
       const res = await axios.get(
         "https://ieee-sps-website.onrender.com/events"
       );
-      setEvents(res.data);
+
+      setEvents(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.log(err);
+      setEvents([]);
     }
   };
+  const arduino = events.find(e => e.title === "Arduino Days 2026");
 
-  //--------------------------------------------------------------------------------------
-  const temporaryEvent = {
-    _id: "arduino-days-temp",
-    title: "Arduino Days 2026",
-    date: "23–26 March 2026",
-    location: "Aditya University, Surampalem",
-    status: "Completed",
-    isTemporary: true
-  }; // i will delete later
-  //----------------------------------------------------------------------------------------
+  const others = events
+    .filter(e => e.title !== "Arduino Days 2026")
+    .sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.date);
+      const dateB = new Date(b.createdAt || b.date);
+      return dateB.getTime() - dateA.getTime();
+    });
 
-  //const visibleEvents = events.slice(0, 4);
-  const visibleEvents = [temporaryEvent, ...events].slice(0, 4); // i will delete later
-  //----------------------------------------------------------------------------------------
+  const visibleEvents = arduino
+    ? [...others.slice(0, 3), arduino]
+    : others.slice(0, 4);
   return (
     <>
       {loading && <LoadingScreen />}
@@ -146,19 +146,19 @@ const EventsSection = () => {
                     <button
                       onClick={() =>
                         handleViewDetails(
-                          event.isTemporary
+                          event.title === "Arduino Days 2026"
                             ? "/arduino-days"
                             : `/event/${event._id}`
                         )
                       }
-                      className="inline-flex items-center justify-center 
-             px-4 py-2 sm:px-5 sm:py-2.5 rounded-full 
-             text-sm font-medium
-             bg-gradient-to-r from-cyan-500 to-blue-600
-             text-white
-             shadow-lg shadow-cyan-500/30
-             hover:scale-105 hover:shadow-cyan-400/50
-             transition-all duration-300"
+                      className="inline-flex items-center justify-center
+                    px-4 py-2 sm:px-5 sm:py-2.5 rounded-full
+                    text-sm font-medium
+                    bg-gradient-to-r from-cyan-500 to-blue-600
+                    text-white
+                    shadow-lg shadow-cyan-500/30
+                    hover:scale-105 hover:shadow-cyan-400/50
+                    transition-all duration-300"
                     >
                       View Details →
                     </button>

@@ -45,95 +45,17 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-router.get("/registration-status", async (req, res) => {
-
-  try {
-
-    const event = await Event.findOne();
-
-    res.json({
-      registrationOpen: event?.registrationOpen || false
-    });
-
-  } catch (error) {
-
-    res.status(500).json({
-      message: "Error fetching status"
-    });
-
-  }
-
-});
-
-router.put("/toggle-registration", verifyToken, async (req, res) => {
-  try {
-
-    const events = await Event.find();
-
-    if (!events.length) {
-      return res.status(404).json({
-        message: "No events found"
-      });
-    }
-
-    const newState = !events[0].registrationOpen;
-
-    await Event.updateMany(
-      {},
-      { $set: { registrationOpen: newState } }
-    );
-
-    res.json({
-      success: true,
-      registrationOpen: newState
-    });
-
-  } catch (error) {
-
-    console.error("Toggle Error:", error);
-
-    res.status(500).json({
-      message: "Toggle failed"
-    });
-
-  }
-});
-
 /* ===============================
    ➕ ADD EVENT
 ================================= */
 
 router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
-  const { title, description, date, location, status } = req.body;
-
   try {
-    if (!title) {
-      throw new Error("❌ Title is required");
-    }
+    const { title, description, date, status, location } = req.body;
 
-    if (!status) {
-      throw new Error("❌ Status is required");
-    }
-
-    if (status === "Completed") {
-      if (!description) {
-        throw new Error("❌ Description is required for completed event");
-      }
-
-      if (!date) {
-        throw new Error("❌ Date is required for completed event");
-      }
-
-      if (!location) {
-        throw new Error("❌ Location is required for completed event");
-      }
-
-      if (!req.files || req.files.length === 0) {
-        throw new Error("❌ Images are required for completed event");
-      }
-    }
-
-    const imageUrls = req.files.map(file => file.path);
+    const images = req.files
+      ? req.files.map((file) => file.path) // ✅ Cloudinary URL
+      : [];
 
     const newEvent = new Event({
       title,
@@ -141,19 +63,15 @@ router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
       date,
       location,
       status,
-      images: imageUrls
+      images,
     });
 
     await newEvent.save();
 
-    res.status(201).json(newEvent);
-
-  } catch (error) {
-    console.error(error.message);
-    res.status(400).json({
-      success: false,
-      error: error.message
-    });
+    res.json({ success: true, event: newEvent });
+  } catch (err) {
+    console.error("ADD EVENT ERROR:", err);
+    res.status(500).json({ msg: "Error adding event" });
   }
 });
 
