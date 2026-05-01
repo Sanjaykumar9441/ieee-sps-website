@@ -17,7 +17,7 @@ const getGalleryByDay = async (req, res) => {
             ),
             full: img.secure_url.replace(
                 "/upload/",
-                "/upload/w_1200,q_auto,f_auto/"
+                "/upload/w_2000,q_auto:best,f_auto/"
             ),
         }));
 

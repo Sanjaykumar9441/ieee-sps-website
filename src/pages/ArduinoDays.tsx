@@ -830,7 +830,7 @@ const ArduinoDays = () => {
                     { value: "3", label: "Days", color: "#00979D" },
                     { value: "150+", label: "Expected Participants", color: "#E07B39" },
                     { value: "3+", label: "Events & Workshops", color: "#00c4a7" },
-                    { value: "₹50000+", label: "Total Prize Pool", color: "#f0a060" },
+                    { value: "₹50000", label: "Total Prize Pool", color: "#f0a060" },
                   ].map((stat, i) => (
                     <div key={i} className="p-5 rounded-xl text-center" style={{ backgroundColor: "rgba(255,255,255,0.03)", border: `1px solid ${stat.color}20` }}>
                       <p className="text-3xl font-black mb-1" style={{ color: stat.color, fontFamily: "'Space Mono', monospace" }}>{stat.value}</p>

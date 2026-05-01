@@ -1,21 +1,16 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
-import LoadingScreen from "./LoadingScreen";
+import { useNavigate } from "react-router-dom";
 
 const TeamSection = () => {
-
+  const navigate = useNavigate();
   const [members, setMembers] = useState<any[]>([]);
   const [showAll, setShowAll] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   const handleViewDetails = (path: string) => {
-    setLoading(true);
-
-    setTimeout(() => {
-      window.location.href = path;
-    }, 3000);
+    navigate(path);
   };
 
   // Detect screen size
@@ -47,7 +42,6 @@ const TeamSection = () => {
 
   return (
     <>
-      {loading && <LoadingScreen />}
       <section
         id="team"
         className="py-16 px-4 sm:px-6 bg-background text-foreground transition-colors duration-300"

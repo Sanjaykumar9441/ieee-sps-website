@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import LoadingScreen from "./LoadingScreen";
+import { useNavigate } from "react-router-dom";
 
 const EventsSection = () => {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -11,7 +13,8 @@ const EventsSection = () => {
     setLoading(true);
 
     setTimeout(() => {
-      window.location.href = path;
+      setLoading(false);
+      navigate(path);
     }, 3000);
   };
 
