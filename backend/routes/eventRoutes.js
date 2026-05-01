@@ -104,12 +104,36 @@ router.put("/toggle-registration", verifyToken, async (req, res) => {
 ================================= */
 
 router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
-  try {
-    const { title, description, date, status, location } = req.body;
+  const { title, description, date, location, status } = req.body;
 
-    const images = req.files
-      ? req.files.map((file) => file.path) // ✅ Cloudinary URL
-      : [];
+  try {
+    if (!title) {
+      throw new Error("❌ Title is required");
+    }
+
+    if (!status) {
+      throw new Error("❌ Status is required");
+    }
+
+    if (status === "Completed") {
+      if (!description) {
+        throw new Error("❌ Description is required for completed event");
+      }
+
+      if (!date) {
+        throw new Error("❌ Date is required for completed event");
+      }
+
+      if (!location) {
+        throw new Error("❌ Location is required for completed event");
+      }
+
+      if (!req.files || req.files.length === 0) {
+        throw new Error("❌ Images are required for completed event");
+      }
+    }
+
+    const imageUrls = req.files.map(file => file.path);
 
     const newEvent = new Event({
       title,
@@ -117,15 +141,19 @@ router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
       date,
       location,
       status,
-      images,
+      images: imageUrls
     });
 
     await newEvent.save();
 
-    res.json({ success: true, event: newEvent });
-  } catch (err) {
-    console.error("ADD EVENT ERROR:", err);
-    res.status(500).json({ msg: "Error adding event" });
+    res.status(201).json(newEvent);
+
+  } catch (error) {
+    console.error(error.message);
+    res.status(400).json({
+      success: false,
+      error: error.message
+    });
   }
 });
 

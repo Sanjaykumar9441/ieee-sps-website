@@ -24,6 +24,11 @@ router.post("/", upload.single("image"), async (req, res) => {
   try {
     const file = req.file;
 
+    // ❗ check file
+    if (!file) {
+      return res.status(400).json({ message: "No image uploaded" });
+    }
+
     const result = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         { folder: "registrations" },
@@ -39,7 +44,7 @@ router.post("/", upload.single("image"), async (req, res) => {
     res.json({ url: result.secure_url });
 
   } catch (error) {
-    console.error(error);
+    console.error("Upload Error:", error);
     res.status(500).json({ message: "Upload failed" });
   }
 });

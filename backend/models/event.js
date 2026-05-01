@@ -1,14 +1,8 @@
 const mongoose = require("mongoose");
 
 const eventSchema = new mongoose.Schema({
-  eventType: {
-    type: String,
-    enum: ["combo", "buildathon"],
-    required: true,
-    unique: true
-  },
 
-  title: { type: String },
+  title: { type: String, required: true },
   description: { type: String },
 
   date: { type: String },
@@ -17,15 +11,10 @@ const eventSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ["Upcoming", "Completed"],
-    default: "Upcoming"
+    required: true
   },
 
-  registrationOpen: {
-    type: Boolean,
-    default: false
-  },
-
-  images: [String]
+  images: [String],
 
 }, { timestamps: true });
 
