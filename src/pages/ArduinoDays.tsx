@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Home, HelpCircle, Info, Handshake, FileText, Menu, MapPin, Calendar,
-  X, ChevronDown, ChevronLeft, ChevronRight, Download, ExternalLink,
-  Trophy, Clock, Zap, Users, ArrowRight, Play
+  X, ChevronDown, ChevronLeft, ChevronRight, Download, ExternalLink, Play
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -343,43 +342,6 @@ const ArduinoDays = () => {
     { name: "Agripeuners", location: "Visakhapatnam", logo: null, description: "Organization promoting agricultural innovation and entrepreneurship by connecting technology, research, and sustainable farming practices.", website: null },
   ];
 
-  const schedule = [
-    {
-      day: "Day 1", date: "March 23rd", color: "#00979D",
-      events: [
-        { time: "09:00 AM", title: "Inauguration Ceremony", desc: "Opening remarks, chief guest address, and event kickoff" },
-        { time: "10:30 AM", title: "Arduino Workshop — Basics", desc: "Hands-on introduction to Arduino hardware and programming" },
-        { time: "02:00 PM", title: "IoT Demonstration", desc: "Live demo of IoT use cases and project showcases" },
-        { time: "04:00 PM", title: "Team Formation & Buildathon Brief", desc: "Teams announced, problem statements distributed" },
-      ],
-    },
-    {
-      day: "Day 2", date: "March 24th", color: "#E07B39",
-      events: [
-        { time: "09:00 AM", title: "Buildathon Begins", desc: "12-hour intensive hardware hackathon starts" },
-        { time: "11:00 AM", title: "Workshop — Embedded Systems", desc: "Deep dive into embedded systems and real-time applications" },
-        { time: "02:00 PM", title: "Mentor Sessions", desc: "One-on-one guidance from industry experts" },
-        { time: "05:00 PM", title: "Project Review Round 1", desc: "Initial prototype evaluation and feedback" },
-      ],
-    },
-    {
-      day: "Day 3", date: "March 25th", color: "#00c4a7",
-      events: [
-        { time: "09:00 AM", title: "Final Submissions", desc: "Teams submit final projects for evaluation" },
-        { time: "10:30 AM", title: "Project Expo", desc: "Public demonstration of all team projects" },
-        { time: "02:00 PM", title: "Panel Judging", desc: "Expert panel evaluation and Q&A with teams" },
-        { time: "04:00 PM", title: "Valedictory & Prize Distribution", desc: "Award ceremony, certificates, and closing remarks" },
-      ],
-    },
-  ];
-
-  const prizes = [
-    { rank: "1st", label: "Winner", amount: "₹15,000", icon: "🥇", color: "#E07B39", glow: "rgba(224,123,57,0.3)" },
-    { rank: "2nd", label: "Runner Up", amount: "₹10,000", icon: "🥈", color: "#00979D", glow: "rgba(0,151,157,0.3)" },
-    { rank: "3rd", label: "2nd Runner Up", amount: "₹5,000", icon: "🥉", color: "#00c4a7", glow: "rgba(0,196,167,0.2)" },
-    { rank: "Special", label: "Best Innovation", amount: "₹3,000", icon: "⚡", color: "#f0a060", glow: "rgba(240,160,96,0.2)" },
-  ];
-
   const faqs = [
     { q: "Who can participate in Arduino Days 2026?", a: "Any undergraduate or postgraduate student from any branch of engineering or science can participate. Teams of 2–4 members are required for the Buildathon." },
     { q: "Is prior Arduino/coding knowledge required?", a: "Basic programming knowledge is helpful but not mandatory. The workshops on Day 1 are designed to get beginners up to speed." },
@@ -393,8 +355,6 @@ const ArduinoDays = () => {
   const navItems = [
     { id: "home", icon: Home, label: "Home" },
     { id: "gallery", icon: FileText, label: "Gallery" },
-    { id: "schedule", icon: Clock, label: "Schedule" },
-    { id: "prizes", icon: Trophy, label: "Prizes" },
     { id: "sponsors", icon: Handshake, label: "Sponsors" },
     { id: "help", icon: HelpCircle, label: "Help Desk" },
     { id: "about", icon: Info, label: "About" },
@@ -486,18 +446,6 @@ const ArduinoDays = () => {
           {/* Register CTA + mobile menu */}
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate_("home")}
-              className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all"
-              style={{
-                background: "linear-gradient(135deg, #00979D, #E07B39)",
-                color: "#fff",
-                boxShadow: "0 0 20px rgba(0,151,157,0.3)",
-                fontFamily: "'Space Mono', monospace",
-              }}
-            >
-              Register <ArrowRight size={12} />
-            </button>
-            <button
               className="lg:hidden p-2 rounded-lg"
               style={{ backgroundColor: "rgba(0,151,157,0.1)", color: "#00979D" }}
               onClick={() => setMenuOpen(!menuOpen)}
@@ -543,12 +491,6 @@ const ArduinoDays = () => {
                 ))}
               </div>
               <div className="mt-auto">
-                <button
-                  className="w-full py-3 rounded-xl font-bold text-sm"
-                  style={{ background: "linear-gradient(135deg, #00979D, #E07B39)", color: "#fff", fontFamily: "'Space Mono', monospace" }}
-                >
-                  Register Now
-                </button>
               </div>
             </motion.div>
           </>
@@ -690,30 +632,6 @@ const ArduinoDays = () => {
                     Innovation • Creativity • Real-Time Learning
                   </motion.p>
 
-                  {/* CTA buttons */}
-                  <motion.div
-                    className="flex flex-wrap justify-center gap-4 pt-2"
-                    initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75 }}
-                  >
-                    <button
-                      className="flex items-center gap-2 px-8 py-3.5 rounded-full font-bold text-sm transition-all"
-                      style={{
-                        background: "linear-gradient(135deg, #00979D, #E07B39)",
-                        color: "#fff",
-                        boxShadow: "0 0 32px rgba(0,151,157,0.4)",
-                        fontFamily: "'Space Mono', monospace",
-                      }}
-                    >
-                      Register Now <ArrowRight size={15} />
-                    </button>
-                    <button
-                      onClick={() => navigate_("schedule")}
-                      className="flex items-center gap-2 px-8 py-3.5 rounded-full font-medium text-sm transition-all"
-                      style={{ border: "1px solid rgba(0,151,157,0.4)", color: "#00979D" }}
-                    >
-                      View Schedule
-                    </button>
-                  </motion.div>
                 </div>
 
                 {/* Scroll indicator */}
@@ -751,108 +669,6 @@ const ArduinoDays = () => {
                 </div>
               </section>
             </>
-          )}
-
-          {/* ─────────────────────────────────────
-              SCHEDULE
-          ───────────────────────────────────── */}
-          {active === "schedule" && (
-            <div className="pt-16">
-              <Section>
-                <SectionHeading accent="orange">Event Schedule</SectionHeading>
-                <div className="space-y-12">
-                  {schedule.map((dayData, di) => (
-                    <motion.div
-                      key={dayData.day}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: di * 0.1 }}
-                    >
-                      {/* Day header */}
-                      <div className="flex items-center gap-4 mb-6">
-                        <div
-                          className="px-4 py-1.5 rounded-full text-xs font-black"
-                          style={{ backgroundColor: dayData.color + "20", color: dayData.color, border: `1px solid ${dayData.color}40`, fontFamily: "'Space Mono', monospace" }}
-                        >
-                          {dayData.day}
-                        </div>
-                        <span className="text-sm" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "'Space Mono', monospace" }}>{dayData.date}, 2026</span>
-                        <div className="flex-1 h-px" style={{ backgroundColor: `${dayData.color}20` }} />
-                      </div>
-
-                      {/* Events */}
-                      <div className="space-y-3 ml-4">
-                        {dayData.events.map((ev, ei) => (
-                          <motion.div
-                            key={ei}
-                            className="flex gap-5 p-4 rounded-xl group"
-                            style={{ backgroundColor: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
-                            whileHover={{ backgroundColor: "rgba(0,151,157,0.04)", borderColor: `${dayData.color}25` }}
-                          >
-                            <div className="flex-shrink-0 w-16 text-xs font-mono pt-0.5" style={{ color: dayData.color, fontFamily: "'Space Mono', monospace" }}>
-                              {ev.time}
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-semibold text-sm mb-0.5" style={{ color: "#f0f4ff" }}>{ev.title}</p>
-                              <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{ev.desc}</p>
-                            </div>
-                            <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: dayData.color }} />
-                          </motion.div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </Section>
-            </div>
-          )}
-
-          {/* ─────────────────────────────────────
-              PRIZES
-          ───────────────────────────────────── */}
-          {active === "prizes" && (
-            <div className="pt-16">
-              <Section>
-                <SectionHeading accent="orange">Prizes & Rewards</SectionHeading>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-                  {prizes.map((prize, i) => (
-                    <motion.div
-                      key={i}
-                      className="relative flex flex-col items-center text-center p-8 rounded-2xl"
-                      style={{
-                        backgroundColor: "rgba(255,255,255,0.03)",
-                        border: `1px solid ${prize.color}25`,
-                        boxShadow: `0 0 40px ${prize.glow}`,
-                      }}
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      whileHover={{ y: -4, boxShadow: `0 8px 50px ${prize.glow}` }}
-                    >
-                      <div className="text-5xl mb-4">{prize.icon}</div>
-                      <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: prize.color, fontFamily: "'Space Mono', monospace" }}>{prize.label}</p>
-                      <p className="text-3xl font-black mb-1" style={{ color: prize.color, fontFamily: "'Space Mono', monospace" }}>{prize.amount}</p>
-                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>Cash Prize + Certificate</p>
-                    </motion.div>
-                  ))}
-                </div>
-
-                {/* Additional perks */}
-                <div
-                  className="rounded-2xl p-8 text-center"
-                  style={{ background: "linear-gradient(135deg, rgba(0,151,157,0.06), rgba(224,123,57,0.06))", border: "1px solid rgba(0,151,157,0.15)" }}
-                >
-                  <h3 className="text-lg font-bold mb-4" style={{ color: "#00979D", fontFamily: "'Space Mono', monospace" }}>All Participants Receive</h3>
-                  <div className="flex flex-wrap justify-center gap-4">
-                    {["Participation Certificate", "Event Kit & Goodies", "Networking Opportunities", "Industry Mentorship"].map((perk) => (
-                      <div key={perk} className="flex items-center gap-2 px-4 py-2 rounded-full text-sm" style={{ backgroundColor: "rgba(0,151,157,0.08)", color: "#00c4a7", border: "1px solid rgba(0,151,157,0.2)" }}>
-                        <Zap size={12} /> {perk}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Section>
-            </div>
           )}
 
           {/* ─────────────────────────────────────
@@ -1012,9 +828,9 @@ const ArduinoDays = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
                   {[
                     { value: "3", label: "Days", color: "#00979D" },
-                    { value: "500+", label: "Expected Participants", color: "#E07B39" },
-                    { value: "10+", label: "Events & Workshops", color: "#00c4a7" },
-                    { value: "₹33K+", label: "Total Prize Pool", color: "#f0a060" },
+                    { value: "150+", label: "Expected Participants", color: "#E07B39" },
+                    { value: "3+", label: "Events & Workshops", color: "#00c4a7" },
+                    { value: "₹50000+", label: "Total Prize Pool", color: "#f0a060" },
                   ].map((stat, i) => (
                     <div key={i} className="p-5 rounded-xl text-center" style={{ backgroundColor: "rgba(255,255,255,0.03)", border: `1px solid ${stat.color}20` }}>
                       <p className="text-3xl font-black mb-1" style={{ color: stat.color, fontFamily: "'Space Mono', monospace" }}>{stat.value}</p>
