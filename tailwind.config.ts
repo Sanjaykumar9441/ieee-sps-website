@@ -19,9 +19,22 @@ export default {
     },
     extend: {
       fontFamily: {
-    heading: ["Montserrat", "sans-serif"],
-    sans: ["Inter", "sans-serif"],
-  },
+        // Main UI
+        sans: ["DM Sans", "sans-serif"],
+
+        // Headings
+        heading: ["Montserrat", "sans-serif"],
+
+        // Tech / Arduino feel
+        mono: ["Space Mono", "monospace"],
+
+        // Extra fonts (your old ones)
+        display: ["Orbitron", "sans-serif"],
+        stylish: ["Poppins", "sans-serif"],
+        elegant: ["Playfair Display", "serif"],
+        bold: ["Bebas Neue", "sans-serif"],
+        modern: ["Inter", "sans-serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

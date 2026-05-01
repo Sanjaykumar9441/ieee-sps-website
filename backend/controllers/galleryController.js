@@ -10,7 +10,16 @@ const getGalleryByDay = async (req, res) => {
             .max_results(50)
             .execute();
 
-        const images = result.resources.map((img) => img.secure_url);
+        const images = result.resources.map((img) => ({
+            thumb: img.secure_url.replace(
+                "/upload/",
+                "/upload/w_300,c_fill,g_auto,q_auto,f_auto/"
+            ),
+            full: img.secure_url.replace(
+                "/upload/",
+                "/upload/w_1200,q_auto,f_auto/"
+            ),
+        }));
 
         res.json(images);
     } catch (error) {

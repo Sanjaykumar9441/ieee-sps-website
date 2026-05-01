@@ -26,7 +26,7 @@ const Navbar = () => {
     setTimeout(() => {
       document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
       setLoading(false);
-    }, 1000);
+    }, 300);
   };
 
   useEffect(() => {

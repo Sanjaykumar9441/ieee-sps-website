@@ -12,7 +12,7 @@ const EventsSection = () => {
 
     setTimeout(() => {
       window.location.href = path;
-    }, 2000);
+    }, 1000);
   };
 
   useEffect(() => {
@@ -36,7 +36,7 @@ const EventsSection = () => {
     title: "Arduino Days 2026",
     date: "23–26 March 2026",
     location: "Aditya University, Surampalem",
-    status: "Upcoming",
+    status: "Completed",
     isTemporary: true
   }; // i will delete later
   //----------------------------------------------------------------------------------------

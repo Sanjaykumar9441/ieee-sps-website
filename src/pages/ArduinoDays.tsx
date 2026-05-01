@@ -47,14 +47,14 @@ const ArduinoDays = () => {
 
   const GalleryTabs = () => {
     const [day, setDay] = useState("day1");
-    const [images, setImages] = useState<string[]>([]);
+    const [images, setImages] = useState<{ thumb: string; full: string }[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
     const handleDownload = async () => {
       if (selectedIndex === null) return;
 
-      const url = images[selectedIndex];
+      const url = images[selectedIndex].full;
 
       const response = await fetch(url);
       const blob = await response.blob();
@@ -132,12 +132,16 @@ const ArduinoDays = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {images.map((img, i) => (
               <motion.img
-                key={img}
-                src={img}
+                key={img.thumb}
+                src={img.thumb}   // 👈 small image
                 alt="gallery"
+                loading="lazy"    // 👈 lazy load
                 onClick={() => setSelectedIndex(i)}
+                onError={(e) => {
+                  e.currentTarget.src = "/fallback.png";
+                }}
                 className="rounded-lg object-cover h-40 md:h-56 w-full 
-             hover:scale-105 transition cursor-pointer"
+               hover:scale-105 transition cursor-pointer"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               />
@@ -156,24 +160,33 @@ const ArduinoDays = () => {
           >
             {/* Close Button */}
             <button
-              onClick={() => setSelectedIndex(null)}
-              className="absolute top-5 right-5 text-white text-2xl"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedIndex(null);
+              }}
+              className="absolute top-5 right-5 text-white text-2xl z-50"
             >
               ✕
             </button>
 
             {/* Prev Button */}
             <button
-              onClick={prevImage}
-              className="absolute left-5 text-white text-3xl"
+              onClick={(e) => {
+                e.stopPropagation();
+                prevImage();
+              }}
+              className="absolute left-5 text-white text-3xl z-50"
             >
               ‹
             </button>
 
             {/* Image */}
             <motion.img
-              src={images[selectedIndex]}
+              src={images[selectedIndex].full}
               alt="preview"
+              onError={(e) => {
+                e.currentTarget.src = "/fallback.png";
+              }}
               className="max-w-[90%] max-h-[90%] rounded-lg shadow-2xl"
               onClick={(e) => e.stopPropagation()}
               initial={{ scale: 0.8 }}
@@ -182,14 +195,20 @@ const ArduinoDays = () => {
 
             {/* Next Button */}
             <button
-              onClick={nextImage}
-              className="absolute right-5 text-white text-3xl"
+              onClick={(e) => {
+                e.stopPropagation();
+                nextImage();
+              }}
+              className="absolute right-5 text-white text-3xl z-50"
             >
               ›
             </button>
             <button
-              onClick={handleDownload}
-              className="absolute bottom-6 right-6 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDownload();
+              }}
+              className="absolute bottom-6 right-6 z-50 
              bg-white/10 backdrop-blur-md 
              px-4 py-2 rounded-full 
              text-white text-sm
