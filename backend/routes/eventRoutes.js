@@ -134,9 +134,7 @@ router.delete("/:id", verifyToken, async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const events = await Event.find({
-      title: { $exists: true },
-    }).sort({ createdAt: -1 });
+    const events = await Event.find().sort({ createdAt: -1 });
     res.json(events);
   } catch (err) {
     res.status(500).json({ msg: "Error fetching events" });

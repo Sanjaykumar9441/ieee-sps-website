@@ -9,6 +9,15 @@ const EventsSection = () => {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+
+    return `${day}-${month}-${year}`;
+  };
   const handleViewDetails = (path: string) => {
     setLoading(true);
 
@@ -34,19 +43,8 @@ const EventsSection = () => {
       setEvents([]);
     }
   };
-  const arduino = events.find(e => e.title === "Arduino Days 2026");
 
-  const others = events
-    .filter(e => e.title !== "Arduino Days 2026")
-    .sort((a, b) => {
-      const dateA = new Date(a.createdAt || a.date);
-      const dateB = new Date(b.createdAt || b.date);
-      return dateB.getTime() - dateA.getTime();
-    });
-
-  const visibleEvents = arduino
-    ? [...others.slice(0, 3), arduino]
-    : others.slice(0, 4);
+  const visibleEvents = events.slice(0, 4);
   return (
     <>
       {loading && <LoadingScreen />}
@@ -132,7 +130,7 @@ const EventsSection = () => {
                 dark:text-white/60 
                 flex items-center gap-4 flex-wrap">
                         <span className="flex items-center gap-1">
-                          📅 <span>{event.date}</span>
+                          📅 <span>{formatDate(event.date)}</span>
                         </span>
 
                         <span className="flex items-center gap-1">
