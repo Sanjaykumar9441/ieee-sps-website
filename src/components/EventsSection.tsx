@@ -12,7 +12,7 @@ const EventsSection = () => {
 
     setTimeout(() => {
       window.location.href = path;
-    }, 1000);
+    }, 3000);
   };
 
   useEffect(() => {

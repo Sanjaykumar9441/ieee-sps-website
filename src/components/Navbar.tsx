@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import ThemeToggle from "./ThemeToggle";
+import { useNavigate } from "react-router-dom";
 import LoadingScreen from "./LoadingScreen";
 
 import ieeeLogo from "../assets/logos/ieee.png";
@@ -19,14 +20,21 @@ const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState("home");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleNavClick = (id: string) => {
+  const handleAdminClick = () => {
     setLoading(true);
 
     setTimeout(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
       setLoading(false);
-    }, 300);
+      navigate("/admin-login");
+    }, 3000);
+  };
+
+  const handleNavClick = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({
+      behavior: "smooth",
+    });
   };
 
   useEffect(() => {
@@ -151,16 +159,17 @@ const Navbar = () => {
               );
             })}
 
-            <Link to="/admin-login" className="ml-3">
-              <button className="px-4 py-1.5 text-xs font-semibold tracking-wider
-                           bg-gradient-to-r from-cyan-500 to-blue-600
-                           text-white rounded-full
-                           hover:scale-105
-                           transition-all duration-300
-                           shadow-lg shadow-cyan-500/30">
-                Admin
-              </button>
-            </Link>
+            <button
+              onClick={handleAdminClick}
+              className="ml-3 px-4 py-1.5 text-xs font-semibold tracking-wider
+             bg-gradient-to-r from-cyan-500 to-blue-600
+             text-white rounded-full
+             hover:scale-105
+             transition-all duration-300
+             shadow-lg shadow-cyan-500/30"
+            >
+              Admin
+            </button>
 
           </div>
         </div>
@@ -200,16 +209,18 @@ const Navbar = () => {
 
           <div className="h-px bg-border" />
 
-          <Link
-            to="/admin-login"
-            onClick={() => setOpen(false)}
+          <button
+            onClick={() => {
+              setOpen(false);
+              handleAdminClick();
+            }}
             className="block text-center border border-primary text-primary 
-                       px-4 py-2 rounded-lg 
-                       hover:bg-primary hover:text-primary-foreground 
-                       transition-all duration-300"
+             px-4 py-2 rounded-lg 
+             hover:bg-primary hover:text-primary-foreground 
+             transition-all duration-300"
           >
             Admin
-          </Link>
+          </button>
 
         </div>
       )}

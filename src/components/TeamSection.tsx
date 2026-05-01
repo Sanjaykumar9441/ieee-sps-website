@@ -15,7 +15,7 @@ const TeamSection = () => {
 
     setTimeout(() => {
       window.location.href = path;
-    }, 1000);
+    }, 3000);
   };
 
   // Detect screen size
