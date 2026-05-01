@@ -13,11 +13,11 @@ const getGalleryByDay = async (req, res) => {
         const images = result.resources.map((img) => ({
             thumb: img.secure_url.replace(
                 "/upload/",
-                "/upload/w_300,c_fill,g_auto,q_auto,f_auto/"
+                "/upload/w_600,c_fill,g_auto,q_auto:good,f_auto/"
             ),
             full: img.secure_url.replace(
                 "/upload/",
-                "/upload/w_2000,q_auto:best,f_auto/"
+                "/upload/w_2400,q_auto:best,f_auto/"
             ),
         }));
 
