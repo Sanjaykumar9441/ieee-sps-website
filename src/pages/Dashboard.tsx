@@ -284,7 +284,7 @@ const EditableEvent = ({ event, onUpdate, onDelete }: any) => {
 };
 
 /* ══════════════════════════════════════════
-   DASHBOARD
+  DASHBOARD
 ══════════════════════════════════════════ */
 const Dashboard = () => {
   const navigate = useNavigate();

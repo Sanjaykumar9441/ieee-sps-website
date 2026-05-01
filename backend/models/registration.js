@@ -20,7 +20,7 @@ const registrationSchema = new mongoose.Schema(
     eventType: {
       type: String,
       enum: ["combo", "buildathon"],
-      required: true,
+      default: "combo"
     },
 
     eventName: {
@@ -48,11 +48,6 @@ const registrationSchema = new mongoose.Schema(
     teamMembers: [memberSchema],
     expectedAmount: {
       type: Number,
-    },
-
-    startup: {
-      answer: String,
-      idea: String,
     },
 
     accommodationRequired: {
