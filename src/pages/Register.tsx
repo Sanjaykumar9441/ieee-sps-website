@@ -135,11 +135,10 @@ const StepIndicator = ({
             {/* Circle */}
             <div
               className={`w-10 h-10 flex items-center justify-center rounded-full font-bold
-              ${
-                active
+              ${active
                   ? "bg-cyan-400 text-black shadow-[0_0_10px_rgba(0,255,255,0.7)]"
                   : "bg-gray-700 text-gray-300"
-              }`}
+                }`}
             >
               {s}
             </div>
@@ -176,9 +175,9 @@ const MemberForm = React.memo(
     return (
       <div
         ref={(el) => (memberRefs.current[index] = el)}
-        className="mb-10 p-5 md:p-6 border border-cyan-400/20 rounded-xl bg-gradient-to-br from-black/60 to-[#07111b] backdrop-blur-md shadow-lg"
+        className="mb-10 p-5 md:p-6 bg-white border border-gray-200 rounded-xl shadow-md"
       >
-        <h2 className="text-xl font-semibold mb-4 text-cyan-300">
+        <h2 className="text-xl font-semibold mb-4 text-blue-600">
           Member {index + 1}
         </h2>
 
@@ -187,7 +186,7 @@ const MemberForm = React.memo(
             ref={(el) => (nameInputRefs.current[index] = el)}
             type="text"
             placeholder="Full Name"
-            className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg"
+            className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
             value={member.fullName}
             onChange={(e) =>
               handleMemberChange(index, "fullName", e.target.value)
@@ -198,7 +197,7 @@ const MemberForm = React.memo(
           <input
             type="text"
             placeholder="Roll Number"
-            className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg"
+            className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
             value={member.rollNo}
             onChange={(e) =>
               handleMemberChange(index, "rollNo", e.target.value)
@@ -337,11 +336,11 @@ const Register = () => {
         prev.map((member, i) =>
           i === index
             ? {
-                ...member,
-                collegeCity: data.city,
-                collegeDistrict: data.district,
-                collegeState: data.state,
-              }
+              ...member,
+              collegeCity: data.city,
+              collegeDistrict: data.district,
+              collegeState: data.state,
+            }
             : member,
         ),
       );
@@ -378,11 +377,11 @@ const Register = () => {
             prev.map((member, i) =>
               i === index
                 ? {
-                    ...member,
-                    collegeCity: locationData.city,
-                    collegeDistrict: locationData.district,
-                    collegeState: locationData.state,
-                  }
+                  ...member,
+                  collegeCity: locationData.city,
+                  collegeDistrict: locationData.district,
+                  collegeState: locationData.state,
+                }
                 : member,
             ),
           );
@@ -406,10 +405,10 @@ const Register = () => {
           prev.map((member, i) =>
             i === index
               ? {
-                  ...member,
-                  selectedCollege: value,
-                  college: value, // auto fill final college
-                }
+                ...member,
+                selectedCollege: value,
+                college: value, // auto fill final college
+              }
               : member,
           ),
         );
@@ -422,10 +421,10 @@ const Register = () => {
           prev.map((member, i) =>
             i === index
               ? {
-                  ...member,
-                  selectedCollege: value,
-                  college: "",
-                }
+                ...member,
+                selectedCollege: value,
+                college: "",
+              }
               : member,
           ),
         );
@@ -485,14 +484,14 @@ const Register = () => {
       prev.map((member, i) =>
         i === index
           ? {
-              ...member,
-              selectedCollege: "OTHER",
-              college: previousMember.college,
-              collegeCity: previousMember.collegeCity,
-              collegePincode: previousMember.collegePincode,
-              collegeDistrict: previousMember.collegeDistrict,
-              collegeState: previousMember.collegeState,
-            }
+            ...member,
+            selectedCollege: "OTHER",
+            college: previousMember.college,
+            collegeCity: previousMember.collegeCity,
+            collegePincode: previousMember.collegePincode,
+            collegeDistrict: previousMember.collegeDistrict,
+            collegeState: previousMember.collegeState,
+          }
           : member,
       ),
     );
@@ -696,7 +695,7 @@ const Register = () => {
 
   if (checkingStatus) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-cyan-400">
+      <div className="min-h-screen flex items-center justify-center text-blue-600">
         Checking registration status...
       </div>
     );
@@ -704,7 +703,7 @@ const Register = () => {
 
   if (registrationClosed) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-center">
+      <div className="min-h-screen flex items-center justify-center bg-white text-center">
         <div className="text-center mt-20">
           <h1 className="text-4xl font-bold text-red-500 leading-relaxed">
             🚫 Arduino Days 2026 Registrations Closed
@@ -721,8 +720,8 @@ const Register = () => {
   }
 
   return (
-    <div className="min-h-screen relative text-white px-4 md:px-6 py-12 overflow-x-hidden">
-      <BackgroundImage />
+    <div className="min-h-screen bg-gray-50 text-gray-900 px-4 md:px-6 py-12">
+      {/* <BackgroundImage /> */}
 
       <div className="relative z-10 max-w-4xl mx-auto w-full">
         <StepIndicator showSummary={showSummary} showPayment={showPayment} />
@@ -731,7 +730,7 @@ const Register = () => {
         <form
           autoComplete="off"
           onSubmit={(e) => e.preventDefault()}
-          className="relative z-10 max-w-4xl mx-auto w-full backdrop-blur-xl bg-black/50 border border-cyan-400/20 rounded-2xl p-5 md:p-8 shadow-[0_10px_40px_rgba(0,0,0,0.6)]"
+          className="bg-white border border-gray-200 rounded-2xl p-6 shadow-lg"
         >
           {!showSummary && !showPayment && (
             <>
@@ -754,7 +753,7 @@ bg-clip-text text-transparent"
                 <input
                   type="text"
                   placeholder="Enter your team name"
-                  className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                  className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                   value={teamName}
                   onChange={(e) =>
@@ -771,7 +770,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 <select
                   value={teamSize}
                   onChange={(e) => setTeamSize(Number(e.target.value))}
-                  className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                  className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
     focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none"
                 >
                   <option value={3}>3 Members</option>
@@ -791,9 +790,9 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 <div
                   key={index}
                   ref={(el) => (memberRefs.current[index] = el)}
-                  className="mb-10 p-5 md:p-6 border border-cyan-400/20 rounded-xl bg-gradient-to-br from-black/60 to-[#07111b] backdrop-blur-md shadow-lg"
+                  className="mb-10 p-5 md:p-6 bg-white border border-gray-200 rounded-xl shadow-md"
                 >
-                  <h2 className="text-xl font-semibold mb-4 text-cyan-300">
+                  <h2 className="text-xl font-semibold mb-4 text-blue-600">
                     Member {index + 1}
                   </h2>
 
@@ -802,7 +801,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       ref={(el) => (nameInputRefs.current[index] = el)}
                       type="text"
                       placeholder="Full Name with initial"
-                      className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                      className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       value={member.fullName}
                       onChange={(e) =>
@@ -814,7 +813,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     <input
                       type="text"
                       placeholder="Roll Number"
-                      className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                      className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       value={member.rollNo}
                       onChange={(e) =>
@@ -826,7 +825,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     <input
                       type="email"
                       placeholder="Email"
-                      className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                      className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       value={member.email}
                       onChange={(e) =>
@@ -841,7 +840,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       maxLength={10}
                       inputMode="numeric"
                       pattern="[0-9]{10}"
-                      className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                      className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       value={member.phone}
                       onChange={(e) =>
@@ -853,7 +852,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     {/* Department */}
                     <div className="flex flex-col gap-2">
                       <select
-                        className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                         value={member.department}
                         onChange={(e) =>
@@ -879,7 +878,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                         <input
                           type="text"
                           placeholder="Enter your Department"
-                          className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg"
+                          className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
                           value={member.otherDepartment || ""}
                           onChange={(e) =>
                             handleMemberChange(
@@ -894,7 +893,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     </div>
 
                     <select
-                      className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                      className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       value={member.year}
                       onChange={(e) =>
@@ -909,7 +908,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       <option>4th</option>
                     </select>
                     <select
-                      className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                      className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                       value={member.selectedCollege}
                       onChange={(e) =>
@@ -935,20 +934,20 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                             m.selectedCollege === "OTHER" &&
                             m.college,
                         ) && (
-                          <button
-                            type="button"
-                            onClick={() => copyCollegeFromPreviousMember(index)}
-                            className="mb-3 text-xs px-3 py-1 bg-yellow-400 text-black rounded hover:bg-yellow-300"
-                          >
-                            Use Previous Member College Details
-                          </button>
-                        )}
+                            <button
+                              type="button"
+                              onClick={() => copyCollegeFromPreviousMember(index)}
+                              className="mb-3 text-xs px-3 py-1 bg-yellow-400 text-black rounded hover:bg-yellow-300"
+                            >
+                              Use Previous Member College Details
+                            </button>
+                          )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <input
                             type="text"
                             placeholder="College Name"
-                            className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                            className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                             value={member.college}
                             onChange={(e) =>
@@ -964,7 +963,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           <input
                             type="text"
                             placeholder="Pincode"
-                            className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                            className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                             value={member.collegePincode}
                             onChange={(e) => {
@@ -992,7 +991,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                                 ? "Auto-detecting location..."
                                 : "City"
                             }
-                            className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                            className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
   focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                             value={
                               loadingPincode === index
@@ -1005,7 +1004,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           <input
                             type="text"
                             placeholder="District"
-                            className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                            className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                             value={
                               loadingPincode === index
@@ -1018,7 +1017,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           <input
                             type="text"
                             placeholder="State"
-                            className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                            className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                             value={
                               loadingPincode === index
@@ -1041,7 +1040,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 </label>
 
                 <select
-                  className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                  className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                   value={startupAnswer}
                   onChange={(e) => setStartupAnswer(e.target.value)}
@@ -1054,7 +1053,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 {startupAnswer === "yes" && (
                   <textarea
                     placeholder="Describe your start-up idea"
-                    className="mt-4 w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                    className="mt-4 w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     value={startupIdea}
                     onChange={(e) => setStartupIdea(e.target.value)}
@@ -1070,7 +1069,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 </label>
 
                 <select
-                  className="w-full p-3 bg-black/70 border border-cyan-400/20 rounded-lg
+                  className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                   value={accommodationRequired ? "yes" : "no"}
                   onChange={(e) => {
@@ -1122,7 +1121,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                             value={arrivalDate}
                             onChange={(e) => setArrivalDate(e.target.value)}
                             onFocus={(e) => e.target.showPicker()}
-                            className="p-2 pl-9 bg-black/70 border border-yellow-400/20 rounded cursor-pointer w-full md:w-auto"
+                            className="p-2 pl-9 bg-white/70 border border-yellow-400/20 rounded cursor-pointer w-full md:w-auto"
                           />
                         </div>
 
@@ -1135,7 +1134,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           }
                           onChange={(e) => setArrivalTime(e.target.value)}
                           pattern="(0?[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM)"
-                          className="p-2 bg-black/70 border border-yellow-400/20 rounded"
+                          className="p-2 bg-white/70 border border-yellow-400/20 rounded"
                         />
                       </div>
                     </div>
@@ -1160,7 +1159,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                             value={departureDate}
                             onChange={(e) => setDepartureDate(e.target.value)}
                             onFocus={(e) => e.target.showPicker()}
-                            className="p-2 pl-9 bg-black/70 border border-yellow-400/20 rounded cursor-pointer w-full md:w-auto"
+                            className="p-2 pl-9 bg-white/70 border border-yellow-400/20 rounded cursor-pointer w-full md:w-auto"
                           />
                         </div>
                         <input
@@ -1172,7 +1171,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                           }
                           onChange={(e) => setDepartureTime(e.target.value)}
                           pattern="(0?[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM)"
-                          className="p-2 bg-black/70 border border-yellow-400/20 rounded"
+                          className="p-2 bg-white/70 border border-yellow-400/20 rounded"
                         />
                       </div>
                     </div>
@@ -1183,11 +1182,10 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
               <button
                 disabled={loading}
                 onClick={handleNext}
-                className={`w-full font-bold py-3 rounded-lg transition ${
-                  loading
-                    ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                    : "bg-gradient-to-r from-cyan-400 to-blue-400 text-black hover:scale-105 hover:shadow-lg hover:shadow-cyan-400/30"
-                }`}
+                className={`w-full font-bold py-3 rounded-lg transition ${loading
+                  ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                  : "bg-blue-600 text-white hover:bg-blue-700 hover:bg-blue-700 hover:scale-105 hover:shadow-lg hover:shadow-cyan-400/30"
+                  }`}
               >
                 {loading ? "Checking Details..." : "Go to Payment"}
               </button>
@@ -1207,7 +1205,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
               {members.map((member, index) => (
                 <div
                   key={index}
-                  className="mb-6 p-5 border border-gray-600 rounded-lg bg-black/40"
+                  className="mb-6 p-5 border border-gray-600 rounded-lg bg-white/40"
                 >
                   <p>
                     <strong>Member {index + 1}</strong>
@@ -1249,10 +1247,10 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     }}
                     className="w-4 h-4"
                   />
-                  <span className="text-sm text-cyan-300">
+                  <span className="text-sm text-blue-600">
                     I agree to the{" "}
                     <span
-                      className="underline cursor-pointer text-cyan-400"
+                      className="underline cursor-pointer text-blue-600"
                       onClick={() => setShowRulesModal(true)}
                     >
                       Event Rules & Regulations
@@ -1278,11 +1276,10 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
 
                 <button
                   disabled={loading}
-                  className={`flex-1 font-bold py-3 rounded transition ${
-                    loading
-                      ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                      : "bg-green-400 text-black hover:scale-105"
-                  }`}
+                  className={`flex-1 font-bold py-3 rounded transition ${loading
+                    ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                    : "bg-green-400 text-black hover:scale-105"
+                    }`}
                   onClick={() => {
                     if (!agreedRules) {
                       setRulesError(true);
@@ -1314,7 +1311,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 </h2>
 
                 <div className="mb-6 p-6 border border-cyan-400/30 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-3 text-cyan-300">
+                  <h3 className="text-lg font-semibold mb-3 text-blue-600">
                     Fee Breakdown
                   </h3>
 
@@ -1350,21 +1347,21 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 {/* Payment Card */}
                 <div
                   className="mb-8 p-5 md:p-8 rounded-2xl border border-cyan-400/30 
-bg-gradient-to-br from-[#07111b] to-[#02060c]
+bg-white
 shadow-[0_10px_40px_rgba(0,0,0,0.6)]
 backdrop-blur-md"
                 >
-                  <h3 className="text-xl font-semibold text-cyan-400 mb-6 text-center">
+                  <h3 className="text-xl font-semibold text-blue-600 mb-6 text-center">
                     🏦 Bank Transfer Details
                   </h3>
 
                   <div className="space-y-4">
                     {/* Account Name */}
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 bg-black/40 p-3 rounded">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 bg-white/40 p-3 rounded">
                       <span>Account Name</span>
 
                       <div className="flex items-center gap-3">
-                        <span className="text-cyan-300 break-words">
+                        <span className="text-blue-600 break-words">
                           ADITYA UNIVERSITY / ADITYA ACADEMY
                         </span>
 
@@ -1383,7 +1380,7 @@ backdrop-blur-md"
                     </div>
 
                     {/* Account Number */}
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 bg-black/40 p-3 rounded">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 bg-white/40 p-3 rounded">
                       <span>Account Number</span>
 
                       <div className="flex items-center gap-3">
@@ -1405,7 +1402,7 @@ backdrop-blur-md"
                     </div>
 
                     {/* IFSC */}
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 bg-black/40 p-3 rounded">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 bg-white/40 p-3 rounded">
                       <span>IFSC Code</span>
 
                       <div className="flex items-center gap-3">
@@ -1423,11 +1420,11 @@ backdrop-blur-md"
                     </div>
 
                     {/* Bank */}
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 bg-black/40 p-3 rounded">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 bg-white/40 p-3 rounded">
                       <span>Bank Name</span>
 
                       <div className="flex items-center gap-3">
-                        <span className="text-cyan-300">CANARA BANK</span>
+                        <span className="text-blue-600">CANARA BANK</span>
 
                         <button
                           onClick={() => copyToClipboard("CANARA BANK", "bank")}
@@ -1439,11 +1436,11 @@ backdrop-blur-md"
                     </div>
 
                     {/* Branch */}
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 bg-black/40 p-3 rounded">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 bg-white/40 p-3 rounded">
                       <span>Branch</span>
 
                       <div className="flex items-center gap-3">
-                        <span className="text-cyan-300">Surampalem</span>
+                        <span className="text-blue-600">Surampalem</span>
 
                         <button
                           onClick={() =>
@@ -1507,10 +1504,10 @@ backdrop-blur-md"
                       setTransactionId(value);
                     }
                   }}
-                  className="w-full p-3 bg-black/70 border border-cyan-400/30 rounded-lg
+                  className="w-full p-3 bg-white/70 border border-cyan-400/30 rounded-lg
 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 />
-                <div className="border border-dashed border-cyan-400/30 p-6 rounded-xl text-center mb-6 bg-black/30">
+                <div className="border border-dashed border-cyan-400/30 p-6 rounded-xl text-center mb-6 bg-white/30">
                   <p className="text-gray-400 mb-3">
                     Upload Payment Screenshot
                   </p>
@@ -1528,11 +1525,10 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
 
                 <button
                   disabled={loading}
-                  className={`w-full font-bold py-3 rounded transition ${
-                    loading
-                      ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                      : "bg-gradient-to-r from-green-400 to-emerald-400 text-black hover:scale-105 hover:shadow-lg hover:shadow-green-400/30"
-                  }`}
+                  className={`w-full font-bold py-3 rounded transition ${loading
+                    ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                    : "bg-gradient-to-r from-green-400 to-emerald-400 text-black hover:scale-105 hover:shadow-lg hover:shadow-green-400/30"
+                    }`}
                   onClick={async () => {
                     // Validate UTR ID
                     if (!/^\d{12}$/.test(transactionId)) {
@@ -1665,7 +1661,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
               ref={successRef}
               className="mt-12 w-full max-w-3xl mx-auto flex flex-col items-center justify-center text-center 
   p-8 md:p-12 rounded-2xl border border-green-400/30 
-  bg-gradient-to-br from-[#07111b] to-[#02060c] shadow-xl"
+bg-white   shadow-xl"
             >
               {/* Animated Check Circle */}
               <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-green-400/20 flex items-center justify-center mb-6">
@@ -1703,7 +1699,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
               <h2 className="text-3xl md:text-4xl font-bold text-green-400 mb-4">
                 Payment Submitted Successfully
               </h2>
-              <p className="mt-4 text-cyan-400 font-semibold">
+              <p className="mt-4 text-blue-600 font-semibold">
                 Registration ID: {registrationId}
               </p>
               <p className="text-gray-300 max-w-xl text-lg">
@@ -1712,7 +1708,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
               </p>
               <p className="mt-6 text-sm text-gray-300">
                 📧 After payment verification, a
-                <span className="text-cyan-400 font-semibold">
+                <span className="text-blue-600 font-semibold">
                   confirmation email with your event pass (PDF)
                 </span>
                 will be sent to all registered team members.
@@ -1723,7 +1719,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
           <AnimatePresence>
             {showRulesModal && (
               <motion.div
-                className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+                className="fixed inset-0 bg-white/70 flex items-center justify-center z-50"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -1731,14 +1727,14 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 onClick={() => setShowRulesModal(false)}
               >
                 <motion.div
-                  className="bg-[#0b1622] max-w-3xl w-full p-8 rounded-xl border border-cyan-400/30 overflow-y-auto max-h-[80vh]"
+                  className="bg-white max-w-3xl w-full p-8 rounded-xl border border-cyan-400/30 overflow-y-auto max-h-[80vh]"
                   initial={{ scale: 0.9, opacity: 0, y: 30 }}
                   animate={{ scale: 1, opacity: 1, y: 0 }}
                   exit={{ scale: 0.9, opacity: 0, y: 30 }}
                   transition={{ duration: 0.3, ease: "easeOut" }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <h2 className="text-2xl font-bold text-cyan-400 mb-6 text-center">
+                  <h2 className="text-2xl font-bold text-blue-600 mb-6 text-center">
                     Event Rules & Regulations
                   </h2>
 
@@ -1764,7 +1760,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                     </div>
 
                     <div>
-                      <h3 className="text-lg text-cyan-400 font-semibold mb-2">
+                      <h3 className="text-lg text-blue-600 font-semibold mb-2">
                         Skill Forze (23<sup>rd</sup> & 24<sup>th</sup> March) –
                         Workshop Guidelines
                       </h3>
