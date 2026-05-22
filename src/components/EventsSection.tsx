@@ -77,7 +77,7 @@ const EventsSection = () => {
         </motion.div>
 
         {/* EVENT GRID */}
-        <div className="mt-16 grid lg:grid-cols-2 gap-6">
+        <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8 place-items-center">
           {visibleEvents.map((event, index) => (
             <motion.div
               key={event._id}
@@ -88,7 +88,7 @@ const EventsSection = () => {
                 delay: index * 0.1,
               }}
               viewport={{ once: true }}
-              className="group relative"
+              className="group relative w-full max-w-[560px]"
             >
               {/* CARD */}
               <div
@@ -137,7 +137,7 @@ hover:shadow-[0_0_40px_rgba(168,85,247,0.18)]
                   </div>
 
                   {/* TITLE */}
-                  <h3 className="mt-5 text-3xl font-bold text-foreground leading-snug">
+                  <h3 className="mt-5 text-3xl font-bold text-foreground leading-snug min-h-[96px]">
                     {event.title}
                   </h3>
 
@@ -145,12 +145,6 @@ hover:shadow-[0_0_40px_rgba(168,85,247,0.18)]
                   <div className="mt-4 dark:text-slate-400 text-slate-500 text-sm">
                     📍 {event.location}
                   </div>
-
-                  {/* DESCRIPTION */}
-                  <p className="mt-6 dark:text-slate-300 text-slate-600 leading-relaxed flex-grow">
-                    Experience innovation, collaboration, and technical
-                    excellence through IEEE SPS events and workshops.
-                  </p>
 
                   {/* BUTTON */}
                   <button

@@ -103,8 +103,10 @@ const TeamSection = () => {
                   </h3>
 
                   {/* ROLE */}
-                  <div className="mt-4 inline-flex px-3 py-1 rounded-full border border-white/10 bg-white/5 text-indigo-300 text-xs font-medium">
-                    {member.role}
+                  <div className="mt-4 flex justify-center">
+                    <span className="px-3 py-1 rounded-full border border-white/10 bg-white/5 text-indigo-300 text-xs font-medium">
+                      {member.role}
+                    </span>
                   </div>
 
                   {/* BUTTON */}
