@@ -16,7 +16,7 @@ const EventsSection = () => {
   const fetchEvents = async () => {
     try {
       const res = await axios.get(
-        "https://ieee-sps-website.onrender.com/events"
+        "https://ieee-sps-website.onrender.com/events",
       );
 
       setEvents(Array.isArray(res.data) ? res.data : []);
@@ -43,15 +43,13 @@ const EventsSection = () => {
       id="events"
       className="relative py-32 overflow-hidden bg-background"
     >
-
       {/* BACKGROUND LIGHTS */}
       <div className="absolute top-20 left-0 w-[400px] h-[400px] bg-indigo-500/10 blur-[120px] rounded-full" />
 
       <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-pink-500/10 blur-[120px] rounded-full" />
 
       {/* CONTENT */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-10">
-
+      <div className="relative z-10 max-w-6xl mx-auto px-6 lg:px-10">
         {/* HEADER */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -60,15 +58,12 @@ const EventsSection = () => {
           viewport={{ once: true }}
           className="max-w-3xl"
         >
-
           <div className="inline-flex px-4 py-2 rounded-full border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 backdrop-blur-xl text-sm text-foreground/70 mb-6">
             Events & Programs
           </div>
 
           <h2 className="text-4xl sm:text-5xl font-bold leading-tight text-foreground">
-
             Technical Events That
-
             <span className="block mt-3 bg-gradient-to-r from-indigo-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">
               Inspire Innovation
             </span>
@@ -76,15 +71,13 @@ const EventsSection = () => {
 
           <p className="mt-8 text-lg leading-relaxed dark:text-slate-300 text-slate-600 max-w-2xl">
             IEEE SPS organizes impactful workshops, technical events,
-            collaborative programs, and innovation-driven experiences
-            for students and researchers.
+            collaborative programs, and innovation-driven experiences for
+            students and researchers.
           </p>
-
         </motion.div>
 
         {/* EVENT GRID */}
-        <div className="mt- grid lg:grid-cols-2 gap-8">
-
+        <div className="mt-16 grid lg:grid-cols-2 gap-6">
           {visibleEvents.map((event, index) => (
             <motion.div
               key={event._id}
@@ -97,16 +90,34 @@ const EventsSection = () => {
               viewport={{ once: true }}
               className="group relative"
             >
-
               {/* CARD */}
-              <div className="relative h-full rounded-[32px] border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 backdrop-blur-2xl overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:border-indigo-500/30">
+              <div
+                className="
+group
+relative
+h-full
+rounded-[32px]
+border
+dark:border-white/10
+border-black/5
+dark:bg-white/5
+bg-white/70
+backdrop-blur-2xl
+overflow-hidden
+transition-all
+duration-500
+hover:-translate-y-2
+hover:border-pink-500/30
+hover:shadow-[0_0_40px_rgba(168,85,247,0.18)]
+"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 via-transparent to-indigo-500/5 opacity-0 group-hover:opacity-100 transition duration-500" />
 
                 {/* TOP GRADIENT */}
                 <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-white/10 to-transparent" />
 
                 {/* STATUS BADGE */}
                 <div className="absolute top-6 right-6 z-20">
-
                   <span
                     className={`px-4 py-2 rounded-full text-xs font-medium border backdrop-blur-xl ${
                       event.status === "Upcoming"
@@ -116,12 +127,10 @@ const EventsSection = () => {
                   >
                     {event.status}
                   </span>
-
                 </div>
 
                 {/* CONTENT */}
-                <div className="relative z-10 p-8 flex flex-col h-full">
-
+                <div className="relative z-10 p-8 flex flex-col justify-between h-full">
                   {/* DATE */}
                   <div className="text-sm dark:text-slate-400 text-slate-500">
                     {formatDate(event.date)}
@@ -149,33 +158,23 @@ const EventsSection = () => {
                       navigate(
                         event.title === "Arduino Days 2026"
                           ? "/arduino-days"
-                          : `/event/${event._id}`
+                          : `/event/${event._id}`,
                       )
                     }
                     className="mt-10 inline-flex items-center gap-3 text-foreground font-medium group/button"
                   >
-
                     <span className="relative">
-
                       View Event
-
                       <span className="absolute left-0 -bottom-1 w-0 h-[2px] bg-gradient-to-r from-indigo-400 to-pink-400 transition-all duration-300 group-hover/button:w-full" />
-
                     </span>
 
                     <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover/button:translate-x-1" />
-
                   </button>
-
                 </div>
-
               </div>
-
             </motion.div>
           ))}
-
         </div>
-
       </div>
     </section>
   );

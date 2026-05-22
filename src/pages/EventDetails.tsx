@@ -1,8 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import Particles from "react-tsparticles";
-import { loadFull } from "tsparticles";
 
 const EventDetails = () => {
   const { id } = useParams();
@@ -13,12 +11,10 @@ const EventDetails = () => {
   }, []);
 
   const fetchEvent = async () => {
-    const res = await axios.get(`https://ieee-sps-website.onrender.com/events/${id}`);
+    const res = await axios.get(
+      `https://ieee-sps-website.onrender.com/events/${id}`,
+    );
     setEvent(res.data);
-  };
-
-  const particlesInit = async (main: any) => {
-    await loadFull(main);
   };
 
   if (!event) {
@@ -30,102 +26,97 @@ const EventDetails = () => {
   }
 
   return (
-    <div className="relative min-h-screen bg-background overflow-hidden text-foreground">
+    <div className="relative min-h-screen overflow-hidden bg-[#020617] text-white">
+      {/* BACKGROUND GLOW */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-[-200px] left-[-100px] h-[500px] w-[500px] rounded-full bg-pink-500/10 blur-3xl" />
+        <div className="absolute bottom-[-200px] right-[-100px] h-[500px] w-[500px] rounded-full bg-indigo-500/10 blur-3xl" />
+      </div>
 
-      {/* ================= PARTICLES BACKGROUND ================= */}
-      <Particles
-        id="tsparticles"
-        init={particlesInit}
-        className="absolute inset-0 -z-10"
-        options={{
-          background: { color: "transparent" },
-          fpsLimit: 60,
-          particles: {
-            number: { value: 60 },
-            color: { value: "#00ffff" },
-            links: {
-              enable: true,
-              color: "#00ffff",
-              distance: 150,
-              opacity: 0.3,
-              width: 1,
-            },
-            move: {
-              enable: true,
-              speed: 1,
-            },
-            opacity: { value: 0.4 },
-            size: { value: 2 },
-          },
-        }}
-      />
-
-      <section className="relative z-10 py-20 px-6">
+      <section className="relative z-10 px-6 py-28">
         <div className="max-w-6xl mx-auto">
+          {/* TOP BADGE */}
+          <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-xl mb-8">
+            <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
 
-          {/* ===== Header Section ===== */}
-          <div className="mb-16 relative">
+            <span className="text-sm text-white/80">IEEE SPS Event</span>
+          </div>
 
-            {/* Glow Behind Title */}
-            <div className="absolute -inset-2 bg-cyan-500/10 blur-2xl rounded-xl"></div>
+          {/* TITLE */}
+          <h1 className="text-5xl md:text-7xl font-bold leading-tight max-w-5xl mb-10">
+            {event.title}
+          </h1>
 
-            <h1 className="relative text-4xl md:text-5xl font-bold mb-6 tracking-wide">
-              {event.title}
-            </h1>
+          {/* META */}
+          <div className="flex flex-wrap items-center gap-4 mb-12">
+            <span
+              className={`px-4 py-2 rounded-full text-sm font-medium border
+            ${
+              event.status === "Upcoming"
+                ? "bg-indigo-500/20 border-indigo-500/20 text-indigo-200"
+                : "bg-pink-500/20 border-pink-500/20 text-pink-200"
+            }`}
+            >
+              {event.status}
+            </span>
 
-            <div className="flex flex-wrap items-center gap-6 text-gray-400 text-sm mb-6">
-
-              <span className={`px-3 py-1 rounded-full text-xs font-medium
-                ${event.status === "Upcoming"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-green-600 text-foreground dark:text-foreground"}`}>
-                {event.status}
-              </span>
-
-              <span>📅 {event.date}</span>
-              <span>📍 {event.location}</span>
+            <div className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/70 text-sm">
+              📅 {event.date}
             </div>
 
-            <div className="bg-card border border-border rounded-xl p-6 max-w-3xl shadow-sm">
-              <p className="text-muted-foreground leading-relaxed">
+            <div className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/70 text-sm">
+              📍 {event.location}
+            </div>
+          </div>
+
+          {/* DESCRIPTION CARD */}
+          <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-10 mb-20">
+            {/* CARD GLOW */}
+            <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 via-transparent to-indigo-500/5" />
+
+            <div className="relative z-10">
+              <h2 className="text-2xl font-semibold mb-6">About This Event</h2>
+
+              <p className="text-white/70 leading-9 text-lg whitespace-pre-line">
                 {event.description}
               </p>
             </div>
           </div>
 
-          {/* ===== Gallery Section ===== */}
+          {/* GALLERY */}
           {event.images && event.images.length > 0 && (
             <>
-              <h2 className="text-2xl font-semibold mb-10">
-                Event Gallery
-              </h2>
+              <div className="flex items-center justify-between mb-10">
+                <h2 className="text-3xl font-bold">Event Gallery</h2>
 
-              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
+                <div className="h-[1px] flex-1 ml-8 bg-gradient-to-r from-white/20 to-transparent" />
+              </div>
 
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {event.images.map((img: string, index: number) => (
                   <div
                     key={index}
-                    className="relative group rounded-xl p-[2px] 
-               bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500 
-               hover:shadow-[0_0_30px_rgba(0,255,255,0.6)] 
-               transition-all duration-500"
+                    className="group relative overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03] backdrop-blur-xl"
                   >
-                    <div className="overflow-hidden rounded-xl bg-card">
+                    {/* IMAGE */}
+                    <div className="overflow-hidden">
                       <img
                         src={img}
                         alt="Event"
-                        className="w-full h-64 object-cover 
-                   group-hover:scale-110 
-                   transition-transform duration-700"
+                        className="h-72 w-full object-cover transition-transform duration-700 group-hover:scale-110"
                       />
                     </div>
+
+                    {/* OVERLAY */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
+
+                    {/* HOVER GLOW */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 bg-pink-500/10" />
                   </div>
                 ))}
-
               </div>
             </>
           )}
-
         </div>
       </section>
     </div>
