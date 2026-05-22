@@ -1,152 +1,217 @@
 import { motion } from "framer-motion";
-import { Signal, Brain, Users, Award, Target, Eye } from "lucide-react";
+import {
+  Signal,
+  Brain,
+  Users,
+  Award,
+} from "lucide-react";
 
-const highlights = [
+const features = [
   {
     icon: Signal,
     title: "Signal Processing",
     description:
-      "Advancing DSP, image, audio & video processing research."
+      "Exploring modern DSP, image processing, and communication systems.",
   },
   {
     icon: Brain,
-    title: "Machine Learning",
+    title: "Artificial Intelligence",
     description:
-      "Exploring AI/ML applications in signal analysis."
+      "Advancing AI and machine learning applications for real-world innovation.",
   },
   {
     icon: Users,
-    title: "Community",
+    title: "Technical Community",
     description:
-      "Building a strong network of engineers and researchers."
+      "Building a collaborative ecosystem of researchers, students, and innovators.",
   },
   {
     icon: Award,
-    title: "Competitions",
+    title: "Workshops & Events",
     description:
-      "Participating in IEEE research challenges and hackathons."
-  }
+      "Conducting impactful workshops, competitions, and technical programs.",
+  },
 ];
-
-const BorderCard = ({ children }: any) => {
-  return (
-    <motion.div
-      whileHover={{
-        y: -6,
-        scale: 1.02
-      }}
-      transition={{ type: "spring", stiffness: 250, damping: 18 }}
-      className="relative p-[2px] rounded-2xl animate-rgb-border h-full group"
-    >
-      <div className="bg-card border border-border rounded-2xl p-3 sm:p-5 lg:p-6 h-full flex flex-col backdrop-blur-md transition-all duration-300 group-hover:shadow-[0_0_25px_rgba(0,229,255,0.3)]">
-        {children}
-      </div>
-    </motion.div>
-  );
-};
-
 
 const AboutSection = () => {
   return (
     <section
       id="about"
-      className="relative py-10 sm:py-20 lg:py-28 px-4 sm:px-6 border-t border-border"
+      className="relative py-32 overflow-hidden bg-background"
     >
-      <div className="max-w-6xl mx-auto">
 
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12 sm:mb-16 lg:mb-20"
-        >
-          <h2 className="text-2xl sm:text-3xl md:text-5xl font-semibold tracking-tight mb-4 sm:mb-6">
-            About IEEE SPS
-          </h2>
+      {/* BACKGROUND LIGHTS */}
+      <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-indigo-500/10 blur-[120px] rounded-full" />
 
-          <div className="w-20 h-[2px] bg-primary mx-auto mb-6" />
+      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-pink-500/10 blur-[120px] rounded-full" />
 
-          
-        </motion.div>
+      {/* CONTENT */}
+      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-10">
 
-        {/* Mission & Vision */}
-        <div className="grid md:grid-cols-2 gap-6 sm:gap-8 lg:gap-10 mb-14 sm:mb-20 lg:mb-24 items-stretch">
+        {/* TOP SECTION */}
+        <div className="grid lg:grid-cols-2 gap-20 items-center">
 
+          {/* LEFT */}
           <motion.div
-            initial={{ opacity: 0, x: -40 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
-            className="h-full"
+            viewport={{ once: true }}
           >
-            <BorderCard>
-              <div className="flex items-center gap-3 mb-5">
-                <Target className="w-5 h-5 text-primary" />
-                <h3 className="font-heading text-lg sm:text-2xl lg:text-3xl font-bold tracking-tight">Our Mission</h3>
+
+            <div className="inline-flex px-4 py-2 rounded-full border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 backdrop-blur-xl text-sm text-foreground/70 mb-6">
+              About IEEE SPS
+            </div>
+
+            <h2 className="text-4xl sm:text-5xl font-bold leading-tight text-foreground">
+
+              Advancing Research Through
+
+              <span className="block mt-3 bg-gradient-to-r from-indigo-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">
+                Innovation & Collaboration
+              </span>
+            </h2>
+
+            <p className="mt-8 text-lg leading-relaxed dark:text-slate-300 text-slate-600">
+              IEEE Signal Processing Society at Aditya University
+              empowers students through advanced technical learning,
+              research opportunities, collaborative innovation,
+              and industry-driven experiences.
+            </p>
+
+            <div className="mt-10 flex flex-wrap gap-4">
+
+              <div className="px-6 py-4 rounded-2xl border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 backdrop-blur-xl">
+                <h3 className="text-2xl font-bold text-foreground">
+                  20+
+                </h3>
+
+                <p className="mt-1 text-sm dark:text-slate-400 text-slate-500">
+                  Active Members
+                </p>
               </div>
 
-              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed flex-grow">
-                To empower students with advanced knowledge in signal
-                processing through workshops, research initiatives,
-                competitions, and leadership opportunities within IEEE.
-              </p>
-            </BorderCard>
+              <div className="px-6 py-4 rounded-2xl border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 backdrop-blur-xl">
+                <h3 className="text-2xl font-bold text-foreground">
+                  10+
+                </h3>
+
+                <p className="mt-1 text-sm dark:text-slate-400 text-slate-500">
+                  Technical Events
+                </p>
+              </div>
+
+            </div>
+
           </motion.div>
 
+          {/* RIGHT */}
           <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7 }}
-            className="h-full"
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="relative"
           >
-            <BorderCard>
-              <div className="flex items-center gap-3 mb-5">
-                <Eye className="w-5 h-5 text-primary" />
-                <h3 className="font-heading text-lg sm:text-2xl lg:text-3xl font-bold tracking-tight">Our Vision</h3>
+
+            {/* GLASS PANEL */}
+            <div className="relative rounded-[40px] border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 backdrop-blur-2xl p-10 overflow-hidden shadow-2xl">
+
+              {/* PANEL GLOW */}
+              <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-white/10 to-transparent" />
+
+              {/* ORBS */}
+              <div className="absolute top-10 right-10 w-28 h-28 rounded-full bg-indigo-500/20 blur-3xl" />
+
+              <div className="absolute bottom-10 left-10 w-32 h-32 rounded-full bg-pink-500/20 blur-3xl" />
+
+              {/* CONTENT */}
+              <div className="relative z-10">
+
+                <h3 className="text-3xl font-bold text-foreground">
+                  Our Mission
+                </h3>
+
+                <p className="mt-6 dark:text-slate-300 text-slate-600 leading-relaxed">
+                  To inspire students toward innovation in signal
+                  processing, artificial intelligence, and emerging
+                  technologies through impactful technical programs,
+                  research initiatives, and collaborative learning.
+                </p>
+
+                <div className="mt-10 grid grid-cols-2 gap-5">
+
+                  <div className="rounded-2xl border dark:border-white/10 border-black/5 bg-black/20 p-5">
+                    <h4 className="text-foreground font-semibold">
+                      Research
+                    </h4>
+
+                    <p className="mt-2 text-sm dark:text-slate-400 text-slate-500">
+                      Encouraging innovation and technical exploration.
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border dark:border-white/10 border-black/5 bg-black/20 p-5">
+                    <h4 className="text-foreground font-semibold">
+                      Community
+                    </h4>
+
+                    <p className="mt-2 text-sm dark:text-slate-400 text-slate-500">
+                      Building strong collaborative technical networks.
+                    </p>
+                  </div>
+
+                </div>
+
               </div>
 
-              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed flex-grow">
-                To be recognized as a leading IEEE student chapter known
-                for innovation, impactful research, and strong
-                industry–academic collaboration.
-              </p>
-            </BorderCard>
+            </div>
+
           </motion.div>
 
         </div>
-        {/* Highlights */}
-<div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 items-stretch">
-  {highlights.map((item, i) => (
-    <motion.div
-      key={item.title}
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: i * 0.1 }}
-      className="h-full"
-    >
-      <BorderCard>
-        <div className="flex flex-col h-full">
 
-          {/* Icon */}
-          <div className="w-9 h-9 sm:w-12 sm:h-12 mb-3 sm:mb-6 rounded-lg bg-muted flex items-center justify-center">
-            <item.icon className="w-6 h-6 text-primary" />
-          </div>
+        {/* FEATURE GRID */}
+        <div className="mt-28 grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
 
-          {/* Title (Fixed Height for Alignment) */}
-          <h3 className="font-heading text-base sm:text-xl md:text-2xl font-semibold tracking-tight min-h-[40px] sm:min-h-[60px]">
-            {item.title}
-          </h3>
+          {features.map((feature, index) => (
+            <motion.div
+              key={feature.title}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.5,
+                delay: index * 0.1,
+              }}
+              viewport={{ once: true }}
+              className="group relative"
+            >
 
-          {/* Description */}
-          <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mt-2">
-            {item.description}
-          </p>
+              <div className="h-full rounded-[30px] border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 backdrop-blur-2xl p-8 transition-all duration-500 hover:-translate-y-2 hover:border-indigo-500/30">
+
+                {/* ICON */}
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-pink-500/20 flex items-center justify-center border dark:border-white/10 border-black/5">
+
+                  <feature.icon className="w-7 h-7 text-foreground" />
+
+                </div>
+
+                {/* TITLE */}
+                <h3 className="mt-8 text-xl font-semibold text-foreground">
+                  {feature.title}
+                </h3>
+
+                {/* DESCRIPTION */}
+                <p className="mt-4 dark:text-slate-400 text-slate-500 leading-relaxed">
+                  {feature.description}
+                </p>
+
+              </div>
+
+            </motion.div>
+          ))}
 
         </div>
-      </BorderCard>
-    </motion.div>
-  ))}
-</div>
 
       </div>
     </section>

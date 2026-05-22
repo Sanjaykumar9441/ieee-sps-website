@@ -1,143 +1,173 @@
-import { Zap } from "lucide-react";
-import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 const HeroSection = () => {
-  const fonts = [
-  "Orbitron",
-  "Audiowide",
-  "Bebas Neue",
-  "Cinzel",
-  "Playfair Display",
-  "Oswald",
-  "Righteous",
-  "Anton",
-  "Exo 2",
-  "Rajdhani",
-];
+  return (
+    <section
+      id="home"
+      className="relative min-h-screen overflow-hidden bg-background"
+    >
+      {/* BACKGROUND GRADIENT */}
+      <div
+        className="absolute inset-0 bg-gradient-to-br dark:from-[#070B14] dark:via-[#0B1120] dark:to-[#111827]
+from-[#F8FAFC] via-[#EDE9FE] to-[#EEF2FF]"
+      />
 
-const [fontIndex, setFontIndex] = useState(0);
+      {/* TOP RIGHT GRADIENT */}
+      <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full bg-indigo-500/20 blur-[120px]" />
 
-useEffect(() => {
-  let lastChange = 0;
+      {/* BOTTOM LEFT GRADIENT */}
+      <div className="absolute bottom-[-200px] left-[-100px] w-[500px] h-[500px] rounded-full bg-pink-500/20 blur-[120px]" />
 
-  const handleScroll = () => {
-    const now = Date.now();
+      {/* GRID OVERLAY */}
+      <div
+        className="absolute inset-0 dark:opacity-[0.04] opacity-[0.02]"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)
+          `,
+          backgroundSize: "80px 80px",
+        }}
+      />
 
-    if (now - lastChange > 500) {
-      setFontIndex(prev => (prev + 1) % fonts.length);
-      lastChange = now;
-    }
-  };
+      {/* MAIN CONTENT */}
+      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-10 pt-20 pb-8">
+        <div className="grid lg:grid-cols-2 gap-12 items-center w-full">
+          {/* LEFT CONTENT */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            {/* TITLE */}
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight text-foreground">
+              Empowering
+              <span className="block mt-2 bg-gradient-to-r from-indigo-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">
+                Innovation & Research
+              </span>
+            </h1>
 
-  window.addEventListener("wheel", handleScroll);      // Desktop
-  window.addEventListener("touchmove", handleScroll);  // Mobile
+            {/* SUBTEXT */}
+            <p className="mt-8 text-lg leading-relaxed dark:text-slate-300 text-slate-600 max-w-lg">
+              IEEE SPS Aditya University fosters innovation in signal
+              processing, artificial intelligence, machine learning, and
+              next-generation technologies through events, research, and
+              technical collaboration.
+            </p>
 
-  return () => {
-    window.removeEventListener("wheel", handleScroll);
-    window.removeEventListener("touchmove", handleScroll);
-  };
-}, []);
+            {/* BUTTONS */}
+            <div className="mt-10 flex flex-wrap gap-4">
+              <a
+                href="https://forms.office.com/r/DU2j5CXpd2"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="button"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 24">
+                  <path d="m18 0 8 12 10-8-4 20H4L0 4l10 8 8-12z"></path>
+                </svg>
+                Join IEEE SPS
+              </a>
 
-    return (
-  <section
-    id="home"
-    className="relative min-h-screen 
-           flex flex-col items-center justify-center
-           pt-20 sm:pt-0
-           px-6 
-           overflow-hidden 
-           bg-background text-foreground"
-  >
+              <a
+                href="#about"
+                className="px-8 py-4 rounded-full border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 backdrop-blur-xl text-foreground hover:bg-white/10 transition-all duration-300"
+              >
+                Learn More
+              </a>
+            </div>
 
-    {/* Animated Gradient Background */}
-    <div
-  className="
-  absolute inset-0 -z-10
-  
-  /* LIGHT MODE BACKGROUND */
-  bg-gradient-to-br
-  from-white
-  via-slate-100
-  to-slate-200
-  
-  /* DARK MODE BACKGROUND */
-  dark:from-cyan-900/30
-  dark:via-black
-  dark:to-blue-900/40
-"
-/>
+            {/* STATS */}
+            <div className="mt-16 grid grid-cols-3 gap-8 max-w-lg">
+              <div>
+                <h3 className="text-3xl font-bold text-foreground">20+</h3>
+                <p className="mt-2 text-sm dark:text-slate-400 text-slate-500">
+                  Active Members
+                </p>
+              </div>
 
-    {/* Floating Glow Blobs */}
-    <div className="absolute top-20 left-10 w-72 h-72 
-                    bg-cyan-400/30 rounded-full blur-3xl 
-                    animate-pulse" />
+              <div>
+                <h3 className="text-3xl font-bold text-foreground">10+</h3>
+                <p className="mt-2 text-sm dark:text-slate-400 text-slate-500">
+                  Technical Events
+                </p>
+              </div>
 
-    <div className="absolute bottom-20 right-10 w-80 h-80 
-                    bg-blue-500/30 rounded-full blur-3xl 
-                    animate-pulse delay-1000" />
+              <div>
+                <h3 className="text-3xl font-bold text-foreground">5+</h3>
+                <p className="mt-2 text-sm dark:text-slate-400 text-slate-500">
+                  Workshops
+                </p>
+              </div>
+            </div>
+          </motion.div>
 
-    <div className="relative z-10 text-center max-w-5xl mx-auto">
+          {/* RIGHT VISUAL */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1 }}
+            className="relative hidden lg:flex justify-center items-center"
+          >
+            <div className="relative w-[540px] h-[540px] flex items-center justify-center">
+              {/* OUTER ORBIT */}
+              <div className="absolute inset-0 rounded-full border border-white/5" />
 
-      {/* Badge */}
-      <div className="mb-8 inline-flex items-center gap-2 
-                      px-6 py-2 rounded-full 
-                      backdrop-blur-xl 
-                      bg-white/80 border border-gray-200 
-                      dark:bg-white/10 dark:border-white/20
-                      shadow-lg shadow-cyan-500/20
-                      text-xs sm:text-sm tracking-widest uppercase 
-                      font-medium text-gray-800 dark:text-white/80">
-        <Zap className="w-4 h-4 text-cyan-400" />
-        IEEE Signal Processing Society
+              <div className="absolute inset-10 rounded-full border border-indigo-500/10" />
+
+              <div className="absolute inset-20 rounded-full border border-pink-500/10" />
+
+              {/* MAIN GLOW */}
+              <div className="absolute w-[320px] h-[320px] rounded-full bg-gradient-to-br from-indigo-500/30 via-violet-500/20 to-pink-500/30 blur-3xl" />
+
+              {/* FLOATING GLASS CARD */}
+              <motion.div
+                animate={{
+                  y: [0, -20, 0],
+                  rotate: [0, 2, 0],
+                }}
+                transition={{
+                  duration: 6,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="relative w-[280px] h-[340px] rounded-[40px] border dark:border-white/10 border-indigo-100 border-black/5 dark:bg-white/5 bg-white/40 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.12)] dark:shadow-2xl overflow-hidden"
+              >
+                {/* TOP LIGHT */}
+                <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-white/10 to-transparent" />
+
+                {/* SMALL ORBS */}
+                <div className="absolute top-10 right-10 w-20 h-20 rounded-full bg-pink-500/30 blur-2xl" />
+
+                <div className="absolute bottom-10 left-10 w-24 h-24 rounded-full bg-indigo-500/30 blur-2xl" />
+
+                {/* CONTENT */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-10">
+                  <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-indigo-500 via-violet-500 to-pink-500 flex items-center justify-center shadow-2xl shadow-indigo-500/30">
+                    <span className="text-3xl font-bold text-foreground">
+                      SPS
+                    </span>
+                  </div>
+
+                  <h3 className="mt-8 text-3xl font-bold text-foreground">
+                    IEEE SPS
+                  </h3>
+
+                  <p className="mt-5 dark:text-slate-300 text-slate-700 leading-relaxed">
+                    Building innovation through signal processing, artificial
+                    intelligence, and collaborative research.
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
       </div>
 
-      {/* Main Heading */}
-      <h1 className="text-5xl sm:text-6xl md:text-8xl 
-                     font-extrabold tracking-tight mb-6">
-        IEEE{" "}
-        <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
-
-  SPS
-</span>
-      </h1>
-      
-
-      {/* Animated Sub Heading */}
-      <h2
-  className="text-xl sm:text-3xl md:text-5xl 
-             font-semibold mb-6 
-             text-gray-900 dark:text-white/90"
-        style={{
-          fontFamily: `${fonts[fontIndex]}, sans-serif`,
-          letterSpacing: "3px",
-        }}
-      >
-        Student Branch Chapter
-      </h2>
-
-      {/* Paragraph */}
-      <p className="text-sm sm:text-base md:text-xl 
-              max-w-3xl mx-auto mb-10 
-              text-gray-700 dark:text-white/70 
-              leading-relaxed">
-        Aditya University — Advancing signal processing research,
-        fostering innovation, and building a globally connected
-        technical community.
-      </p>
-
-      {/* CTA Button */}
-<a
-  href="https://forms.office.com/r/DU2j5CXpd2"
-  target="_blank"
-  rel="noreferrer"
-  className="btn-glow-light inline-block"
->
-  Join IEEE SPS
-</a>
-
-    </div>
-  </section>
-);
+      {/* BOTTOM FADE */}
+      <div className="absolute bottom-0 left-0 w-full h-40 dark:bg-gradient-to-t dark:from-black dark:via-transparent dark:to-transparent" />
+    </section>
+  );
 };
 
 export default HeroSection;

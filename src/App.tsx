@@ -30,28 +30,6 @@ function App() {
 
       <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
 
-        {/* Global Animated Gradient */}
-        <div className="fixed inset-0 -z-20 
-                        bg-gradient-to-br 
-                        from-cyan-500/10 
-                        via-blue-500/10 
-                        to-purple-500/10 
-                        animate-globalGradient" />
-
-        {/* Top Left Glow Blob */}
-        <div className="fixed -top-40 -left-40 w-[500px] h-[500px]
-                        bg-cyan-500/20 
-                        rounded-full blur-[150px]
-                        animate-floatSlow 
-                        -z-10" />
-
-        {/* Bottom Right Glow Blob */}
-        <div className="fixed -bottom-40 -right-40 w-[500px] h-[500px]
-                        bg-blue-500/20 
-                        rounded-full blur-[150px]
-                        animate-floatSlow delay-1000
-                        -z-10" />
-
         {/* Main Content */}
         <div className="relative z-10">
           <Routes>

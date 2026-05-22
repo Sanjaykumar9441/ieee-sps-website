@@ -78,7 +78,7 @@ const EventDetails = () => {
               <span className={`px-3 py-1 rounded-full text-xs font-medium
                 ${event.status === "Upcoming"
                   ? "bg-primary text-primary-foreground"
-                  : "bg-green-600 text-white dark:text-white"}`}>
+                  : "bg-green-600 text-foreground dark:text-foreground"}`}>
                 {event.status}
               </span>
 

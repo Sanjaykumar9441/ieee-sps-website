@@ -1,31 +1,13 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
-import LoadingScreen from "./LoadingScreen";
+import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const EventsSection = () => {
   const navigate = useNavigate();
+
   const [events, setEvents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-
-    return `${day}-${month}-${year}`;
-  };
-  const handleViewDetails = (path: string) => {
-    setLoading(true);
-
-    setTimeout(() => {
-      setLoading(false);
-      navigate(path);
-    }, 3000);
-  };
 
   useEffect(() => {
     fetchEvents();
@@ -44,134 +26,158 @@ const EventsSection = () => {
     }
   };
 
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+
+    return date.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
   const visibleEvents = events.slice(0, 4);
+
   return (
-    <>
-      {loading && <LoadingScreen />}
-      <section
-        id="events"
-        className="py-16 px-4 sm:px-6 bg-background text-foreground transition-colors duration-300"
-      >
-        <div className="max-w-3xl mx-auto">
+    <section
+      id="events"
+      className="relative py-32 overflow-hidden bg-background"
+    >
 
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-12 sm:mb-16 lg:mb-20"
-          >
-            <h2 className="text-2xl sm:text-3xl md:text-5xl font-semibold tracking-tight mb-4 sm:mb-6">
-              Events
-            </h2>
+      {/* BACKGROUND LIGHTS */}
+      <div className="absolute top-20 left-0 w-[400px] h-[400px] bg-indigo-500/10 blur-[120px] rounded-full" />
 
-            <div className="w-20 h-[2px] bg-primary mx-auto mb-6" />
-          </motion.div>
+      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-pink-500/10 blur-[120px] rounded-full" />
 
-          {/* Events List */}
-          <div className="space-y-6">
+      {/* CONTENT */}
+      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-10">
 
-            {visibleEvents.map((event) => (
-              <motion.div
-                key={event._id}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                whileHover={{ scale: 1.02 }}
-                className="group relative"
-              >
+        {/* HEADER */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7 }}
+          viewport={{ once: true }}
+          className="max-w-3xl"
+        >
 
-                {/* Glow Background */}
-                <div className="absolute -inset-1 rounded-2xl 
-                    bg-gradient-to-r 
-                    from-cyan-500/30 
-                    via-blue-500/30 
-                    to-purple-500/30
-                    blur-xl opacity-0 
-                    group-hover:opacity-100 
-                    transition duration-500" />
-
-                {/* Glass Card */}
-                <div className="relative 
-                    backdrop-blur-xl 
-                    bg-white/5 dark:bg-white/5
-                    border border-white/20
-                    rounded-2xl 
-                    p-4 sm:p-6
-                    shadow-lg
-                    transition-all duration-500">
-
-                  {/* Top Section */}
-                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-
-                    <div className="flex flex-col gap-3">
-
-                      {/* Status Badge */}
-                      <div>
-                        <span
-                          className={`inline-block text-[10px] px-3 py-1 sm:text-xs sm:px-4 sm:py-1.5 rounded-full font-semibold tracking-wide
-        ${event.status === "Upcoming"
-                              ? "bg-cyan-500/20 text-cyan-400 border border-cyan-400/40"
-                              : "bg-green-500/20 text-green-400 border border-green-400/40"
-                            }`}
-                        >
-                          {event.status}
-                        </span>
-                      </div>
-
-                      {/* Title */}
-                      <h3 className="font-heading text-base sm:text-xl md:text-2xl font-semibold tracking-tight leading-snug">
-                        {event.title}
-                      </h3>
-
-                      {/* Date & Location */}
-                      <div className="text-xs sm:text-sm mt-2
-                text-gray-600 
-                dark:text-white/60 
-                flex items-center gap-4 flex-wrap">
-                        <span className="flex items-center gap-1">
-                          📅 <span>{formatDate(event.date)}</span>
-                        </span>
-
-                        <span className="flex items-center gap-1">
-                          📍 <span>{event.location}</span>
-                        </span>
-                      </div>
-
-                    </div>
-
-                    {/* View Button */}
-                    <button
-                      onClick={() =>
-                        handleViewDetails(
-                          event.title === "Arduino Days 2026"
-                            ? "/arduino-days"
-                            : `/event/${event._id}`
-                        )
-                      }
-                      className="inline-flex items-center justify-center
-                    px-4 py-2 sm:px-5 sm:py-2.5 rounded-full
-                    text-sm font-medium
-                    bg-gradient-to-r from-cyan-500 to-blue-600
-                    text-white
-                    shadow-lg shadow-cyan-500/30
-                    hover:scale-105 hover:shadow-cyan-400/50
-                    transition-all duration-300"
-                    >
-                      View Details →
-                    </button>
-
-
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-
+          <div className="inline-flex px-4 py-2 rounded-full border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 backdrop-blur-xl text-sm text-foreground/70 mb-6">
+            Events & Programs
           </div>
 
+          <h2 className="text-4xl sm:text-5xl font-bold leading-tight text-foreground">
+
+            Technical Events That
+
+            <span className="block mt-3 bg-gradient-to-r from-indigo-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">
+              Inspire Innovation
+            </span>
+          </h2>
+
+          <p className="mt-8 text-lg leading-relaxed dark:text-slate-300 text-slate-600 max-w-2xl">
+            IEEE SPS organizes impactful workshops, technical events,
+            collaborative programs, and innovation-driven experiences
+            for students and researchers.
+          </p>
+
+        </motion.div>
+
+        {/* EVENT GRID */}
+        <div className="mt- grid lg:grid-cols-2 gap-8">
+
+          {visibleEvents.map((event, index) => (
+            <motion.div
+              key={event._id}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.5,
+                delay: index * 0.1,
+              }}
+              viewport={{ once: true }}
+              className="group relative"
+            >
+
+              {/* CARD */}
+              <div className="relative h-full rounded-[32px] border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 backdrop-blur-2xl overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:border-indigo-500/30">
+
+                {/* TOP GRADIENT */}
+                <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-white/10 to-transparent" />
+
+                {/* STATUS BADGE */}
+                <div className="absolute top-6 right-6 z-20">
+
+                  <span
+                    className={`px-4 py-2 rounded-full text-xs font-medium border backdrop-blur-xl ${
+                      event.status === "Upcoming"
+                        ? "bg-indigo-500/10 border-indigo-400/20 text-indigo-300"
+                        : "bg-pink-500/10 border-pink-400/20 text-pink-300"
+                    }`}
+                  >
+                    {event.status}
+                  </span>
+
+                </div>
+
+                {/* CONTENT */}
+                <div className="relative z-10 p-8 flex flex-col h-full">
+
+                  {/* DATE */}
+                  <div className="text-sm dark:text-slate-400 text-slate-500">
+                    {formatDate(event.date)}
+                  </div>
+
+                  {/* TITLE */}
+                  <h3 className="mt-5 text-3xl font-bold text-foreground leading-snug">
+                    {event.title}
+                  </h3>
+
+                  {/* LOCATION */}
+                  <div className="mt-4 dark:text-slate-400 text-slate-500 text-sm">
+                    📍 {event.location}
+                  </div>
+
+                  {/* DESCRIPTION */}
+                  <p className="mt-6 dark:text-slate-300 text-slate-600 leading-relaxed flex-grow">
+                    Experience innovation, collaboration, and technical
+                    excellence through IEEE SPS events and workshops.
+                  </p>
+
+                  {/* BUTTON */}
+                  <button
+                    onClick={() =>
+                      navigate(
+                        event.title === "Arduino Days 2026"
+                          ? "/arduino-days"
+                          : `/event/${event._id}`
+                      )
+                    }
+                    className="mt-10 inline-flex items-center gap-3 text-foreground font-medium group/button"
+                  >
+
+                    <span className="relative">
+
+                      View Event
+
+                      <span className="absolute left-0 -bottom-1 w-0 h-[2px] bg-gradient-to-r from-indigo-400 to-pink-400 transition-all duration-300 group-hover/button:w-full" />
+
+                    </span>
+
+                    <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover/button:translate-x-1" />
+
+                  </button>
+
+                </div>
+
+              </div>
+
+            </motion.div>
+          ))}
+
         </div>
-      </section >
-    </>
+
+      </div>
+    </section>
   );
 };
 

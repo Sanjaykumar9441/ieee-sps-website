@@ -704,7 +704,7 @@ const Register = () => {
   if (registrationClosed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white text-center">
-        <div className="text-center mt-20">
+        <div className="text-center mt-12">
           <h1 className="text-4xl font-bold text-red-500 leading-relaxed">
             🚫 Arduino Days 2026 Registrations Closed
             <br />
@@ -1184,7 +1184,7 @@ focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition"
                 onClick={handleNext}
                 className={`w-full font-bold py-3 rounded-lg transition ${loading
                   ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                  : "bg-blue-600 text-white hover:bg-blue-700 hover:bg-blue-700 hover:scale-105 hover:shadow-lg hover:shadow-cyan-400/30"
+                  : "bg-blue-600 text-foreground hover:bg-blue-700 hover:bg-blue-700 hover:scale-105 hover:shadow-lg hover:shadow-cyan-400/30"
                   }`}
               >
                 {loading ? "Checking Details..." : "Go to Payment"}

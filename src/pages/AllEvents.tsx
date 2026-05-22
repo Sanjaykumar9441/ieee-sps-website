@@ -16,7 +16,7 @@ const AllEvents = () => {
   };
 
   return (
-    <div className="min-h-screen p-20 text-white">
+    <div className="min-h-screen p-20 text-foreground">
 
       <h1 className="text-4xl mb-10">All Events</h1>
 
@@ -26,7 +26,7 @@ const AllEvents = () => {
 
           <div
             key={event._id}
-            className="border border-white/20 p-6 rounded-2xl bg-white/5"
+            className="border border-white/20 p-6 rounded-2xl dark:bg-white/5 bg-white/70"
           >
 
             <span className={`text-xs px-3 py-1 rounded-full

@@ -65,10 +65,10 @@ const AdminLogin = () => {
               boxShadow: "0 0 32px rgba(59,130,246,0.4)",
             }}
           >
-            <Zap size={28} className="text-white" />
+            <Zap size={28} className="text-foreground" />
           </div>
           <h1
-            className="text-3xl font-bold tracking-tight text-white mb-1"
+            className="text-3xl font-bold tracking-tight text-foreground mb-1"
             style={{ fontFamily: "'Orbitron', sans-serif", letterSpacing: "0.05em" }}
           >
             IEEE SPS
@@ -87,7 +87,7 @@ const AdminLogin = () => {
             boxShadow: "0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(59,130,246,0.05)",
           }}
         >
-          <h2 className="text-xl font-semibold text-white mb-1">Welcome back</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-1">Welcome back</h2>
           <p className="text-sm mb-8" style={{ color: "#64748b" }}>
             Sign in to access the dashboard
           </p>
@@ -110,7 +110,7 @@ const AdminLogin = () => {
               <input
                 type="email"
                 placeholder="admin@ieee-sps.org"
-                className="w-full pl-11 pr-4 py-3 rounded-xl text-white text-sm outline-none transition-all duration-200"
+                className="w-full pl-11 pr-4 py-3 rounded-xl text-foreground text-sm outline-none transition-all duration-200"
                 style={{
                   backgroundColor: "#080c14",
                   border: "1px solid rgba(99,179,237,0.12)",
@@ -147,7 +147,7 @@ const AdminLogin = () => {
               <input
                 type="password"
                 placeholder="••••••••••"
-                className="w-full pl-11 pr-4 py-3 rounded-xl text-white text-sm outline-none transition-all duration-200"
+                className="w-full pl-11 pr-4 py-3 rounded-xl text-foreground text-sm outline-none transition-all duration-200"
                 style={{
                   backgroundColor: "#080c14",
                   border: "1px solid rgba(99,179,237,0.12)",
@@ -172,7 +172,7 @@ const AdminLogin = () => {
             type="button"
             onClick={handleLogin}
             disabled={isLoading}
-            className="w-full py-3 rounded-xl text-white font-semibold text-sm tracking-wide transition-all duration-200 relative overflow-hidden"
+            className="w-full py-3 rounded-xl text-foreground font-semibold text-sm tracking-wide transition-all duration-200 relative overflow-hidden"
             style={{
               background: isLoading
                 ? "rgba(59,130,246,0.4)"

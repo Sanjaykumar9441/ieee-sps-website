@@ -620,7 +620,7 @@ const Dashboard = () => {
               className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)" }}
             >
-              <Zap size={14} className="text-white" />
+              <Zap size={14} className="text-foreground" />
             </div>
             <div>
               <span className="font-bold text-sm tracking-wide" style={{ fontFamily: "'Orbitron', sans-serif", color: "#f0f4ff" }}>

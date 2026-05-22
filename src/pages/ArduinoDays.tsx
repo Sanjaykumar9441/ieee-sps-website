@@ -195,7 +195,7 @@ const GalleryTabs = () => {
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center">
-                <Play size={24} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Play size={24} className="text-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </motion.div>
           ))}
@@ -215,10 +215,10 @@ const GalleryTabs = () => {
             exit={{ opacity: 0 }}
             onClick={() => setSelectedIndex(null)}
           >
-            <button onClick={(e) => { e.stopPropagation(); setSelectedIndex(null); }} className="absolute top-5 right-5 p-2 rounded-full text-white z-50" style={{ backgroundColor: "rgba(255,255,255,0.1)" }}>
+            <button onClick={(e) => { e.stopPropagation(); setSelectedIndex(null); }} className="absolute top-5 right-5 p-2 rounded-full text-foreground z-50" style={{ backgroundColor: "rgba(255,255,255,0.1)" }}>
               <X size={18} />
             </button>
-            <button onClick={(e) => { e.stopPropagation(); prevImage(); }} className="absolute left-5 p-3 rounded-full text-white z-50" style={{ backgroundColor: "rgba(255,255,255,0.1)" }}>
+            <button onClick={(e) => { e.stopPropagation(); prevImage(); }} className="absolute left-5 p-3 rounded-full text-foreground z-50" style={{ backgroundColor: "rgba(255,255,255,0.1)" }}>
               <ChevronLeft size={20} />
             </button>
             <motion.img
@@ -230,7 +230,7 @@ const GalleryTabs = () => {
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
             />
-            <button onClick={(e) => { e.stopPropagation(); nextImage(); }} className="absolute right-5 p-3 rounded-full text-white z-50" style={{ backgroundColor: "rgba(255,255,255,0.1)" }}>
+            <button onClick={(e) => { e.stopPropagation(); nextImage(); }} className="absolute right-5 p-3 rounded-full text-foreground z-50" style={{ backgroundColor: "rgba(255,255,255,0.1)" }}>
               <ChevronRight size={20} />
             </button>
             <button
@@ -375,7 +375,7 @@ const ArduinoDays = () => {
   ══════════════════════════════════════════ */
   return (
     <div
-      className="min-h-screen relative text-white overflow-x-hidden"
+      className="min-h-screen relative text-foreground overflow-x-hidden"
       style={{ backgroundColor: "#030a0a", fontFamily: "'DM Sans', sans-serif" }}
     >
       {/* Google Fonts */}
@@ -606,7 +606,7 @@ const ArduinoDays = () => {
                         style={{ backgroundColor: "rgba(224,123,57,0.12)", border: "1px solid rgba(224,123,57,0.35)", color: "#f0a060" }}
                       >
                         <MapPin size={15} />
-                        <a href="https://maps.app.goo.gl/hFCpjSyJV1oPQzEZ8" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                        <a href="https://maps.app.goo.gl/hFCpjSyJV1oPQzEZ8" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
                           Aditya University
                         </a>
                         <span className="text-xs underline" style={{ color: "#00979D" }}>Map</span>

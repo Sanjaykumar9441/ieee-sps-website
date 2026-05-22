@@ -123,7 +123,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="min-h-screen bg-black text-foreground flex flex-col">
 
       {/* HEADER */}
       <div className="flex justify-end items-center px-8 py-4 border-b border-cyan-500/20 bg-zinc-900">
@@ -152,7 +152,7 @@ const Dashboard = () => {
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${
                   activeTab === item.id
                     ? "bg-cyan-500 text-black"
-                    : "hover:bg-white/10 text-white/70"
+                    : "hover:bg-white/10 text-foreground/70"
                 }`}
               >
                 <item.icon size={18} />

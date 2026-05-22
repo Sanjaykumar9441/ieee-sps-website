@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -12,59 +10,61 @@
 
 :root {
 
-  --background: 210 40% 97%;
-  --foreground: 222 47% 15%;
+  /* PREMIUM LIGHT MODE */
+
+  --background: 220 33% 98%;
+  --foreground: 222 47% 11%;
 
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 15%;
+  --card-foreground: 222 47% 11%;
 
-  --primary: 190 100% 45%;
+  --primary: 239 84% 67%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 295 90% 50%;
+  --secondary: 262 83% 68%;
   --secondary-foreground: 0 0% 100%;
 
-  --accent: 110 80% 45%;
+  --accent: 330 81% 60%;
   --accent-foreground: 0 0% 100%;
 
-  --muted: 210 30% 94%;
-  --muted-foreground: 215 20% 40%;
+  --muted: 220 20% 95%;
+  --muted-foreground: 222 15% 35%;
 
-  --border: 214 32% 85%;
-  --input: 214 32% 85%;
-  --ring: 190 100% 45%;
+  --border: 220 18% 88%;
+  --input: 220 18% 88%;
+  --ring: 239 84% 67%;
 
-  --radius: 0.6rem;
+  --radius: 1rem;
 
-  --font-display: 'Orbitron', monospace;
+  --font-display: 'Poppins', sans-serif;
   --font-body: 'Inter', sans-serif;
 }
 
-/* Dark Mode */
-
 .dark {
 
-  --background: 0 0% 2%;
-  --foreground: 0 0% 95%;
+  /* DARK MODE */
 
-  --card: 0 0% 5%;
-  --card-foreground: 0 0% 95%;
+  --background: 222 47% 8%;
+  --foreground: 210 40% 98%;
 
-  --primary: 186 100% 50%;
-  --primary-foreground: 0 0% 2%;
+  --card: 217 33% 12%;
+  --card-foreground: 210 40% 98%;
 
-  --secondary: 295 100% 45%;
-  --secondary-foreground: 0 0% 95%;
+  --primary: 239 84% 67%;
+  --primary-foreground: 0 0% 100%;
 
-  --accent: 110 100% 55%;
-  --accent-foreground: 0 0% 2%;
+  --secondary: 262 83% 68%;
+  --secondary-foreground: 0 0% 100%;
 
-  --muted: 0 0% 10%;
-  --muted-foreground: 0 0% 55%;
+  --accent: 330 81% 60%;
+  --accent-foreground: 0 0% 100%;
 
-  --border: 0 0% 12%;
-  --input: 0 0% 12%;
-  --ring: 186 100% 50%;
+  --muted: 217 33% 18%;
+  --muted-foreground: 215 20% 75%;
+
+  --border: 217 33% 22%;
+  --input: 217 33% 22%;
+  --ring: 239 84% 67%;
 }
 
 /* Base body */
@@ -85,12 +85,13 @@ h1,h2,h3,h4,h5,h6{
 
 .btn-glow-light{
 
-  background: linear-gradient(
-    90deg,
-    hsl(190 100% 45%),
-    hsl(295 90% 50%),
-    hsl(110 80% 45%)
-  );
+  background:linear-gradient(
+90deg,
+#6366F1,
+#8B5CF6,
+#EC4899,
+#6366F1
+);
 
   background-size:200% 100%;
 
@@ -105,8 +106,8 @@ h1,h2,h3,h4,h5,h6{
   animation:rgb-button-shift 4s linear infinite;
 
   box-shadow:
-  0 5px 20px hsl(190 100% 45% / .25),
-  0 0 40px hsl(295 90% 50% / .15);
+0 5px 20px rgba(99,102,241,.35),
+0 0 40px rgba(236,72,153,.25);
 }
 
 .btn-glow-light:hover{
@@ -228,11 +229,11 @@ animation:spin-slow 6s linear infinite;
 @keyframes textGlow{
 
 0%,100%{
-text-shadow:0 0 10px rgba(6,182,212,.6);
+text-shadow:0 0 10px rgba(139,92,246,.7);
 }
 
 50%{
-text-shadow:0 0 25px rgba(6,182,212,1);
+text-shadow:0 0 25px rgba(236,72,153,1);
 }
 
 }
@@ -283,7 +284,7 @@ background:#020617;
 
 background-image:radial-gradient(
 circle at 50% 35%,
-rgba(0,180,255,.25),
+rgba(99,102,241,.25),
 rgba(0,0,0,0) 65%
 );
 
@@ -316,4 +317,411 @@ background-size:cover;
 }
 .animate-shimmer {
   animation: shimmer 1.5s infinite;
+}
+
+/* From Uiverse.io by Yaya12085 */ 
+.button {
+  width: fit-content;
+  display: flex;
+  padding: 1.2em 1rem;
+  cursor: pointer;
+  gap: 0.4rem;
+  font-weight: bold;
+  border-radius: 30px;
+  text-shadow: 2px 2px 3px rgb(136 0 136 / 50%);
+  background: linear-gradient(15deg, #880088, #aa2068, #cc3f47, #de6f3d, #f09f33, #de6f3d, #cc3f47, #aa2068, #880088) no-repeat;
+  background-size: 300%;
+  color: #fff;
+  border: none;
+  background-position: left center;
+  box-shadow: 0 30px 10px -20px rgba(0,0,0,.2);
+  transition: background .3s ease;
+}
+
+.button:hover {
+  background-size: 320%;
+  background-position: right center;
+}
+
+.button:hover svg {
+  fill: #fff;
+}
+
+.button svg {
+  width: 23px;
+  fill: #f09f33;
+  transition: .3s ease;
+}
+
+/* From Uiverse.io by RiccardoRapelli */ 
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.switch #input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #2196f3;
+  -webkit-transition: 0.4s;
+  transition: 0.4s;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.sun-moon {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: yellow;
+  -webkit-transition: 0.4s;
+  transition: 0.4s;
+}
+
+#input:checked + .slider {
+  background-color: black;
+}
+
+#input:focus + .slider {
+  box-shadow: 0 0 1px #2196f3;
+}
+
+#input:checked + .slider .sun-moon {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+  background-color: white;
+  -webkit-animation: rotate-center 0.6s ease-in-out both;
+  animation: rotate-center 0.6s ease-in-out both;
+}
+
+.moon-dot {
+  opacity: 0;
+  transition: 0.4s;
+  fill: gray;
+}
+
+#input:checked + .slider .sun-moon .moon-dot {
+  opacity: 1;
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round .sun-moon {
+  border-radius: 50%;
+}
+
+#moon-dot-1 {
+  left: 10px;
+  top: 3px;
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  z-index: 4;
+}
+
+#moon-dot-2 {
+  left: 2px;
+  top: 10px;
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  z-index: 4;
+}
+
+#moon-dot-3 {
+  left: 16px;
+  top: 18px;
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  z-index: 4;
+}
+
+#light-ray-1 {
+  left: -8px;
+  top: -8px;
+  position: absolute;
+  width: 43px;
+  height: 43px;
+  z-index: -1;
+  fill: white;
+  opacity: 10%;
+}
+
+#light-ray-2 {
+  left: -50%;
+  top: -50%;
+  position: absolute;
+  width: 55px;
+  height: 55px;
+  z-index: -1;
+  fill: white;
+  opacity: 10%;
+}
+
+#light-ray-3 {
+  left: -18px;
+  top: -18px;
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  z-index: -1;
+  fill: white;
+  opacity: 10%;
+}
+
+.cloud-light {
+  position: absolute;
+  fill: #eee;
+  animation-name: cloud-move;
+  animation-duration: 6s;
+  animation-iteration-count: infinite;
+}
+
+.cloud-dark {
+  position: absolute;
+  fill: #ccc;
+  animation-name: cloud-move;
+  animation-duration: 6s;
+  animation-iteration-count: infinite;
+  animation-delay: 1s;
+}
+
+#cloud-1 {
+  left: 30px;
+  top: 15px;
+  width: 40px;
+}
+
+#cloud-2 {
+  left: 44px;
+  top: 10px;
+  width: 20px;
+}
+
+#cloud-3 {
+  left: 18px;
+  top: 24px;
+  width: 30px;
+}
+
+#cloud-4 {
+  left: 36px;
+  top: 18px;
+  width: 40px;
+}
+
+#cloud-5 {
+  left: 48px;
+  top: 14px;
+  width: 20px;
+}
+
+#cloud-6 {
+  left: 22px;
+  top: 26px;
+  width: 30px;
+}
+
+@keyframes cloud-move {
+  0% {
+    transform: translateX(0px);
+  }
+
+  40% {
+    transform: translateX(4px);
+  }
+
+  80% {
+    transform: translateX(-4px);
+  }
+
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+.stars {
+  transform: translateY(-32px);
+  opacity: 0;
+  transition: 0.4s;
+}
+
+.star {
+  fill: white;
+  position: absolute;
+  -webkit-transition: 0.4s;
+  transition: 0.4s;
+  animation-name: star-twinkle;
+  animation-duration: 2s;
+  animation-iteration-count: infinite;
+}
+
+#input:checked + .slider .stars {
+  -webkit-transform: translateY(0);
+  -ms-transform: translateY(0);
+  transform: translateY(0);
+  opacity: 1;
+}
+
+#star-1 {
+  width: 20px;
+  top: 2px;
+  left: 3px;
+  animation-delay: 0.3s;
+}
+
+#star-2 {
+  width: 6px;
+  top: 16px;
+  left: 3px;
+}
+
+#star-3 {
+  width: 12px;
+  top: 20px;
+  left: 10px;
+  animation-delay: 0.6s;
+}
+
+#star-4 {
+  width: 18px;
+  top: 0px;
+  left: 18px;
+  animation-delay: 1.3s;
+}
+
+@keyframes star-twinkle {
+  0% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.2);
+  }
+
+  80% {
+    transform: scale(0.8);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* From Uiverse.io by Zameerahmad01 */ 
+ul {
+  list-style: none;
+}
+
+.example-2 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  row-gap: 0.5rem;
+}
+.example-2 .icon-content {
+  margin: 0 10px;
+  position: relative;
+}
+.example-2 .icon-content .tooltip {
+  position: absolute;
+  top: 20px;
+  left: 40%;
+  transform: translateX(50%);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 5px;
+  opacity: 0;
+  visibility: hidden;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+.example-2 .icon-content:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+  top: 5px;
+}
+.example-2 .icon-content a {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  color: #4d4d4d;
+  background-color: #fff;
+  transition: all 0.3s ease-in-out;
+}
+.example-2 .icon-content a:hover {
+  box-shadow: 3px 2px 45px 0px rgb(0 0 0 / 12%);
+}
+.example-2 .icon-content a svg {
+  position: relative;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+}
+.example-2 .icon-content a:hover {
+  color: white;
+}
+.example-2 .icon-content a .filled {
+  position: absolute;
+  top: auto;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 0;
+  background-color: #000;
+  transition: all 0.3s ease-in-out;
+}
+.example-2 .icon-content a:hover .filled {
+  height: 100%;
+}
+
+.example-2 .icon-content a[data-social="linkedin"] .filled,
+.example-2 .icon-content a[data-social="linkedin"] ~ .tooltip {
+  background-color: #0274b3;
+}
+
+.example-2 .icon-content a[data-social="facebook"] .filled,
+.example-2 .icon-content a[data-social="facebook"] ~ .tooltip {
+  background-color: #1877f2;
+}
+.example-2 .icon-content a[data-social="instagram"] .filled,
+.example-2 .icon-content a[data-social="instagram"] ~ .tooltip {
+  background: linear-gradient(
+    45deg,
+    #405de6,
+    #5b51db,
+    #b33ab4,
+    #c135b4,
+    #e1306c,
+    #fd1f1f
+  );
+}
+.example-2 .icon-content a[data-social="twitter"] .filled,
+.example-2 .icon-content a[data-social="twitter"] ~ .tooltip {
+  background-color: #000000;
 }
