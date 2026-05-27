@@ -191,14 +191,14 @@ const Footer = () => {
           </p>
 
           <p className="text-sm dark:text-slate-400 text-slate-500 text-center md:text-right">
-            Created by{" "}
+            Developed by{" "}
             <a
               href="https://www.linkedin.com/in/sanjaykumarchitturi"
               target="_blank"
               rel="noopener noreferrer"
               className="text-foreground hover:text-pink-300 transition-all duration-300"
             >
-              Sanjay Kumar
+              Sanjay Kumar Chitturi
             </a>
           </p>
         </div>
