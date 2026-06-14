@@ -51,7 +51,8 @@ const verifyToken = (req, res, next) => {
 
 router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
   try {
-    const { title, description, date, status, location } = req.body;
+    const { title, description, date, status, location, pageType, customPage } =
+      req.body;
 
     const images = req.files
       ? req.files.map((file) => file.path) // ✅ Cloudinary URL
@@ -63,6 +64,8 @@ router.post("/", verifyToken, upload.array("images", 5), async (req, res) => {
       date,
       location,
       status,
+      pageType,
+      customPage,
       images,
     });
 
@@ -92,6 +95,8 @@ router.put(
           status: req.body.status,
           date: req.body.date,
           location: req.body.location,
+          pageType: req.body.pageType,
+          customPage: req.body.customPage,
         },
       };
 
