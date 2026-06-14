@@ -922,7 +922,7 @@ const Dashboard = () => {
             />
           )}
 
-          {activeTab === "team" && (
+          {activeTab === "team" && (permissions.team || isSuperAdmin) && (
             <TeamTab
               teamView={teamView}
               setTeamView={setTeamView}
@@ -951,7 +951,7 @@ const Dashboard = () => {
             />
           )}
 
-          {activeTab === "messages" && (
+          {activeTab === "messages" && (permissions.messages || isSuperAdmin) && (
             <MessagesTab
               messages={messages}
               deleteMessage={deleteMessage}
@@ -960,7 +960,7 @@ const Dashboard = () => {
           )}
 
           {/* ── REGISTRATIONS ── */}
-          {activeTab === "registrations" && (
+          {activeTab === "registrations" && (permissions.registrations || isSuperAdmin) && (
             <div>
               <div className="mb-8">
                 <h2
@@ -1707,7 +1707,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {activeTab === "admins" && <AdminsTab />}
+          {activeTab === "admins" && isSuperAdmin && ( <AdminsTab /> )}
         </main>
       </div>
 

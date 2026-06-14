@@ -246,43 +246,42 @@ const AdminsTab = () => {
                   Save Access
                 </button>
               </div>
-
-              <div className="mt-8">
-                <h3 className="font-semibold mb-4">Existing Admins</h3>
-
-                <div className="space-y-3">
-                  {admins.map((admin: any) => (
-                    <div
-                      key={admin._id}
-                      className="p-4 rounded-xl"
-                      style={{
-                        backgroundColor: "#0f1624",
-                        border: "1px solid rgba(99,179,237,0.08)",
-                      }}
-                    >
-                      <div className="font-medium">{admin.memberId?.name}</div>
-
-                      <div className="text-sm" style={{ color: "#64748b" }}>
-                        Username: {admin.username}
-                      </div>
-
-                      <button
-                        onClick={() => deleteAdmin(admin._id)}
-                        className="mt-3 px-3 py-2 rounded-lg text-sm"
-                        style={{
-                          backgroundColor: "rgba(239,68,68,0.1)",
-                          color: "#f87171",
-                          border: "1px solid rgba(239,68,68,0.2)",
-                        }}
-                      >
-                        Remove Access
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </>
           )}
+          <div className="mt-8">
+            <h3 className="font-semibold mb-4">Existing Admins</h3>
+
+            <div className="space-y-3">
+              {admins.map((admin: any) => (
+                <div
+                  key={admin._id}
+                  className="p-4 rounded-xl"
+                  style={{
+                    backgroundColor: "#0f1624",
+                    border: "1px solid rgba(99,179,237,0.08)",
+                  }}
+                >
+                  <div className="font-medium">{admin.memberId?.name}</div>
+
+                  <div className="text-sm" style={{ color: "#64748b" }}>
+                    Username: {admin.username}
+                  </div>
+
+                  <button
+                    onClick={() => deleteAdmin(admin._id)}
+                    className="mt-3 px-3 py-2 rounded-lg text-sm"
+                    style={{
+                      backgroundColor: "rgba(239,68,68,0.1)",
+                      color: "#f87171",
+                      border: "1px solid rgba(239,68,68,0.2)",
+                    }}
+                  >
+                    Remove Access
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
