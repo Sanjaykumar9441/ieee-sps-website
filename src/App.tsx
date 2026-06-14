@@ -5,8 +5,9 @@ import AdminLogin from "./pages/AdminLogin";
 import Dashboard from "./pages/Dashboard";
 import EventDetails from "./pages/EventDetails";
 import AllEvents from "./pages/AllEvents";
+import AllMembers from "./pages/AllMembers";
 import TeamDetails from "./pages/TeamDetails";
-import ArduinoDays from "./pages/ArduinoDays"; // temporary
+import ArduinoDays from "./pages/ArduinoDays";
 import Register from "./pages/Register"; // temporary
 import { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -17,7 +18,7 @@ function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 3000); // 3 seconds
+    }, 1800); // 1.8 seconds
 
     return () => clearTimeout(timer);
   }, []);
@@ -28,7 +29,7 @@ function App() {
         {loading && <LoadingScreen />}
       </AnimatePresence>
 
-      <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+      <div className="relative min-h-screen bg-white text-slate-900">
 
         {/* Main Content */}
         <div className="relative z-10">
@@ -41,6 +42,7 @@ function App() {
             <Route path="/team/:id" element={<TeamDetails />} />
             <Route path="/arduino-days" element={<ArduinoDays />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/all-members" element={<AllMembers />} />
           </Routes>
         </div>
 

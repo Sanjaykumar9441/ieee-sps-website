@@ -1,76 +1,96 @@
-import {
-  Linkedin,
-  Instagram,
-  Facebook,
-  Twitter,
-  Mail,
-  Phone,
-} from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="relative overflow-hidden border-t dark:border-white/10 border-black/5 bg-background">
-      {/* BACKGROUND LIGHTS */}
-      <div className="absolute top-0 left-0 w-[300px] h-[300px] bg-indigo-500/10 blur-[120px] rounded-full" />
-
-      <div className="absolute bottom-0 right-0 w-[300px] h-[300px] bg-pink-500/10 blur-[120px] rounded-full" />
-
+    <footer className="border-t border-slate-200 bg-white">
       {/* MAIN CONTENT */}
       <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-10 py-20">
         {/* TOP */}
-        <div className="grid lg:grid-cols-2 gap-16 items-start">
+        <div className="grid lg:grid-cols-[2fr_1fr_1.3fr_0.8fr] gap-10">
           {/* LEFT */}
           <div>
             {/* BADGE */}
-            <div className="inline-flex px-4 py-2 rounded-full border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 backdrop-blur-xl text-sm text-foreground/70 mb-6">
-              IEEE SPS Aditya University
-            </div>
+            <h2 className="text-3xl font-bold text-slate-900">IEEE SPS</h2>
 
-            {/* TITLE */}
-            <h2 className="text-4xl sm:text-5xl font-bold leading-tight text-foreground">
-              Building The Future Through
-              <span className="block mt-3 bg-gradient-to-r from-indigo-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">
-                Innovation & Collaboration
-              </span>
-            </h2>
+            <p className="mt-2 text-[#00629B] font-medium">
+              Aditya University Student Branch Chapter
+            </p>
 
-            {/* DESCRIPTION */}
-            <p className="mt-8 text-lg leading-relaxed dark:text-slate-300 text-slate-600 max-w-xl">
-              IEEE Signal Processing Society empowers students through
-              innovation, research, workshops, and collaborative technical
-              experiences.
+            <p className="mt-6 text-slate-600 leading-relaxed max-w-md">
+              Empowering students through innovation, research, technical
+              excellence, and professional development in signal processing and
+              emerging technologies.
             </p>
           </div>
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-6">
+              Quick Links
+            </h3>
 
-          {/* RIGHT */}
-          <div className="grid sm:grid-cols-2 gap-10">
-            {/* CONTACT */}
-            <div>
-              <h3 className="text-lg font-semibold text-foreground mb-6">
+            <div className="space-y-3 text-slate-600">
+              <a href="#about" className="block hover:text-[#00629B]">
+                About
+              </a>
+
+              <a href="#domains" className="block hover:text-[#00629B]">
+                Domains
+              </a>
+
+              <a href="#events" className="block hover:text-[#00629B]">
+                Events
+              </a>
+
+              <a href="#team" className="block hover:text-[#00629B]">
+                Team
+              </a>
+
+              <a href="#contact" className="block hover:text-[#00629B]">
                 Contact
-              </h3>
+              </a>
+            </div>
+          </div>
+          {/* CONTACT */}
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-6">
+              Contact
+            </h3>
 
-              <div className="space-y-5">
-                <div className="flex items-center gap-4 dark:text-slate-300 text-slate-600">
-                  <div className="w-11 h-11 rounded-2xl border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 flex items-center justify-center">
-                    <Mail className="w-5 h-5" />
-                  </div>
-
-                  <span>ieee.club.aus@gmail.com</span>
+            <div className="space-y-5">
+              <div className="flex items-center gap-4 text-slate-600">
+                <div className="w-11 h-11 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <Mail className="w-5 h-5 text-[#00629B]" />
                 </div>
 
-                <div className="flex items-center gap-4 dark:text-slate-300 text-slate-600">
-                  <div className="w-11 h-11 rounded-2xl border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 flex items-center justify-center">
-                    <Phone className="w-5 h-5" />
-                  </div>
+                <a
+                  href="mailto:ieee.club.aus@gmail.com"
+                  className="break-all hover:text-[#00629B] transition"
+                >
+                  ieee.club.aus@gmail.com
+                </a>
+              </div>
 
-                  <span>+91 70950 09441</span>
+              <div className="flex items-center gap-4 text-slate-600">
+                <div className="w-11 h-11 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <Phone className="w-5 h-5 text-[#00629B]" />
                 </div>
+
+                <a
+                  href="tel:+917095009441"
+                  className="whitespace-nowrap hover:text-[#00629B] transition"
+                >
+                  +91 70950 09441
+                </a>
               </div>
             </div>
+          </div>
 
-            {/* SOCIALS */}
-            <ul className="example-2 flex-row">
+          {/* SOCIAL */}
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-6">
+  Social Media
+</h3>
+
+            <ul className="example-2 flex flex-col gap-5 items-start">
               <li className="icon-content">
                 <a
                   data-social="linkedin"
@@ -93,7 +113,7 @@ const Footer = () => {
                     <path
                       fill="currentColor"
                       d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854zm4.943 12.248V6.169H2.542v7.225zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248S2.4 3.226 2.4 3.934c0 .694.521 1.248 1.327 1.248zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016l.016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225z"
-                    ></path>
+                    />
                   </svg>
                 </a>
 
@@ -170,33 +190,33 @@ const Footer = () => {
                     width="16"
                     xmlns="http://www.w3.org/2000/svg"
                   >
-                    <path d="M18.244 2H21.5l-7.12 8.135L22 22h-6.828l-5.347-6.99L3.7 22H.44l7.62-8.71L1 2h7l4.833 6.35zm-1.197 18h1.8L7.02 3.894H5.09z"></path>
+                    <path d="M18.244 2H21.5l-7.12 8.135L22 22h-6.828l-5.347-6.99L3.7 22H.44l7.62-8.71L1 2h7l4.833 6.35zm-1.197 18h1.8L7.02 3.894H5.09z" />
                   </svg>
                 </a>
 
-                <div className="tooltip">Twitter</div>
+                <div className="tooltip">X</div>
               </li>
             </ul>
           </div>
         </div>
 
         {/* DIVIDER */}
-        <div className="mt-16 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <div className="mt-16 border-t border-slate-200" />
 
         {/* BOTTOM */}
         <div className="mt-10 flex flex-col md:flex-row items-center justify-between gap-6">
-          <p className="text-sm dark:text-slate-400 text-slate-500 text-center md:text-left">
+          <p className="text-sm text-slate-500 text-center md:text-left">
             © {new Date().getFullYear()} IEEE SPS Student Branch Chapter —
             Aditya University. All rights reserved.
           </p>
 
-          <p className="text-sm dark:text-slate-400 text-slate-500 text-center md:text-right">
+          <p className="text-sm text-slate-500 text-center md:text-right">
             Developed by{" "}
             <a
               href="https://www.linkedin.com/in/sanjaykumarchitturi"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-foreground hover:text-pink-300 transition-all duration-300"
+              className="text-[#00629B] hover:underline"
             >
               Sanjay Kumar Chitturi
             </a>

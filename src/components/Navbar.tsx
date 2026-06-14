@@ -7,6 +7,7 @@ import uniLogo from "../assets/logos/university.png";
 
 const links = [
   { label: "About", href: "about" },
+  { label: "Domains", href: "domains" },
   { label: "Events", href: "events" },
   { label: "Team", href: "team" },
   { label: "Contact", href: "contact" },
@@ -15,13 +16,6 @@ const links = [
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
-
-  const toggleTheme = () => {
-    setDarkMode(!darkMode);
-
-    document.documentElement.classList.toggle("dark");
-  };
 
   const handleNavClick = (id: string) => {
     document.getElementById(id)?.scrollIntoView({
@@ -44,16 +38,14 @@ const Navbar = () => {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${
-          scrolled
-            ? "backdrop-blur-xl bg-white/60 dark:bg-background/80 border-b border-white/40 dark:border-white/10 backdrop-blur-2xl shadow-[0_8px_30px_rgba(15,23,42,0.08)]"
-            : "bg-transparent"
+        className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
+          scrolled ? "bg-white border-b border-slate-200 shadow-sm" : "bg-white"
         }`}
       >
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-16">
-          <div className="flex items-center justify-between h-20">
+        <div className="max-w-7xl mx-auto px-6 lg:px-16">
+          <div className="flex items-center justify-between h-16">
             {/* LEFT LOGOS */}
-            <div className="flex items-center gap-5 ml-16">
+            <div className="flex items-center gap-3">
               <img
                 src={spsLogo}
                 alt="SPS"
@@ -71,14 +63,12 @@ const Navbar = () => {
                 alt="University"
                 className="h-8 md:h-9 w-auto object-contain"
               />
+              <div className="hidden lg:block ml-2">
+                <h3 className="font-semibold text-slate-900 text-sm">
+                  IEEE SPS
+                </h3>
 
-              {/* IEEE TEXT BADGE */}
-              <div className="hidden lg:flex items-center gap-5 px-4 py-2 ml-16 rounded-full border border-white/10 dark:bg-white/5 bg-black/5 backdrop-blur-xl">
-                <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
-
-                <span className="text-sm font-medium text-foreground/80">
-                  IEEE Signal Processing Society
-                </span>
+                <p className="text-xs text-slate-500">Aditya University</p>
               </div>
             </div>
 
@@ -89,91 +79,41 @@ const Navbar = () => {
                   <button
                     key={link.label}
                     onClick={() => handleNavClick(link.href)}
-                    className="relative text-sm font-medium text-foreground/80 hover:text-foreground transition-all duration-300 group"
+                    className="
+text-sm
+font-medium
+text-slate-600
+hover:text-[#00629B]
+transition
+"
                   >
                     {link.label}
-
-                    <span className="absolute left-0 -bottom-1 w-0 h-[2px] bg-gradient-to-r from-indigo-500 to-pink-500 transition-all duration-300 group-hover:w-full" />
                   </button>
                 ))}
               </nav>
-
-              <label className="switch">
-                <input
-                  id="input"
-                  type="checkbox"
-                  checked={darkMode}
-                  onChange={toggleTheme}
-                />
-
-                <div className="slider round">
-                  <div className="sun-moon">
-                    <svg
-                      id="moon-dot-1"
-                      className="moon-dot"
-                      viewBox="0 0 100 100"
-                    >
-                      <circle cx="50" cy="50" r="50"></circle>
-                    </svg>
-
-                    <svg
-                      id="moon-dot-2"
-                      className="moon-dot"
-                      viewBox="0 0 100 100"
-                    >
-                      <circle cx="50" cy="50" r="50"></circle>
-                    </svg>
-
-                    <svg
-                      id="moon-dot-3"
-                      className="moon-dot"
-                      viewBox="0 0 100 100"
-                    >
-                      <circle cx="50" cy="50" r="50"></circle>
-                    </svg>
-
-                    <svg
-                      id="light-ray-1"
-                      className="light-ray"
-                      viewBox="0 0 100 100"
-                    >
-                      <circle cx="50" cy="50" r="50"></circle>
-                    </svg>
-
-                    <svg
-                      id="light-ray-2"
-                      className="light-ray"
-                      viewBox="0 0 100 100"
-                    >
-                      <circle cx="50" cy="50" r="50"></circle>
-                    </svg>
-
-                    <svg
-                      id="light-ray-3"
-                      className="light-ray"
-                      viewBox="0 0 100 100"
-                    >
-                      <circle cx="50" cy="50" r="50"></circle>
-                    </svg>
-                  </div>
-
-                  <div className="stars">
-                    <svg id="star-1" className="star" viewBox="0 0 20 20">
-                      <path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path>
-                    </svg>
-
-                    <svg id="star-2" className="star" viewBox="0 0 20 20">
-                      <path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path>
-                    </svg>
-                  </div>
-                </div>
-              </label>
+              <a
+                href="https://forms.office.com/r/DU2j5CXpd2"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="
+  px-5
+  py-2.5
+  rounded-xl
+  bg-[#00629B]
+  text-white
+  font-medium
+  hover:bg-[#00517f]
+  transition
+  "
+              >
+                Join SPS
+              </a>
             </div>
 
             {/* MOBILE BUTTON */}
             <button
               onClick={() => setOpen(!open)}
-              className="md:hidden text-foreground"
+              className="md:hidden text-slate-900"
             >
               {open ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -189,92 +129,45 @@ const Navbar = () => {
             : "opacity-0 pointer-events-none"
         }`}
       >
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-lg" />
+        <div className="absolute inset-0 bg-black/30" />
 
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 w-[90%] rounded-3xl border dark:border-white/10 border-black/5 bg-[#0F172A]/90 backdrop-blur-2xl p-8">
+        <div
+          className="absolute top-24 left-1/2 -translate-x-1/2 w-[90%] rounded-3xl bg-white border border-slate-200 shadow-xl p-8"
+        >
           <div className="flex flex-col gap-6">
             {links.map((link) => (
               <button
                 key={link.label}
                 onClick={() => handleNavClick(link.href)}
-                className="text-left text-lg text-foreground/80 hover:text-foreground transition"
+                className="
+text-left
+text-lg
+font-medium
+text-slate-700
+hover:text-[#00629B]
+transition
+"
               >
                 {link.label}
               </button>
             ))}
-
-            <div className="pt-4 border-t dark:border-white/10 border-black/5">
-              <label className="switch">
-                <input
-                  id="input"
-                  type="checkbox"
-                  checked={darkMode}
-                  onChange={toggleTheme}
-                />
-
-                <div className="slider round">
-                  <div className="sun-moon">
-                    <svg
-                      id="moon-dot-1"
-                      className="moon-dot"
-                      viewBox="0 0 100 100"
-                    >
-                      <circle cx="50" cy="50" r="50"></circle>
-                    </svg>
-
-                    <svg
-                      id="moon-dot-2"
-                      className="moon-dot"
-                      viewBox="0 0 100 100"
-                    >
-                      <circle cx="50" cy="50" r="50"></circle>
-                    </svg>
-
-                    <svg
-                      id="moon-dot-3"
-                      className="moon-dot"
-                      viewBox="0 0 100 100"
-                    >
-                      <circle cx="50" cy="50" r="50"></circle>
-                    </svg>
-
-                    <svg
-                      id="light-ray-1"
-                      className="light-ray"
-                      viewBox="0 0 100 100"
-                    >
-                      <circle cx="50" cy="50" r="50"></circle>
-                    </svg>
-
-                    <svg
-                      id="light-ray-2"
-                      className="light-ray"
-                      viewBox="0 0 100 100"
-                    >
-                      <circle cx="50" cy="50" r="50"></circle>
-                    </svg>
-
-                    <svg
-                      id="light-ray-3"
-                      className="light-ray"
-                      viewBox="0 0 100 100"
-                    >
-                      <circle cx="50" cy="50" r="50"></circle>
-                    </svg>
-                  </div>
-
-                  <div className="stars">
-                    <svg id="star-1" className="star" viewBox="0 0 20 20">
-                      <path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path>
-                    </svg>
-
-                    <svg id="star-2" className="star" viewBox="0 0 20 20">
-                      <path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path>
-                    </svg>
-                  </div>
-                </div>
-              </label>
-            </div>
+            <a
+              href="https://forms.office.com/r/DU2j5CXpd2"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="
+  mt-4
+  w-full
+  text-center
+  bg-[#00629B]
+  text-white
+  py-3
+  rounded-xl
+  font-medium
+  "
+            >
+              Join SPS
+            </a>
           </div>
         </div>
       </div>

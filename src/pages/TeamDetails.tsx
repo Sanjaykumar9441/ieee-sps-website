@@ -23,55 +23,55 @@ const TeamDetails = () => {
 
   if (!member) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center text-foreground">
+      <div className="min-h-screen bg-white flex items-center justify-center text-slate-600">
         Loading...
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#020617] text-white px-6 py-24">
-      {/* BACKGROUND GLOWS */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-[-150px] left-[-100px] h-[400px] w-[400px] rounded-full bg-pink-500/10 blur-3xl" />
-
-        <div className="absolute bottom-[-150px] right-[-100px] h-[400px] w-[400px] rounded-full bg-indigo-500/10 blur-3xl" />
-      </div>
-
-      <div className="relative z-10 max-w-6xl mx-auto">
+    <div className="min-h-screen bg-[#F8FAFC] px-6 py-24">
+      <div className="max-w-6xl mx-auto">
+        <button
+          onClick={() => window.history.back()}
+          className="
+  mb-8
+  text-[#00629B]
+  font-medium
+  hover:underline
+  "
+        >
+          ← Back to Team
+        </button>
         {/* MAIN CARD */}
         <div
           className="
         relative
         overflow-hidden
-        rounded-[40px]
-        border border-white/10
-        bg-white/[0.03]
-        backdrop-blur-2xl
-        shadow-[0_0_60px_rgba(99,102,241,0.08)]
+        bg-white
+border
+border-slate-200
+rounded-2xl
+shadow-sm
       "
         >
-          {/* SUBTLE GLOW */}
-          <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 via-transparent to-indigo-500/5" />
-
-          <div className="relative z-10 grid lg:grid-cols-[380px_1fr] gap-12 p-10 lg:p-16 items-center">
+          <div className="grid lg:grid-cols-[380px_1fr] gap-12 p-10 lg:p-16 items-center">
             {/* ===== LEFT PHOTO SECTION ===== */}
             <div className="flex flex-col items-center">
               {/* IMAGE CONTAINER */}
               <div className="relative">
-                {/* OUTER GLOW */}
-                <div className="absolute inset-0 rounded-full bg-indigo-500/30 blur-3xl scale-110" />
-
                 <img
                   src={member.photo}
                   alt={member.name}
                   className="
                   relative
-                  w-72 h-72
-                  object-cover
-                  rounded-full
-                  border-4 border-indigo-400
-                  shadow-[0_0_50px_rgba(99,102,241,0.45)]
+                  w-72
+h-72
+object-cover
+rounded-full
+border-4
+border-slate-100
+shadow-md
                 "
                 />
               </div>
@@ -82,12 +82,10 @@ const TeamDetails = () => {
               mt-8
               px-6 py-3
               rounded-full
-              border border-indigo-500/20
-              bg-indigo-500/10
-              text-indigo-200
-              text-sm
-              font-medium
-              backdrop-blur-xl
+              bg-blue-50
+text-[#00629B]
+font-medium
+text-sm
             "
               >
                 {member.role}
@@ -97,21 +95,19 @@ const TeamDetails = () => {
             {/* ===== RIGHT CONTENT ===== */}
             <div>
               {/* TOP LABEL */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-xl mb-6">
-                <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-[#00629B] font-medium mb-6">
+                <div className="w-2 h-2 rounded-full bg-[#00629B]" />
 
-                <span className="text-sm text-white/70">
-                  IEEE SPS Team Member
-                </span>
+                <span className="text-sm">IEEE SPS Team Member</span>
               </div>
 
               {/* NAME */}
-              <h1 className="text-5xl md:text-6xl font-bold mb-4 leading-tight">
+              <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-4 leading-tight">
                 {member.name}
               </h1>
 
               {/* ROLE TEXT */}
-              <p className="text-xl text-indigo-300 mb-12">{member.role}</p>
+              <p className="text-xl text-[#00629B] mb-12">{member.role}</p>
 
               {/* INFO GRID */}
               <div className="grid sm:grid-cols-2 gap-6">
@@ -138,19 +134,19 @@ const TeamDetails = () => {
 const InfoCard = ({ label, value }: { label: string; value: string }) => (
   <div
     className="
-    rounded-2xl
-    border border-white/10
-    bg-white/[0.03]
-    backdrop-blur-xl
-    p-5
-    transition-all duration-300
-    hover:border-indigo-500/30
-    hover:bg-white/[0.05]
-  "
+rounded-2xl
+border
+border-slate-200
+bg-white
+p-5
+shadow-sm
+hover:shadow-md
+transition
+"
   >
-    <p className="text-sm text-white/50 mb-2">{label}</p>
+    <p className="text-sm text-slate-500 mb-2">{label}</p>
 
-    <p className="text-lg font-medium break-words">{value}</p>
+    <p className="text-lg font-medium text-slate-900 break-words">{value}</p>
   </div>
 );
 

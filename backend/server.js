@@ -14,6 +14,7 @@ const contactRoutes = require("./routes/contactRoutes");
 const Admin = require("./models/admin");
 const registrationRoutes = require("./routes/registrationRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
+const adminAccessRoutes = require("./routes/adminAccessRoutes");
 const compression = require("compression");
 const axios = require("axios");
 const app = express();
@@ -90,6 +91,7 @@ app.use("/contact", contactRoutes);
 app.use("/team", teamRoutes);
 app.use("/api", registrationRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/admin-access", adminAccessRoutes);
 app.use("/api", galleryRoutes);
 /* ===============================
    📂 Serve Uploaded Images

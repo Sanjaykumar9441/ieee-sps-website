@@ -8,7 +8,6 @@ const TeamSection = () => {
   const navigate = useNavigate();
 
   const [members, setMembers] = useState<any[]>([]);
-  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     fetchMembers();
@@ -24,17 +23,12 @@ const TeamSection = () => {
     }
   };
 
-  const visibleMembers = showAll ? members : members.slice(0, 8);
+  const visibleMembers = members.slice(0, 4);
 
   return (
-    <section id="team" className="relative py-32 overflow-hidden bg-background">
-      {/* BACKGROUND LIGHTS */}
-      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-500/10 blur-[120px] rounded-full" />
-
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-pink-500/10 blur-[120px] rounded-full" />
-
+    <section id="team" className="scroll-mt-20 py-24 bg-[#F8FAFC]">
       {/* CONTENT */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-10">
+      <div className="max-w-7xl mx-auto px-6 lg:px-10">
         {/* HEADER */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -43,21 +37,19 @@ const TeamSection = () => {
           viewport={{ once: true }}
           className="max-w-3xl"
         >
-          <div className="inline-flex px-4 py-2 rounded-full border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 backdrop-blur-xl text-sm text-foreground/70 mb-6">
-            Our Team
-          </div>
+          <span className="text-[#00629B] font-semibold uppercase tracking-wider text-sm">
+            Executive Committee
+          </span>
 
-          <h2 className="text-4xl sm:text-5xl font-bold leading-tight text-foreground">
-            Meet The Minds Behind
-            <span className="block mt-3 bg-gradient-to-r from-indigo-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">
-              IEEE SPS
-            </span>
+          <h2 className="mt-4 text-4xl lg:text-5xl font-bold text-slate-900">
+            Meet Our
+            <span className="block text-[#00629B]">Leadership Team</span>
           </h2>
 
-          <p className="mt-8 text-lg leading-relaxed dark:text-slate-300 text-slate-600 max-w-2xl">
-            Our chapter is driven by passionate innovators, technical leaders,
-            researchers, and students committed to advancing technology and
-            collaboration.
+          <p className="mt-6 text-lg text-slate-600 leading-relaxed max-w-2xl">
+            Our chapter is driven by passionate leaders, innovators,
+            researchers, and students committed to advancing technology,
+            collaboration, and professional excellence.
           </p>
         </motion.div>
 
@@ -76,21 +68,31 @@ const TeamSection = () => {
               className="group relative"
             >
               {/* CARD */}
-              <div className="relative h-full rounded-[30px] border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 backdrop-blur-2xl overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:border-indigo-500/30">
-                <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 via-transparent to-indigo-500/5 opacity-0 group-hover:opacity-100 transition duration-500" />
-                {/* TOP LIGHT */}
-                <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-white/10 to-transparent" />
-
+              <div
+                className="relative h-full bg-white
+border
+border-slate-200
+rounded-2xl
+shadow-sm
+hover:shadow-lg
+hover:-translate-y-1
+transition-all
+duration-300"
+              >
                 {/* IMAGE */}
                 <div className="relative pt-10 flex justify-center">
                   <div className="relative">
-                    {/* GLOW */}
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-500/20 to-pink-500/20 blur-2xl scale-125 opacity-0 group-hover:opacity-100 transition-all duration-500" />
-
                     <img
                       src={member.photo}
                       alt={member.name}
-                      className="relative w-28 h-28 rounded-full object-cover border dark:border-white/10 border-black/5"
+                      className="
+w-28
+h-28
+rounded-full
+object-cover
+border-4
+border-slate-100
+"
                     />
                   </div>
                 </div>
@@ -98,13 +100,23 @@ const TeamSection = () => {
                 {/* CONTENT */}
                 <div className="relative z-10 p-8 text-center">
                   {/* NAME */}
-                  <h3 className="text-xl font-semibold text-foreground leading-snug">
+                  <h3 className="text-xl font-semibold text-slate-900 leading-snug">
                     {member.name}
                   </h3>
 
                   {/* ROLE */}
                   <div className="mt-4 flex justify-center">
-                    <span className="px-3 py-1 rounded-full border border-white/10 bg-white/5 text-indigo-300 text-xs font-medium">
+                    <span
+                      className="
+px-3
+py-1
+rounded-full
+bg-blue-50
+text-[#00629B]
+text-xs
+font-medium
+"
+                    >
                       {member.role}
                     </span>
                   </div>
@@ -112,14 +124,19 @@ const TeamSection = () => {
                   {/* BUTTON */}
                   <button
                     onClick={() => navigate(`/team/${member._id}`)}
-                    className="mt-8 inline-flex items-center gap-2 text-foreground/80 hover:text-pink-400 transition-all duration-300 group/button"
+                    className="
+  mt-6
+  inline-flex
+  items-center
+  gap-2
+  text-[#00629B]
+  font-semibold
+  hover:gap-3
+  transition-all
+  "
                   >
-                    <span className="relative">
-                      View Profile
-                      <span className="absolute left-0 -bottom-1 w-0 h-[2px] bg-gradient-to-r from-indigo-400 to-pink-400 transition-all duration-300 group-hover/button:w-full" />
-                    </span>
-
-                    <ArrowUpRight className="w-4 h-4 transition-transform duration-300 group-hover/button:-translate-y-1 group-hover/button:translate-x-1" />
+                    View Profile
+                    <ArrowUpRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -128,16 +145,23 @@ const TeamSection = () => {
         </div>
 
         {/* VIEW ALL BUTTON */}
-        {members.length > 8 && (
-          <div className="mt-16 flex justify-center">
-            <button
-              onClick={() => setShowAll(!showAll)}
-              className="px-8 py-4 rounded-full border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 backdrop-blur-xl text-foreground hover:bg-white/10 transition-all duration-300"
-            >
-              {showAll ? "Show Less" : "View All Members"}
-            </button>
-          </div>
-        )}
+        <div className="mt-16 flex justify-center">
+          <button
+            onClick={() => navigate("/all-members")}
+            className="
+    px-8
+    py-3
+    rounded-xl
+    bg-[#00629B]
+    text-white
+    font-medium
+    hover:bg-[#00517f]
+    transition
+    "
+          >
+            View All Members
+          </button>
+        </div>
       </div>
     </section>
   );

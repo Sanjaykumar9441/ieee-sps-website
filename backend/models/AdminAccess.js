@@ -1,0 +1,50 @@
+const mongoose = require("mongoose");
+
+const adminAccessSchema = new mongoose.Schema(
+  {
+    memberId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Team",
+      required: true,
+    },
+
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+
+    password: {
+      type: String,
+      required: true,
+    },
+
+    permissions: {
+      events: {
+        type: Boolean,
+        default: false,
+      },
+
+      team: {
+        type: Boolean,
+        default: false,
+      },
+
+      registrations: {
+        type: Boolean,
+        default: false,
+      },
+
+      messages: {
+        type: Boolean,
+        default: false,
+      },
+    },
+  },
+  { timestamps: true },
+);
+
+module.exports = mongoose.model(
+  "AdminAccess",
+  adminAccessSchema,
+);
