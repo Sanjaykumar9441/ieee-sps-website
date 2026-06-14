@@ -636,14 +636,38 @@ const Dashboard = () => {
     );
   };
 
+  const permissions = JSON.parse(localStorage.getItem("permissions") || "{}");
+
   /* MENU */
+  const isSuperAdmin = permissions.admins === true;
+
   const menu = [
-    { id: "upload", label: "Upload Event", icon: Upload },
-    { id: "events", label: "Manage Events", icon: Calendar },
-    { id: "team", label: "Team Management", icon: Users },
-    { id: "messages", label: "Messages", icon: Mail },
-    { id: "registrations", label: "Registrations", icon: BookOpen },
-    { id: "admins", label: "Admins", icon: Shield },
+    ...(permissions.events
+      ? [
+          { id: "upload", label: "Upload Event", icon: Upload },
+          { id: "events", label: "Manage Events", icon: Calendar },
+        ]
+      : []),
+
+    ...(permissions.team
+      ? [{ id: "team", label: "Team Management", icon: Users }]
+      : []),
+
+    ...(permissions.messages
+      ? [{ id: "messages", label: "Messages", icon: Mail }]
+      : []),
+
+    ...(permissions.registrations
+      ? [
+          {
+            id: "registrations",
+            label: "Registrations",
+            icon: BookOpen,
+          },
+        ]
+      : []),
+
+    ...(isSuperAdmin ? [{ id: "admins", label: "Admins", icon: Shield }] : []),
   ];
 
   const filteredRegistrations = (viewStatus: string) =>
