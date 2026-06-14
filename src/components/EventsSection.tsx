@@ -39,17 +39,9 @@ const EventsSection = () => {
   const visibleEvents = events.slice(0, 4);
 
   return (
-    <section
-      id="events"
-      className="relative py-32 overflow-hidden bg-background"
-    >
-      {/* BACKGROUND LIGHTS */}
-      <div className="absolute top-20 left-0 w-[400px] h-[400px] bg-indigo-500/10 blur-[120px] rounded-full" />
-
-      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-pink-500/10 blur-[120px] rounded-full" />
-
+    <section id="events" className="scroll-mt-20 py-24 bg-[#F8FAFC]">
       {/* CONTENT */}
-      <div className="relative z-10 max-w-6xl mx-auto px-6 lg:px-10">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-10">
         {/* HEADER */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -58,24 +50,23 @@ const EventsSection = () => {
           viewport={{ once: true }}
           className="max-w-3xl"
         >
-          <div className="inline-flex px-4 py-2 rounded-full border dark:border-white/10 border-black/5 dark:bg-white/5 bg-white/70 backdrop-blur-xl text-sm text-foreground/70 mb-6">
-            Events & Programs
-          </div>
-
-          <h2 className="text-4xl sm:text-5xl font-bold leading-tight text-foreground">
-            Technical Events That
-            <span className="block mt-3 bg-gradient-to-r from-indigo-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">
-              Inspire Innovation
+          <div className="max-w-3xl">
+            <span className="text-[#00629B] font-semibold uppercase tracking-wider text-sm">
+              Events & Programs
             </span>
-          </h2>
 
-          <p className="mt-8 text-lg leading-relaxed dark:text-slate-300 text-slate-600 max-w-2xl">
-            IEEE SPS organizes impactful workshops, technical events,
-            collaborative programs, and innovation-driven experiences for
-            students and researchers.
-          </p>
+            <h2 className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900">
+              Inspiring Innovation Through
+              <span className="block text-[#00629B]">Technical Events</span>
+            </h2>
+
+            <p className="mt-6 text-lg text-slate-600 leading-relaxed">
+              Explore workshops, seminars, competitions, and technical programs
+              organized by IEEE SPS to foster innovation, collaboration, and
+              professional growth.
+            </p>
+          </div>
         </motion.div>
-
         {/* EVENT GRID */}
         <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8 place-items-center">
           {visibleEvents.map((event, index) => (
@@ -96,33 +87,25 @@ const EventsSection = () => {
 group
 relative
 h-full
-rounded-[32px]
+bg-white
 border
-dark:border-white/10
-border-black/5
-dark:bg-white/5
-bg-white/70
-backdrop-blur-2xl
-overflow-hidden
+border-slate-200
+rounded-2xl
+p-8
+shadow-sm
+hover:shadow-lg
+hover:-translate-y-1
 transition-all
-duration-500
-hover:-translate-y-2
-hover:border-pink-500/30
-hover:shadow-[0_0_40px_rgba(168,85,247,0.18)]
+duration-300
 "
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 via-transparent to-indigo-500/5 opacity-0 group-hover:opacity-100 transition duration-500" />
-
-                {/* TOP GRADIENT */}
-                <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-white/10 to-transparent" />
-
                 {/* STATUS BADGE */}
                 <div className="absolute top-6 right-6 z-20">
                   <span
-                    className={`px-4 py-2 rounded-full text-xs font-medium border backdrop-blur-xl ${
+                    className={`px-4 py-2 rounded-full text-xs font-medium border ${
                       event.status === "Upcoming"
-                        ? "bg-indigo-500/10 border-indigo-400/20 text-indigo-300"
-                        : "bg-pink-500/10 border-pink-400/20 text-pink-300"
+                        ? "bg-blue-50 text-[#00629B] border-blue-100"
+                        : "bg-slate-100 text-slate-700 border-slate-200"
                     }`}
                   >
                     {event.status}
@@ -132,17 +115,17 @@ hover:shadow-[0_0_40px_rgba(168,85,247,0.18)]
                 {/* CONTENT */}
                 <div className="relative z-10 p-8 flex flex-col justify-between h-full">
                   {/* DATE */}
-                  <div className="text-sm dark:text-slate-400 text-slate-500">
+                  <div className="text-sm text-slate-500">
                     {formatDate(event.date)}
                   </div>
 
                   {/* TITLE */}
-                  <h3 className="mt-5 text-3xl font-bold text-foreground leading-snug min-h-[96px]">
+                  <h3 className="mt-5 text-xl sm:text-2xl font-bold text-slate-900 leading-snug min-h-[80px] sm:min-h-[96px]">
                     {event.title}
                   </h3>
 
                   {/* LOCATION */}
-                  <div className="mt-4 dark:text-slate-400 text-slate-500 text-sm">
+                  <div className="mt-4 text-slate-500 text-sm">
                     📍 {event.location}
                   </div>
 
@@ -150,24 +133,46 @@ hover:shadow-[0_0_40px_rgba(168,85,247,0.18)]
                   <button
                     onClick={() =>
                       navigate(
-                        event.title === "Arduino Days 2026"
-                          ? "/arduino-days"
+                        event.pageType === "custom" && event.customPage
+                          ? `/${event.customPage}`
                           : `/event/${event._id}`,
                       )
                     }
-                    className="mt-10 inline-flex items-center gap-3 text-foreground font-medium group/button"
+                    className="
+  mt-8
+  inline-flex
+  items-center
+  gap-2
+  text-[#00629B]
+  font-semibold
+  hover:gap-3
+  transition-all
+  "
                   >
-                    <span className="relative">
-                      View Event
-                      <span className="absolute left-0 -bottom-1 w-0 h-[2px] bg-gradient-to-r from-indigo-400 to-pink-400 transition-all duration-300 group-hover/button:w-full" />
-                    </span>
-
-                    <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover/button:translate-x-1" />
+                    View Event
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
             </motion.div>
           ))}
+        </div>
+        <div className="mt-12 flex justify-center">
+          <button
+            onClick={() => navigate("/all-events")}
+            className="
+    px-8
+    py-3
+    rounded-xl
+    bg-[#00629B]
+    text-white
+    font-medium
+    hover:bg-[#00517f]
+    transition
+    "
+          >
+            View All Events
+          </button>
         </div>
       </div>
     </section>
