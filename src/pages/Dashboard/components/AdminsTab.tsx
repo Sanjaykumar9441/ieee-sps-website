@@ -6,8 +6,11 @@ const AdminsTab = () => {
   const [members, setMembers] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
   const [selectedMember, setSelectedMember] = useState<any>(null);
+  const [editingAdminId, setEditingAdminId] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [externalName, setExternalName] = useState("");
+  const [externalRole, setExternalRole] = useState("");
 
   const [permissions, setPermissions] = useState({
     events: false,
@@ -72,6 +75,21 @@ const AdminsTab = () => {
     }
   };
 
+  const editAdmin = (admin: any) => {
+    setEditingAdminId(admin._id);
+
+    setSelectedMember(admin.memberId);
+
+    setUsername(admin.username);
+
+    setPermissions({
+      events: admin.permissions.events,
+      team: admin.permissions.team,
+      registrations: admin.permissions.registrations,
+      messages: admin.permissions.messages,
+    });
+  };
+
   const saveAccess = async () => {
     try {
       await axios.post(
@@ -94,6 +112,62 @@ const AdminsTab = () => {
     } catch (err) {
       console.error(err);
       alert("Failed to save access");
+    }
+  };
+
+  const saveExternalAdmin = async () => {
+    try {
+      await axios.post(
+        "https://ieee-sps-website.onrender.com/api/admin-access",
+        {
+          name: externalName,
+          role: externalRole,
+          isExternal: true,
+
+          username,
+          password,
+
+          permissions,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      alert("External Admin Created");
+
+      fetchAdmins();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create external admin");
+    }
+  };
+
+  const updateAccess = async () => {
+    try {
+      await axios.put(
+        `https://ieee-sps-website.onrender.com/api/admin-access/${editingAdminId}`,
+        {
+          username,
+          permissions,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      alert("Admin access updated successfully");
+
+      setEditingAdminId("");
+
+      fetchAdmins();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update access");
     }
   };
 
@@ -143,6 +217,41 @@ const AdminsTab = () => {
                 </div>
               </button>
             ))}
+          </div>
+        </div>
+
+        <div
+          className="rounded-xl p-5 mt-6"
+          style={{
+            backgroundColor: "#0f1624",
+            border: "1px solid rgba(99,179,237,0.08)",
+          }}
+        >
+          <h3 className="font-semibold mb-4">External Admin</h3>
+
+          <div className="space-y-3">
+            <input
+              type="text"
+              placeholder="Full Name"
+              value={externalName}
+              onChange={(e) => setExternalName(e.target.value)}
+              className="w-full p-3 rounded-lg"
+            />
+
+            <input
+              type="text"
+              placeholder="Role"
+              value={externalRole}
+              onChange={(e) => setExternalRole(e.target.value)}
+              className="w-full p-3 rounded-lg"
+            />
+
+            <button
+              onClick={saveExternalAdmin}
+              className="px-4 py-2 rounded-lg bg-green-600"
+            >
+              Create External Admin
+            </button>
           </div>
         </div>
 
@@ -240,10 +349,10 @@ const AdminsTab = () => {
                 </div>
 
                 <button
-                  onClick={saveAccess}
+                  onClick={editingAdminId ? updateAccess : saveAccess}
                   className="px-5 py-3 rounded-lg bg-blue-600"
                 >
-                  Save Access
+                  {editingAdminId ? "Update Access" : "Save Access"}
                 </button>
               </div>
             </>
@@ -266,6 +375,18 @@ const AdminsTab = () => {
                   <div className="text-sm" style={{ color: "#64748b" }}>
                     Username: {admin.username}
                   </div>
+
+                  <button
+                    onClick={() => editAdmin(admin)}
+                    className="mt-3 mr-2 px-3 py-2 rounded-lg text-sm"
+                    style={{
+                      backgroundColor: "rgba(59,130,246,0.1)",
+                      color: "#60a5fa",
+                      border: "1px solid rgba(59,130,246,0.2)",
+                    }}
+                  >
+                    Edit Access
+                  </button>
 
                   <button
                     onClick={() => deleteAdmin(admin._id)}

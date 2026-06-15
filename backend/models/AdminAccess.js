@@ -5,7 +5,22 @@ const adminAccessSchema = new mongoose.Schema(
     memberId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Team",
-      required: true,
+      default: null,
+    },
+
+    name: {
+      type: String,
+      default: "",
+    },
+
+    role: {
+      type: String,
+      default: "",
+    },
+
+    isExternal: {
+      type: Boolean,
+      default: false,
     },
 
     username: {
@@ -44,7 +59,4 @@ const adminAccessSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-module.exports = mongoose.model(
-  "AdminAccess",
-  adminAccessSchema,
-);
+module.exports = mongoose.model("AdminAccess", adminAccessSchema);
