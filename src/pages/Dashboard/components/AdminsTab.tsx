@@ -9,6 +9,7 @@ const AdminsTab = () => {
   const [editingAdminId, setEditingAdminId] = useState("");
   const [viewAdmin, setViewAdmin] = useState<any>(null);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showExternalAdmin, setShowExternalAdmin] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [externalName, setExternalName] = useState("");
@@ -30,7 +31,6 @@ const AdminsTab = () => {
   const fetchMembers = async () => {
     try {
       const res = await axios.get("https://ieee-sps-website.onrender.com/team");
-
       setMembers(res.data);
     } catch (err) {
       console.log(err);
@@ -40,16 +40,10 @@ const AdminsTab = () => {
   const fetchAdmins = async () => {
     try {
       const token = localStorage.getItem("token");
-
       const res = await axios.get(
         "https://ieee-sps-website.onrender.com/api/admin-access",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       setAdmins(res.data);
     } catch (err) {
       console.log(err);
@@ -59,18 +53,11 @@ const AdminsTab = () => {
   const deleteAdmin = async (id: string) => {
     try {
       const token = localStorage.getItem("token");
-
       await axios.delete(
         `https://ieee-sps-website.onrender.com/api/admin-access/${id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       fetchAdmins();
-
       alert("Admin access removed");
     } catch (err) {
       console.log(err);
@@ -83,36 +70,27 @@ const AdminsTab = () => {
       await axios.post(
         `https://ieee-sps-website.onrender.com/api/admin-access/reset-password/${id}`,
         {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      alert(
-        "Password reset successfully. User must change password on next login.",
-      );
+      alert("Password reset successfully. User must change password on next login.");
     } catch (err) {
       console.error(err);
-
       alert("Failed to reset password");
     }
   };
 
   const editAdmin = (admin: any) => {
     setEditingAdminId(admin._id);
-
     if (admin.isExternal) {
       setExternalName(admin.name);
       setExternalRole(admin.role);
       setSelectedMember(null);
+      setShowExternalAdmin(true);
     } else {
       setSelectedMember(admin.memberId);
+      setShowExternalAdmin(false);
     }
-
     setUsername(admin.username);
-
     setPermissions({
       events: admin.permissions.events,
       team: admin.permissions.team,
@@ -132,19 +110,12 @@ const AdminsTab = () => {
         "https://ieee-sps-website.onrender.com/api/admin-access",
         {
           memberId: selectedMember._id,
-
           username: selectedMember.rollNumber,
           password: selectedMember.rollNumber,
-
           permissions,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       alert("Admin access granted successfully");
       fetchAdmins();
     } catch (err) {
@@ -161,21 +132,13 @@ const AdminsTab = () => {
           name: externalName,
           role: externalRole,
           isExternal: true,
-
           username,
           password,
-
           permissions,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       alert("External Admin Created");
-
       fetchAdmins();
     } catch (err) {
       console.error(err);
@@ -187,23 +150,11 @@ const AdminsTab = () => {
     try {
       await axios.put(
         `https://ieee-sps-website.onrender.com/api/admin-access/${editingAdminId}`,
-        {
-          username,
-          permissions,
-          name: externalName,
-          role: externalRole,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        { username, permissions, name: externalName, role: externalRole },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       alert("Admin access updated successfully");
-
       setEditingAdminId("");
-
       fetchAdmins();
     } catch (err) {
       console.error(err);
@@ -213,12 +164,39 @@ const AdminsTab = () => {
 
   const filteredAdmins = admins.filter((admin: any) => {
     const name = admin.isExternal ? admin.name : admin.memberId?.name;
-
     return name?.toLowerCase().includes(search.toLowerCase());
   });
 
+  const cardStyle = {
+    backgroundColor: "#0f1624",
+    border: "1px solid rgba(99,179,237,0.10)",
+  };
+
+  const inputStyle: React.CSSProperties = {
+    backgroundColor: "#0a0f1e",
+    border: "1px solid rgba(99,179,237,0.15)",
+    color: "#e2e8f0",
+    width: "100%",
+    padding: "10px 14px",
+    borderRadius: "8px",
+    fontSize: "14px",
+    outline: "none",
+  };
+
+  const permissionKeys = [
+    { key: "events", label: "Events" },
+    { key: "team", label: "Team" },
+    { key: "registrations", label: "Registrations" },
+    { key: "messages", label: "Messages" },
+  ] as const;
+
+  const isExternalMode = showExternalAdmin || (editingAdminId && !selectedMember);
+  const hasSelection = selectedMember || isExternalMode;
+
   return (
-    <div>
+    <div style={{ color: "#e2e8f0" }}>
+
+      {/* ── Page Header ── */}
       <div className="mb-8">
         <h2
           className="text-2xl font-bold mb-1"
@@ -226,262 +204,308 @@ const AdminsTab = () => {
         >
           Admin Management
         </h2>
-
         <p className="text-sm" style={{ color: "#64748b" }}>
           Manage dashboard access for team members
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* LEFT */}
-        <div
-          className="rounded-xl p-5"
-          style={{
-            backgroundColor: "#0f1624",
-            border: "1px solid rgba(99,179,237,0.08)",
-          }}
-        >
-          <h3 className="font-semibold mb-4">Team Members</h3>
+      {/* ── Top Section: Select + Configure (side by side) ── */}
+      <div className="grid md:grid-cols-2 gap-6 mb-6">
 
-          <div className="space-y-2">
-            {members.map((member) => (
-              <button
-                key={member._id}
-                onClick={() => {
-                  setSelectedMember(member);
+        {/* LEFT — Member Selection */}
+        <div className="rounded-xl p-5 flex flex-col gap-4" style={cardStyle}>
 
-                  setUsername(member.rollNumber || "");
-                  setPassword(member.rollNumber || "");
-                }}
-                className="w-full text-left p-3 rounded-lg transition-all"
-                style={{
-                  backgroundColor:
-                    selectedMember?._id === member._id
-                      ? "rgba(59,130,246,0.15)"
-                      : "rgba(255,255,255,0.02)",
-                }}
-              >
-                <div>{member.name}</div>
-
-                <div className="text-xs" style={{ color: "#64748b" }}>
-                  {member.role}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div
-          className="rounded-xl p-5 mt-6"
-          style={{
-            backgroundColor: "#0f1624",
-            border: "1px solid rgba(99,179,237,0.08)",
-          }}
-        >
-          <h3 className="font-semibold mb-4">External Admin</h3>
-
-          <div className="space-y-3">
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={externalName}
-              onChange={(e) => setExternalName(e.target.value)}
-              className="w-full p-3 rounded-lg"
-            />
-
-            <input
-              type="text"
-              placeholder="Role"
-              value={externalRole}
-              onChange={(e) => setExternalRole(e.target.value)}
-              className="w-full p-3 rounded-lg"
-            />
-
-            <button
-              onClick={editingAdminId ? updateAccess : saveExternalAdmin}
-              className="px-4 py-2 rounded-lg bg-green-600"
-            >
-              {editingAdminId
-                ? "Update External Admin"
-                : "Create External Admin"}
-            </button>
-          </div>
-        </div>
-
-        {/* RIGHT */}
-        <div
-          className="rounded-xl p-5"
-          style={{
-            backgroundColor: "#0f1624",
-            border: "1px solid rgba(99,179,237,0.08)",
-          }}
-        >
-          {!selectedMember && !editingAdminId ? (
-            <p style={{ color: "#64748b" }}>Select a team member</p>
-          ) : (
-            <>
-              <h3 className="font-semibold mb-2">
-                {selectedMember?.name || externalName}
+          {/* Team Members List */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-sm uppercase tracking-widest" style={{ color: "#94a3b8" }}>
+                Team Members
               </h3>
+              {selectedMember && (
+                <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: "rgba(59,130,246,0.15)", color: "#60a5fa" }}>
+                  Selected
+                </span>
+              )}
+            </div>
+            <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
+              {members.map((member) => (
+                <button
+                  key={member._id}
+                  onClick={() => {
+                    setSelectedMember(member);
+                    setShowExternalAdmin(false);
+                    setUsername(member.rollNumber || "");
+                    setPassword(member.rollNumber || "");
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-lg transition-all"
+                  style={{
+                    backgroundColor:
+                      selectedMember?._id === member._id
+                        ? "rgba(59,130,246,0.18)"
+                        : "rgba(255,255,255,0.02)",
+                    border:
+                      selectedMember?._id === member._id
+                        ? "1px solid rgba(59,130,246,0.35)"
+                        : "1px solid transparent",
+                  }}
+                >
+                  <div className="font-medium text-sm">{member.name}</div>
+                  <div className="text-xs mt-0.5" style={{ color: "#64748b" }}>
+                    {member.role}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
 
-              <p className="text-sm mb-5" style={{ color: "#64748b" }}>
-                {selectedMember?.role || externalRole}
-              </p>
+          {/* Divider */}
+          <div style={{ borderTop: "1px solid rgba(99,179,237,0.08)" }} />
 
-              <div className="space-y-4">
+          {/* External Admin Toggle */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-sm uppercase tracking-widest" style={{ color: "#94a3b8" }}>
+                External Admin
+              </h3>
+            </div>
+            <button
+              onClick={() => {
+                setShowExternalAdmin(!showExternalAdmin);
+                setSelectedMember(null);
+              }}
+              className="w-full py-2 rounded-lg text-sm font-medium transition-all"
+              style={{
+                backgroundColor: showExternalAdmin
+                  ? "rgba(34,197,94,0.15)"
+                  : "rgba(34,197,94,0.08)",
+                color: "#22c55e",
+                border: "1px solid rgba(34,197,94,0.25)",
+              }}
+            >
+              {showExternalAdmin ? "✕ Close External Admin" : "+ Create External Admin"}
+            </button>
+
+            {showExternalAdmin && (
+              <div className="mt-3 space-y-3">
                 <input
                   type="text"
+                  placeholder="Full Name"
+                  value={externalName}
+                  onChange={(e) => setExternalName(e.target.value)}
+                  style={inputStyle}
+                />
+                <input
+                  type="text"
+                  placeholder="Role"
+                  value={externalRole}
+                  onChange={(e) => setExternalRole(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT — Permissions & Credentials */}
+        <div className="rounded-xl p-5" style={cardStyle}>
+          {!hasSelection ? (
+            <div className="h-full flex flex-col items-center justify-center text-center gap-2" style={{ color: "#475569" }}>
+              <div className="text-3xl mb-1">👤</div>
+              <p className="font-medium">No member selected</p>
+              <p className="text-sm">Select a team member or create an external admin to configure access.</p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {/* Selected member header */}
+              <div>
+                <h3 className="font-semibold text-base">
+                  {selectedMember?.name || externalName || "External Admin"}
+                </h3>
+                <p className="text-sm mt-0.5" style={{ color: "#64748b" }}>
+                  {selectedMember?.role || externalRole || "No role set"}
+                </p>
+              </div>
+
+              <div style={{ borderTop: "1px solid rgba(99,179,237,0.08)" }} />
+
+              {/* Credentials */}
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#94a3b8" }}>
+                  Credentials
+                </p>
+                <input
+                  type="text"
+                  placeholder="Username"
                   value={username}
                   readOnly={selectedMember !== null}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full p-3 rounded-lg"
+                  style={{
+                    ...inputStyle,
+                    opacity: selectedMember !== null ? 0.6 : 1,
+                    cursor: selectedMember !== null ? "not-allowed" : "text",
+                  }}
                 />
-
                 <input
                   type="password"
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full p-3 rounded-lg"
+                  style={inputStyle}
                 />
+              </div>
 
-                <div className="space-y-3">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={permissions.events}
-                      onChange={(e) =>
-                        setPermissions({
-                          ...permissions,
-                          events: e.target.checked,
-                        })
-                      }
-                    />
-                    Events Access
-                  </label>
+              <div style={{ borderTop: "1px solid rgba(99,179,237,0.08)" }} />
 
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={permissions.team}
-                      onChange={(e) =>
-                        setPermissions({
-                          ...permissions,
-                          team: e.target.checked,
-                        })
-                      }
-                    />
-                    Team Access
-                  </label>
+              {/* Permissions */}
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#94a3b8" }}>
+                  Permissions
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {permissionKeys.map(({ key, label }) => (
+                    <label
+                      key={key}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all"
+                      style={{
+                        backgroundColor: permissions[key]
+                          ? "rgba(59,130,246,0.12)"
+                          : "rgba(255,255,255,0.03)",
+                        border: permissions[key]
+                          ? "1px solid rgba(59,130,246,0.3)"
+                          : "1px solid rgba(99,179,237,0.08)",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={permissions[key]}
+                        onChange={(e) =>
+                          setPermissions({ ...permissions, [key]: e.target.checked })
+                        }
+                        style={{ accentColor: "#3b82f6" }}
+                      />
+                      <span className="text-sm">{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
 
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={permissions.registrations}
-                      onChange={(e) =>
-                        setPermissions({
-                          ...permissions,
-                          registrations: e.target.checked,
-                        })
-                      }
-                    />
-                    Registration Access
-                  </label>
+              {/* Save Button */}
+              <button
+                onClick={
+                  editingAdminId
+                    ? updateAccess
+                    : isExternalMode
+                    ? saveExternalAdmin
+                    : saveAccess
+                }
+                className="w-full py-3 rounded-lg font-semibold text-sm transition-all"
+                style={{
+                  backgroundColor: editingAdminId ? "#2563eb" : "#1d4ed8",
+                  color: "#fff",
+                }}
+              >
+                {editingAdminId
+                  ? isExternalMode
+                    ? "Update External Admin"
+                    : "Update Access"
+                  : isExternalMode
+                  ? "Create External Admin"
+                  : "Save Access"}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={permissions.messages}
-                      onChange={(e) =>
-                        setPermissions({
-                          ...permissions,
-                          messages: e.target.checked,
-                        })
-                      }
-                    />
-                    Messages Access
-                  </label>
+      {/* ── Bottom Section: Existing Admins (full width) ── */}
+      <div className="rounded-xl p-5" style={cardStyle}>
+        {/* Section Header + Search */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+          <h3 className="font-semibold text-sm uppercase tracking-widest" style={{ color: "#94a3b8" }}>
+            Existing Admins
+            <span
+              className="ml-2 text-xs px-2 py-0.5 rounded-full font-normal normal-case"
+              style={{ backgroundColor: "rgba(99,179,237,0.1)", color: "#60a5fa" }}
+            >
+              {filteredAdmins.length}
+            </span>
+          </h3>
+          <input
+            type="text"
+            placeholder="Search admins..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ ...inputStyle, width: "220px" }}
+          />
+        </div>
+
+        {/* Admin Cards Grid */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredAdmins.map((admin: any) => {
+            const name = admin.isExternal ? admin.name : admin.memberId?.name;
+            const role = admin.isExternal ? admin.role : admin.memberId?.role;
+            const activePerms = Object.entries(admin.permissions)
+              .filter(([, v]) => v)
+              .map(([k]) => k);
+
+            return (
+              <div
+                key={admin._id}
+                className="rounded-xl p-4 flex flex-col gap-3"
+                style={{
+                  backgroundColor: "#080d1a",
+                  border: "1px solid rgba(99,179,237,0.10)",
+                }}
+              >
+                {/* Admin Info */}
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="font-semibold text-sm">{name}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "#64748b" }}>{role}</div>
+                  </div>
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full shrink-0"
+                    style={{
+                      backgroundColor: admin.isExternal
+                        ? "rgba(168,85,247,0.15)"
+                        : "rgba(59,130,246,0.15)",
+                      color: admin.isExternal ? "#a855f7" : "#60a5fa",
+                    }}
+                  >
+                    {admin.isExternal ? "External" : "Member"}
+                  </span>
                 </div>
 
-                <button
-                  onClick={editingAdminId ? updateAccess : saveAccess}
-                  className="px-5 py-3 rounded-lg bg-blue-600"
-                >
-                  {editingAdminId ? "Update Access" : "Save Access"}
-                </button>
-              </div>
-            </>
-          )}
-          <div className="mt-8">
-            <input
-              type="text"
-              placeholder="Search Admin..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full p-3 rounded-lg mb-4"
-              style={{
-                backgroundColor: "#0f1624",
-                border: "1px solid rgba(99,179,237,0.08)",
-              }}
-            />
-            <h3 className="font-semibold mb-4">Existing Admins</h3>
-
-            <div className="space-y-3">
-              {filteredAdmins.map((admin: any) => (
+                {/* Username */}
                 <div
-                  key={admin._id}
-                  className="p-4 rounded-xl"
-                  style={{
-                    backgroundColor: "#0f1624",
-                    border: "1px solid rgba(99,179,237,0.08)",
-                  }}
+                  className="text-xs px-3 py-1.5 rounded-lg"
+                  style={{ backgroundColor: "rgba(255,255,255,0.03)", color: "#94a3b8" }}
                 >
-                  <div className="font-medium">
-                    {admin.isExternal ? admin.name : admin.memberId?.name}
-                  </div>
+                  @{admin.username}
+                </div>
 
-                  <div className="text-sm" style={{ color: "#64748b" }}>
-                    {admin.isExternal ? admin.role : admin.memberId?.role}
-                  </div>
-
-                  <div className="text-xs mt-1" style={{ color: "#60a5fa" }}>
-                    {admin.isExternal ? "External Admin" : "Team Member Admin"}
-                  </div>
-
-                  <div className="text-sm mt-2" style={{ color: "#64748b" }}>
-                    Username: {admin.username}
-                  </div>
-                  <div className="mt-3 text-sm">Permissions:</div>
-
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {admin.permissions.events && (
-                      <span className="px-2 py-1 rounded bg-blue-500/20 text-xs">
-                        Events
+                {/* Permission Badges */}
+                {activePerms.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {activePerms.map((p) => (
+                      <span
+                        key={p}
+                        className="text-xs px-2 py-0.5 rounded capitalize"
+                        style={{ backgroundColor: "rgba(59,130,246,0.15)", color: "#93c5fd" }}
+                      >
+                        {p}
                       </span>
-                    )}
-
-                    {admin.permissions.team && (
-                      <span className="px-2 py-1 rounded bg-blue-500/20 text-xs">
-                        Team
-                      </span>
-                    )}
-
-                    {admin.permissions.messages && (
-                      <span className="px-2 py-1 rounded bg-blue-500/20 text-xs">
-                        Messages
-                      </span>
-                    )}
-
-                    {admin.permissions.registrations && (
-                      <span className="px-2 py-1 rounded bg-blue-500/20 text-xs">
-                        Registrations
-                      </span>
-                    )}
+                    ))}
                   </div>
+                ) : (
+                  <span className="text-xs" style={{ color: "#475569" }}>No permissions set</span>
+                )}
 
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-2 mt-1">
                   <button
                     onClick={() => openViewModal(admin)}
-                    className="mt-3 mr-2 px-3 py-2 rounded-lg text-sm"
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium"
                     style={{
                       backgroundColor: "rgba(34,197,94,0.1)",
                       color: "#22c55e",
@@ -490,104 +514,134 @@ const AdminsTab = () => {
                   >
                     👁 View
                   </button>
-
                   <button
                     onClick={() => editAdmin(admin)}
-                    className="mt-3 mr-2 px-3 py-2 rounded-lg text-sm"
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium"
                     style={{
                       backgroundColor: "rgba(59,130,246,0.1)",
                       color: "#60a5fa",
                       border: "1px solid rgba(59,130,246,0.2)",
                     }}
                   >
-                    Edit Access
+                    ✏️ Edit
                   </button>
-
                   <button
                     onClick={() => resetPassword(admin._id)}
-                    className="mt-3 mr-2 px-3 py-2 rounded-lg text-sm"
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium"
                     style={{
                       backgroundColor: "rgba(245,158,11,0.1)",
                       color: "#f59e0b",
                       border: "1px solid rgba(245,158,11,0.2)",
                     }}
                   >
-                    🔑 Reset Password
+                    🔑 Reset
                   </button>
-
                   <button
                     onClick={() => deleteAdmin(admin._id)}
-                    className="mt-3 px-3 py-2 rounded-lg text-sm"
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium"
                     style={{
                       backgroundColor: "rgba(239,68,68,0.1)",
                       color: "#f87171",
                       border: "1px solid rgba(239,68,68,0.2)",
                     }}
                   >
-                    Remove Access
-                  </button>
-                </div>
-              ))}
-            </div>
-            {showViewModal && viewAdmin && (
-              <div
-                className="fixed inset-0 flex items-center justify-center z-50"
-                style={{
-                  backgroundColor: "rgba(0,0,0,0.7)",
-                }}
-              >
-                <div
-                  className="p-6 rounded-xl w-full max-w-md"
-                  style={{
-                    backgroundColor: "#0f1624",
-                  }}
-                >
-                  <h2 className="text-xl font-bold mb-4">Admin Details</h2>
-
-                  <p>
-                    <strong>Name:</strong>{" "}
-                    {viewAdmin.isExternal
-                      ? viewAdmin.name
-                      : viewAdmin.memberId?.name}
-                  </p>
-
-                  <p>
-                    <strong>Role:</strong>{" "}
-                    {viewAdmin.isExternal
-                      ? viewAdmin.role
-                      : viewAdmin.memberId?.role}
-                  </p>
-
-                  <p>
-                    <strong>Username:</strong> {viewAdmin.username}
-                  </p>
-
-                  <p className="mt-3">
-                    <strong>Password Status:</strong>{" "}
-                    {viewAdmin.mustChangePassword
-                      ? "Using Default Password"
-                      : "Changed"}
-                  </p>
-
-                  <p>
-                    <strong>Last Password Change:</strong>{" "}
-                    {viewAdmin.lastPasswordChange
-                      ? new Date(viewAdmin.lastPasswordChange).toLocaleString()
-                      : "Never"}
-                  </p>
-
-                  <button
-                    onClick={() => setShowViewModal(false)}
-                    className="mt-5 px-4 py-2 rounded-lg bg-blue-600"
-                  >
-                    Close
+                    🗑 Remove
                   </button>
                 </div>
               </div>
-            )}
-          </div>
+            );
+          })}
+
+          {filteredAdmins.length === 0 && (
+            <div
+              className="col-span-full text-center py-12"
+              style={{ color: "#475569" }}
+            >
+              {search ? `No admins found for "${search}"` : "No admins yet. Add one above."}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* ── View Modal ── */}
+      {showViewModal && viewAdmin && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ backgroundColor: "rgba(0,0,0,0.75)" }}
+          onClick={() => setShowViewModal(false)}
+        >
+          <div
+            className="p-6 rounded-xl w-full max-w-md"
+            style={{ backgroundColor: "#0f1624", border: "1px solid rgba(99,179,237,0.15)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold">Admin Details</h2>
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="text-lg leading-none"
+                style={{ color: "#64748b" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              {[
+                ["Name", viewAdmin.isExternal ? viewAdmin.name : viewAdmin.memberId?.name],
+                ["Role", viewAdmin.isExternal ? viewAdmin.role : viewAdmin.memberId?.role],
+                ["Username", `@${viewAdmin.username}`],
+                ["Admin Type", viewAdmin.isExternal ? "External Admin" : "Team Member Admin"],
+                ["Created On", new Date(viewAdmin.createdAt).toLocaleString()],
+                ["Password Status", viewAdmin.mustChangePassword ? "Using Default Password" : "Changed"],
+                [
+                  "Last Password Change",
+                  viewAdmin.lastPasswordChange
+                    ? new Date(viewAdmin.lastPasswordChange).toLocaleString()
+                    : "Never",
+                ],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="flex justify-between gap-3 px-3 py-2 rounded-lg"
+                  style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
+                >
+                  <span style={{ color: "#64748b" }}>{label}</span>
+                  <span className="text-right font-medium">{value}</span>
+                </div>
+              ))}
+
+              <div
+                className="px-3 py-2 rounded-lg"
+                style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
+              >
+                <div className="mb-2" style={{ color: "#64748b" }}>Permissions</div>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(viewAdmin.permissions)
+                    .filter(([, v]) => v)
+                    .map(([k]) => (
+                      <span
+                        key={k}
+                        className="px-2 py-0.5 rounded text-xs capitalize"
+                        style={{ backgroundColor: "rgba(59,130,246,0.2)", color: "#93c5fd" }}
+                      >
+                        {k}
+                      </span>
+                    ))}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowViewModal(false)}
+              className="mt-5 w-full py-2 rounded-lg font-medium text-sm"
+              style={{ backgroundColor: "#1d4ed8", color: "#fff" }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
