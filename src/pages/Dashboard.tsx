@@ -165,7 +165,9 @@ const StatCard = ({ label, value, color, icon: Icon }: any) => {
 const Dashboard = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
-  const [permissions, setPermissions] = useState<any>({});
+  const [permissions, setPermissions] = useState(
+  JSON.parse(localStorage.getItem("permissions") || "{}")
+);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(false);
 
@@ -314,23 +316,13 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!token) return;
-    fetchProfile();
+    //fetchProfile();
     fetchEvents();
     fetchMembers();
     fetchRegistrations();
     const interval = setInterval(() => {
       if (activeTab === "registrations") fetchRegistrations();
     }, 10000);
-    return () => clearInterval(interval);
-  }, [token]);
-
-  useEffect(() => {
-    if (!token) return;
-
-    const interval = setInterval(() => {
-      fetchProfile();
-    }, 15000);
-
     return () => clearInterval(interval);
   }, [token]);
 
@@ -719,28 +711,6 @@ const Dashboard = () => {
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
-
-  const fetchProfile = async () => {
-    try {
-      const res = await axios.get(
-        "https://ieee-sps-website.onrender.com/api/admin-access/profile",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      setPermissions(res.data.permissions || {});
-
-      localStorage.setItem(
-        "permissions",
-        JSON.stringify(res.data.permissions || {}),
-      );
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   /* ══ RENDER ══ */
   return (
