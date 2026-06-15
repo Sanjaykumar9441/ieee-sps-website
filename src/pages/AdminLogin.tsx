@@ -38,6 +38,8 @@ const AdminLogin = () => {
             admins: true,
           }),
         );
+
+        window.location.href = "/dashboard";
       } else {
         res = await axios.post(
           "https://ieee-sps-website.onrender.com/api/admin-access/login",
@@ -53,9 +55,13 @@ const AdminLogin = () => {
           "permissions",
           JSON.stringify(res.data.permissions),
         );
-      }
 
-      window.location.href = "/dashboard";
+        if (res.data.mustChangePassword) {
+          window.location.href = "/change-password";
+        } else {
+          window.location.href = "/dashboard";
+        }
+      }
     } catch (err: any) {
       console.log(err.response?.data);
 

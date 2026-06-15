@@ -145,6 +145,7 @@ router.post("/login", async (req, res) => {
       role: "admin",
       permissions: admin.permissions,
       member: admin.memberId,
+      mustChangePassword: admin.mustChangePassword,
     });
   } catch (err) {
     console.error(err);
@@ -155,5 +156,118 @@ router.post("/login", async (req, res) => {
     });
   }
 });
+
+/* =========================
+   CHANGE PASSWORD
+========================= */
+
+router.post(
+  "/change-password",
+  verifyToken,
+  async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      const admin = await AdminAccess.findById(
+        req.user.id,
+      );
+
+      if (!admin) {
+        return res.status(404).json({
+          message: "Admin not found",
+        });
+      }
+
+      const isMatch = await bcrypt.compare(
+        currentPassword,
+        admin.password,
+      );
+
+      if (!isMatch) {
+        return res.status(400).json({
+          message: "Current password incorrect",
+        });
+      }
+
+      admin.password = await bcrypt.hash(
+        newPassword,
+        10,
+      );
+
+      admin.mustChangePassword = false;
+
+      admin.lastPasswordChange = new Date();
+
+      await admin.save();
+
+      res.json({
+        success: true,
+        message: "Password updated successfully",
+      });
+    } catch (err) {
+      console.error(err);
+
+      res.status(500).json({
+        message: "Server Error",
+      });
+    }
+  },
+);
+
+/* =========================
+   RESET PASSWORD
+========================= */
+
+router.post(
+  "/reset-password/:id",
+  verifyToken,
+  async (req, res) => {
+    try {
+      const admin = await AdminAccess.findById(
+        req.params.id,
+      ).populate("memberId");
+
+      if (!admin) {
+        return res.status(404).json({
+          message: "Admin not found",
+        });
+      }
+
+      let defaultPassword = "";
+
+      if (
+        admin.isExternal === false &&
+        admin.memberId
+      ) {
+        defaultPassword =
+          admin.memberId.rollNumber;
+      } else {
+        defaultPassword = "ChangeMe123";
+      }
+
+      admin.password = await bcrypt.hash(
+        defaultPassword,
+        10,
+      );
+
+      admin.mustChangePassword = true;
+
+      admin.lastPasswordChange = null;
+
+      await admin.save();
+
+      res.json({
+        success: true,
+        message: "Password reset successfully",
+      });
+    } catch (err) {
+      console.error(err);
+
+      res.status(500).json({
+        message: "Failed to reset password",
+      });
+    }
+  },
+);
 
 module.exports = router;

@@ -12,6 +12,7 @@ import Register from "./pages/Register"; // temporary
 import { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import LoadingScreen from "./components/LoadingScreen";
+import ChangePassword from "./pages/ChangePassword";
 function App() {
   const [loading, setLoading] = useState(true);
 
@@ -43,6 +44,7 @@ function App() {
             <Route path="/arduino-days" element={<ArduinoDays />} />
             <Route path="/register" element={<Register />} />
             <Route path="/all-members" element={<AllMembers />} />
+            <Route path="/change-password" element={<ChangePassword />} />
           </Routes>
         </div>
 

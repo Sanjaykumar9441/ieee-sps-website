@@ -23,6 +23,16 @@ const adminAccessSchema = new mongoose.Schema(
       default: false,
     },
 
+    mustChangePassword: {
+      type: Boolean,
+      default: true,
+    },
+
+    lastPasswordChange: {
+      type: Date,
+      default: null,
+    },
+
     username: {
       type: String,
       required: true,

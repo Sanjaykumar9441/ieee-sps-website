@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-const token = localStorage.getItem("token");
 
 const AdminsTab = () => {
+  const token = localStorage.getItem("token");
   const [members, setMembers] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
   const [selectedMember, setSelectedMember] = useState<any>(null);
   const [editingAdminId, setEditingAdminId] = useState("");
+  const [viewAdmin, setViewAdmin] = useState<any>(null);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [externalName, setExternalName] = useState("");
   const [externalRole, setExternalRole] = useState("");
+  const [search, setSearch] = useState("");
 
   const [permissions, setPermissions] = useState({
     events: false,
@@ -75,10 +78,38 @@ const AdminsTab = () => {
     }
   };
 
+  const resetPassword = async (id: string) => {
+    try {
+      await axios.post(
+        `https://ieee-sps-website.onrender.com/api/admin-access/reset-password/${id}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      alert(
+        "Password reset successfully. User must change password on next login.",
+      );
+    } catch (err) {
+      console.error(err);
+
+      alert("Failed to reset password");
+    }
+  };
+
   const editAdmin = (admin: any) => {
     setEditingAdminId(admin._id);
 
-    setSelectedMember(admin.memberId);
+    if (admin.isExternal) {
+      setExternalName(admin.name);
+      setExternalRole(admin.role);
+      setSelectedMember(null);
+    } else {
+      setSelectedMember(admin.memberId);
+    }
 
     setUsername(admin.username);
 
@@ -90,14 +121,21 @@ const AdminsTab = () => {
     });
   };
 
+  const openViewModal = (admin: any) => {
+    setViewAdmin(admin);
+    setShowViewModal(true);
+  };
+
   const saveAccess = async () => {
     try {
       await axios.post(
         "https://ieee-sps-website.onrender.com/api/admin-access",
         {
           memberId: selectedMember._id,
-          username,
-          password,
+
+          username: selectedMember.rollNumber,
+          password: selectedMember.rollNumber,
+
           permissions,
         },
         {
@@ -152,6 +190,8 @@ const AdminsTab = () => {
         {
           username,
           permissions,
+          name: externalName,
+          role: externalRole,
         },
         {
           headers: {
@@ -170,6 +210,12 @@ const AdminsTab = () => {
       alert("Failed to update access");
     }
   };
+
+  const filteredAdmins = admins.filter((admin: any) => {
+    const name = admin.isExternal ? admin.name : admin.memberId?.name;
+
+    return name?.toLowerCase().includes(search.toLowerCase());
+  });
 
   return (
     <div>
@@ -201,7 +247,12 @@ const AdminsTab = () => {
             {members.map((member) => (
               <button
                 key={member._id}
-                onClick={() => setSelectedMember(member)}
+                onClick={() => {
+                  setSelectedMember(member);
+
+                  setUsername(member.rollNumber || "");
+                  setPassword(member.rollNumber || "");
+                }}
                 className="w-full text-left p-3 rounded-lg transition-all"
                 style={{
                   backgroundColor:
@@ -247,10 +298,12 @@ const AdminsTab = () => {
             />
 
             <button
-              onClick={saveExternalAdmin}
+              onClick={editingAdminId ? updateAccess : saveExternalAdmin}
               className="px-4 py-2 rounded-lg bg-green-600"
             >
-              Create External Admin
+              {editingAdminId
+                ? "Update External Admin"
+                : "Create External Admin"}
             </button>
           </div>
         </div>
@@ -263,21 +316,23 @@ const AdminsTab = () => {
             border: "1px solid rgba(99,179,237,0.08)",
           }}
         >
-          {!selectedMember ? (
+          {!selectedMember && !editingAdminId ? (
             <p style={{ color: "#64748b" }}>Select a team member</p>
           ) : (
             <>
-              <h3 className="font-semibold mb-2">{selectedMember.name}</h3>
+              <h3 className="font-semibold mb-2">
+                {selectedMember?.name || externalName}
+              </h3>
 
               <p className="text-sm mb-5" style={{ color: "#64748b" }}>
-                {selectedMember.role}
+                {selectedMember?.role || externalRole}
               </p>
 
               <div className="space-y-4">
                 <input
                   type="text"
-                  placeholder="Username"
                   value={username}
+                  readOnly={selectedMember !== null}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full p-3 rounded-lg"
                 />
@@ -358,10 +413,21 @@ const AdminsTab = () => {
             </>
           )}
           <div className="mt-8">
+            <input
+              type="text"
+              placeholder="Search Admin..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full p-3 rounded-lg mb-4"
+              style={{
+                backgroundColor: "#0f1624",
+                border: "1px solid rgba(99,179,237,0.08)",
+              }}
+            />
             <h3 className="font-semibold mb-4">Existing Admins</h3>
 
             <div className="space-y-3">
-              {admins.map((admin: any) => (
+              {filteredAdmins.map((admin: any) => (
                 <div
                   key={admin._id}
                   className="p-4 rounded-xl"
@@ -370,11 +436,60 @@ const AdminsTab = () => {
                     border: "1px solid rgba(99,179,237,0.08)",
                   }}
                 >
-                  <div className="font-medium">{admin.memberId?.name}</div>
+                  <div className="font-medium">
+                    {admin.isExternal ? admin.name : admin.memberId?.name}
+                  </div>
 
                   <div className="text-sm" style={{ color: "#64748b" }}>
+                    {admin.isExternal ? admin.role : admin.memberId?.role}
+                  </div>
+
+                  <div className="text-xs mt-1" style={{ color: "#60a5fa" }}>
+                    {admin.isExternal ? "External Admin" : "Team Member Admin"}
+                  </div>
+
+                  <div className="text-sm mt-2" style={{ color: "#64748b" }}>
                     Username: {admin.username}
                   </div>
+                  <div className="mt-3 text-sm">Permissions:</div>
+
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {admin.permissions.events && (
+                      <span className="px-2 py-1 rounded bg-blue-500/20 text-xs">
+                        Events
+                      </span>
+                    )}
+
+                    {admin.permissions.team && (
+                      <span className="px-2 py-1 rounded bg-blue-500/20 text-xs">
+                        Team
+                      </span>
+                    )}
+
+                    {admin.permissions.messages && (
+                      <span className="px-2 py-1 rounded bg-blue-500/20 text-xs">
+                        Messages
+                      </span>
+                    )}
+
+                    {admin.permissions.registrations && (
+                      <span className="px-2 py-1 rounded bg-blue-500/20 text-xs">
+                        Registrations
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => openViewModal(admin)}
+                    className="mt-3 mr-2 px-3 py-2 rounded-lg text-sm"
+                    style={{
+                      backgroundColor: "rgba(34,197,94,0.1)",
+                      color: "#22c55e",
+                      border: "1px solid rgba(34,197,94,0.2)",
+                    }}
+                  >
+                    👁 View
+                  </button>
 
                   <button
                     onClick={() => editAdmin(admin)}
@@ -386,6 +501,18 @@ const AdminsTab = () => {
                     }}
                   >
                     Edit Access
+                  </button>
+
+                  <button
+                    onClick={() => resetPassword(admin._id)}
+                    className="mt-3 mr-2 px-3 py-2 rounded-lg text-sm"
+                    style={{
+                      backgroundColor: "rgba(245,158,11,0.1)",
+                      color: "#f59e0b",
+                      border: "1px solid rgba(245,158,11,0.2)",
+                    }}
+                  >
+                    🔑 Reset Password
                   </button>
 
                   <button
@@ -402,6 +529,62 @@ const AdminsTab = () => {
                 </div>
               ))}
             </div>
+            {showViewModal && viewAdmin && (
+              <div
+                className="fixed inset-0 flex items-center justify-center z-50"
+                style={{
+                  backgroundColor: "rgba(0,0,0,0.7)",
+                }}
+              >
+                <div
+                  className="p-6 rounded-xl w-full max-w-md"
+                  style={{
+                    backgroundColor: "#0f1624",
+                  }}
+                >
+                  <h2 className="text-xl font-bold mb-4">Admin Details</h2>
+
+                  <p>
+                    <strong>Name:</strong>{" "}
+                    {viewAdmin.isExternal
+                      ? viewAdmin.name
+                      : viewAdmin.memberId?.name}
+                  </p>
+
+                  <p>
+                    <strong>Role:</strong>{" "}
+                    {viewAdmin.isExternal
+                      ? viewAdmin.role
+                      : viewAdmin.memberId?.role}
+                  </p>
+
+                  <p>
+                    <strong>Username:</strong> {viewAdmin.username}
+                  </p>
+
+                  <p className="mt-3">
+                    <strong>Password Status:</strong>{" "}
+                    {viewAdmin.mustChangePassword
+                      ? "Using Default Password"
+                      : "Changed"}
+                  </p>
+
+                  <p>
+                    <strong>Last Password Change:</strong>{" "}
+                    {viewAdmin.lastPasswordChange
+                      ? new Date(viewAdmin.lastPasswordChange).toLocaleString()
+                      : "Never"}
+                  </p>
+
+                  <button
+                    onClick={() => setShowViewModal(false)}
+                    className="mt-5 px-4 py-2 rounded-lg bg-blue-600"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
