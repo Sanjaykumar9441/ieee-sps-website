@@ -33,6 +33,15 @@ const adminAccessSchema = new mongoose.Schema(
       default: null,
     },
 
+    lastLogin: {
+      type: Date,
+    },
+
+    isPaused: {
+      type: Boolean,
+      default: false,
+    },
+
     username: {
       type: String,
       required: true,

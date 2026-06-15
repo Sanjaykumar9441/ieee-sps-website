@@ -9,6 +9,8 @@ import ManageEventsTab from "./Dashboard/components/ManageEventsTab";
 import TeamTab from "./Dashboard/components/TeamTab";
 import MessagesTab from "./Dashboard/components/MessagesTab";
 import AdminsTab from "./Dashboard/components/AdminsTab";
+import ActivityLogsTab from "./Dashboard/components/ActivityLogsTab";
+import Profile from "./Profile";
 
 const collegeMap: Record<string, string> = {
   AUS: "Aditya University (AUS)",
@@ -30,6 +32,7 @@ import {
   Calendar,
   Mail,
   Upload,
+  User,
   LogOut,
   Users,
   Menu,
@@ -642,6 +645,11 @@ const Dashboard = () => {
   const isSuperAdmin = permissions.admins === true;
 
   const menu = [
+    {
+      id: "profile",
+      label: "My Profile",
+      icon: User,
+    },
     ...(permissions.events
       ? [
           { id: "upload", label: "Upload Event", icon: Upload },
@@ -668,6 +676,10 @@ const Dashboard = () => {
       : []),
 
     ...(isSuperAdmin ? [{ id: "admins", label: "Admins", icon: Shield }] : []),
+
+    ...(isSuperAdmin
+      ? [{ id: "activity", label: "Activity Logs", icon: BookOpen }]
+      : []),
   ];
 
   const filteredRegistrations = (viewStatus: string) =>
@@ -891,6 +903,8 @@ const Dashboard = () => {
             </div>
           </div>
 
+          {activeTab === "profile" && <Profile />}
+
           {activeTab === "upload" && (
             <UploadEventTab
               handleEventUpload={handleEventUpload}
@@ -951,763 +965,782 @@ const Dashboard = () => {
             />
           )}
 
-          {activeTab === "messages" && (permissions.messages || isSuperAdmin) && (
-            <MessagesTab
-              messages={messages}
-              deleteMessage={deleteMessage}
-              cardStyle={cardStyle}
-            />
-          )}
+          {activeTab === "messages" &&
+            (permissions.messages || isSuperAdmin) && (
+              <MessagesTab
+                messages={messages}
+                deleteMessage={deleteMessage}
+                cardStyle={cardStyle}
+              />
+            )}
 
           {/* ── REGISTRATIONS ── */}
-          {activeTab === "registrations" && (permissions.registrations || isSuperAdmin) && (
-            <div>
-              <div className="mb-8">
-                <h2
-                  className="text-2xl font-bold mb-1"
-                  style={{ fontFamily: "'Orbitron', sans-serif" }}
-                >
-                  Registrations
-                </h2>
-                <div className="flex items-center gap-3 mt-3 flex-wrap">
-                  {/* Registration open/closed badge */}
-                  <span
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium"
-                    style={{
-                      backgroundColor: registrationOpen
-                        ? "rgba(34,197,94,0.1)"
-                        : "rgba(239,68,68,0.1)",
-                      color: registrationOpen ? "#22c55e" : "#ef4444",
-                      border: `1px solid ${registrationOpen ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
-                    }}
+          {activeTab === "registrations" &&
+            (permissions.registrations || isSuperAdmin) && (
+              <div>
+                <div className="mb-8">
+                  <h2
+                    className="text-2xl font-bold mb-1"
+                    style={{ fontFamily: "'Orbitron', sans-serif" }}
                   >
+                    Registrations
+                  </h2>
+                  <div className="flex items-center gap-3 mt-3 flex-wrap">
+                    {/* Registration open/closed badge */}
                     <span
-                      className="w-1.5 h-1.5 rounded-full"
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium"
                       style={{
                         backgroundColor: registrationOpen
-                          ? "#22c55e"
-                          : "#ef4444",
-                        animation: registrationOpen
-                          ? "pulse 2s infinite"
-                          : "none",
+                          ? "rgba(34,197,94,0.1)"
+                          : "rgba(239,68,68,0.1)",
+                        color: registrationOpen ? "#22c55e" : "#ef4444",
+                        border: `1px solid ${registrationOpen ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
                       }}
-                    />
-                    {registrationOpen
-                      ? "Registrations Open"
-                      : "Registrations Closed"}
-                  </span>
-                  {/* Live indicator */}
-                  <span
-                    className="inline-flex items-center gap-2 text-xs"
-                    style={{ color: "#22c55e" }}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                    Live Updates
-                  </span>
-                </div>
-              </div>
-
-              {/* New registrations banner */}
-              {latestRegistrations.length > 0 && !newRegsBannerDismissed && (
-                <div
-                  className="mb-6 p-4 rounded-xl flex items-start justify-between gap-4"
-                  style={{
-                    backgroundColor: "rgba(59,130,246,0.08)",
-                    border: "1px solid rgba(59,130,246,0.2)",
-                  }}
-                >
-                  <div>
-                    <p
-                      className="text-sm font-semibold mb-1"
-                      style={{ color: "#60a5fa" }}
                     >
-                      🔔 New Registrations
-                    </p>
-                    {latestRegistrations.map((reg, i) => (
+                      <span
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{
+                          backgroundColor: registrationOpen
+                            ? "#22c55e"
+                            : "#ef4444",
+                          animation: registrationOpen
+                            ? "pulse 2s infinite"
+                            : "none",
+                        }}
+                      />
+                      {registrationOpen
+                        ? "Registrations Open"
+                        : "Registrations Closed"}
+                    </span>
+                    {/* Live indicator */}
+                    <span
+                      className="inline-flex items-center gap-2 text-xs"
+                      style={{ color: "#22c55e" }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                      Live Updates
+                    </span>
+                  </div>
+                </div>
+
+                {/* New registrations banner */}
+                {latestRegistrations.length > 0 && !newRegsBannerDismissed && (
+                  <div
+                    className="mb-6 p-4 rounded-xl flex items-start justify-between gap-4"
+                    style={{
+                      backgroundColor: "rgba(59,130,246,0.08)",
+                      border: "1px solid rgba(59,130,246,0.2)",
+                    }}
+                  >
+                    <div>
                       <p
-                        key={i}
-                        className="text-xs"
-                        style={{ color: "#94a3b8" }}
+                        className="text-sm font-semibold mb-1"
+                        style={{ color: "#60a5fa" }}
                       >
-                        🚀 {reg.teamName} registered for {reg.eventName}
+                        🔔 New Registrations
                       </p>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => setNewRegsBannerDismissed(true)}
-                    style={{ color: "#64748b" }}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              )}
-
-              {/* ANALYTICS CARDS */}
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-8">
-                <StatCard
-                  label="Total Revenue"
-                  value={`₹${totalRevenue}`}
-                  color="emerald"
-                  icon={DollarSign}
-                />
-                <StatCard
-                  label="Combo Revenue"
-                  value={`₹${comboRevenue}`}
-                  color="blue"
-                  icon={TrendingUp}
-                />
-                <StatCard
-                  label="Buildathon Revenue"
-                  value={`₹${buildathonRevenue}`}
-                  color="purple"
-                  icon={TrendingUp}
-                />
-                <StatCard
-                  label="Confirmed Combo"
-                  value={confirmedComboTeams}
-                  color="cyan"
-                  icon={Check}
-                />
-                <StatCard
-                  label="Confirmed Buildathon"
-                  value={confirmedBuildathonTeams}
-                  color="blue"
-                  icon={Check}
-                />
-                <StatCard
-                  label="Hostel Required"
-                  value={hostelCount}
-                  color="orange"
-                  icon={Home}
-                />
-                <StatCard
-                  label="Total Teams"
-                  value={totalCount}
-                  color="cyan"
-                  icon={Users}
-                />
-                <StatCard
-                  label="Pending"
-                  value={pendingCount}
-                  color="yellow"
-                  icon={BookOpen}
-                />
-                <StatCard
-                  label="Total Members"
-                  value={totalMembers}
-                  color="cyan"
-                  icon={Users}
-                />
-                <StatCard
-                  label="Combo Members"
-                  value={comboMembers}
-                  color="blue"
-                  icon={Users}
-                />
-                <StatCard
-                  label="Buildathon Members"
-                  value={buildathonMembers}
-                  color="purple"
-                  icon={Users}
-                />
-                <StatCard
-                  label="Hostel Students"
-                  value={hostelStudents}
-                  color="orange"
-                  icon={Home}
-                />
-              </div>
-
-              {/* CHARTS */}
-              <div className="grid md:grid-cols-3 gap-4 mb-8">
-                <div className="p-5 rounded-xl" style={cardStyle}>
-                  <h3
-                    className="text-sm font-semibold mb-4 uppercase tracking-wider"
-                    style={{ color: "#64748b" }}
-                  >
-                    Registration Status
-                  </h3>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <PieChart>
-                      <Pie
-                        data={statusData}
-                        dataKey="value"
-                        nameKey="name"
-                        outerRadius={80}
-                        label
-                      >
-                        {statusData.map((_, index) => (
-                          <Cell
-                            key={index}
-                            fill={STATUS_COLORS[index % STATUS_COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#0f1624",
-                          border: "1px solid rgba(99,179,237,0.12)",
-                          borderRadius: "8px",
-                          color: "#f0f4ff",
-                        }}
-                      />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="p-5 rounded-xl" style={cardStyle}>
-                  <h3
-                    className="text-sm font-semibold mb-4 uppercase tracking-wider"
-                    style={{ color: "#64748b" }}
-                  >
-                    Event Type
-                  </h3>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <PieChart>
-                      <Pie
-                        data={eventData}
-                        dataKey="value"
-                        nameKey="name"
-                        outerRadius={80}
-                        label
-                      >
-                        {eventData.map((_, index) => (
-                          <Cell
-                            key={index}
-                            fill={EVENT_COLORS[index % EVENT_COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#0f1624",
-                          border: "1px solid rgba(99,179,237,0.12)",
-                          borderRadius: "8px",
-                          color: "#f0f4ff",
-                        }}
-                      />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="p-5 rounded-xl" style={cardStyle}>
-                  <h3
-                    className="text-sm font-semibold mb-4 uppercase tracking-wider"
-                    style={{ color: "#64748b" }}
-                  >
-                    🏫 Top Colleges
-                  </h3>
-                  <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
-                    {collegeAnalytics.map((college, index) => (
-                      <div key={index}>
-                        <div className="flex justify-between items-center mb-1">
-                          <span
-                            className="text-xs font-medium"
-                            style={{ color: "#94a3b8" }}
-                          >
-                            {index + 1}.{" "}
-                            {collegeMap[normalizeCollege(college.name)] ||
-                              college.name}
-                          </span>
-                          <span
-                            className="text-xs font-semibold"
-                            style={{ color: "#22d3ee" }}
-                          >
-                            {college.value}
-                          </span>
-                        </div>
-                        <div
-                          className="h-1 rounded-full"
-                          style={{ backgroundColor: "rgba(99,179,237,0.08)" }}
+                      {latestRegistrations.map((reg, i) => (
+                        <p
+                          key={i}
+                          className="text-xs"
+                          style={{ color: "#94a3b8" }}
                         >
-                          <div
-                            className="h-1 rounded-full"
-                            style={{
-                              width: `${(college.value / maxCollegeCount) * 100}%`,
-                              background:
-                                "linear-gradient(to right, #3b82f6, #06b6d4)",
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* SEARCH + FILTER */}
-              <div className="flex flex-col md:flex-row md:items-center gap-4 mb-5">
-                <div className="relative">
-                  <Search
-                    size={14}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2"
-                    style={{ color: "#64748b" }}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Search team name or roll no..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 pr-9 py-2.5 text-sm rounded-xl outline-none"
-                    style={{ ...inputStyle, width: "260px" }}
-                  />
-                  {searchTerm && (
+                          🚀 {reg.teamName} registered for {reg.eventName}
+                        </p>
+                      ))}
+                    </div>
                     <button
-                      onClick={() => setSearchTerm("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      onClick={() => setNewRegsBannerDismissed(true)}
                       style={{ color: "#64748b" }}
                     >
-                      <X size={14} />
+                      <X size={16} />
                     </button>
-                  )}
+                  </div>
+                )}
+
+                {/* ANALYTICS CARDS */}
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-8">
+                  <StatCard
+                    label="Total Revenue"
+                    value={`₹${totalRevenue}`}
+                    color="emerald"
+                    icon={DollarSign}
+                  />
+                  <StatCard
+                    label="Combo Revenue"
+                    value={`₹${comboRevenue}`}
+                    color="blue"
+                    icon={TrendingUp}
+                  />
+                  <StatCard
+                    label="Buildathon Revenue"
+                    value={`₹${buildathonRevenue}`}
+                    color="purple"
+                    icon={TrendingUp}
+                  />
+                  <StatCard
+                    label="Confirmed Combo"
+                    value={confirmedComboTeams}
+                    color="cyan"
+                    icon={Check}
+                  />
+                  <StatCard
+                    label="Confirmed Buildathon"
+                    value={confirmedBuildathonTeams}
+                    color="blue"
+                    icon={Check}
+                  />
+                  <StatCard
+                    label="Hostel Required"
+                    value={hostelCount}
+                    color="orange"
+                    icon={Home}
+                  />
+                  <StatCard
+                    label="Total Teams"
+                    value={totalCount}
+                    color="cyan"
+                    icon={Users}
+                  />
+                  <StatCard
+                    label="Pending"
+                    value={pendingCount}
+                    color="yellow"
+                    icon={BookOpen}
+                  />
+                  <StatCard
+                    label="Total Members"
+                    value={totalMembers}
+                    color="cyan"
+                    icon={Users}
+                  />
+                  <StatCard
+                    label="Combo Members"
+                    value={comboMembers}
+                    color="blue"
+                    icon={Users}
+                  />
+                  <StatCard
+                    label="Buildathon Members"
+                    value={buildathonMembers}
+                    color="purple"
+                    icon={Users}
+                  />
+                  <StatCard
+                    label="Hostel Students"
+                    value={hostelStudents}
+                    color="orange"
+                    icon={Home}
+                  />
                 </div>
+
+                {/* CHARTS */}
+                <div className="grid md:grid-cols-3 gap-4 mb-8">
+                  <div className="p-5 rounded-xl" style={cardStyle}>
+                    <h3
+                      className="text-sm font-semibold mb-4 uppercase tracking-wider"
+                      style={{ color: "#64748b" }}
+                    >
+                      Registration Status
+                    </h3>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie
+                          data={statusData}
+                          dataKey="value"
+                          nameKey="name"
+                          outerRadius={80}
+                          label
+                        >
+                          {statusData.map((_, index) => (
+                            <Cell
+                              key={index}
+                              fill={STATUS_COLORS[index % STATUS_COLORS.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "#0f1624",
+                            border: "1px solid rgba(99,179,237,0.12)",
+                            borderRadius: "8px",
+                            color: "#f0f4ff",
+                          }}
+                        />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="p-5 rounded-xl" style={cardStyle}>
+                    <h3
+                      className="text-sm font-semibold mb-4 uppercase tracking-wider"
+                      style={{ color: "#64748b" }}
+                    >
+                      Event Type
+                    </h3>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie
+                          data={eventData}
+                          dataKey="value"
+                          nameKey="name"
+                          outerRadius={80}
+                          label
+                        >
+                          {eventData.map((_, index) => (
+                            <Cell
+                              key={index}
+                              fill={EVENT_COLORS[index % EVENT_COLORS.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "#0f1624",
+                            border: "1px solid rgba(99,179,237,0.12)",
+                            borderRadius: "8px",
+                            color: "#f0f4ff",
+                          }}
+                        />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="p-5 rounded-xl" style={cardStyle}>
+                    <h3
+                      className="text-sm font-semibold mb-4 uppercase tracking-wider"
+                      style={{ color: "#64748b" }}
+                    >
+                      🏫 Top Colleges
+                    </h3>
+                    <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
+                      {collegeAnalytics.map((college, index) => (
+                        <div key={index}>
+                          <div className="flex justify-between items-center mb-1">
+                            <span
+                              className="text-xs font-medium"
+                              style={{ color: "#94a3b8" }}
+                            >
+                              {index + 1}.{" "}
+                              {collegeMap[normalizeCollege(college.name)] ||
+                                college.name}
+                            </span>
+                            <span
+                              className="text-xs font-semibold"
+                              style={{ color: "#22d3ee" }}
+                            >
+                              {college.value}
+                            </span>
+                          </div>
+                          <div
+                            className="h-1 rounded-full"
+                            style={{ backgroundColor: "rgba(99,179,237,0.08)" }}
+                          >
+                            <div
+                              className="h-1 rounded-full"
+                              style={{
+                                width: `${(college.value / maxCollegeCount) * 100}%`,
+                                background:
+                                  "linear-gradient(to right, #3b82f6, #06b6d4)",
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* SEARCH + FILTER */}
+                <div className="flex flex-col md:flex-row md:items-center gap-4 mb-5">
+                  <div className="relative">
+                    <Search
+                      size={14}
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2"
+                      style={{ color: "#64748b" }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Search team name or roll no..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9 pr-9 py-2.5 text-sm rounded-xl outline-none"
+                      style={{ ...inputStyle, width: "260px" }}
+                    />
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2"
+                        style={{ color: "#64748b" }}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                  <div
+                    className="flex gap-1 p-1 rounded-xl"
+                    style={{
+                      backgroundColor: "#0f1624",
+                      border: "1px solid rgba(99,179,237,0.08)",
+                    }}
+                  >
+                    {["all", "combo", "buildathon", "hostel", "startup"].map(
+                      (f) => (
+                        <button
+                          key={f}
+                          onClick={() => setRegistrationFilter(f)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all"
+                          style={{
+                            backgroundColor:
+                              registrationFilter === f
+                                ? "rgba(59,130,246,0.15)"
+                                : "transparent",
+                            color:
+                              registrationFilter === f ? "#60a5fa" : "#64748b",
+                            border:
+                              registrationFilter === f
+                                ? "1px solid rgba(59,130,246,0.2)"
+                                : "1px solid transparent",
+                          }}
+                        >
+                          {f === "startup"
+                            ? "Startups"
+                            : f.charAt(0).toUpperCase() + f.slice(1)}
+                        </button>
+                      ),
+                    )}
+                  </div>
+                </div>
+
+                {/* PENDING / CONFIRMED SEGMENTED CONTROL */}
                 <div
-                  className="flex gap-1 p-1 rounded-xl"
+                  className="flex gap-1 p-1 rounded-xl w-fit mb-6"
                   style={{
                     backgroundColor: "#0f1624",
                     border: "1px solid rgba(99,179,237,0.08)",
                   }}
                 >
-                  {["all", "combo", "buildathon", "hostel", "startup"].map(
-                    (f) => (
-                      <button
-                        key={f}
-                        onClick={() => setRegistrationFilter(f)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all"
-                        style={{
-                          backgroundColor:
-                            registrationFilter === f
-                              ? "rgba(59,130,246,0.15)"
-                              : "transparent",
-                          color:
-                            registrationFilter === f ? "#60a5fa" : "#64748b",
-                          border:
-                            registrationFilter === f
-                              ? "1px solid rgba(59,130,246,0.2)"
-                              : "1px solid transparent",
-                        }}
-                      >
-                        {f === "startup"
-                          ? "Startups"
-                          : f.charAt(0).toUpperCase() + f.slice(1)}
-                      </button>
-                    ),
-                  )}
-                </div>
-              </div>
-
-              {/* PENDING / CONFIRMED SEGMENTED CONTROL */}
-              <div
-                className="flex gap-1 p-1 rounded-xl w-fit mb-6"
-                style={{
-                  backgroundColor: "#0f1624",
-                  border: "1px solid rgba(99,179,237,0.08)",
-                }}
-              >
-                <button
-                  onClick={() => setRegistrationView("pending")}
-                  className="px-5 py-2 rounded-lg text-sm font-medium transition-all"
-                  style={{
-                    backgroundColor:
-                      registrationView === "pending"
-                        ? "rgba(234,179,8,0.15)"
-                        : "transparent",
-                    color:
-                      registrationView === "pending" ? "#eab308" : "#64748b",
-                    border:
-                      registrationView === "pending"
-                        ? "1px solid rgba(234,179,8,0.25)"
-                        : "1px solid transparent",
-                  }}
-                >
-                  Pending{" "}
-                  <span
-                    className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs"
-                    style={{ backgroundColor: "rgba(234,179,8,0.15)" }}
+                  <button
+                    onClick={() => setRegistrationView("pending")}
+                    className="px-5 py-2 rounded-lg text-sm font-medium transition-all"
+                    style={{
+                      backgroundColor:
+                        registrationView === "pending"
+                          ? "rgba(234,179,8,0.15)"
+                          : "transparent",
+                      color:
+                        registrationView === "pending" ? "#eab308" : "#64748b",
+                      border:
+                        registrationView === "pending"
+                          ? "1px solid rgba(234,179,8,0.25)"
+                          : "1px solid transparent",
+                    }}
                   >
-                    {pendingCount}
-                  </span>
-                </button>
-                <button
-                  onClick={() => setRegistrationView("confirmed")}
-                  className="px-5 py-2 rounded-lg text-sm font-medium transition-all"
-                  style={{
-                    backgroundColor:
-                      registrationView === "confirmed"
-                        ? "rgba(34,197,94,0.15)"
-                        : "transparent",
-                    color:
-                      registrationView === "confirmed" ? "#22c55e" : "#64748b",
-                    border:
-                      registrationView === "confirmed"
-                        ? "1px solid rgba(34,197,94,0.25)"
-                        : "1px solid transparent",
-                  }}
-                >
-                  Confirmed{" "}
-                  <span
-                    className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs"
-                    style={{ backgroundColor: "rgba(34,197,94,0.15)" }}
-                  >
-                    {confirmedCount}
-                  </span>
-                </button>
-              </div>
-
-              <p
-                className="text-xs mb-4 font-medium"
-                style={{ color: "#64748b" }}
-              >
-                Showing{" "}
-                {
-                  filteredRegistrations(
-                    registrationView === "pending" ? "Pending" : "Confirmed",
-                  ).length
-                }{" "}
-                results
-              </p>
-
-              {/* PENDING CARDS */}
-              {registrationView === "pending" && (
-                <div className="grid md:grid-cols-2 gap-4">
-                  {filteredRegistrations("Pending").map((reg) => (
-                    <div
-                      key={reg._id}
-                      className="p-5 rounded-xl"
-                      style={cardStyle}
+                    Pending{" "}
+                    <span
+                      className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs"
+                      style={{ backgroundColor: "rgba(234,179,8,0.15)" }}
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <h3
-                          className="font-semibold text-base"
-                          style={{ color: "#f0f4ff" }}
-                        >
-                          {reg.teamName}
-                        </h3>
-                        <span
-                          className="text-xs px-2 py-1 rounded-full font-mono"
-                          style={{
-                            backgroundColor: "rgba(234,179,8,0.1)",
-                            color: "#eab308",
-                          }}
-                        >
-                          {reg.registrationId}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 mb-3 flex-wrap">
-                        <span
-                          className="text-xs px-2.5 py-1 rounded-full"
-                          style={{
-                            backgroundColor:
-                              reg.eventType === "combo"
-                                ? "rgba(59,130,246,0.12)"
-                                : "rgba(168,85,247,0.12)",
-                            color:
-                              reg.eventType === "combo" ? "#60a5fa" : "#c084fc",
-                          }}
-                        >
-                          {reg.eventName}
-                        </span>
-                        {reg.accommodationRequired && (
-                          <span
-                            className="text-xs px-2.5 py-1 rounded-full"
-                            style={{
-                              backgroundColor: "rgba(249,115,22,0.12)",
-                              color: "#fb923c",
-                            }}
-                          >
-                            🏠 Hostel
-                          </span>
-                        )}
-                        {(reg.startup?.answer || "").toLowerCase() ===
-                          "yes" && (
-                          <span
-                            className="text-xs px-2.5 py-1 rounded-full"
-                            style={{
-                              backgroundColor: "rgba(236,72,153,0.12)",
-                              color: "#f472b6",
-                            }}
-                          >
-                            🚀 Startup
-                          </span>
-                        )}
-                        {reg.payment?.amountMismatch && (
-                          <span
-                            className="text-xs px-2.5 py-1 rounded-full"
-                            style={{
-                              backgroundColor: "rgba(239,68,68,0.12)",
-                              color: "#f87171",
-                            }}
-                          >
-                            ⚠ Mismatch
-                          </span>
-                        )}
-                      </div>
-                      <div className="mb-4">
-                        <p
-                          className="text-xs font-medium mb-1.5 uppercase tracking-wider"
-                          style={{ color: "#64748b" }}
-                        >
-                          Team Members
-                        </p>
-                        <div className="space-y-0.5">
-                          {reg.teamMembers.map((m: any, i: number) => (
-                            <p
-                              key={i}
-                              className="text-xs"
-                              style={{ color: "#94a3b8" }}
-                            >
-                              {i + 1}. {m.fullName}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
+                      {pendingCount}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setRegistrationView("confirmed")}
+                    className="px-5 py-2 rounded-lg text-sm font-medium transition-all"
+                    style={{
+                      backgroundColor:
+                        registrationView === "confirmed"
+                          ? "rgba(34,197,94,0.15)"
+                          : "transparent",
+                      color:
+                        registrationView === "confirmed"
+                          ? "#22c55e"
+                          : "#64748b",
+                      border:
+                        registrationView === "confirmed"
+                          ? "1px solid rgba(34,197,94,0.25)"
+                          : "1px solid transparent",
+                    }}
+                  >
+                    Confirmed{" "}
+                    <span
+                      className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs"
+                      style={{ backgroundColor: "rgba(34,197,94,0.15)" }}
+                    >
+                      {confirmedCount}
+                    </span>
+                  </button>
+                </div>
+
+                <p
+                  className="text-xs mb-4 font-medium"
+                  style={{ color: "#64748b" }}
+                >
+                  Showing{" "}
+                  {
+                    filteredRegistrations(
+                      registrationView === "pending" ? "Pending" : "Confirmed",
+                    ).length
+                  }{" "}
+                  results
+                </p>
+
+                {/* PENDING CARDS */}
+                {registrationView === "pending" && (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {filteredRegistrations("Pending").map((reg) => (
                       <div
-                        className="flex gap-2 flex-wrap pt-3"
-                        style={{ borderTop: "1px solid rgba(99,179,237,0.08)" }}
+                        key={reg._id}
+                        className="p-5 rounded-xl"
+                        style={cardStyle}
                       >
-                        <button
-                          onClick={() => setSelectedFullDetails(reg)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+                        <div className="flex items-start justify-between mb-3">
+                          <h3
+                            className="font-semibold text-base"
+                            style={{ color: "#f0f4ff" }}
+                          >
+                            {reg.teamName}
+                          </h3>
+                          <span
+                            className="text-xs px-2 py-1 rounded-full font-mono"
+                            style={{
+                              backgroundColor: "rgba(234,179,8,0.1)",
+                              color: "#eab308",
+                            }}
+                          >
+                            {reg.registrationId}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mb-3 flex-wrap">
+                          <span
+                            className="text-xs px-2.5 py-1 rounded-full"
+                            style={{
+                              backgroundColor:
+                                reg.eventType === "combo"
+                                  ? "rgba(59,130,246,0.12)"
+                                  : "rgba(168,85,247,0.12)",
+                              color:
+                                reg.eventType === "combo"
+                                  ? "#60a5fa"
+                                  : "#c084fc",
+                            }}
+                          >
+                            {reg.eventName}
+                          </span>
+                          {reg.accommodationRequired && (
+                            <span
+                              className="text-xs px-2.5 py-1 rounded-full"
+                              style={{
+                                backgroundColor: "rgba(249,115,22,0.12)",
+                                color: "#fb923c",
+                              }}
+                            >
+                              🏠 Hostel
+                            </span>
+                          )}
+                          {(reg.startup?.answer || "").toLowerCase() ===
+                            "yes" && (
+                            <span
+                              className="text-xs px-2.5 py-1 rounded-full"
+                              style={{
+                                backgroundColor: "rgba(236,72,153,0.12)",
+                                color: "#f472b6",
+                              }}
+                            >
+                              🚀 Startup
+                            </span>
+                          )}
+                          {reg.payment?.amountMismatch && (
+                            <span
+                              className="text-xs px-2.5 py-1 rounded-full"
+                              style={{
+                                backgroundColor: "rgba(239,68,68,0.12)",
+                                color: "#f87171",
+                              }}
+                            >
+                              ⚠ Mismatch
+                            </span>
+                          )}
+                        </div>
+                        <div className="mb-4">
+                          <p
+                            className="text-xs font-medium mb-1.5 uppercase tracking-wider"
+                            style={{ color: "#64748b" }}
+                          >
+                            Team Members
+                          </p>
+                          <div className="space-y-0.5">
+                            {reg.teamMembers.map((m: any, i: number) => (
+                              <p
+                                key={i}
+                                className="text-xs"
+                                style={{ color: "#94a3b8" }}
+                              >
+                                {i + 1}. {m.fullName}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                        <div
+                          className="flex gap-2 flex-wrap pt-3"
                           style={{
-                            backgroundColor: "rgba(6,182,212,0.1)",
-                            color: "#22d3ee",
-                            border: "1px solid rgba(6,182,212,0.2)",
+                            borderTop: "1px solid rgba(99,179,237,0.08)",
                           }}
                         >
-                          <Eye size={12} /> Details
-                        </button>
-                        <button
-                          onClick={() => confirmRegistration(reg._id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-                          style={{
-                            backgroundColor: "rgba(34,197,94,0.1)",
-                            color: "#22c55e",
-                            border: "1px solid rgba(34,197,94,0.2)",
-                          }}
-                        >
-                          <Check size={12} /> Confirm
-                        </button>
-                        <button
-                          onClick={() => deleteRegistration(reg._id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-                          style={{
-                            backgroundColor: "rgba(239,68,68,0.1)",
-                            color: "#f87171",
-                            border: "1px solid rgba(239,68,68,0.2)",
-                          }}
-                        >
-                          <Trash2 size={12} /> Delete
-                        </button>
-                        {reg.payment?.screenshotUrl && (
                           <button
-                            onClick={() =>
-                              setSelectedScreenshot(reg.payment.screenshotUrl)
-                            }
+                            onClick={() => setSelectedFullDetails(reg)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
                             style={{
-                              backgroundColor: "rgba(59,130,246,0.1)",
-                              color: "#60a5fa",
-                              border: "1px solid rgba(59,130,246,0.2)",
+                              backgroundColor: "rgba(6,182,212,0.1)",
+                              color: "#22d3ee",
+                              border: "1px solid rgba(6,182,212,0.2)",
                             }}
                           >
-                            <Eye size={12} /> Payment
+                            <Eye size={12} /> Details
                           </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* CONFIRMED TABLE */}
-              {registrationView === "confirmed" && (
-                <>
-                  <div className="flex justify-end mb-4">
-                    <button
-                      onClick={exportRegistrations}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium"
-                      style={{
-                        background: "linear-gradient(135deg, #22c55e, #16a34a)",
-                        color: "#fff",
-                        boxShadow: "0 2px 12px rgba(34,197,94,0.25)",
-                      }}
-                    >
-                      <Download size={14} /> Export Excel
-                    </button>
-                  </div>
-                  <div className="overflow-x-auto rounded-xl" style={cardStyle}>
-                    <table className="w-full">
-                      <thead>
-                        <tr
-                          style={{
-                            borderBottom: "1px solid rgba(99,179,237,0.08)",
-                          }}
-                        >
-                          {[
-                            "#",
-                            "Date & Time",
-                            "Reg ID",
-                            "Team",
-                            "Members",
-                            "Event",
-                            "Hostel",
-                            "Actions",
-                          ].map((h) => (
-                            <th
-                              key={h}
-                              className={`px-4 py-4 text-xs font-semibold uppercase tracking-widest ${h === "Actions" ? "text-center" : "text-left"}`}
-                              style={{ color: "#64748b" }}
-                            >
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredRegistrations("Confirmed").map(
-                          (reg, index) => (
-                            <tr
-                              key={reg._id}
-                              className="transition-colors"
+                          <button
+                            onClick={() => confirmRegistration(reg._id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+                            style={{
+                              backgroundColor: "rgba(34,197,94,0.1)",
+                              color: "#22c55e",
+                              border: "1px solid rgba(34,197,94,0.2)",
+                            }}
+                          >
+                            <Check size={12} /> Confirm
+                          </button>
+                          <button
+                            onClick={() => deleteRegistration(reg._id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+                            style={{
+                              backgroundColor: "rgba(239,68,68,0.1)",
+                              color: "#f87171",
+                              border: "1px solid rgba(239,68,68,0.2)",
+                            }}
+                          >
+                            <Trash2 size={12} /> Delete
+                          </button>
+                          {reg.payment?.screenshotUrl && (
+                            <button
+                              onClick={() =>
+                                setSelectedScreenshot(reg.payment.screenshotUrl)
+                              }
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
                               style={{
-                                borderBottom: "1px solid rgba(99,179,237,0.06)",
+                                backgroundColor: "rgba(59,130,246,0.1)",
+                                color: "#60a5fa",
+                                border: "1px solid rgba(59,130,246,0.2)",
                               }}
-                              onMouseEnter={(e) =>
-                                ((
-                                  e.currentTarget as HTMLElement
-                                ).style.backgroundColor =
-                                  "rgba(59,130,246,0.03)")
-                              }
-                              onMouseLeave={(e) =>
-                                ((
-                                  e.currentTarget as HTMLElement
-                                ).style.backgroundColor = "transparent")
-                              }
                             >
-                              <td
-                                className="px-4 py-3 text-xs font-mono"
-                                style={{ color: "#60a5fa" }}
+                              <Eye size={12} /> Payment
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* CONFIRMED TABLE */}
+                {registrationView === "confirmed" && (
+                  <>
+                    <div className="flex justify-end mb-4">
+                      <button
+                        onClick={exportRegistrations}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium"
+                        style={{
+                          background:
+                            "linear-gradient(135deg, #22c55e, #16a34a)",
+                          color: "#fff",
+                          boxShadow: "0 2px 12px rgba(34,197,94,0.25)",
+                        }}
+                      >
+                        <Download size={14} /> Export Excel
+                      </button>
+                    </div>
+                    <div
+                      className="overflow-x-auto rounded-xl"
+                      style={cardStyle}
+                    >
+                      <table className="w-full">
+                        <thead>
+                          <tr
+                            style={{
+                              borderBottom: "1px solid rgba(99,179,237,0.08)",
+                            }}
+                          >
+                            {[
+                              "#",
+                              "Date & Time",
+                              "Reg ID",
+                              "Team",
+                              "Members",
+                              "Event",
+                              "Hostel",
+                              "Actions",
+                            ].map((h) => (
+                              <th
+                                key={h}
+                                className={`px-4 py-4 text-xs font-semibold uppercase tracking-widest ${h === "Actions" ? "text-center" : "text-left"}`}
+                                style={{ color: "#64748b" }}
                               >
-                                {index + 1}
-                              </td>
-                              <td
-                                className="px-4 py-3 text-xs"
-                                style={{ color: "#94a3b8" }}
-                              >
-                                {reg.createdAt
-                                  ? `${formatDate(reg.createdAt)}, ${new Date(reg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-                                  : "-"}
-                              </td>
-                              <td className="px-4 py-3">
-                                <span
-                                  className="text-xs font-mono font-semibold"
-                                  style={{ color: "#22c55e" }}
-                                >
-                                  {reg.registrationId}
-                                </span>
-                              </td>
-                              <td
-                                className="px-4 py-3 text-sm font-medium"
-                                style={{ color: "#f0f4ff" }}
-                              >
-                                {reg.teamName}
-                              </td>
-                              <td
-                                className="px-4 py-3 text-xs space-y-0.5"
-                                style={{ color: "#94a3b8" }}
-                              >
-                                {(registrationFilter === "hostel"
-                                  ? reg.hostelMembers
-                                  : reg.teamMembers
-                                )?.map((m: any, i: number) => (
-                                  <div key={i}>
-                                    {i + 1}. {m.fullName}
-                                  </div>
-                                ))}
-                              </td>
-                              <td className="px-4 py-3">
-                                <span
-                                  className="text-xs px-2.5 py-1 rounded-full"
-                                  style={{
-                                    backgroundColor:
-                                      reg.eventType === "combo"
-                                        ? "rgba(59,130,246,0.12)"
-                                        : "rgba(168,85,247,0.12)",
-                                    color:
-                                      reg.eventType === "combo"
-                                        ? "#60a5fa"
-                                        : "#c084fc",
-                                  }}
-                                >
-                                  {reg.eventName}
-                                </span>
-                              </td>
-                              <td
-                                className="px-4 py-3 text-xs"
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredRegistrations("Confirmed").map(
+                            (reg, index) => (
+                              <tr
+                                key={reg._id}
+                                className="transition-colors"
                                 style={{
-                                  color: reg.accommodationRequired
-                                    ? "#fb923c"
-                                    : "#64748b",
+                                  borderBottom:
+                                    "1px solid rgba(99,179,237,0.06)",
                                 }}
+                                onMouseEnter={(e) =>
+                                  ((
+                                    e.currentTarget as HTMLElement
+                                  ).style.backgroundColor =
+                                    "rgba(59,130,246,0.03)")
+                                }
+                                onMouseLeave={(e) =>
+                                  ((
+                                    e.currentTarget as HTMLElement
+                                  ).style.backgroundColor = "transparent")
+                                }
                               >
-                                {reg.accommodationRequired ? "Yes" : "No"}
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-1.5 justify-center">
-                                  <button
-                                    onClick={() => setSelectedFullDetails(reg)}
-                                    className="p-1.5 rounded-lg"
+                                <td
+                                  className="px-4 py-3 text-xs font-mono"
+                                  style={{ color: "#60a5fa" }}
+                                >
+                                  {index + 1}
+                                </td>
+                                <td
+                                  className="px-4 py-3 text-xs"
+                                  style={{ color: "#94a3b8" }}
+                                >
+                                  {reg.createdAt
+                                    ? `${formatDate(reg.createdAt)}, ${new Date(reg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                                    : "-"}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span
+                                    className="text-xs font-mono font-semibold"
+                                    style={{ color: "#22c55e" }}
+                                  >
+                                    {reg.registrationId}
+                                  </span>
+                                </td>
+                                <td
+                                  className="px-4 py-3 text-sm font-medium"
+                                  style={{ color: "#f0f4ff" }}
+                                >
+                                  {reg.teamName}
+                                </td>
+                                <td
+                                  className="px-4 py-3 text-xs space-y-0.5"
+                                  style={{ color: "#94a3b8" }}
+                                >
+                                  {(registrationFilter === "hostel"
+                                    ? reg.hostelMembers
+                                    : reg.teamMembers
+                                  )?.map((m: any, i: number) => (
+                                    <div key={i}>
+                                      {i + 1}. {m.fullName}
+                                    </div>
+                                  ))}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span
+                                    className="text-xs px-2.5 py-1 rounded-full"
                                     style={{
-                                      backgroundColor: "rgba(6,182,212,0.1)",
-                                      color: "#22d3ee",
-                                      border: "1px solid rgba(6,182,212,0.2)",
+                                      backgroundColor:
+                                        reg.eventType === "combo"
+                                          ? "rgba(59,130,246,0.12)"
+                                          : "rgba(168,85,247,0.12)",
+                                      color:
+                                        reg.eventType === "combo"
+                                          ? "#60a5fa"
+                                          : "#c084fc",
                                     }}
                                   >
-                                    <Eye size={13} />
-                                  </button>
-                                  {reg.payment?.screenshotUrl && (
+                                    {reg.eventName}
+                                  </span>
+                                </td>
+                                <td
+                                  className="px-4 py-3 text-xs"
+                                  style={{
+                                    color: reg.accommodationRequired
+                                      ? "#fb923c"
+                                      : "#64748b",
+                                  }}
+                                >
+                                  {reg.accommodationRequired ? "Yes" : "No"}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-1.5 justify-center">
                                     <button
                                       onClick={() =>
-                                        setSelectedScreenshot(
-                                          reg.payment.screenshotUrl,
-                                        )
+                                        setSelectedFullDetails(reg)
                                       }
                                       className="p-1.5 rounded-lg"
                                       style={{
-                                        backgroundColor: "rgba(59,130,246,0.1)",
-                                        color: "#60a5fa",
-                                        border:
-                                          "1px solid rgba(59,130,246,0.2)",
+                                        backgroundColor: "rgba(6,182,212,0.1)",
+                                        color: "#22d3ee",
+                                        border: "1px solid rgba(6,182,212,0.2)",
                                       }}
                                     >
                                       <Eye size={13} />
                                     </button>
-                                  )}
-                                  <button
-                                    onClick={() => deleteRegistration(reg._id)}
-                                    className="p-1.5 rounded-lg"
-                                    style={{
-                                      backgroundColor: "rgba(239,68,68,0.1)",
-                                      color: "#f87171",
-                                      border: "1px solid rgba(239,68,68,0.2)",
-                                    }}
-                                  >
-                                    <Trash2 size={13} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ),
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+                                    {reg.payment?.screenshotUrl && (
+                                      <button
+                                        onClick={() =>
+                                          setSelectedScreenshot(
+                                            reg.payment.screenshotUrl,
+                                          )
+                                        }
+                                        className="p-1.5 rounded-lg"
+                                        style={{
+                                          backgroundColor:
+                                            "rgba(59,130,246,0.1)",
+                                          color: "#60a5fa",
+                                          border:
+                                            "1px solid rgba(59,130,246,0.2)",
+                                        }}
+                                      >
+                                        <Eye size={13} />
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() =>
+                                        deleteRegistration(reg._id)
+                                      }
+                                      className="p-1.5 rounded-lg"
+                                      style={{
+                                        backgroundColor: "rgba(239,68,68,0.1)",
+                                        color: "#f87171",
+                                        border: "1px solid rgba(239,68,68,0.2)",
+                                      }}
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ),
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
-          {activeTab === "admins" && isSuperAdmin && ( <AdminsTab /> )}
+          {activeTab === "admins" && isSuperAdmin && <AdminsTab />}
+          {activeTab === "activity" && isSuperAdmin && <ActivityLogsTab />}
         </main>
       </div>
 

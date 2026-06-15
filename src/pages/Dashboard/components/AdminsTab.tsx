@@ -42,7 +42,7 @@ const AdminsTab = () => {
       const token = localStorage.getItem("token");
       const res = await axios.get(
         "https://ieee-sps-website.onrender.com/api/admin-access",
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       setAdmins(res.data);
     } catch (err) {
@@ -55,7 +55,7 @@ const AdminsTab = () => {
       const token = localStorage.getItem("token");
       await axios.delete(
         `https://ieee-sps-website.onrender.com/api/admin-access/${id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       fetchAdmins();
       alert("Admin access removed");
@@ -70,12 +70,36 @@ const AdminsTab = () => {
       await axios.post(
         `https://ieee-sps-website.onrender.com/api/admin-access/reset-password/${id}`,
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
-      alert("Password reset successfully. User must change password on next login.");
+      fetchAdmins();
+      alert(
+        "Password reset successfully. User must change password on next login.",
+      );
     } catch (err) {
       console.error(err);
       alert("Failed to reset password");
+    }
+  };
+
+  const toggleAdminStatus = async (id: string) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      await axios.put(
+        `https://ieee-sps-website.onrender.com/api/admin-access/toggle-status/${id}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      fetchAdmins();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update admin status");
     }
   };
 
@@ -114,7 +138,7 @@ const AdminsTab = () => {
           password: selectedMember.rollNumber,
           permissions,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       alert("Admin access granted successfully");
       fetchAdmins();
@@ -136,7 +160,7 @@ const AdminsTab = () => {
           password,
           permissions,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       alert("External Admin Created");
       fetchAdmins();
@@ -151,7 +175,7 @@ const AdminsTab = () => {
       await axios.put(
         `https://ieee-sps-website.onrender.com/api/admin-access/${editingAdminId}`,
         { username, permissions, name: externalName, role: externalRole },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       alert("Admin access updated successfully");
       setEditingAdminId("");
@@ -190,12 +214,12 @@ const AdminsTab = () => {
     { key: "messages", label: "Messages" },
   ] as const;
 
-  const isExternalMode = showExternalAdmin || (editingAdminId && !selectedMember);
+  const isExternalMode =
+    showExternalAdmin || (editingAdminId && !selectedMember);
   const hasSelection = selectedMember || isExternalMode;
 
   return (
     <div style={{ color: "#e2e8f0" }}>
-
       {/* ── Page Header ── */}
       <div className="mb-8">
         <h2
@@ -211,18 +235,25 @@ const AdminsTab = () => {
 
       {/* ── Top Section: Select + Configure (side by side) ── */}
       <div className="grid md:grid-cols-2 gap-6 mb-6">
-
         {/* LEFT — Member Selection */}
         <div className="rounded-xl p-5 flex flex-col gap-4" style={cardStyle}>
-
           {/* Team Members List */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-sm uppercase tracking-widest" style={{ color: "#94a3b8" }}>
+              <h3
+                className="font-semibold text-sm uppercase tracking-widest"
+                style={{ color: "#94a3b8" }}
+              >
                 Team Members
               </h3>
               {selectedMember && (
-                <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: "rgba(59,130,246,0.15)", color: "#60a5fa" }}>
+                <span
+                  className="text-xs px-2 py-1 rounded-full"
+                  style={{
+                    backgroundColor: "rgba(59,130,246,0.15)",
+                    color: "#60a5fa",
+                  }}
+                >
                   Selected
                 </span>
               )}
@@ -264,7 +295,10 @@ const AdminsTab = () => {
           {/* External Admin Toggle */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-sm uppercase tracking-widest" style={{ color: "#94a3b8" }}>
+              <h3
+                className="font-semibold text-sm uppercase tracking-widest"
+                style={{ color: "#94a3b8" }}
+              >
                 External Admin
               </h3>
             </div>
@@ -282,7 +316,9 @@ const AdminsTab = () => {
                 border: "1px solid rgba(34,197,94,0.25)",
               }}
             >
-              {showExternalAdmin ? "✕ Close External Admin" : "+ Create External Admin"}
+              {showExternalAdmin
+                ? "✕ Close External Admin"
+                : "+ Create External Admin"}
             </button>
 
             {showExternalAdmin && (
@@ -309,10 +345,16 @@ const AdminsTab = () => {
         {/* RIGHT — Permissions & Credentials */}
         <div className="rounded-xl p-5" style={cardStyle}>
           {!hasSelection ? (
-            <div className="h-full flex flex-col items-center justify-center text-center gap-2" style={{ color: "#475569" }}>
+            <div
+              className="h-full flex flex-col items-center justify-center text-center gap-2"
+              style={{ color: "#475569" }}
+            >
               <div className="text-3xl mb-1">👤</div>
               <p className="font-medium">No member selected</p>
-              <p className="text-sm">Select a team member or create an external admin to configure access.</p>
+              <p className="text-sm">
+                Select a team member or create an external admin to configure
+                access.
+              </p>
             </div>
           ) : (
             <div className="space-y-5">
@@ -330,7 +372,10 @@ const AdminsTab = () => {
 
               {/* Credentials */}
               <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#94a3b8" }}>
+                <p
+                  className="text-xs font-semibold uppercase tracking-widest"
+                  style={{ color: "#94a3b8" }}
+                >
                   Credentials
                 </p>
                 <input
@@ -358,7 +403,10 @@ const AdminsTab = () => {
 
               {/* Permissions */}
               <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#94a3b8" }}>
+                <p
+                  className="text-xs font-semibold uppercase tracking-widest"
+                  style={{ color: "#94a3b8" }}
+                >
                   Permissions
                 </p>
                 <div className="grid grid-cols-2 gap-2">
@@ -379,7 +427,10 @@ const AdminsTab = () => {
                         type="checkbox"
                         checked={permissions[key]}
                         onChange={(e) =>
-                          setPermissions({ ...permissions, [key]: e.target.checked })
+                          setPermissions({
+                            ...permissions,
+                            [key]: e.target.checked,
+                          })
                         }
                         style={{ accentColor: "#3b82f6" }}
                       />
@@ -395,8 +446,8 @@ const AdminsTab = () => {
                   editingAdminId
                     ? updateAccess
                     : isExternalMode
-                    ? saveExternalAdmin
-                    : saveAccess
+                      ? saveExternalAdmin
+                      : saveAccess
                 }
                 className="w-full py-3 rounded-lg font-semibold text-sm transition-all"
                 style={{
@@ -409,8 +460,8 @@ const AdminsTab = () => {
                     ? "Update External Admin"
                     : "Update Access"
                   : isExternalMode
-                  ? "Create External Admin"
-                  : "Save Access"}
+                    ? "Create External Admin"
+                    : "Save Access"}
               </button>
             </div>
           )}
@@ -421,11 +472,17 @@ const AdminsTab = () => {
       <div className="rounded-xl p-5" style={cardStyle}>
         {/* Section Header + Search */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-          <h3 className="font-semibold text-sm uppercase tracking-widest" style={{ color: "#94a3b8" }}>
+          <h3
+            className="font-semibold text-sm uppercase tracking-widest"
+            style={{ color: "#94a3b8" }}
+          >
             Existing Admins
             <span
               className="ml-2 text-xs px-2 py-0.5 rounded-full font-normal normal-case"
-              style={{ backgroundColor: "rgba(99,179,237,0.1)", color: "#60a5fa" }}
+              style={{
+                backgroundColor: "rgba(99,179,237,0.1)",
+                color: "#60a5fa",
+              }}
             >
               {filteredAdmins.length}
             </span>
@@ -461,7 +518,12 @@ const AdminsTab = () => {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="font-semibold text-sm">{name}</div>
-                    <div className="text-xs mt-0.5" style={{ color: "#64748b" }}>{role}</div>
+                    <div
+                      className="text-xs mt-0.5"
+                      style={{ color: "#64748b" }}
+                    >
+                      {role}
+                    </div>
                   </div>
                   <span
                     className="text-xs px-2 py-0.5 rounded-full shrink-0"
@@ -476,10 +538,27 @@ const AdminsTab = () => {
                   </span>
                 </div>
 
+                <div className="mt-2">
+                  <span
+                    className="px-2 py-1 rounded text-xs font-medium"
+                    style={{
+                      backgroundColor: admin.isPaused
+                        ? "rgba(239,68,68,0.15)"
+                        : "rgba(34,197,94,0.15)",
+                      color: admin.isPaused ? "#ef4444" : "#22c55e",
+                    }}
+                  >
+                    {admin.isPaused ? "Paused" : "Active"}
+                  </span>
+                </div>
+
                 {/* Username */}
                 <div
                   className="text-xs px-3 py-1.5 rounded-lg"
-                  style={{ backgroundColor: "rgba(255,255,255,0.03)", color: "#94a3b8" }}
+                  style={{
+                    backgroundColor: "rgba(255,255,255,0.03)",
+                    color: "#94a3b8",
+                  }}
                 >
                   @{admin.username}
                 </div>
@@ -491,14 +570,19 @@ const AdminsTab = () => {
                       <span
                         key={p}
                         className="text-xs px-2 py-0.5 rounded capitalize"
-                        style={{ backgroundColor: "rgba(59,130,246,0.15)", color: "#93c5fd" }}
+                        style={{
+                          backgroundColor: "rgba(59,130,246,0.15)",
+                          color: "#93c5fd",
+                        }}
                       >
                         {p}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <span className="text-xs" style={{ color: "#475569" }}>No permissions set</span>
+                  <span className="text-xs" style={{ color: "#475569" }}>
+                    No permissions set
+                  </span>
                 )}
 
                 {/* Action Buttons */}
@@ -537,6 +621,21 @@ const AdminsTab = () => {
                     🔑 Reset
                   </button>
                   <button
+                    onClick={() => toggleAdminStatus(admin._id)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                    style={{
+                      backgroundColor: admin.isPaused
+                        ? "rgba(34,197,94,0.1)"
+                        : "rgba(245,158,11,0.1)",
+                      color: admin.isPaused ? "#22c55e" : "#f59e0b",
+                      border: admin.isPaused
+                        ? "1px solid rgba(34,197,94,0.2)"
+                        : "1px solid rgba(245,158,11,0.2)",
+                    }}
+                  >
+                    {admin.isPaused ? "▶ Resume" : "⏸ Pause"}
+                  </button>
+                  <button
                     onClick={() => deleteAdmin(admin._id)}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium"
                     style={{
@@ -557,7 +656,9 @@ const AdminsTab = () => {
               className="col-span-full text-center py-12"
               style={{ color: "#475569" }}
             >
-              {search ? `No admins found for "${search}"` : "No admins yet. Add one above."}
+              {search
+                ? `No admins found for "${search}"`
+                : "No admins yet. Add one above."}
             </div>
           )}
         </div>
@@ -572,7 +673,10 @@ const AdminsTab = () => {
         >
           <div
             className="p-6 rounded-xl w-full max-w-md"
-            style={{ backgroundColor: "#0f1624", border: "1px solid rgba(99,179,237,0.15)" }}
+            style={{
+              backgroundColor: "#0f1624",
+              border: "1px solid rgba(99,179,237,0.15)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
@@ -588,12 +692,33 @@ const AdminsTab = () => {
 
             <div className="space-y-3 text-sm">
               {[
-                ["Name", viewAdmin.isExternal ? viewAdmin.name : viewAdmin.memberId?.name],
-                ["Role", viewAdmin.isExternal ? viewAdmin.role : viewAdmin.memberId?.role],
+                [
+                  "Name",
+                  viewAdmin.isExternal
+                    ? viewAdmin.name
+                    : viewAdmin.memberId?.name,
+                ],
+                [
+                  "Role",
+                  viewAdmin.isExternal
+                    ? viewAdmin.role
+                    : viewAdmin.memberId?.role,
+                ],
                 ["Username", `@${viewAdmin.username}`],
-                ["Admin Type", viewAdmin.isExternal ? "External Admin" : "Team Member Admin"],
+
+                ["Status", viewAdmin.isPaused ? "Paused" : "Active"],
+
+                [
+                  "Admin Type",
+                  viewAdmin.isExternal ? "External Admin" : "Team Member Admin",
+                ],
                 ["Created On", new Date(viewAdmin.createdAt).toLocaleString()],
-                ["Password Status", viewAdmin.mustChangePassword ? "Using Default Password" : "Changed"],
+                [
+                  "Password Status",
+                  viewAdmin.mustChangePassword
+                    ? "Using Default Password"
+                    : "Changed",
+                ],
                 [
                   "Last Password Change",
                   viewAdmin.lastPasswordChange
@@ -615,7 +740,9 @@ const AdminsTab = () => {
                 className="px-3 py-2 rounded-lg"
                 style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
               >
-                <div className="mb-2" style={{ color: "#64748b" }}>Permissions</div>
+                <div className="mb-2" style={{ color: "#64748b" }}>
+                  Permissions
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(viewAdmin.permissions)
                     .filter(([, v]) => v)
@@ -623,7 +750,10 @@ const AdminsTab = () => {
                       <span
                         key={k}
                         className="px-2 py-0.5 rounded text-xs capitalize"
-                        style={{ backgroundColor: "rgba(59,130,246,0.2)", color: "#93c5fd" }}
+                        style={{
+                          backgroundColor: "rgba(59,130,246,0.2)",
+                          color: "#93c5fd",
+                        }}
                       >
                         {k}
                       </span>

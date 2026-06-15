@@ -26,6 +26,10 @@ const path = require("path");
 const uploadDir = path.join(__dirname, "uploads");
 const galleryRoutes = require("./routes/galleryRoutes");
 
+const activityRoutes = require(
+  "./routes/activityRoutes"
+);
+
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
 }
@@ -89,6 +93,7 @@ app.use("/admin", adminRoutes);
 app.use("/events", eventRoutes);
 app.use("/contact", contactRoutes);
 app.use("/team", teamRoutes);
+app.use("/api/activity-logs",activityRoutes);
 app.use("/api", registrationRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/admin-access", adminAccessRoutes);

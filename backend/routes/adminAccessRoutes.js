@@ -5,6 +5,7 @@ const AdminAccess = require("../models/AdminAccess");
 const verifyToken = require("../middleware/verifyToken");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const logActivity = require("../utils/logActivity");
 
 /* =========================
    GET ALL ADMINS
@@ -42,6 +43,8 @@ router.post("/", verifyToken, async (req, res) => {
 
     await admin.save();
 
+    await logActivity("Super Admin", "Created Admin", username);
+
     res.json({
       success: true,
       admin,
@@ -69,6 +72,8 @@ router.put("/:id", verifyToken, async (req, res) => {
       },
     );
 
+    await logActivity("Super Admin", "Updated Admin Access", updated.username);
+
     res.json(updated);
   } catch (err) {
     console.error(err);
@@ -85,7 +90,11 @@ router.put("/:id", verifyToken, async (req, res) => {
 
 router.delete("/:id", verifyToken, async (req, res) => {
   try {
+    const admin = await AdminAccess.findById(req.params.id);
+
     await AdminAccess.findByIdAndDelete(req.params.id);
+
+    await logActivity("Super Admin", "Deleted Admin", admin.username);
 
     res.json({
       success: true,
@@ -127,6 +136,17 @@ router.post("/login", async (req, res) => {
       });
     }
 
+    if (admin.isPaused) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Your admin account is temporarily locked. Contact Super Admin.",
+      });
+    }
+
+    admin.lastLogin = new Date();
+    await admin.save();
+
     const token = jwt.sign(
       {
         id: admin._id,
@@ -161,71 +181,134 @@ router.post("/login", async (req, res) => {
    CHANGE PASSWORD
 ========================= */
 
-router.post(
-  "/change-password",
-  verifyToken,
-  async (req, res) => {
-    try {
-      const { currentPassword, newPassword } = req.body;
+router.post("/change-password", verifyToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
 
-      const admin = await AdminAccess.findById(
-        req.user.id,
-      );
+    const admin = await AdminAccess.findById(req.user.id);
 
-      if (!admin) {
-        return res.status(404).json({
-          message: "Admin not found",
-        });
-      }
-
-      const isMatch = await bcrypt.compare(
-        currentPassword,
-        admin.password,
-      );
-
-      if (!isMatch) {
-        return res.status(400).json({
-          message: "Current password incorrect",
-        });
-      }
-
-      admin.password = await bcrypt.hash(
-        newPassword,
-        10,
-      );
-
-      admin.mustChangePassword = false;
-
-      admin.lastPasswordChange = new Date();
-
-      await admin.save();
-
-      res.json({
-        success: true,
-        message: "Password updated successfully",
-      });
-    } catch (err) {
-      console.error(err);
-
-      res.status(500).json({
-        message: "Server Error",
+    if (!admin) {
+      return res.status(404).json({
+        message: "Admin not found",
       });
     }
-  },
-);
+
+    const isMatch = await bcrypt.compare(currentPassword, admin.password);
+
+    if (!isMatch) {
+      return res.status(400).json({
+        message: "Current password incorrect",
+      });
+    }
+
+    admin.password = await bcrypt.hash(newPassword, 10);
+
+    admin.mustChangePassword = false;
+
+    admin.lastPasswordChange = new Date();
+
+    await admin.save();
+
+    await logActivity(admin.username, "Changed Password", admin.username);
+
+    res.json({
+      success: true,
+      message: "Password updated successfully",
+    });
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      message: "Server Error",
+    });
+  }
+});
 
 /* =========================
    RESET PASSWORD
 ========================= */
 
-router.post(
-  "/reset-password/:id",
+router.post("/reset-password/:id", verifyToken, async (req, res) => {
+  try {
+    const admin = await AdminAccess.findById(req.params.id).populate(
+      "memberId",
+    );
+
+    if (!admin) {
+      return res.status(404).json({
+        message: "Admin not found",
+      });
+    }
+
+    let defaultPassword = "";
+
+    if (admin.isExternal === false && admin.memberId) {
+      defaultPassword = admin.memberId.rollNumber;
+    } else {
+      defaultPassword = "ChangeMe123";
+    }
+
+    admin.password = await bcrypt.hash(defaultPassword, 10);
+
+    admin.mustChangePassword = true;
+
+    admin.lastPasswordChange = null;
+
+    await admin.save();
+
+    await logActivity("Super Admin", "Reset Password", admin.username);
+
+    res.json({
+      success: true,
+      message: "Password reset successfully",
+    });
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      message: "Failed to reset password",
+    });
+  }
+});
+
+router.put("/toggle-status/:id", verifyToken, async (req, res) => {
+  try {
+    const admin = await AdminAccess.findById(req.params.id);
+
+    admin.isPaused = !admin.isPaused;
+
+    await admin.save();
+
+    await logActivity(
+      "Super Admin",
+      admin.isPaused ? "Paused Admin" : "Resumed Admin",
+      admin.username,
+    );
+
+    res.json({
+      success: true,
+      isPaused: admin.isPaused,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "Failed",
+    });
+  }
+});
+
+/* =========================
+   MY PROFILE
+========================= */
+
+router.get(
+  "/profile",
   verifyToken,
   async (req, res) => {
     try {
-      const admin = await AdminAccess.findById(
-        req.params.id,
-      ).populate("memberId");
+      const admin =
+        await AdminAccess.findById(
+          req.user.id
+        ).populate("memberId");
 
       if (!admin) {
         return res.status(404).json({
@@ -233,41 +316,15 @@ router.post(
         });
       }
 
-      let defaultPassword = "";
-
-      if (
-        admin.isExternal === false &&
-        admin.memberId
-      ) {
-        defaultPassword =
-          admin.memberId.rollNumber;
-      } else {
-        defaultPassword = "ChangeMe123";
-      }
-
-      admin.password = await bcrypt.hash(
-        defaultPassword,
-        10,
-      );
-
-      admin.mustChangePassword = true;
-
-      admin.lastPasswordChange = null;
-
-      await admin.save();
-
-      res.json({
-        success: true,
-        message: "Password reset successfully",
-      });
+      res.json(admin);
     } catch (err) {
       console.error(err);
 
       res.status(500).json({
-        message: "Failed to reset password",
+        message: "Failed to fetch profile",
       });
     }
-  },
+  }
 );
 
 module.exports = router;
