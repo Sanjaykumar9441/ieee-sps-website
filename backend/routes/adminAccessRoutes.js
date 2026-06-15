@@ -136,14 +136,6 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    if (admin.isPaused) {
-      return res.status(403).json({
-        success: false,
-        message:
-          "Your admin account is temporarily locked. Contact Super Admin.",
-      });
-    }
-
     admin.lastLogin = new Date();
     await admin.save();
 
@@ -166,6 +158,7 @@ router.post("/login", async (req, res) => {
       permissions: admin.permissions,
       member: admin.memberId,
       mustChangePassword: admin.mustChangePassword,
+      isPaused: admin.isPaused,
     });
   } catch (err) {
     console.error(err);
@@ -326,5 +319,25 @@ router.get(
     }
   }
 );
+
+router.get("/permissions", verifyToken, async (req, res) => {
+  try {
+    const admin = await AdminAccess.findById(req.user.id);
+
+    if (!admin) {
+      return res.status(404).json({
+        message: "Admin not found",
+      });
+    }
+
+    res.json(admin.permissions);
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      message: "Server Error",
+    });
+  }
+});
 
 module.exports = router;

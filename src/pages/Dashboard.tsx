@@ -166,8 +166,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const [permissions, setPermissions] = useState(
-  JSON.parse(localStorage.getItem("permissions") || "{}")
-);
+    JSON.parse(localStorage.getItem("permissions") || "{}"),
+  );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(false);
 
@@ -316,13 +316,17 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!token) return;
-    //fetchProfile();
+
+    refreshPermissions();
+
     fetchEvents();
     fetchMembers();
     fetchRegistrations();
+
     const interval = setInterval(() => {
       if (activeTab === "registrations") fetchRegistrations();
     }, 10000);
+
     return () => clearInterval(interval);
   }, [token]);
 
@@ -644,45 +648,82 @@ const Dashboard = () => {
   };
 
   /* MENU */
+  const isPaused = JSON.parse(localStorage.getItem("isPaused") || "false");
+
   const isSuperAdmin = permissions.admins === true;
 
-  const menu = [
-    {
-      id: "profile",
-      label: "My Profile",
-      icon: User,
-    },
-    ...(permissions.events
-      ? [
-          { id: "upload", label: "Upload Event", icon: Upload },
-          { id: "events", label: "Manage Events", icon: Calendar },
-        ]
-      : []),
+  const menu = isPaused
+    ? [
+        {
+          id: "profile",
+          label: "My Profile",
+          icon: User,
+        },
+      ]
+    : [
+        {
+          id: "profile",
+          label: "My Profile",
+          icon: User,
+        },
 
-    ...(permissions.team
-      ? [{ id: "team", label: "Team Management", icon: Users }]
-      : []),
+        ...(permissions.events
+          ? [
+              { id: "upload", label: "Upload Event", icon: Upload },
+              { id: "events", label: "Manage Events", icon: Calendar },
+            ]
+          : []),
 
-    ...(permissions.messages
-      ? [{ id: "messages", label: "Messages", icon: Mail }]
-      : []),
+        ...(permissions.team
+          ? [
+              {
+                id: "team",
+                label: "Team Management",
+                icon: Users,
+              },
+            ]
+          : []),
 
-    ...(permissions.registrations
-      ? [
-          {
-            id: "registrations",
-            label: "Registrations",
-            icon: BookOpen,
-          },
-        ]
-      : []),
+        ...(permissions.messages
+          ? [
+              {
+                id: "messages",
+                label: "Messages",
+                icon: Mail,
+              },
+            ]
+          : []),
 
-    ...(isSuperAdmin ? [{ id: "admins", label: "Admins", icon: Shield }] : []),
+        ...(permissions.registrations
+          ? [
+              {
+                id: "registrations",
+                label: "Registrations",
+                icon: BookOpen,
+              },
+            ]
+          : []),
 
-    ...(isSuperAdmin
-      ? [{ id: "activity", label: "Activity Logs", icon: BookOpen }]
-      : []),
-  ];
+        ...(isSuperAdmin
+          ? [
+              {
+                id: "admins",
+                label: "Admins",
+                icon: Shield,
+              },
+            ]
+          : []),
+
+        ...(isSuperAdmin
+          ? [
+              {
+                id: "activity",
+                label: "Activity Logs",
+                icon: BookOpen,
+              },
+            ]
+          : []),
+      ];
 
   const filteredRegistrations = (viewStatus: string) =>
     registrations
@@ -711,6 +752,25 @@ const Dashboard = () => {
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
+
+  const refreshPermissions = async () => {
+    try {
+      const res = await axios.get(
+        "https://ieee-sps-website.onrender.com/api/admin-access/permissions",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      setPermissions(res.data);
+
+      localStorage.setItem("permissions", JSON.stringify(res.data));
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   /* ══ RENDER ══ */
   return (
@@ -907,7 +967,7 @@ const Dashboard = () => {
 
           {activeTab === "profile" && <Profile />}
 
-          {activeTab === "upload" && (
+          {!isPaused && activeTab === "upload" && (
             <UploadEventTab
               handleEventUpload={handleEventUpload}
               title={title}
@@ -929,7 +989,7 @@ const Dashboard = () => {
             />
           )}
 
-          {activeTab === "events" && (
+          {!isPaused && activeTab === "events" && (
             <ManageEventsTab
               events={events}
               handleUpdate={handleUpdate}
@@ -938,36 +998,39 @@ const Dashboard = () => {
             />
           )}
 
-          {activeTab === "team" && (permissions.team || isSuperAdmin) && (
-            <TeamTab
-              teamView={teamView}
-              setTeamView={setTeamView}
-              handleAddMember={handleAddMember}
-              name={name}
-              setName={setName}
-              role={role}
-              setRole={setRole}
-              department={department}
-              setDepartment={setDepartment}
-              rollNumber={rollNumber}
-              setRollNumber={setRollNumber}
-              registrationNumber={registrationNumber}
-              setRegistrationNumber={setRegistrationNumber}
-              email={email}
-              setEmail={setEmail}
-              priority={priority}
-              setPriority={setPriority}
-              setPhoto={setPhoto}
-              members={members}
-              editMember={editMember}
-              setEditMember={setEditMember}
-              handleUpdateMember={handleUpdateMember}
-              deleteMember={deleteMember}
-              cardStyle={cardStyle}
-            />
-          )}
+          {!isPaused &&
+            activeTab === "team" &&
+            (permissions.team || isSuperAdmin) && (
+              <TeamTab
+                teamView={teamView}
+                setTeamView={setTeamView}
+                handleAddMember={handleAddMember}
+                name={name}
+                setName={setName}
+                role={role}
+                setRole={setRole}
+                department={department}
+                setDepartment={setDepartment}
+                rollNumber={rollNumber}
+                setRollNumber={setRollNumber}
+                registrationNumber={registrationNumber}
+                setRegistrationNumber={setRegistrationNumber}
+                email={email}
+                setEmail={setEmail}
+                priority={priority}
+                setPriority={setPriority}
+                setPhoto={setPhoto}
+                members={members}
+                editMember={editMember}
+                setEditMember={setEditMember}
+                handleUpdateMember={handleUpdateMember}
+                deleteMember={deleteMember}
+                cardStyle={cardStyle}
+              />
+            )}
 
-          {activeTab === "messages" &&
+          {!isPaused &&
+            activeTab === "messages" &&
             (permissions.messages || isSuperAdmin) && (
               <MessagesTab
                 messages={messages}
@@ -977,7 +1040,8 @@ const Dashboard = () => {
             )}
 
           {/* ── REGISTRATIONS ── */}
-          {activeTab === "registrations" &&
+          {!isPaused &&
+            activeTab === "registrations" &&
             (permissions.registrations || isSuperAdmin) && (
               <div>
                 <div className="mb-8">
@@ -1741,8 +1805,10 @@ const Dashboard = () => {
               </div>
             )}
 
-          {activeTab === "admins" && isSuperAdmin && <AdminsTab />}
-          {activeTab === "activity" && isSuperAdmin && <ActivityLogsTab />}
+          {!isPaused && activeTab === "admins" && isSuperAdmin && <AdminsTab />}
+          {!isPaused && activeTab === "activity" && isSuperAdmin && (
+            <ActivityLogsTab />
+          )}
         </main>
       </div>
 

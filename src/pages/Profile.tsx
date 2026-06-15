@@ -18,7 +18,7 @@ const Profile = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       setProfile(res.data);
@@ -28,11 +28,7 @@ const Profile = () => {
   };
 
   if (!profile) {
-    return (
-      <div className="p-6">
-        Loading Profile...
-      </div>
-    );
+    return <div className="p-6">Loading Profile...</div>;
   }
 
   const isExternal = profile.isExternal;
@@ -51,6 +47,19 @@ const Profile = () => {
         border: "1px solid rgba(99,179,237,0.08)",
       }}
     >
+      {profile.isPaused && (
+        <div
+          className="mb-6 p-4 rounded-lg"
+          style={{
+            backgroundColor: "rgba(239,68,68,0.1)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            color: "#ef4444",
+          }}
+        >
+          Your account is currently paused. Please contact Super Admin.
+        </div>
+      )}
+
       <div className="flex items-center gap-5 mb-6">
         <img
           src={photo}
@@ -60,9 +69,7 @@ const Profile = () => {
 
         <div>
           <h2 className="text-2xl font-bold">
-            {isExternal
-              ? profile.name
-              : member?.name}
+            {isExternal ? profile.name : member?.name}
           </h2>
 
           <p
@@ -70,56 +77,36 @@ const Profile = () => {
               color: "#64748b",
             }}
           >
-            {isExternal
-              ? profile.role
-              : member?.role}
+            {isExternal ? profile.role : member?.role}
           </p>
         </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-
         {!isExternal && (
           <>
-            <InfoCard
-              label="Department"
-              value={member?.department}
-            />
+            <InfoCard label="Department" value={member?.department} />
 
-            <InfoCard
-              label="Roll Number"
-              value={member?.rollNumber}
-            />
+            <InfoCard label="Roll Number" value={member?.rollNumber} />
 
             <InfoCard
               label="Registration Number"
               value={member?.registrationNumber}
             />
 
-            <InfoCard
-              label="Email"
-              value={member?.email}
-            />
+            <InfoCard label="Email" value={member?.email} />
 
-            <InfoCard
-              label="Phone"
-              value={member?.phone}
-            />
+            <InfoCard label="Phone" value={member?.phone} />
           </>
         )}
 
-        <InfoCard
-          label="Username"
-          value={profile.username}
-        />
+        <InfoCard label="Username" value={profile.username} />
 
         <InfoCard
           label="Last Login"
           value={
             profile.lastLogin
-              ? new Date(
-                  profile.lastLogin
-                ).toLocaleString()
+              ? new Date(profile.lastLogin).toLocaleString()
               : "Never"
           }
         />
@@ -128,31 +115,24 @@ const Profile = () => {
           label="Last Password Change"
           value={
             profile.lastPasswordChange
-              ? new Date(
-                  profile.lastPasswordChange
-                ).toLocaleString()
+              ? new Date(profile.lastPasswordChange).toLocaleString()
               : "Never"
           }
         />
       </div>
 
       <div className="mt-6">
-        <h3 className="font-semibold mb-3">
-          Permissions
-        </h3>
+        <h3 className="font-semibold mb-3">Permissions</h3>
 
         <div className="flex flex-wrap gap-2">
-          {Object.entries(
-            profile.permissions
-          )
+          {Object.entries(profile.permissions)
             .filter(([, value]) => value)
             .map(([key]) => (
               <span
                 key={key}
                 className="px-3 py-1 rounded-lg text-sm"
                 style={{
-                  backgroundColor:
-                    "rgba(59,130,246,0.15)",
+                  backgroundColor: "rgba(59,130,246,0.15)",
                   color: "#93c5fd",
                 }}
               >
@@ -165,18 +145,11 @@ const Profile = () => {
   );
 };
 
-const InfoCard = ({
-  label,
-  value,
-}: {
-  label: string;
-  value: any;
-}) => (
+const InfoCard = ({ label, value }: { label: string; value: any }) => (
   <div
     className="p-3 rounded-lg"
     style={{
-      backgroundColor:
-        "rgba(255,255,255,0.03)",
+      backgroundColor: "rgba(255,255,255,0.03)",
     }}
   >
     <div

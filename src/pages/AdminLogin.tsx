@@ -56,6 +56,11 @@ const AdminLogin = () => {
           JSON.stringify(res.data.permissions),
         );
 
+        localStorage.setItem(
+  "isPaused",
+  JSON.stringify(res.data.isPaused)
+);
+
         if (res.data.mustChangePassword) {
           window.location.href = "/change-password";
         } else {
