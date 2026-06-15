@@ -6,7 +6,7 @@ const AdminsTab = () => {
   const [members, setMembers] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
   const [selectedMember, setSelectedMember] = useState<any>(null);
-  const [editingAdminId, setEditingAdminId] = useState("");
+  const [editingAdminId, setEditingAdminId] = useState<string | null>(null);
   const [viewAdmin, setViewAdmin] = useState<any>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showExternalAdmin, setShowExternalAdmin] = useState(false);
@@ -130,18 +130,55 @@ const AdminsTab = () => {
 
   const saveAccess = async () => {
     try {
-      await axios.post(
-        "https://ieee-sps-website.onrender.com/api/admin-access",
-        {
-          memberId: selectedMember._id,
-          username: selectedMember.rollNumber,
-          password: selectedMember.rollNumber,
-          permissions,
-        },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      alert("Admin access granted successfully");
+      if (editingAdminId) {
+        await axios.put(
+          `https://ieee-sps-website.onrender.com/api/admin-access/${editingAdminId}`,
+          {
+            permissions,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        alert("Admin access updated successfully");
+        setShowExternalAdmin(false);
+        setExternalName("");
+        setExternalRole("");
+        setUsername("");
+        fetchAdmins();
+      } else {
+        await axios.post(
+          "https://ieee-sps-website.onrender.com/api/admin-access",
+          {
+            memberId: selectedMember._id,
+            username: selectedMember.rollNumber,
+            password: selectedMember.rollNumber,
+            permissions,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        alert("Admin access granted successfully");
+      }
+
       fetchAdmins();
+
+      setSelectedMember(null);
+      setEditingAdminId(null);
+
+      setPermissions({
+        events: false,
+        team: false,
+        registrations: false,
+        messages: false,
+      });
     } catch (err) {
       console.error(err);
       alert("Failed to save access");
@@ -178,8 +215,19 @@ const AdminsTab = () => {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       alert("Admin access updated successfully");
-      setEditingAdminId("");
+      setEditingAdminId(null);
       fetchAdmins();
+      setEditingAdminId(null);
+
+      setSelectedMember(null);
+
+      setShowExternalAdmin(false);
+
+      setExternalName("");
+      setExternalRole("");
+
+      setUsername("");
+      setPassword("");
     } catch (err) {
       console.error(err);
       alert("Failed to update access");
@@ -263,8 +311,12 @@ const AdminsTab = () => {
                 <button
                   key={member._id}
                   onClick={() => {
+                    setEditingAdminId(null);
+
                     setSelectedMember(member);
+
                     setShowExternalAdmin(false);
+
                     setUsername(member.rollNumber || "");
                     setPassword(member.rollNumber || "");
                   }}
@@ -305,7 +357,22 @@ const AdminsTab = () => {
             <button
               onClick={() => {
                 setShowExternalAdmin(!showExternalAdmin);
+
                 setSelectedMember(null);
+
+                if (editingAdminId) {
+                  setEditingAdminId(null);
+
+                  setUsername("");
+                  setPassword("");
+
+                  setPermissions({
+                    events: false,
+                    team: false,
+                    registrations: false,
+                    messages: false,
+                  });
+                }
               }}
               className="w-full py-2 rounded-lg text-sm font-medium transition-all"
               style={{
@@ -390,13 +457,15 @@ const AdminsTab = () => {
                     cursor: selectedMember !== null ? "not-allowed" : "text",
                   }}
                 />
-                <input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  style={inputStyle}
-                />
+                {!editingAdminId && (
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full p-3 rounded-lg"
+                  />
+                )}
               </div>
 
               <div style={{ borderTop: "1px solid rgba(99,179,237,0.08)" }} />
@@ -442,13 +511,15 @@ const AdminsTab = () => {
 
               {/* Save Button */}
               <button
-                onClick={
-                  editingAdminId
-                    ? updateAccess
-                    : isExternalMode
-                      ? saveExternalAdmin
-                      : saveAccess
-                }
+                onClick={() => {
+                  if (showExternalAdmin && editingAdminId) {
+                    updateAccess();
+                  } else if (showExternalAdmin) {
+                    saveExternalAdmin();
+                  } else {
+                    saveAccess();
+                  }
+                }}
                 className="w-full py-3 rounded-lg font-semibold text-sm transition-all"
                 style={{
                   backgroundColor: editingAdminId ? "#2563eb" : "#1d4ed8",
