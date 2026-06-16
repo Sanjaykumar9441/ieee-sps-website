@@ -35,6 +35,7 @@ const AdminLogin = () => {
             team: true,
             registrations: true,
             messages: true,
+            spsApplications: true,
             admins: true,
           }),
         );
