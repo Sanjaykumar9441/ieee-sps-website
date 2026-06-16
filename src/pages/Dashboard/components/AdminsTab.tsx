@@ -82,13 +82,23 @@ const AdminsTab = () => {
     }
   };
 
-  const toggleAdminStatus = async (id: string) => {
+  const toggleAdminStatus = async (id: string, currentlyPaused: boolean) => {
     try {
       const token = localStorage.getItem("token");
 
+      let reason = "";
+
+      if (!currentlyPaused) {
+        reason =
+          prompt("Pause Reason:", "Temporary Committee Restriction") ||
+          "Temporary Committee Restriction";
+      }
+
       await axios.put(
         `https://ieee-sps-website.onrender.com/api/admin-access/toggle-status/${id}`,
-        {},
+        {
+          reason,
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -266,6 +276,10 @@ const AdminsTab = () => {
     showExternalAdmin || (editingAdminId && !selectedMember);
   const hasSelection = selectedMember || isExternalMode;
 
+  const isMemberAdmin = (memberId: string) => {
+    return admins.some((admin) => admin.memberId?._id === memberId);
+  };
+
   return (
     <div style={{ color: "#e2e8f0" }}>
       {/* ── Page Header ── */}
@@ -294,6 +308,19 @@ const AdminsTab = () => {
               >
                 Team Members
               </h3>
+              {editingAdminId && (
+                <div
+                  className="mb-4 p-3 rounded-lg"
+                  style={{
+                    background: "rgba(34,197,94,0.1)",
+                    border: "1px solid rgba(34,197,94,0.3)",
+                    color: "#22c55e",
+                  }}
+                >
+                  🛡 This member already has admin access. You are currently
+                  editing their permissions.
+                </div>
+              )}
               {selectedMember && (
                 <span
                   className="text-xs px-2 py-1 rounded-full"
@@ -311,6 +338,33 @@ const AdminsTab = () => {
                 <button
                   key={member._id}
                   onClick={() => {
+                    if (selectedMember?._id === member._id) {
+                      setSelectedMember(null);
+                      setEditingAdminId(null);
+                      return;
+                    }
+
+                    const existingAdmin = admins.find(
+                      (admin) => admin.memberId?._id === member._id,
+                    );
+                    if (existingAdmin) {
+                      if (editingAdminId === existingAdmin._id) {
+                        setEditingAdminId(null);
+                        setSelectedMember(null);
+
+                        setPermissions({
+                          events: false,
+                          team: false,
+                          registrations: false,
+                          messages: false,
+                        });
+
+                        return;
+                      }
+
+                      editAdmin(existingAdmin);
+                      return;
+                    }
                     setEditingAdminId(null);
 
                     setSelectedMember(member);
@@ -336,6 +390,18 @@ const AdminsTab = () => {
                   <div className="text-xs mt-0.5" style={{ color: "#64748b" }}>
                     {member.role}
                   </div>
+                  {isMemberAdmin(member._id) && (
+                    <div
+                      className="mt-2 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
+                      style={{
+                        background: "rgba(34,197,94,0.12)",
+                        border: "1px solid rgba(34,197,94,0.25)",
+                        color: "#22c55e",
+                      }}
+                    >
+                      🛡 Team Admin
+                    </div>
+                  )}
                 </button>
               ))}
             </div>
@@ -508,6 +574,13 @@ const AdminsTab = () => {
                   ))}
                 </div>
               </div>
+
+              {editingAdminId && (
+                <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400">
+                  This member already has admin access. You are editing existing
+                  permissions.
+                </div>
+              )}
 
               {/* Save Button */}
               <button
@@ -692,7 +765,7 @@ const AdminsTab = () => {
                     🔑 Reset
                   </button>
                   <button
-                    onClick={() => toggleAdminStatus(admin._id)}
+                    onClick={() => toggleAdminStatus(admin._id, admin.isPaused)}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium"
                     style={{
                       backgroundColor: admin.isPaused
@@ -778,6 +851,13 @@ const AdminsTab = () => {
                 ["Username", `@${viewAdmin.username}`],
 
                 ["Status", viewAdmin.isPaused ? "Paused" : "Active"],
+
+                [
+                  "Reason",
+                  viewAdmin.isPaused
+                    ? viewAdmin.pauseReason || "Temporary Committee Restriction"
+                    : "-",
+                ],
 
                 [
                   "Admin Type",

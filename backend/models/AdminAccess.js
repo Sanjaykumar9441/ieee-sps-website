@@ -42,6 +42,11 @@ const adminAccessSchema = new mongoose.Schema(
       default: false,
     },
 
+    pauseReason: {
+      type: String,
+      default: "",
+    },
+
     username: {
       type: String,
       required: true,

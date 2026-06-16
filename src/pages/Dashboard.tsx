@@ -187,7 +187,7 @@ const Dashboard = () => {
   }, []);
 
   const [activeTab, setActiveTab] = useState(
-    localStorage.getItem("adminTab") || "upload",
+    localStorage.getItem("adminTab") || "profile",
   );
 
   /* EVENTS */
@@ -314,10 +314,34 @@ const Dashboard = () => {
 
   const totalMessages = messages.length;
 
+  const [isPaused, setIsPaused] = useState(
+    JSON.parse(localStorage.getItem("isPaused") || "false"),
+  );
+
+  const refreshPauseStatus = async () => {
+    try {
+      const res = await axios.get(
+        "https://ieee-sps-website.onrender.com/api/admin-access/profile",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      setIsPaused(res.data.isPaused);
+
+      localStorage.setItem("isPaused", JSON.stringify(res.data.isPaused));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     if (!token) return;
 
     refreshPermissions();
+    refreshPauseStatus();
 
     fetchEvents();
     fetchMembers();
@@ -329,6 +353,12 @@ const Dashboard = () => {
 
     return () => clearInterval(interval);
   }, [token]);
+
+  useEffect(() => {
+    if (isPaused) {
+      setActiveTab("profile");
+    }
+  }, [isPaused]);
 
   useEffect(() => {
     if (activeTab === "messages") fetchMessages();
@@ -648,7 +678,6 @@ const Dashboard = () => {
   };
 
   /* MENU */
-  const isPaused = JSON.parse(localStorage.getItem("isPaused") || "false");
 
   const isSuperAdmin = permissions.admins === true;
 

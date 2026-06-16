@@ -56,7 +56,18 @@ const Profile = () => {
             color: "#ef4444",
           }}
         >
-          Your account is currently paused. Please contact Super Admin.
+          <>
+            <div className="font-semibold text-lg">⚠ Access Restricted</div>
+
+            <div className="mt-2">
+              Your administrative access has been temporarily restricted.
+            </div>
+
+            <div className="mt-3">
+              <strong>Reason:</strong>{" "}
+              {profile.pauseReason || "Temporary Committee Restriction"}
+            </div>
+          </>
         </div>
       )}
 

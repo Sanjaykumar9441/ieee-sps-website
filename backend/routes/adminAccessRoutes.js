@@ -268,19 +268,30 @@ router.put("/toggle-status/:id", verifyToken, async (req, res) => {
   try {
     const admin = await AdminAccess.findById(req.params.id);
 
+    const { reason } = req.body;
+
     admin.isPaused = !admin.isPaused;
+
+    if (admin.isPaused) {
+      admin.pauseReason = reason || "Temporary Committee Restriction";
+    } else {
+      admin.pauseReason = "";
+    }
 
     await admin.save();
 
     await logActivity(
       "Super Admin",
       admin.isPaused ? "Paused Admin" : "Resumed Admin",
-      admin.username,
+      admin.isPaused
+        ? `${admin.username} (${admin.pauseReason})`
+        : admin.username,
     );
 
     res.json({
       success: true,
       isPaused: admin.isPaused,
+      pauseReason: admin.pauseReason,
     });
   } catch (err) {
     res.status(500).json({
@@ -293,32 +304,25 @@ router.put("/toggle-status/:id", verifyToken, async (req, res) => {
    MY PROFILE
 ========================= */
 
-router.get(
-  "/profile",
-  verifyToken,
-  async (req, res) => {
-    try {
-      const admin =
-        await AdminAccess.findById(
-          req.user.id
-        ).populate("memberId");
+router.get("/profile", verifyToken, async (req, res) => {
+  try {
+    const admin = await AdminAccess.findById(req.user.id).populate("memberId");
 
-      if (!admin) {
-        return res.status(404).json({
-          message: "Admin not found",
-        });
-      }
-
-      res.json(admin);
-    } catch (err) {
-      console.error(err);
-
-      res.status(500).json({
-        message: "Failed to fetch profile",
+    if (!admin) {
+      return res.status(404).json({
+        message: "Admin not found",
       });
     }
+
+    res.json(admin);
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      message: "Failed to fetch profile",
+    });
   }
-);
+});
 
 router.get("/permissions", verifyToken, async (req, res) => {
   try {
