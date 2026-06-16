@@ -78,6 +78,11 @@ const adminAccessSchema = new mongoose.Schema(
         type: Boolean,
         default: false,
       },
+
+      spsApplications: {
+        type: Boolean,
+        default: false,
+      },
     },
   },
   { timestamps: true },

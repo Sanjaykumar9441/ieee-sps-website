@@ -15,12 +15,14 @@ const AdminsTab = () => {
   const [externalName, setExternalName] = useState("");
   const [externalRole, setExternalRole] = useState("");
   const [search, setSearch] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
 
   const [permissions, setPermissions] = useState({
     events: false,
     team: false,
     registrations: false,
     messages: false,
+    spsApplications: false,
   });
 
   useEffect(() => {
@@ -130,6 +132,7 @@ const AdminsTab = () => {
       team: admin.permissions.team,
       registrations: admin.permissions.registrations,
       messages: admin.permissions.messages,
+      spsApplications: admin.permissions.spsApplications,
     });
   };
 
@@ -188,6 +191,7 @@ const AdminsTab = () => {
         team: false,
         registrations: false,
         messages: false,
+        spsApplications: false,
       });
     } catch (err) {
       console.error(err);
@@ -280,6 +284,12 @@ const AdminsTab = () => {
     return admins.some((admin) => admin.memberId?._id === memberId);
   };
 
+  const filteredMembers = members.filter(
+    (member) =>
+      member.name?.toLowerCase().includes(memberSearch.toLowerCase()) ||
+      member.rollNumber?.toLowerCase().includes(memberSearch.toLowerCase()),
+  );
+
   return (
     <div style={{ color: "#e2e8f0" }}>
       {/* ── Page Header ── */}
@@ -308,6 +318,24 @@ const AdminsTab = () => {
               >
                 Team Members
               </h3>
+              <div className="relative mb-4">
+                <input
+                  type="text"
+                  placeholder="Search by name or roll number..."
+                  value={memberSearch}
+                  onChange={(e) => setMemberSearch(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg bg-[#111827] border border-slate-700 text-white"
+                />
+
+                {memberSearch && (
+                  <button
+                    onClick={() => setMemberSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  >
+                    ✖
+                  </button>
+                )}
+              </div>
               {editingAdminId && (
                 <div
                   className="mb-4 p-3 rounded-lg"
@@ -334,7 +362,7 @@ const AdminsTab = () => {
               )}
             </div>
             <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
-              {members.map((member) => (
+              {filteredMembers.map((member) => (
                 <button
                   key={member._id}
                   onClick={() => {
@@ -357,6 +385,7 @@ const AdminsTab = () => {
                           team: false,
                           registrations: false,
                           messages: false,
+                          spsApplications: false,
                         });
 
                         return;
@@ -387,21 +416,25 @@ const AdminsTab = () => {
                   }}
                 >
                   <div className="font-medium text-sm">{member.name}</div>
-                  <div className="text-xs mt-0.5" style={{ color: "#64748b" }}>
-                    {member.role}
+
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-xs" style={{ color: "#64748b" }}>
+                      {member.role}
+                    </span>
+
+                    {isMemberAdmin(member._id) && (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
+                        style={{
+                          background: "rgba(34,197,94,0.12)",
+                          border: "1px solid rgba(34,197,94,0.25)",
+                          color: "#22c55e",
+                        }}
+                      >
+                        🛡 Team Admin
+                      </span>
+                    )}
                   </div>
-                  {isMemberAdmin(member._id) && (
-                    <div
-                      className="mt-2 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
-                      style={{
-                        background: "rgba(34,197,94,0.12)",
-                        border: "1px solid rgba(34,197,94,0.25)",
-                        color: "#22c55e",
-                      }}
-                    >
-                      🛡 Team Admin
-                    </div>
-                  )}
                 </button>
               ))}
             </div>
@@ -437,6 +470,7 @@ const AdminsTab = () => {
                     team: false,
                     registrations: false,
                     messages: false,
+                    spsApplications: false,
                   });
                 }
               }}

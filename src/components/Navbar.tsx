@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import ieeeLogo from "../assets/logos/ieee.png";
 import spsLogo from "../assets/logos/sps.png";
@@ -14,6 +15,8 @@ const links = [
 ];
 
 const Navbar = () => {
+  const navigate = useNavigate();
+
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -91,11 +94,9 @@ transition
                   </button>
                 ))}
               </nav>
-              <a
-                href="https://forms.office.com/r/DU2j5CXpd2"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="
+              <button
+  onClick={() => navigate("/join-sps")}
+  className="
   px-5
   py-2.5
   rounded-xl
@@ -105,9 +106,9 @@ transition
   hover:bg-[#00517f]
   transition
   "
-              >
-                Join SPS
-              </a>
+>
+  Join SPS
+</button>
             </div>
 
             {/* MOBILE BUTTON */}
@@ -151,11 +152,12 @@ transition
                 {link.label}
               </button>
             ))}
-            <a
-              href="https://forms.office.com/r/DU2j5CXpd2"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="
+            <button
+  onClick={() => {
+    navigate("/join-sps");
+    setOpen(false);
+  }}
+  className="
   mt-4
   w-full
   text-center
@@ -165,9 +167,9 @@ transition
   rounded-xl
   font-medium
   "
-            >
-              Join SPS
-            </a>
+>
+  Join SPS
+</button>
           </div>
         </div>
       </div>

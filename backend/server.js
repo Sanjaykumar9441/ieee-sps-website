@@ -26,6 +26,8 @@ const path = require("path");
 const uploadDir = path.join(__dirname, "uploads");
 const galleryRoutes = require("./routes/galleryRoutes");
 
+const spsApplicationRoutes = require("./routes/spsApplicationRoutes");
+
 const activityRoutes = require(
   "./routes/activityRoutes"
 );
@@ -98,9 +100,7 @@ app.use("/api", registrationRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/admin-access", adminAccessRoutes);
 app.use("/api", galleryRoutes);
-/* ===============================
-   📂 Serve Uploaded Images
-================================= */
+app.use("/api/sps-applications", spsApplicationRoutes);
 app.use("/uploads", express.static("uploads"));
 
 /* ===============================

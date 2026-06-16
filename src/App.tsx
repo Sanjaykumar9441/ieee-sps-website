@@ -13,6 +13,8 @@ import { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import LoadingScreen from "./components/LoadingScreen";
 import ChangePassword from "./pages/ChangePassword";
+import JoinSPS from "./pages/JoinSPS";
+
 function App() {
   const [loading, setLoading] = useState(true);
 
@@ -45,6 +47,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/all-members" element={<AllMembers />} />
             <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="/join-sps" element={<JoinSPS />} />
           </Routes>
         </div>
 

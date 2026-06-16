@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 const HeroSection = () => {
   return (
@@ -37,18 +38,16 @@ const HeroSection = () => {
 
             {/* Buttons */}
             <div className="mt-10 flex flex-col sm:flex-row gap-4">
-              <a
-                href="https://forms.office.com/r/DU2j5CXpd2"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-[#00629B] text-white px-8 py-4 rounded-xl font-semibold hover:bg-[#00517f] transition"
+              <Link
+                to="/join-sps"
+                className="bg-[#00629B] text-white px-8 py-4 rounded-xl font-semibold hover:bg-[#00517f] transition text-center"
               >
                 Join SPS
-              </a>
+              </Link>
 
               <a
                 href="#events"
-                className="border border-slate-300 text-slate-700 px-8 py-4 rounded-xl font-semibold hover:bg-slate-50 transition"
+                className="border border-slate-300 text-slate-700 px-8 py-4 rounded-xl font-semibold hover:bg-slate-50 transition text-center"
               >
                 Explore Events
               </a>

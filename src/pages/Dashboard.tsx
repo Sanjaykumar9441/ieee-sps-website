@@ -11,6 +11,7 @@ import MessagesTab from "./Dashboard/components/MessagesTab";
 import AdminsTab from "./Dashboard/components/AdminsTab";
 import ActivityLogsTab from "./Dashboard/components/ActivityLogsTab";
 import Profile from "./Profile";
+import SPSApplicationsTab from "./Dashboard/components/SPSApplicationsTab";
 
 const collegeMap: Record<string, string> = {
   AUS: "Aditya University (AUS)",
@@ -733,6 +734,16 @@ const Dashboard = () => {
             ]
           : []),
 
+        ...(permissions.spsApplications
+          ? [
+              {
+                id: "spsApplications",
+                label: "SPS Applications",
+                icon: Users,
+              },
+            ]
+          : []),
+
         ...(isSuperAdmin
           ? [
               {
@@ -1066,6 +1077,12 @@ const Dashboard = () => {
                 deleteMessage={deleteMessage}
                 cardStyle={cardStyle}
               />
+            )}
+
+          {!isPaused &&
+            activeTab === "spsApplications" &&
+            (isSuperAdmin || permissions.spsApplications) && (
+              <SPSApplicationsTab />
             )}
 
           {/* ── REGISTRATIONS ── */}
