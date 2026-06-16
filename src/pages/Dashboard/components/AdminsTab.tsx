@@ -274,6 +274,7 @@ const AdminsTab = () => {
     { key: "team", label: "Team" },
     { key: "registrations", label: "Registrations" },
     { key: "messages", label: "Messages" },
+    { key: "spsApplications", label: "SPS Applications" },
   ] as const;
 
   const isExternalMode =
