@@ -5,6 +5,7 @@ const spsApplicationSchema = new mongoose.Schema(
     rollNumber: {
       type: String,
       required: true,
+      unique: true,
     },
 
     fullName: {
@@ -25,6 +26,7 @@ const spsApplicationSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
+      unique: true,
     },
 
     mobile: {

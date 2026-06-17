@@ -6,6 +6,7 @@ const verifyToken = require("../middleware/verifyToken");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const logActivity = require("../utils/logActivity");
+const UAParser = require("ua-parser-js");
 
 /* =========================
    GET ALL ADMINS
@@ -137,7 +138,26 @@ router.post("/login", async (req, res) => {
     }
 
     admin.lastLogin = new Date();
-    await admin.save();
+
+const parser = new UAParser(
+  req.headers["user-agent"]
+);
+
+const browser =
+  parser.getBrowser().name || "Unknown Browser";
+
+const os =
+  parser.getOS().name || "Unknown OS";
+
+admin.loginHistory.unshift({
+  loginAt: new Date(),
+  device: `${browser} • ${os}`,
+});
+
+admin.loginHistory =
+  admin.loginHistory.slice(0, 10);
+
+await admin.save();
 
     const token = jwt.sign(
       {

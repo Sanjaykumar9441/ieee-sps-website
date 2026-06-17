@@ -4,12 +4,40 @@ const router = express.Router();
 const SPSApplication = require("../models/SPSApplication");
 const verifyToken = require("../middleware/verifyToken");
 
+const existingApplication = await SPSApplication.findOne({
+  $or: [
+    { rollNumber: req.body.rollNumber },
+    { email: req.body.email },
+  ],
+});
+
+if (existingApplication) {
+  return res.status(400).json({
+    success: false,
+    message: "Application already submitted with this Roll Number",
+  });
+}
+
 /* =========================
    SUBMIT APPLICATION
 ========================= */
-
 router.post("/", async (req, res) => {
   try {
+    const existingApplication = await SPSApplication.findOne({
+      $or: [
+        { rollNumber: req.body.rollNumber },
+        { email: req.body.email },
+      ],
+    });
+
+    if (existingApplication) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Application already submitted with this Roll Number or Email",
+      });
+    }
+
     const application = new SPSApplication(req.body);
 
     await application.save();

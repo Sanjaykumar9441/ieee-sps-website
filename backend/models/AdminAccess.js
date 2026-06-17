@@ -37,6 +37,20 @@ const adminAccessSchema = new mongoose.Schema(
       type: Date,
     },
 
+    loginHistory: [
+      {
+        loginAt: {
+          type: Date,
+          default: Date.now,
+        },
+
+        device: {
+          type: String,
+          default: "",
+        },
+      },
+    ],
+
     isPaused: {
       type: Boolean,
       default: false,

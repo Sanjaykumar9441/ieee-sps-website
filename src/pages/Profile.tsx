@@ -3,10 +3,15 @@ import axios from "axios";
 
 const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
+  const permissions = JSON.parse(localStorage.getItem("permissions") || "{}");
+
+  const isSuperAdmin = permissions.admins === true;
 
   useEffect(() => {
+  if (!isSuperAdmin) {
     fetchProfile();
-  }, []);
+  }
+}, [isSuperAdmin]);
 
   const fetchProfile = async () => {
     try {
@@ -26,6 +31,50 @@ const Profile = () => {
       console.error(err);
     }
   };
+
+  if (isSuperAdmin) {
+    return (
+      <div
+        className="rounded-xl p-6"
+        style={{
+          backgroundColor: "#0f1624",
+          border: "1px solid rgba(99,179,237,0.08)",
+        }}
+      >
+        <div className="flex items-center gap-5 mb-6">
+          <img
+            src="https://ui-avatars.com/api/?name=IEEE+SPS+Admin&background=00629B&color=fff"
+            alt="Super Admin"
+            className="w-28 h-28 rounded-full"
+          />
+
+          <div>
+            <h2 className="text-2xl font-bold">Super Admin</h2>
+
+            <p style={{ color: "#64748b" }}>IEEE SPS System Administrator</p>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <InfoCard label="Role" value="Super Admin" />
+
+          <InfoCard label="Access Level" value="Full System Access" />
+
+          <InfoCard label="Events" value="Allowed" />
+
+          <InfoCard label="Team" value="Allowed" />
+
+          <InfoCard label="Registrations" value="Allowed" />
+
+          <InfoCard label="Messages" value="Allowed" />
+
+          <InfoCard label="SPS Applications" value="Allowed" />
+
+          <InfoCard label="Admin Management" value="Allowed" />
+        </div>
+      </div>
+    );
+  }
 
   if (!profile) {
     return <div className="p-6">Loading Profile...</div>;
@@ -134,6 +183,52 @@ const Profile = () => {
 
       <div className="mt-6">
         <h3 className="font-semibold mb-3">Permissions</h3>
+
+        <div className="mt-8">
+  <h3 className="font-semibold mb-4">
+    Recent Logins
+  </h3>
+
+  <div className="space-y-3">
+    {profile.loginHistory?.length > 0 ? (
+      profile.loginHistory.map(
+        (login: any, index: number) => (
+          <div
+            key={index}
+            className="p-3 rounded-lg"
+            style={{
+              backgroundColor:
+                "rgba(255,255,255,0.03)",
+            }}
+          >
+            <div>
+              {new Date(
+                login.loginAt,
+              ).toLocaleString()}
+            </div>
+
+            <div
+              style={{
+                color: "#64748b",
+                fontSize: "12px",
+              }}
+            >
+              {login.device}
+            </div>
+          </div>
+        ),
+      )
+    ) : (
+      <div
+        style={{
+          color: "#64748b",
+        }}
+      >
+        No login history available
+      </div>
+    )}
+  </div>
+</div>
 
         <div className="flex flex-wrap gap-2">
           {Object.entries(profile.permissions)
