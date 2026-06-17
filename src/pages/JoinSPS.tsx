@@ -95,7 +95,7 @@ const JoinSPS = () => {
     } catch (err: any) {
       console.error(err);
 
-      setError(err.response?.data?.message || "Failed to submit application");
+      alert(err.response?.data?.message || "Failed to submit application");
     } finally {
       setLoading(false);
     }
