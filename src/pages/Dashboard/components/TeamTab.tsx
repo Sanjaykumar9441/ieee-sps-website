@@ -30,6 +30,9 @@ const TeamTab = ({
   priority,
   setPriority,
 
+  linkedIn,
+  setLinkedIn,
+
   setPhoto,
 
   members,
@@ -126,7 +129,14 @@ const TeamTab = ({
                 type="email"
                 value={email}
                 onChange={(e: any) => setEmail(e.target.value)}
-                placeholder="email@example.com"
+                placeholder="roll@adityauniversity.in"
+              />
+              <InputField
+                label="LinkedIn Profile"
+                type="url"
+                value={linkedIn}
+                onChange={(e: any) => setLinkedIn(e.target.value)}
+                placeholder="https://linkedin.com/in/username"
               />
               <InputField
                 label="Priority (1 = Chair)"
@@ -320,6 +330,16 @@ const TeamTab = ({
                                 setEditMember({
                                   ...editMember,
                                   email: e.target.value,
+                                })
+                              }
+                            />
+                            <InputField
+                              label="LinkedIn Profile"
+                              value={editMember.url}
+                              onChange={(e: any) =>
+                                setEditMember({
+                                  ...editMember,
+                                  url: e.target.value,
                                 })
                               }
                             />

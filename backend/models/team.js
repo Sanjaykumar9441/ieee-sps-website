@@ -8,7 +8,7 @@ const teamSchema = new mongoose.Schema(
     rollNumber: String,
     registrationNumber: String,
     email: String,
-    phone: String,
+    linkedIn: String,
     photo: String,
     priority: { type: Number, default: 5 } // For hierarchy order
   },

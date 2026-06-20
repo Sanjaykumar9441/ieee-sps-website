@@ -60,7 +60,7 @@ const EventsSection = () => {
               <span className="block text-[#00629B]">Technical Events</span>
             </h2>
 
-            <p className="mt-6 text-lg text-slate-600 leading-relaxed">
+            <p className="hidden md:block mt-6 text-lg text-slate-600 leading-relaxed">
               Explore workshops, seminars, competitions, and technical programs
               organized by IEEE SPS to foster innovation, collaboration, and
               professional growth.
@@ -69,93 +69,75 @@ const EventsSection = () => {
         </motion.div>
         {/* EVENT GRID */}
         <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8 place-items-center">
-          {visibleEvents.map((event, index) => (
-            <motion.div
-              key={event._id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.5,
-                delay: index * 0.1,
-              }}
-              viewport={{ once: true }}
-              className="group relative w-full max-w-[560px]"
-            >
-              {/* CARD */}
-              <div
-                className="
-group
-relative
-h-full
-bg-white
-border
-border-slate-200
-rounded-2xl
-p-8
-shadow-sm
-hover:shadow-lg
-hover:-translate-y-1
-transition-all
-duration-300
-"
+          {visibleEvents.map((event, index) => {
+            const isUpcoming = event.status === "Upcoming";
+            return (
+              <motion.div
+                key={event._id}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                className="group w-full max-w-[560px]"
               >
-                {/* STATUS BADGE */}
-                <div className="absolute top-6 right-6 z-20">
-                  <span
-                    className={`px-4 py-2 rounded-full text-xs font-medium border ${
-                      event.status === "Upcoming"
-                        ? "bg-blue-50 text-[#00629B] border-blue-100"
-                        : "bg-slate-100 text-slate-700 border-slate-200"
-                    }`}
-                  >
-                    {event.status}
-                  </span>
-                </div>
+                <div className="flex flex-col h-full bg-white border border-slate-200 rounded-2xl overflow-hidden hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                  {/* TOP STRIPE */}
+                  <div
+                    className={`h-1 ${isUpcoming ? "bg-[#00629B]" : "bg-slate-200"}`}
+                  />
 
-                {/* CONTENT */}
-                <div className="relative z-10 p-8 flex flex-col justify-between h-full">
-                  {/* DATE */}
-                  <div className="text-sm text-slate-500">
-                    {formatDate(event.date)}
+                  {/* BODY */}
+                  <div className="flex flex-col gap-3 p-6 flex-1">
+                    {/* DATE + BADGE */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium text-slate-500 tracking-wide">
+                        {formatDate(event.date)}
+                      </span>
+                      <span
+                        className={`text-xs font-medium px-3 py-1 rounded-full ${
+                          isUpcoming
+                            ? "bg-blue-50 text-[#185FA5]"
+                            : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {event.status}
+                      </span>
+                    </div>
+
+                    {/* TITLE */}
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-900 leading-snug flex-1">
+                      {event.title}
+                    </h3>
+
+                    {/* LOCATION */}
+                    <p className="text-sm text-slate-500">
+                      📍 {event.location}
+                    </p>
                   </div>
 
-                  {/* TITLE */}
-                  <h3 className="mt-5 text-xl sm:text-2xl font-bold text-slate-900 leading-snug min-h-[80px] sm:min-h-[96px]">
-                    {event.title}
-                  </h3>
-
-                  {/* LOCATION */}
-                  <div className="mt-4 text-slate-500 text-sm">
-                    📍 {event.location}
+                  {/* FOOTER */}
+                  <div className="border-t border-slate-100 px-6 py-4 flex items-center justify-between">
+                    <span className="text-xs text-slate-400 tracking-wide">
+                      IEEE SPS
+                    </span>
+                    <button
+                      onClick={() =>
+                        navigate(
+                          event.pageType === "custom" && event.customPage
+                            ? `/${event.customPage}`
+                            : `/event/${event._id}`,
+                        )
+                      }
+                      className="flex items-center gap-1.5 text-[#00629B] text-sm font-semibold hover:gap-2.5 transition-all"
+                    >
+                      View Event
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
                   </div>
-
-                  {/* BUTTON */}
-                  <button
-                    onClick={() =>
-                      navigate(
-                        event.pageType === "custom" && event.customPage
-                          ? `/${event.customPage}`
-                          : `/event/${event._id}`,
-                      )
-                    }
-                    className="
-  mt-8
-  inline-flex
-  items-center
-  gap-2
-  text-[#00629B]
-  font-semibold
-  hover:gap-3
-  transition-all
-  "
-                  >
-                    View Event
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
         <div className="mt-12 flex justify-center">
           <button

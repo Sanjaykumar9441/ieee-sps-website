@@ -1,6 +1,8 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { motion } from "framer-motion";
+import { ArrowLeft, Calendar, MapPin, CheckCircle } from "lucide-react";
 
 const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString("en-IN", {
@@ -12,137 +14,159 @@ const formatDate = (dateStr: string) => {
 
 const EventDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [event, setEvent] = useState<any>(null);
 
-  useEffect(() => {
-    fetchEvent();
-  }, []);
+  useEffect(() => { fetchEvent(); }, []);
 
   const fetchEvent = async () => {
-    const res = await axios.get(
-      `https://ieee-sps-website.onrender.com/events/${id}`,
-    );
+    const res = await axios.get(`https://ieee-sps-website.onrender.com/events/${id}`);
     setEvent(res.data);
   };
 
   if (!event) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center text-slate-600">
-        Loading...
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-slate-400">
+          <div className="w-8 h-8 border-2 border-[#00629B] border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm">Loading event...</span>
+        </div>
       </div>
     );
   }
 
+  const isUpcoming = event.status === "Upcoming";
+
   return (
-    <div className="min-h-screen bg-white">
-      <section className="px-6 py-24">
-        <div className="max-w-6xl mx-auto">
-          <button
-            onClick={() => window.history.back()}
-            className="
-  mb-8
-  text-[#00629B]
-  font-medium
-  hover:underline
-  "
+    <div className="min-h-screen bg-[#F8FAFC]">
+      <section className="px-4 sm:px-6 py-10 sm:py-16">
+        <div className="max-w-4xl mx-auto">
+
+          {/* BACK */}
+          <motion.button
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4 }}
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 text-[#00629B] text-sm font-medium mb-8 hover:gap-3 transition-all"
           >
-            ← Back to Events
-          </button>
-          {/* TOP BADGE */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-[#00629B] font-medium mb-8">
-            <div className="w-2 h-2 rounded-full bg-[#00629B]" />
+            <ArrowLeft className="w-4 h-4" />
+            Back to Events
+          </motion.button>
 
-            <span className="text-sm">IEEE SPS Event</span>
-          </div>
+          {/* HERO CARD */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="relative bg-white border border-slate-200 rounded-2xl overflow-hidden mb-4 shadow-sm"
+          >
+            {/* Top accent stripe */}
+            <div className={`h-1 w-full ${isUpcoming ? "bg-[#00629B]" : "bg-slate-300"}`} />
 
-          {/* TITLE */}
-          <h1 className="text-4xl md:text-6xl font-bold text-slate-900 leading-tight max-w-5xl mb-10">
-            {event.title}
-          </h1>
+            <div className="p-6 sm:p-8">
+              {/* IEEE chip */}
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-[#0C447C] text-xs font-medium mb-5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00629B]" />
+                IEEE SPS Event
+              </div>
 
-          {/* META */}
-          <div className="flex flex-wrap items-center gap-4 mb-12">
-            <span
-              className={`px-4 py-2 rounded-full text-sm font-medium border
-            ${
-              event.status === "Upcoming"
-                ? "bg-blue-50 text-[#00629B] border-blue-100"
-                : "bg-slate-100 text-slate-700 border-slate-200"
-            }`}
+              {/* Title */}
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 leading-tight mb-6">
+                {event.title}
+              </h1>
+
+              {/* Meta pills */}
+              <div className="flex flex-wrap gap-2">
+                <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border ${
+                  isUpcoming
+                    ? "bg-blue-50 text-[#0C447C] border-blue-100"
+                    : "bg-slate-100 text-slate-600 border-slate-200"
+                }`}>
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  {event.status}
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                  <Calendar className="w-3.5 h-3.5" />
+                  {formatDate(event.date)}
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                  <MapPin className="w-3.5 h-3.5" />
+                  {event.location}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* QUICK STATS (optional fields) */}
+          {(event.duration || event.mode) && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="grid grid-cols-2 gap-3 mb-4"
             >
-              {event.status}
-            </span>
+              {event.duration && (
+                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                  <p className="text-xs text-slate-400 mb-1">Duration</p>
+                  <p className="text-sm font-semibold text-slate-800">{event.duration}</p>
+                </div>
+              )}
+              {event.mode && (
+                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                  <p className="text-xs text-slate-400 mb-1">Mode</p>
+                  <p className="text-sm font-semibold text-slate-800">{event.mode}</p>
+                </div>
+              )}
+            </motion.div>
+          )}
 
-            <div className="px-4 py-2 rounded-full bg-slate-100 text-slate-700 text-sm">
-              📅 {formatDate(event.date)}
-            </div>
-
-            <div className="px-4 py-2 rounded-full bg-slate-100 text-slate-700 text-sm">
-              📍 {event.location}
-            </div>
-          </div>
-
-          {/* DESCRIPTION CARD */}
-          <div
-            className="relative overflow-hidden bg-white
-border
-border-slate-200
-rounded-2xl
-shadow-sm
-p-10 mb-20"
+          {/* ABOUT */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 mb-4 shadow-sm"
           >
-            <h2 className="text-2xl font-semibold mb-6 text-slate-900">
-              About This Event
-            </h2>
-
-            <p className="text-slate-600 leading-8 text-lg whitespace-pre-line">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-4">
+              About this event
+            </p>
+            <p className="text-slate-600 text-base leading-relaxed whitespace-pre-line">
               {event.description}
             </p>
-          </div>
+          </motion.div>
 
           {/* GALLERY */}
           {event.images && event.images.length > 0 && (
-            <>
-              <div className="flex items-center justify-between mb-10">
-                <h2 className="text-3xl font-bold text-slate-900">
-                  Event Gallery
-                </h2>
-
-                <div className="h-[1px] flex-1 ml-8 bg-slate-200" />
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="flex items-center gap-4 mb-4">
+                <span className="text-sm font-semibold text-slate-700 whitespace-nowrap">Event gallery</span>
+                <div className="flex-1 h-px bg-slate-200" />
               </div>
 
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                {event.images.map((img: string, index: number) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {event.images.map((img: string, i: number) => (
                   <div
-                    key={index}
-                    className="group relative overflow-hidden rounded-2xl
-border
-border-slate-200
-bg-white
-shadow-sm
-hover:shadow-lg
-transition"
+                    key={i}
+                    className={`overflow-hidden rounded-xl border border-slate-200 bg-white ${
+                      i === 0 ? "col-span-2 sm:col-span-2" : ""
+                    }`}
                   >
-                    {/* IMAGE */}
-                    <div className="overflow-hidden">
-                      <img
-                        src={img}
-                        alt="Event"
-                        className="
-h-72
-w-full
-object-cover
-transition-transform
-duration-500
-group-hover:scale-105
-"
-                      />
-                    </div>
+                    <img
+                      src={img}
+                      alt={`Event photo ${i + 1}`}
+                      className="w-full h-48 sm:h-56 object-cover hover:scale-105 transition-transform duration-500"
+                    />
                   </div>
                 ))}
               </div>
-            </>
+            </motion.div>
           )}
+
         </div>
       </section>
     </div>

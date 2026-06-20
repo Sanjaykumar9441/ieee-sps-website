@@ -51,7 +51,7 @@ const AllEvents = () => {
             <span className="block text-[#00629B]">Technical Programs</span>
           </h1>
 
-          <p className="mt-6 text-lg text-slate-600 max-w-2xl">
+          <p className="hidden md:block mt-6 text-lg text-slate-600 max-w-2xl">
             Explore workshops, competitions, seminars, and technical programs
             organized by IEEE SPS Aditya University.
           </p>
@@ -60,65 +60,77 @@ const AllEvents = () => {
           </p>
         </motion.div>
 
-        <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-8">
-          {events.map((event) => (
-            <div
-              key={event._id}
-              className="
-bg-white
-border
-border-slate-200
-rounded-2xl
-p-8
-h-full
-shadow-sm
-hover:shadow-lg
-hover:-translate-y-1
-transition-all
-duration-300
-"
-            >
-              <span
-                className={`text-xs font-medium px-3 py-1 rounded-full
-              ${
-                event.status === "Upcoming"
-                  ? "bg-blue-50 text-[#00629B]"
-                  : "bg-slate-100 text-slate-700"
-              }`}
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+          {events.map((event, index) => {
+            const isUpcoming = event.status === "Upcoming";
+
+            return (
+              <motion.div
+                key={event._id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: index * 0.05 }}
+                viewport={{ once: true }}
+                className="w-full"
               >
-                {event.status}
-              </span>
+                {" "}
+                <div className="flex flex-col h-full bg-white border border-slate-200 rounded-2xl overflow-hidden hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                  {/* TOP STRIPE */}
+                  <div
+                    className={`h-1 ${
+                      isUpcoming ? "bg-[#00629B]" : "bg-slate-200"
+                    }`}
+                  />
+                  {/* BODY */}
+                  <div className="flex flex-col gap-4 p-6 flex-1">
+                    {/* DATE + STATUS */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium text-slate-500 tracking-wide">
+                        {formatDate(event.date)}
+                      </span>
 
-              <h3 className="text-2xl font-bold text-slate-900 mt-5 min-h-[96px]">
-                {event.title}
-              </h3>
+                      <span
+                        className={`text-xs font-medium px-3 py-1 rounded-full ${
+                          isUpcoming
+                            ? "bg-blue-50 text-[#185FA5]"
+                            : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {event.status}
+                      </span>
+                    </div>
 
-              <div className="flex flex-col sm:flex-row sm:justify-between gap-2 text-slate-500 mt-4 text-sm">
-                <span>📅 {formatDate(event.date)}</span>
-                <span>📍 {event.location}</span>
-              </div>
+                    {/* TITLE */}
+                    <h3 className="text-lg sm:text-xl font-semibold text-slate-900 leading-snug flex-1">
+                      {event.title}
+                    </h3>
 
-              <Link
-                to={
-                  event.pageType === "custom" && event.customPage
-                    ? `/${event.customPage}`
-                    : `/event/${event._id}`
-                }
-                className="
-mt-6
-inline-flex
-items-center
-gap-2
-text-[#00629B]
-font-semibold
-hover:gap-3
-transition-all
-"
-              >
-                View Event →
-              </Link>
-            </div>
-          ))}
+                    {/* LOCATION */}
+                    <p className="text-sm text-slate-500">
+                      📍 {event.location}
+                    </p>
+                  </div>
+                  {/* FOOTER */}
+                  <div className="border-t border-slate-100 px-6 py-4 flex items-center justify-between">
+                    <span className="text-xs text-slate-400 tracking-wide">
+                      IEEE SPS
+                    </span>
+
+                    <Link
+                      to={
+                        event.pageType === "custom" && event.customPage
+                          ? `/${event.customPage}`
+                          : `/event/${event._id}`
+                      }
+                      className="flex items-center gap-1.5 text-[#00629B] text-sm font-semibold hover:gap-2.5 transition-all"
+                    >
+                      View Event →
+                    </Link>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
 

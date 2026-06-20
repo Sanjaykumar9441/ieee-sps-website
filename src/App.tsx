@@ -14,6 +14,7 @@ import { AnimatePresence } from "framer-motion";
 import LoadingScreen from "./components/LoadingScreen";
 import ChangePassword from "./pages/ChangePassword";
 import JoinSPS from "./pages/JoinSPS";
+import ScrollToTop from "./components/ScrollToTop";
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -28,6 +29,7 @@ function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <AnimatePresence>
         {loading && <LoadingScreen />}
       </AnimatePresence>

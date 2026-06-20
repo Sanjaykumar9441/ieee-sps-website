@@ -6,7 +6,6 @@ const AboutSection = () => {
     <section id="about" className="scroll-mt-20 py-24 bg-[#F8FAFC]">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="grid lg:grid-cols-2 gap-16 items-start">
-          
           {/* LEFT CONTENT */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -25,7 +24,7 @@ const AboutSection = () => {
               </span>
             </h2>
 
-            <p className="mt-8 text-lg text-slate-600 leading-relaxed">
+            <p className="hidden md:block mt-8 text-lg text-slate-600 leading-relaxed">
               The IEEE Signal Processing Society Student Branch Chapter at
               Aditya University is dedicated to fostering technical excellence,
               innovation, and research among students. Through workshops,
@@ -34,10 +33,10 @@ const AboutSection = () => {
               technologies and develop industry-relevant skills.
             </p>
 
-            <p className="mt-6 text-lg text-slate-600 leading-relaxed">
+            <p className="hidden md:block mt-6 text-lg text-slate-600 leading-relaxed">
               Our mission is to create a vibrant technical community that
-              encourages knowledge sharing, professional growth, leadership,
-              and innovation while contributing to advancements in signal
+              encourages knowledge sharing, professional growth, leadership, and
+              innovation while contributing to advancements in signal
               processing, artificial intelligence, and related technologies.
             </p>
           </motion.div>
@@ -120,7 +119,6 @@ const AboutSection = () => {
               </div>
             </div>
           </motion.div>
-
         </div>
       </div>
     </section>

@@ -14,7 +14,9 @@ const Home = () => {
       <Navbar />
       <HeroSection />
       <AboutSection />
-      <DomainsSection />
+      <div className="hidden lg:block">
+        <DomainsSection />
+      </div>
       <EventsSection />
       <TeamSection />
       <ContactSection />

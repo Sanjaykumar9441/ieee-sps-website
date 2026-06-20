@@ -1,9 +1,12 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { motion } from "framer-motion";
+import { ArrowLeft, Mail, Linkedin } from "lucide-react";
 
 const TeamDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [member, setMember] = useState<any>(null);
 
   useEffect(() => {
@@ -16,138 +19,138 @@ const TeamDetails = () => {
         `https://ieee-sps-website.onrender.com/team/${id}`,
       );
       setMember(res.data);
-    } catch (error) {
-      console.error("Error fetching team member:", error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
   if (!member) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center text-slate-600">
-        Loading...
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-slate-400">
+          <div className="w-8 h-8 border-2 border-[#00629B] border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm">Loading profile...</span>
+        </div>
       </div>
     );
   }
 
+  const initials = member.name
+    ?.split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] px-6 py-24">
-      <div className="max-w-6xl mx-auto">
-        <button
-          onClick={() => window.history.back()}
-          className="
-  mb-8
-  text-[#00629B]
-  font-medium
-  hover:underline
-  "
-        >
-          ← Back to Team
-        </button>
-        {/* MAIN CARD */}
-        <div
-          className="
-        relative
-        overflow-hidden
-        bg-white
-border
-border-slate-200
-rounded-2xl
-shadow-sm
-      "
-        >
-          <div className="grid lg:grid-cols-[380px_1fr] gap-12 p-10 lg:p-16 items-center">
-            {/* ===== LEFT PHOTO SECTION ===== */}
-            <div className="flex flex-col items-center">
-              {/* IMAGE CONTAINER */}
-              <div className="relative">
-                <img
-                  src={member.photo}
-                  alt={member.name}
-                  className="
-                  relative
-                  w-72
-h-72
-object-cover
-rounded-full
-border-4
-border-slate-100
-shadow-md
-                "
-                />
+    <div className="min-h-screen bg-[#F8FAFC]">
+      <section className="px-4 sm:px-6 py-10 sm:py-16">
+        <div className="max-w-2xl mx-auto">
+          {/* BACK */}
+          <motion.button
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4 }}
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 text-[#00629B] text-sm font-medium mb-8 hover:gap-3 transition-all"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Team
+          </motion.button>
+
+          {/* PROFILE CARD */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm mb-3"
+          >
+            {/* Accent stripe */}
+            <div className="h-1 bg-[#00629B]" />
+
+            {/* Avatar + name block */}
+            <div className="flex flex-col items-center px-6 pt-8 pb-6 gap-4">
+              <div className="p-1 rounded-full border-2 border-blue-100">
+                {member.photo ? (
+                  <img
+                    src={member.photo}
+                    alt={member.name}
+                    className="w-24 h-24 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-blue-50 flex items-center justify-center text-2xl font-semibold text-[#0C447C]">
+                    {initials}
+                  </div>
+                )}
               </div>
 
-              {/* ROLE BADGE */}
-              <div
-                className="
-              mt-8
-              px-6 py-3
-              rounded-full
-              bg-blue-50
-text-[#00629B]
-font-medium
-text-sm
-            "
-              >
-                {member.role}
+              <div className="text-center">
+                <div className="inline-flex items-center gap-1.5 text-xs font-medium text-[#0C447C] bg-blue-50 px-3 py-1 rounded-full mb-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00629B]" />
+                  IEEE SPS Team Member
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
+                  {member.name}
+                </h1>
+                <p className="text-sm font-semibold text-[#00629B] mt-1">
+                  {member.role}
+                </p>
               </div>
             </div>
 
-            {/* ===== RIGHT CONTENT ===== */}
-            <div>
-              {/* TOP LABEL */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-[#00629B] font-medium mb-6">
-                <div className="w-2 h-2 rounded-full bg-[#00629B]" />
-
-                <span className="text-sm">IEEE SPS Team Member</span>
-              </div>
-
-              {/* NAME */}
-              <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-4 leading-tight">
-                {member.name}
-              </h1>
-
-              {/* ROLE TEXT */}
-              <p className="text-xl text-[#00629B] mb-12">{member.role}</p>
-
-              {/* INFO GRID */}
-              <div className="grid sm:grid-cols-2 gap-6">
-                <InfoCard label="Department" value={member.department} />
-
-                <InfoCard label="Roll Number" value={member.rollNumber} />
-
-                <InfoCard
-                  label="Registration Number"
-                  value={member.registrationNumber}
-                />
-
-                <InfoCard label="Email" value={member.email} />
-              </div>
+            {/* Info grid */}
+            <div className="border-t border-slate-100 grid grid-cols-2">
+              {[
+                { label: "Department", value: member.department },
+                { label: "Roll Number", value: member.rollNumber },
+                { label: "Reg. Number", value: member.registrationNumber },
+                { label: "Email", value: member.email },
+              ].map((item, i, arr) => (
+                <div
+                  key={item.label}
+                  className={`px-5 py-4 flex flex-col gap-1
+                    ${i % 2 === 0 ? "border-r border-slate-100" : ""}
+                    ${i < arr.length - 2 ? "border-b border-slate-100" : ""}
+                  `}
+                >
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                    {item.label}
+                  </span>
+                  <span className="text-sm font-semibold text-slate-800 break-all">
+                    {item.value || "—"}
+                  </span>
+                </div>
+              ))}
             </div>
-          </div>
+
+            {/* Social / contact actions */}
+            <div className="border-t border-slate-100 px-5 py-4 flex flex-wrap justify-center gap-2">
+              {member.email && (
+                <a
+                  href={`mailto:${member.email}`}
+                  className="inline-flex items-center gap-2 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg px-4 py-2 hover:border-slate-300 transition"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  Email
+                </a>
+              )}
+              {member.linkedIn && (
+                <a
+                  href={member.linkedIn}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg px-4 py-2 hover:border-slate-300 transition"
+                >
+                  <Linkedin className="w-3.5 h-3.5" />
+                  LinkedIn
+                </a>
+              )}
+            </div>
+          </motion.div>
         </div>
-      </div>
+      </section>
     </div>
   );
 };
-
-/* ===== Reusable Info Row ===== */
-const InfoCard = ({ label, value }: { label: string; value: string }) => (
-  <div
-    className="
-rounded-2xl
-border
-border-slate-200
-bg-white
-p-5
-shadow-sm
-hover:shadow-md
-transition
-"
-  >
-    <p className="text-sm text-slate-500 mb-2">{label}</p>
-
-    <p className="text-lg font-medium text-slate-900 break-words">{value}</p>
-  </div>
-);
 
 export default TeamDetails;

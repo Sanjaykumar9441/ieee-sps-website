@@ -10,43 +10,47 @@ const Footer = () => {
           {/* LEFT */}
           <div>
             {/* BADGE */}
-            <h2 className="text-3xl font-bold text-slate-900">IEEE SPS</h2>
+            <div className="hidden md:block">
+              <h2 className="text-3xl font-bold text-slate-900">IEEE SPS</h2>
 
-            <p className="mt-2 text-[#00629B] font-medium">
-              Aditya University Student Branch Chapter
-            </p>
+              <p className="mt-2 text-[#00629B] font-medium">
+                Aditya University Student Branch Chapter
+              </p>
 
-            <p className="mt-6 text-slate-600 leading-relaxed max-w-md">
-              Empowering students through innovation, research, technical
-              excellence, and professional development in signal processing and
-              emerging technologies.
-            </p>
+              <p className="mt-6 text-slate-600 leading-relaxed max-w-md">
+                Empowering students through innovation, research, technical
+                excellence, and professional development in signal processing
+                and emerging technologies.
+              </p>
+            </div>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-6">
-              Quick Links
-            </h3>
+            <div className="hidden md:block">
+              <h3 className="text-lg font-semibold text-slate-900 mb-6">
+                Quick Links
+              </h3>
 
-            <div className="space-y-3 text-slate-600">
-              <a href="#about" className="block hover:text-[#00629B]">
-                About
-              </a>
+              <div className="space-y-3 text-slate-600">
+                <a href="#about" className="block hover:text-[#00629B]">
+                  About
+                </a>
 
-              <a href="#domains" className="block hover:text-[#00629B]">
-                Domains
-              </a>
+                <a href="#domains" className="block hover:text-[#00629B]">
+                  Domains
+                </a>
 
-              <a href="#events" className="block hover:text-[#00629B]">
-                Events
-              </a>
+                <a href="#events" className="block hover:text-[#00629B]">
+                  Events
+                </a>
 
-              <a href="#team" className="block hover:text-[#00629B]">
-                Team
-              </a>
+                <a href="#team" className="block hover:text-[#00629B]">
+                  Team
+                </a>
 
-              <a href="#contact" className="block hover:text-[#00629B]">
-                Contact
-              </a>
+                <a href="#contact" className="block hover:text-[#00629B]">
+                  Contact
+                </a>
+              </div>
             </div>
           </div>
           {/* CONTACT */}
@@ -87,8 +91,8 @@ const Footer = () => {
           {/* SOCIAL */}
           <div>
             <h3 className="text-lg font-semibold text-slate-900 mb-6">
-  Social Media
-</h3>
+              Social Media
+            </h3>
 
             <ul className="example-2 flex flex-col gap-5 items-start">
               <li className="icon-content">

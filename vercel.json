@@ -1,11 +1,4 @@
 {
-  "redirects": [
-    {
-      "source": "/arduino-days%E2%81%A0",
-      "destination": "/arduino-days",
-      "permanent": true
-    }
-  ],
   "rewrites": [
     {
       "source": "/(.*)",
