@@ -335,11 +335,11 @@ const TeamTab = ({
                             />
                             <InputField
                               label="LinkedIn Profile"
-                              value={editMember.url}
+                              value={editMember.linkedIn || ""}
                               onChange={(e: any) =>
                                 setEditMember({
                                   ...editMember,
-                                  url: e.target.value,
+                                  linkedIn: e.target.value,
                                 })
                               }
                             />
