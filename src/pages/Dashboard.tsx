@@ -28,6 +28,7 @@ import {
   BookOpen,
   Shield,
   History,
+  Linkedin,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -91,6 +92,7 @@ const Dashboard = () => {
   const [rollNumber, setRollNumber] = useState("");
   const [registrationNumber, setRegistrationNumber] = useState("");
   const [email, setEmail] = useState("");
+  const [linkedIn, setLinkedIn] = useState("");
   const [priority, setPriority] = useState(5);
   const [photo, setPhoto] = useState<File | null>(null);
 
@@ -276,6 +278,7 @@ const Dashboard = () => {
     formData.append("rollNumber", rollNumber);
     formData.append("registrationNumber", registrationNumber);
     formData.append("email", email);
+    formData.append("linkedIn", linkedIn);
     formData.append("priority", priority.toString());
     if (photo) formData.append("photo", photo);
     await axios.post("https://ieee-sps-website.onrender.com/team", formData, {
@@ -288,6 +291,7 @@ const Dashboard = () => {
     setRollNumber("");
     setRegistrationNumber("");
     setEmail("");
+    setLinkedIn("");
     setPriority(5);
     setPhoto(null);
     fetchMembers();
@@ -309,6 +313,7 @@ const Dashboard = () => {
     formData.append("rollNumber", member.rollNumber);
     formData.append("registrationNumber", member.registrationNumber);
     formData.append("email", member.email);
+    formData.append("linkedIn", member.linkedIn || "");
     formData.append("priority", member.priority);
     if (member.newPhoto) formData.append("photo", member.newPhoto);
     await axios.put(
@@ -606,6 +611,8 @@ const Dashboard = () => {
                 setRegistrationNumber={setRegistrationNumber}
                 email={email}
                 setEmail={setEmail}
+                linkedIn={linkedIn}
+                setLinkedIn={setLinkedIn}
                 priority={priority}
                 setPriority={setPriority}
                 setPhoto={setPhoto}

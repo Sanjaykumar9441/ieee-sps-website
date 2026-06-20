@@ -70,7 +70,7 @@ const TeamSection = () => {
                   <img
                     src={member.photo}
                     alt={member.name}
-                    className="w-26 h-26 rounded-full object-cover border-2 border-blue-100"
+                    className="w-24 h-24 rounded-full object-cover border-2 border-blue-100"
                   />
                 </div>
 

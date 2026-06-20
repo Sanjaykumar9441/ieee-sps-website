@@ -75,7 +75,7 @@ const TeamDetails = () => {
                   <img
                     src={member.photo}
                     alt={member.name}
-                    className="w-26 h-26 rounded-full object-cover"
+                    className="w-25 h-25 rounded-full object-cover"
                   />
                 ) : (
                   <div className="w-24 h-24 rounded-full bg-blue-50 flex items-center justify-center text-2xl font-semibold text-[#0C447C]">
