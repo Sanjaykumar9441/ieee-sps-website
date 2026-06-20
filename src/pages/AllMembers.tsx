@@ -32,7 +32,7 @@ const AllMembers = () => {
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
           {/* Back Button */}
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/#team")}
             className="mb-8 inline-flex items-center gap-2 text-[#00629B] font-medium hover:gap-3 transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -81,7 +81,7 @@ const AllMembers = () => {
                     <img
                       src={member.photo}
                       alt={member.name}
-                      className="w-24 h-24 rounded-full object-cover border-2 border-blue-100"
+                      className="w-26 h-26 rounded-full object-cover border-2 border-blue-100"
                     />
                   </div>
 

@@ -10,13 +10,12 @@ const Footer = () => {
           {/* LEFT */}
           <div>
             {/* BADGE */}
-            <div className="hidden md:block">
               <h2 className="text-3xl font-bold text-slate-900">IEEE SPS</h2>
 
               <p className="mt-2 text-[#00629B] font-medium">
                 Aditya University Student Branch Chapter
               </p>
-
+              <div className="hidden md:block">
               <p className="mt-6 text-slate-600 leading-relaxed max-w-md">
                 Empowering students through innovation, research, technical
                 excellence, and professional development in signal processing
