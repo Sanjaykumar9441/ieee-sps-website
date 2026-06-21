@@ -546,43 +546,26 @@ const Dashboard = () => {
           style={{ maxWidth: "1400px" }}
         >
           {/* OVERVIEW STAT CARDS */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4 mb-8">
-            <div style={cardStyle} className="p-5 rounded-xl">
-              <p className="text-xs uppercase" style={{ color: "#64748b" }}>
-                Total Events
-              </p>
-              <h3 className="text-2xl font-bold">{totalEvents}</h3>
-            </div>
-            <div style={cardStyle} className="p-5 rounded-xl">
-              <p className="text-xs uppercase" style={{ color: "#64748b" }}>
-                Upcoming
-              </p>
-              <h3 className="text-2xl font-bold">{upcomingEvents}</h3>
-            </div>
-            <div style={cardStyle} className="p-5 rounded-xl">
-              <p className="text-xs uppercase" style={{ color: "#64748b" }}>
-                Completed
-              </p>
-              <h3 className="text-2xl font-bold">{completedEvents}</h3>
-            </div>
-            <div style={cardStyle} className="p-5 rounded-xl">
-              <p className="text-xs uppercase" style={{ color: "#64748b" }}>
-                Team Members
-              </p>
-              <h3 className="text-2xl font-bold">{totalTeamMembers}</h3>
-            </div>
-            <div style={cardStyle} className="p-5 rounded-xl">
-              <p className="text-xs uppercase" style={{ color: "#64748b" }}>
-                Messages
-              </p>
-              <h3 className="text-2xl font-bold">{totalMessages}</h3>
-            </div>
-            <div style={cardStyle} className="p-5 rounded-xl mb-8">
-              <p className="text-xs uppercase" style={{ color: "#64748b" }}>
-                SPS Applications
-              </p>
-              <h3 className="text-2xl font-bold">{spsApplications.length}</h3>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-8">
+            {[
+              { label: "Total Events", value: totalEvents },
+              { label: "Upcoming", value: upcomingEvents },
+              { label: "Completed", value: completedEvents },
+              { label: "Team Members", value: totalTeamMembers },
+              { label: "Messages", value: totalMessages },
+              { label: "SPS Applications", value: spsApplications.length },
+            ].map(({ label, value }) => (
+              <div
+                key={label}
+                style={cardStyle}
+                className="p-4 rounded-xl flex flex-col gap-1"
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis">
+                  {label}
+                </p>
+                <h3 className="text-2xl font-bold">{value}</h3>
+              </div>
+            ))}
           </div>
 
           {activeTab === "profile" && <Profile />}
