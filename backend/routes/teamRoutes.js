@@ -52,10 +52,35 @@ const verifyToken = (req, res, next) => {
 router.post("/", verifyToken, upload.single("photo"), async (req, res) => {
   try {
 
+    // Get highest existing priority
+    const lastMember = await Team.findOne().sort({ priority: -1 });
+
+    const nextPriority = lastMember
+      ? lastMember.priority + 1
+      : 1;
+
     const newMember = new Team({
       ...req.body,
-      photo: req.file ? req.file.path : null // ✅ Cloudinary URL
+
+      // Use provided priority or next available
+      priority: req.body.priority
+        ? Number(req.body.priority)
+        : nextPriority,
+
+      photo: req.file ? req.file.path : null,
     });
+
+    const newPriority = Number(newMember.priority);
+
+    // Shift existing members if inserting in between
+    await Team.updateMany(
+      {
+        priority: { $gte: newPriority },
+      },
+      {
+        $inc: { priority: 1 },
+      }
+    );
 
     await newMember.save();
 
@@ -73,11 +98,56 @@ router.post("/", verifyToken, upload.single("photo"), async (req, res) => {
 
 router.put("/:id", verifyToken, upload.single("photo"), async (req, res) => {
   try {
+    const member = await Team.findById(req.params.id);
 
-    const updateData = { ...req.body };
+    if (!member) {
+      return res.status(404).json({ msg: "Member not found" });
+    }
+
+    const oldPriority = Number(member.priority);
+    const newPriority = Number(req.body.priority);
+
+    if (oldPriority !== newPriority) {
+
+      if (newPriority < oldPriority) {
+
+        await Team.updateMany(
+          {
+            _id: { $ne: member._id },
+            priority: {
+              $gte: newPriority,
+              $lt: oldPriority
+            }
+          },
+          {
+            $inc: { priority: 1 }
+          }
+        );
+
+      } else {
+
+        await Team.updateMany(
+          {
+            _id: { $ne: member._id },
+            priority: {
+              $gt: oldPriority,
+              $lte: newPriority
+            }
+          },
+          {
+            $inc: { priority: -1 }
+          }
+        );
+      }
+    }
+
+    const updateData = {
+      ...req.body,
+      priority: newPriority
+    };
 
     if (req.file) {
-      updateData.photo = req.file.path; // ✅ Cloudinary URL
+      updateData.photo = req.file.path;
     }
 
     const updated = await Team.findByIdAndUpdate(

@@ -6,9 +6,16 @@ import ieeeLogo from "../assets/logos/ieee.png";
 import spsLogo from "../assets/logos/sps.png";
 import uniLogo from "../assets/logos/university.png";
 
-const links = [
+const desktopLinks = [
   { label: "About", href: "about" },
   { label: "Domains", href: "domains" },
+  { label: "Events", href: "events" },
+  { label: "Team", href: "team" },
+  { label: "Contact", href: "contact" },
+];
+
+const mobileLinks = [
+  { label: "About", href: "about" },
   { label: "Events", href: "events" },
   { label: "Team", href: "team" },
   { label: "Contact", href: "contact" },
@@ -78,7 +85,7 @@ const Navbar = () => {
             {/* DESKTOP NAV */}
             <div className="hidden md:flex items-center gap-10">
               <nav className="flex items-center gap-8">
-                {links.map((link) => (
+                {desktopLinks.map((link) => (
                   <button
                     key={link.label}
                     onClick={() => handleNavClick(link.href)}
@@ -136,7 +143,7 @@ transition
           className="absolute top-24 left-1/2 -translate-x-1/2 w-[90%] rounded-3xl bg-white border border-slate-200 shadow-xl p-8"
         >
           <div className="flex flex-col gap-6">
-            {links.map((link) => (
+            {mobileLinks.map((link) => (
               <button
                 key={link.label}
                 onClick={() => handleNavClick(link.href)}

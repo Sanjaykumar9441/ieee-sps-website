@@ -32,7 +32,7 @@ const AllMembers = () => {
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
           {/* Back Button */}
           <button
-            onClick={() => navigate("/#team")}
+            onClick={() => navigate(-1)}
             className="mb-8 inline-flex items-center gap-2 text-[#00629B] font-medium hover:gap-3 transition-all"
           >
             <ArrowLeft className="w-4 h-4" />

@@ -10,7 +10,7 @@ const teamSchema = new mongoose.Schema(
     email: String,
     linkedIn: String,
     photo: String,
-    priority: { type: Number, default: 5 } // For hierarchy order
+    priority: Number // For hierarchy order
   },
   { timestamps: true }
 );

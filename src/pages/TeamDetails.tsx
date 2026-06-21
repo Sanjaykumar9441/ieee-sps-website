@@ -51,7 +51,7 @@ const TeamDetails = () => {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.4 }}
-            onClick={() => navigate("/#team")}
+            onClick={() => navigate(-1)}
             className="inline-flex items-center gap-2 text-[#00629B] text-sm font-medium mb-8 hover:gap-3 transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -75,7 +75,7 @@ const TeamDetails = () => {
                   <img
                     src={member.photo}
                     alt={member.name}
-                    className="w-25 h-25 rounded-full object-cover"
+                    className="w-24 h-24 rounded-full object-cover"
                   />
                 ) : (
                   <div className="w-24 h-24 rounded-full bg-blue-50 flex items-center justify-center text-2xl font-semibold text-[#0C447C]">
