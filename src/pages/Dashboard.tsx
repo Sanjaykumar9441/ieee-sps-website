@@ -577,13 +577,12 @@ const Dashboard = () => {
               </p>
               <h3 className="text-2xl font-bold">{totalMessages}</h3>
             </div>
-          </div>
-
-          <div style={cardStyle} className="p-5 rounded-xl mb-8">
-            <p className="text-xs uppercase" style={{ color: "#64748b" }}>
-              SPS Applications
-            </p>
-            <h3 className="text-2xl font-bold">{spsApplications.length}</h3>
+            <div style={cardStyle} className="p-5 rounded-xl mb-8">
+              <p className="text-xs uppercase" style={{ color: "#64748b" }}>
+                SPS Applications
+              </p>
+              <h3 className="text-2xl font-bold">{spsApplications.length}</h3>
+            </div>
           </div>
 
           {activeTab === "profile" && <Profile />}
