@@ -384,15 +384,25 @@ const TeamTab = ({
                               </label>
                               <input
                                 type="file"
-                                onChange={(e: any) =>
-                                  setEditMember({
-                                    ...editMember,
-                                    newPhoto: e.target.files[0],
-                                  })
-                                }
+                                onChange={(e: any) => {
+                                  const file = e.target.files?.[0];
+
+                                  if (!file) return;
+
+                                  setImageSrc(URL.createObjectURL(file));
+
+                                  setShowCrop(true);
+                                }}
                                 className="text-sm"
                                 style={{ color: "#94a3b8" }}
                               />
+                              {editMember?.newPhoto && (
+                                <img
+                                  src={URL.createObjectURL(editMember.newPhoto)}
+                                  alt="preview"
+                                  className="mt-3 w-28 h-28 rounded-full object-cover border-2 border-blue-500"
+                                />
+                              )}
                             </div>
                             <div className="col-span-2 flex gap-3 pt-2">
                               <GradientButton
@@ -429,7 +439,15 @@ const TeamTab = ({
             image={imageSrc}
             onClose={() => setShowCrop(false)}
             onSave={(croppedFile) => {
-              setPhoto(croppedFile);
+              if (editMember) {
+                setEditMember({
+                  ...editMember,
+                  newPhoto: croppedFile,
+                });
+              } else {
+                setPhoto(croppedFile);
+              }
+
               setShowCrop(false);
             }}
           />
