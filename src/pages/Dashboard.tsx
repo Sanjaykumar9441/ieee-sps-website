@@ -95,6 +95,8 @@ const Dashboard = () => {
   const [linkedIn, setLinkedIn] = useState("");
   const [priority, setPriority] = useState(5);
   const [photo, setPhoto] = useState<File | null>(null);
+  const [showCrop, setShowCrop] = useState(false);
+  const [imageSrc, setImageSrc] = useState("");
 
   /* MESSAGES */
   const [messages, setMessages] = useState<any[]>([]);
@@ -413,14 +415,19 @@ const Dashboard = () => {
           <div className="flex items-center gap-3">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, #3b82f6, #06b6d4)" }}
+              style={{
+                background: "linear-gradient(135deg, #3b82f6, #06b6d4)",
+              }}
             >
               <Zap size={14} className="text-foreground" />
             </div>
             <div>
               <span
                 className="font-bold text-sm tracking-wide"
-                style={{ fontFamily: "'Orbitron', sans-serif", color: "#f0f4ff" }}
+                style={{
+                  fontFamily: "'Orbitron', sans-serif",
+                  color: "#f0f4ff",
+                }}
               >
                 IEEE SPS
               </span>
@@ -446,10 +453,12 @@ const Dashboard = () => {
             border: "1px solid rgba(239,68,68,0.15)",
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(239,68,68,0.15)";
+            (e.currentTarget as HTMLElement).style.backgroundColor =
+              "rgba(239,68,68,0.15)";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(239,68,68,0.08)";
+            (e.currentTarget as HTMLElement).style.backgroundColor =
+              "rgba(239,68,68,0.08)";
           }}
         >
           <LogOut size={15} />
@@ -479,7 +488,8 @@ const Dashboard = () => {
           <div
             className="absolute left-0 top-0 bottom-0 w-0.5"
             style={{
-              background: "linear-gradient(to bottom, #3b82f6, #06b6d4, transparent)",
+              background:
+                "linear-gradient(to bottom, #3b82f6, #06b6d4, transparent)",
             }}
           />
 
@@ -496,9 +506,13 @@ const Dashboard = () => {
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 relative"
                   style={{
-                    backgroundColor: isActive ? "rgba(59,130,246,0.12)" : "transparent",
+                    backgroundColor: isActive
+                      ? "rgba(59,130,246,0.12)"
+                      : "transparent",
                     color: isActive ? "#60a5fa" : "#64748b",
-                    border: isActive ? "1px solid rgba(59,130,246,0.2)" : "1px solid transparent",
+                    border: isActive
+                      ? "1px solid rgba(59,130,246,0.2)"
+                      : "1px solid transparent",
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive)
@@ -513,7 +527,8 @@ const Dashboard = () => {
                     <div
                       className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r"
                       style={{
-                        background: "linear-gradient(to bottom, #3b82f6, #06b6d4)",
+                        background:
+                          "linear-gradient(to bottom, #3b82f6, #06b6d4)",
                       }}
                     />
                   )}
@@ -533,29 +548,41 @@ const Dashboard = () => {
           {/* OVERVIEW STAT CARDS */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
             <div style={cardStyle} className="p-5 rounded-xl">
-              <p className="text-xs uppercase" style={{ color: "#64748b" }}>Total Events</p>
+              <p className="text-xs uppercase" style={{ color: "#64748b" }}>
+                Total Events
+              </p>
               <h3 className="text-2xl font-bold">{totalEvents}</h3>
             </div>
             <div style={cardStyle} className="p-5 rounded-xl">
-              <p className="text-xs uppercase" style={{ color: "#64748b" }}>Upcoming</p>
+              <p className="text-xs uppercase" style={{ color: "#64748b" }}>
+                Upcoming
+              </p>
               <h3 className="text-2xl font-bold">{upcomingEvents}</h3>
             </div>
             <div style={cardStyle} className="p-5 rounded-xl">
-              <p className="text-xs uppercase" style={{ color: "#64748b" }}>Completed</p>
+              <p className="text-xs uppercase" style={{ color: "#64748b" }}>
+                Completed
+              </p>
               <h3 className="text-2xl font-bold">{completedEvents}</h3>
             </div>
             <div style={cardStyle} className="p-5 rounded-xl">
-              <p className="text-xs uppercase" style={{ color: "#64748b" }}>Team Members</p>
+              <p className="text-xs uppercase" style={{ color: "#64748b" }}>
+                Team Members
+              </p>
               <h3 className="text-2xl font-bold">{totalTeamMembers}</h3>
             </div>
             <div style={cardStyle} className="p-5 rounded-xl">
-              <p className="text-xs uppercase" style={{ color: "#64748b" }}>Messages</p>
+              <p className="text-xs uppercase" style={{ color: "#64748b" }}>
+                Messages
+              </p>
               <h3 className="text-2xl font-bold">{totalMessages}</h3>
             </div>
           </div>
 
           <div style={cardStyle} className="p-5 rounded-xl mb-8">
-            <p className="text-xs uppercase" style={{ color: "#64748b" }}>SPS Applications</p>
+            <p className="text-xs uppercase" style={{ color: "#64748b" }}>
+              SPS Applications
+            </p>
             <h3 className="text-2xl font-bold">{spsApplications.length}</h3>
           </div>
 
@@ -615,7 +642,12 @@ const Dashboard = () => {
                 setLinkedIn={setLinkedIn}
                 priority={priority}
                 setPriority={setPriority}
+                photo={photo}
                 setPhoto={setPhoto}
+                showCrop={showCrop}
+                setShowCrop={setShowCrop}
+                imageSrc={imageSrc}
+                setImageSrc={setImageSrc}
                 members={members}
                 editMember={editMember}
                 setEditMember={setEditMember}
@@ -653,8 +685,12 @@ const Dashboard = () => {
             )}
 
           {!isPaused && activeTab === "admins" && isSuperAdmin && <AdminsTab />}
-          {!isPaused && activeTab === "activity" && isSuperAdmin && <ActivityLogsTab />}
-          {!isPaused && activeTab === "loginHistory" && isSuperAdmin && <LoginHistoryTab />}
+          {!isPaused && activeTab === "activity" && isSuperAdmin && (
+            <ActivityLogsTab />
+          )}
+          {!isPaused && activeTab === "loginHistory" && isSuperAdmin && (
+            <LoginHistoryTab />
+          )}
         </main>
       </div>
     </div>

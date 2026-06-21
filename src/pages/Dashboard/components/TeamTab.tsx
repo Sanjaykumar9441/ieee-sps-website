@@ -2,6 +2,7 @@ import { Users, Trash2, ChevronDown, ChevronUp, Check } from "lucide-react";
 
 import InputField from "../components/InputField";
 import GradientButton from "../components/GradientButton";
+import CropImageModal from "../components/CropImageModal";
 
 const TeamTab = ({
   teamView,
@@ -33,7 +34,14 @@ const TeamTab = ({
   linkedIn,
   setLinkedIn,
 
+  photo,
   setPhoto,
+
+  showCrop,
+  setShowCrop,
+
+  imageSrc,
+  setImageSrc,
 
   members,
 
@@ -154,10 +162,23 @@ const TeamTab = ({
                 </label>
                 <input
                   type="file"
-                  onChange={(e: any) => setPhoto(e.target.files[0])}
-                  className="text-sm"
-                  style={{ color: "#94a3b8" }}
+                  accept="image/*"
+                  onChange={(e: any) => {
+                    const file = e.target.files?.[0];
+
+                    if (!file) return;
+
+                    setImageSrc(URL.createObjectURL(file));
+                    setShowCrop(true);
+                  }}
                 />
+                {photo && (
+                  <img
+                    src={URL.createObjectURL(photo)}
+                    alt="preview"
+                    className="mt-3 w-28 h-28 rounded-full object-cover border-2 border-blue-500"
+                  />
+                )}
               </div>
               <div className="col-span-2 pt-2">
                 <GradientButton color="green">
@@ -401,9 +422,20 @@ const TeamTab = ({
             </table>
           </div>
         )}
+
+        {/* Crop Modal */}
+        {showCrop && (
+          <CropImageModal
+            image={imageSrc}
+            onClose={() => setShowCrop(false)}
+            onSave={(croppedFile) => {
+              setPhoto(croppedFile);
+              setShowCrop(false);
+            }}
+          />
+        )}
       </div>
     </div>
   );
 };
-
 export default TeamTab;
