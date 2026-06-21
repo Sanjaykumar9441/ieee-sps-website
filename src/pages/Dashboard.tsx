@@ -546,7 +546,7 @@ const Dashboard = () => {
           style={{ maxWidth: "1400px" }}
         >
           {/* OVERVIEW STAT CARDS */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4 mb-8">
             <div style={cardStyle} className="p-5 rounded-xl">
               <p className="text-xs uppercase" style={{ color: "#64748b" }}>
                 Total Events
