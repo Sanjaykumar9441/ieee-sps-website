@@ -231,22 +231,6 @@ const SPSApplicationsTab = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div
-          className="p-5 rounded-xl"
-          style={{
-            backgroundColor: "#0f1624",
-            border: "1px solid rgba(99,179,237,0.08)",
-          }}
-        >
-          <div className="text-sm" style={{ color: "#64748b" }}>
-            TOTAL APPLICATIONS
-          </div>
-
-          <div className="text-3xl font-bold mt-2">{totalApplications}</div>
-        </div>
-      </div>
-
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <input
           type="text"
