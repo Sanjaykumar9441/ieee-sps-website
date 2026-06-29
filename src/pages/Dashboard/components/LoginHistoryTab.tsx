@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { RefreshCw, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 
 const LoginHistoryTab = () => {
   const [admins, setAdmins] = useState<any[]>([]);
@@ -17,18 +19,11 @@ const LoginHistoryTab = () => {
   const fetchAdmins = async () => {
     try {
       setRefreshing(true);
-
       const token = localStorage.getItem("token");
-
       const res = await axios.get(
         "https://ieee-sps-website.onrender.com/api/admin-access",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
-
       setAdmins(res.data);
     } catch (err) {
       console.error(err);
@@ -37,22 +32,86 @@ const LoginHistoryTab = () => {
     }
   };
 
+  const exportToExcel = () => {
+    // Build flat rows — one row per login entry
+    const rows: any[] = [];
+
+    admins.forEach((admin) => {
+      if (admin.loginHistory && admin.loginHistory.length > 0) {
+        admin.loginHistory.forEach((login: any) => {
+          rows.push({
+            Username: admin.username,
+            "Total Logins": admin.loginHistory.length,
+            "Last Login": admin.lastLogin
+              ? new Date(admin.lastLogin).toLocaleString()
+              : "Never",
+            "Login At": new Date(login.loginAt).toLocaleString(),
+            Device: login.device || "—",
+          });
+        });
+      } else {
+        // Admin with no login history still gets a row
+        rows.push({
+          Username: admin.username,
+          "Total Logins": 0,
+          "Last Login": "Never",
+          "Login At": "—",
+          Device: "—",
+        });
+      }
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+
+    // Column widths
+    worksheet["!cols"] = [
+      { wch: 20 }, // Username
+      { wch: 14 }, // Total Logins
+      { wch: 24 }, // Last Login
+      { wch: 24 }, // Login At
+      { wch: 30 }, // Device
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Login History");
+
+    const date = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `IEEE_SPS_Login_History_${date}.xlsx`);
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold">Login History</h2>
 
-        <button
-          onClick={fetchAdmins}
-          disabled={refreshing}
-          className="px-4 py-2 rounded-lg disabled:opacity-60"
-          style={{
-            background: "#2563eb",
-            color: "white",
-          }}
-        >
-          {refreshing ? "🔄 Refreshing..." : "🔄 Refresh"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportToExcel}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium disabled:opacity-60"
+            style={{
+              background: "linear-gradient(135deg, #22c55e, #16a34a)",
+              color: "#fff",
+              boxShadow: "0 2px 12px rgba(34,197,94,0.25)",
+            }}
+          >
+            <Download size={14} />
+            Export Excel
+          </button>
+
+          <button
+            onClick={fetchAdmins}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium disabled:opacity-60"
+            style={{
+              background: "linear-gradient(135deg, #22c55e, #16a34a)",
+              color: "#fff",
+              boxShadow: "0 2px 12px rgba(34,197,94,0.25)",
+            }}
+          >
+            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
       </div>
 
       <div className="mb-4" style={{ color: "#64748b" }}>
@@ -85,20 +144,11 @@ const LoginHistoryTab = () => {
           >
             <div className="font-semibold">{admin.username}</div>
 
-            <div
-              style={{
-                color: "#64748b",
-                fontSize: "12px",
-              }}
-            >
+            <div style={{ color: "#64748b", fontSize: "12px" }}>
               Total Logins: {admin.loginHistory?.length || 0}
             </div>
 
-            <div
-              style={{
-                color: "#64748b",
-              }}
-            >
+            <div style={{ color: "#64748b" }}>
               Last Login:{" "}
               {admin.lastLogin
                 ? new Date(admin.lastLogin).toLocaleString()
@@ -112,18 +162,10 @@ const LoginHistoryTab = () => {
                   <div
                     key={index}
                     className="p-2 rounded-lg"
-                    style={{
-                      backgroundColor: "rgba(255,255,255,0.03)",
-                    }}
+                    style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
                   >
                     <div>{new Date(login.loginAt).toLocaleString()}</div>
-
-                    <div
-                      style={{
-                        color: "#64748b",
-                        fontSize: "12px",
-                      }}
-                    >
+                    <div style={{ color: "#64748b", fontSize: "12px" }}>
                       {login.device}
                     </div>
                   </div>

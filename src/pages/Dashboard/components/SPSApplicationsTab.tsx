@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { Download, RefreshCw } from "lucide-react";
 
 const SPSApplicationsTab = () => {
   const [applications, setApplications] = useState<any[]>([]);
@@ -205,24 +206,27 @@ const SPSApplicationsTab = () => {
           <button
             onClick={fetchApplications}
             disabled={refreshing}
-            className="px-4 py-2 rounded-lg disabled:opacity-60"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium disabled:opacity-60"
             style={{
-              background: "#2563eb",
-              color: "white",
+              background: "linear-gradient(135deg, #22c55e, #16a34a)",
+              color: "#fff",
+              boxShadow: "0 2px 12px rgba(34,197,94,0.25)",
             }}
           >
-            {refreshing ? "🔄 Refreshing..." : "🔄 Refresh"}
+            <RefreshCw size={14} />
+            {refreshing ? "Refreshing..." : "Refresh"}
           </button>
 
           <button
             onClick={exportToExcel}
-            className="px-4 py-2 rounded-lg"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium"
             style={{
-              background: "#16a34a",
-              color: "white",
+              background: "linear-gradient(135deg, #22c55e, #16a34a)",
+              color: "#fff",
+              boxShadow: "0 2px 12px rgba(34,197,94,0.25)",
             }}
           >
-            📥 Export Excel
+            <Download size={14} /> Export Excel
           </button>
         </div>
       </div>

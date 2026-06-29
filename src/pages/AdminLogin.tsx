@@ -1,6 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
-import { Mail, Lock, Zap } from "lucide-react";
+import { Lock, Zap } from "lucide-react";
 
 const AdminLogin = () => {
   const [loginType, setLoginType] = useState("superadmin");
