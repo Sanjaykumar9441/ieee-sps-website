@@ -1,3 +1,4 @@
+import React from "react";
 import { Users, Trash2, ChevronDown, ChevronUp, Check } from "lucide-react";
 
 import InputField from "../components/InputField";
@@ -165,9 +166,7 @@ const TeamTab = ({
                   accept="image/*"
                   onChange={(e: any) => {
                     const file = e.target.files?.[0];
-
                     if (!file) return;
-
                     setImageSrc(URL.createObjectURL(file));
                     setShowCrop(true);
                   }}
@@ -195,11 +194,7 @@ const TeamTab = ({
           <div className="overflow-x-auto rounded-xl" style={cardStyle}>
             <table className="w-full">
               <thead>
-                <tr
-                  style={{
-                    borderBottom: "1px solid rgba(99,179,237,0.08)",
-                  }}
-                >
+                <tr style={{ borderBottom: "1px solid rgba(99,179,237,0.08)" }}>
                   {["Priority", "Name", "Role", "Actions"].map((h: any) => (
                     <th
                       key={h}
@@ -213,22 +208,17 @@ const TeamTab = ({
               </thead>
               <tbody>
                 {members.map((m: any) => (
-                  <>
+                  <React.Fragment key={m._id}>
                     <tr
-                      key={m._id}
                       className="transition-colors"
-                      style={{
-                        borderBottom: "1px solid rgba(99,179,237,0.06)",
-                      }}
+                      style={{ borderBottom: "1px solid rgba(99,179,237,0.06)" }}
                       onMouseEnter={(e) =>
-                        ((
-                          e.currentTarget as HTMLElement
-                        ).style.backgroundColor = "rgba(59,130,246,0.04)")
+                        ((e.currentTarget as HTMLElement).style.backgroundColor =
+                          "rgba(59,130,246,0.04)")
                       }
                       onMouseLeave={(e) =>
-                        ((
-                          e.currentTarget as HTMLElement
-                        ).style.backgroundColor = "transparent")
+                        ((e.currentTarget as HTMLElement).style.backgroundColor =
+                          "transparent")
                       }
                     >
                       <td
@@ -290,6 +280,7 @@ const TeamTab = ({
                         </div>
                       </td>
                     </tr>
+
                     {editMember?._id === m._id && (
                       <tr style={{ backgroundColor: "rgba(15,22,36,0.8)" }}>
                         <td colSpan={4} className="px-5 py-5">
@@ -298,70 +289,49 @@ const TeamTab = ({
                               label="Name"
                               value={editMember.name}
                               onChange={(e: any) =>
-                                setEditMember({
-                                  ...editMember,
-                                  name: e.target.value,
-                                })
+                                setEditMember({ ...editMember, name: e.target.value })
                               }
                             />
                             <InputField
                               label="Role"
                               value={editMember.role}
                               onChange={(e: any) =>
-                                setEditMember({
-                                  ...editMember,
-                                  role: e.target.value,
-                                })
+                                setEditMember({ ...editMember, role: e.target.value })
                               }
                             />
                             <InputField
                               label="Department"
                               value={editMember.department}
                               onChange={(e: any) =>
-                                setEditMember({
-                                  ...editMember,
-                                  department: e.target.value,
-                                })
+                                setEditMember({ ...editMember, department: e.target.value })
                               }
                             />
                             <InputField
                               label="Roll Number"
                               value={editMember.rollNumber}
                               onChange={(e: any) =>
-                                setEditMember({
-                                  ...editMember,
-                                  rollNumber: e.target.value,
-                                })
+                                setEditMember({ ...editMember, rollNumber: e.target.value })
                               }
                             />
                             <InputField
                               label="Registration Number"
                               value={editMember.registrationNumber}
                               onChange={(e: any) =>
-                                setEditMember({
-                                  ...editMember,
-                                  registrationNumber: e.target.value,
-                                })
+                                setEditMember({ ...editMember, registrationNumber: e.target.value })
                               }
                             />
                             <InputField
                               label="Email"
                               value={editMember.email}
                               onChange={(e: any) =>
-                                setEditMember({
-                                  ...editMember,
-                                  email: e.target.value,
-                                })
+                                setEditMember({ ...editMember, email: e.target.value })
                               }
                             />
                             <InputField
                               label="LinkedIn Profile"
                               value={editMember.linkedIn || ""}
                               onChange={(e: any) =>
-                                setEditMember({
-                                  ...editMember,
-                                  linkedIn: e.target.value,
-                                })
+                                setEditMember({ ...editMember, linkedIn: e.target.value })
                               }
                             />
                             <InputField
@@ -369,10 +339,7 @@ const TeamTab = ({
                               type="number"
                               value={editMember.priority}
                               onChange={(e: any) =>
-                                setEditMember({
-                                  ...editMember,
-                                  priority: Number(e.target.value),
-                                })
+                                setEditMember({ ...editMember, priority: Number(e.target.value) })
                               }
                             />
                             <div>
@@ -386,11 +353,8 @@ const TeamTab = ({
                                 type="file"
                                 onChange={(e: any) => {
                                   const file = e.target.files?.[0];
-
                                   if (!file) return;
-
                                   setImageSrc(URL.createObjectURL(file));
-
                                   setShowCrop(true);
                                 }}
                                 className="text-sm"
@@ -426,7 +390,7 @@ const TeamTab = ({
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
@@ -440,14 +404,10 @@ const TeamTab = ({
             onClose={() => setShowCrop(false)}
             onSave={(croppedFile) => {
               if (editMember) {
-                setEditMember({
-                  ...editMember,
-                  newPhoto: croppedFile,
-                });
+                setEditMember({ ...editMember, newPhoto: croppedFile });
               } else {
                 setPhoto(croppedFile);
               }
-
               setShowCrop(false);
             }}
           />
@@ -456,4 +416,5 @@ const TeamTab = ({
     </div>
   );
 };
+
 export default TeamTab;

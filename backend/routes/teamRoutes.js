@@ -51,41 +51,26 @@ const verifyToken = (req, res, next) => {
 
 router.post("/", verifyToken, upload.single("photo"), async (req, res) => {
   try {
-
-    // Get highest existing priority
     const lastMember = await Team.findOne().sort({ priority: -1 });
 
-    const nextPriority = lastMember
-      ? lastMember.priority + 1
-      : 1;
+    const nextPriority = lastMember ? lastMember.priority + 1 : 1;
 
     const newMember = new Team({
       ...req.body,
-
-      // Use provided priority or next available
-      priority: req.body.priority
-        ? Number(req.body.priority)
-        : nextPriority,
-
+      priority: req.body.priority ? Number(req.body.priority) : nextPriority,
       photo: req.file ? req.file.path : null,
     });
 
     const newPriority = Number(newMember.priority);
 
-    // Shift existing members if inserting in between
     await Team.updateMany(
-      {
-        priority: { $gte: newPriority },
-      },
-      {
-        $inc: { priority: 1 },
-      }
+      { priority: { $gte: newPriority } },
+      { $inc: { priority: 1 } }
     );
 
     await newMember.save();
 
     res.json(newMember);
-
   } catch (err) {
     console.error("ADD MEMBER ERROR:", err);
     res.status(500).json({ msg: "Error adding member" });
@@ -108,56 +93,39 @@ router.put("/:id", verifyToken, upload.single("photo"), async (req, res) => {
     const newPriority = Number(req.body.priority);
 
     if (oldPriority !== newPriority) {
-
       if (newPriority < oldPriority) {
-
         await Team.updateMany(
           {
             _id: { $ne: member._id },
-            priority: {
-              $gte: newPriority,
-              $lt: oldPriority
-            }
+            priority: { $gte: newPriority, $lt: oldPriority },
           },
-          {
-            $inc: { priority: 1 }
-          }
+          { $inc: { priority: 1 } }
         );
-
       } else {
-
         await Team.updateMany(
           {
             _id: { $ne: member._id },
-            priority: {
-              $gt: oldPriority,
-              $lte: newPriority
-            }
+            priority: { $gt: oldPriority, $lte: newPriority },
           },
-          {
-            $inc: { priority: -1 }
-          }
+          { $inc: { priority: -1 } }
         );
       }
     }
 
     const updateData = {
       ...req.body,
-      priority: newPriority
+      priority: newPriority,
     };
 
     if (req.file) {
       updateData.photo = req.file.path;
     }
 
-    const updated = await Team.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true }
-    );
+    const updated = await Team.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+    });
 
     res.json(updated);
-
   } catch (err) {
     console.error("UPDATE MEMBER ERROR:", err);
     res.status(500).json({ msg: "Error updating member" });
@@ -170,7 +138,21 @@ router.put("/:id", verifyToken, upload.single("photo"), async (req, res) => {
 
 router.delete("/:id", verifyToken, async (req, res) => {
   try {
+    const member = await Team.findById(req.params.id);
+
+    if (!member) {
+      return res.status(404).json({ msg: "Member not found" });
+    }
+
+    const deletedPriority = Number(member.priority);
+
     await Team.findByIdAndDelete(req.params.id);
+
+    await Team.updateMany(
+      { priority: { $gt: deletedPriority } },
+      { $inc: { priority: -1 } }
+    );
+
     res.json({ msg: "Member deleted successfully" });
   } catch (err) {
     res.status(500).json({ msg: "Error deleting member" });
@@ -197,6 +179,7 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const member = await Team.findById(req.params.id);
+    if (!member) return res.status(404).json({ msg: "Member not found" });
     res.json(member);
   } catch (err) {
     res.status(500).json({ msg: "Error fetching member" });
