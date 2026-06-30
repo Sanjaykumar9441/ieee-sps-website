@@ -112,6 +112,9 @@ const Dashboard = () => {
   );
 
   const refreshPauseStatus = async () => {
+    const role = localStorage.getItem("role");
+
+    if (role === "superadmin") return;
     try {
       const res = await axios.get(
         "https://ieee-sps-website.onrender.com/api/admin-access/profile",
@@ -130,8 +133,14 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!token) return;
-    refreshPermissions();
-    refreshPauseStatus();
+
+    const role = localStorage.getItem("role");
+
+    if (role === "admin") {
+      refreshPermissions();
+      refreshPauseStatus();
+    }
+
     fetchEvents();
     fetchMembers();
     fetchSPSApplications();
@@ -201,6 +210,7 @@ const Dashboard = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("role");
     navigate("/");
   };
 
@@ -373,6 +383,9 @@ const Dashboard = () => {
       ];
 
   const refreshPermissions = async () => {
+    const role = localStorage.getItem("role");
+
+    if (role === "superadmin") return;
     try {
       const res = await axios.get(
         "https://ieee-sps-website.onrender.com/api/admin-access/permissions",

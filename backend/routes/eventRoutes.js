@@ -147,6 +147,33 @@ router.get("/", async (req, res) => {
 });
 
 /* ===============================
+   REGISTRATION STATUS
+================================= */
+
+router.get("/registration-status", async (req, res) => {
+  try {
+    const combo = await Event.findOne({
+      eventType: "combo",
+    });
+
+    const buildathon = await Event.findOne({
+      eventType: "buildathon",
+    });
+
+    res.json({
+      combo: combo?.registrationOpen ?? false,
+      buildathon: buildathon?.registrationOpen ?? false,
+    });
+  } catch (err) {
+    console.error("REGISTRATION STATUS ERROR:", err);
+
+    res.status(500).json({
+      message: "Server Error",
+    });
+  }
+});
+
+/* ===============================
    GET SINGLE
 ================================= */
 
