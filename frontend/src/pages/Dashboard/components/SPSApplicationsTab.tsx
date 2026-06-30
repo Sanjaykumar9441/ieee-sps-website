@@ -9,7 +9,14 @@ const SPSApplicationsTab = () => {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
+
+  const [search, setSearch] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [yearFilter, setYearFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
   const totalApplications = applications.length;
+
   const filteredApplications = applications.filter((app) => {
     const fullName = (app.fullName || "").toLowerCase();
     const rollNumber = (app.rollNumber || "").toLowerCase();
@@ -27,11 +34,6 @@ const SPSApplicationsTab = () => {
 
     return matchesSearch && matchesDepartment && matchesYear;
   });
-
-  const [search, setSearch] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("");
-  const [yearFilter, setYearFilter] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
 
   const applicationsPerPage = 10;
 
