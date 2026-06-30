@@ -11,10 +11,14 @@ const SPSApplicationsTab = () => {
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const totalApplications = applications.length;
   const filteredApplications = applications.filter((app) => {
+    const fullName = (app.fullName || "").toLowerCase();
+    const rollNumber = (app.rollNumber || "").toLowerCase();
+    const department = (app.department || "").toLowerCase();
+
     const matchesSearch =
-      app.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      app.rollNumber.toLowerCase().includes(search.toLowerCase()) ||
-      app.department.toLowerCase().includes(search.toLowerCase());
+      fullName.includes(search.toLowerCase()) ||
+      rollNumber.includes(search.toLowerCase()) ||
+      department.includes(search.toLowerCase());
 
     const matchesDepartment =
       !departmentFilter || app.department === departmentFilter;
@@ -409,13 +413,10 @@ const SPSApplicationsTab = () => {
                     {indexOfFirstApplication + index + 1}
                   </td>
 
-                  <td className="p-4">{app.fullName}</td>
-
-                  <td className="p-4">{app.rollNumber}</td>
-
-                  <td className="p-4">{app.department}</td>
-
-                  <td className="p-4">{app.year}</td>
+                  <td className="p-4">{app.fullName || "-"}</td>
+                  <td className="p-4">{app.rollNumber || "-"}</td>
+                  <td className="p-4">{app.department || "-"}</td>
+                  <td className="p-4">{app.year || "-"}</td>
 
                   <td className="p-4">
                     {new Date(app.createdAt).toLocaleDateString()}
@@ -435,7 +436,7 @@ const SPSApplicationsTab = () => {
                       </button>
 
                       <button
-                        onClick={() => window.open(`mailto:${app.email}`)}
+                        onClick={() => window.open(`mailto:${app.email || ""}`)}
                         className="px-3 py-1 rounded-lg text-sm"
                         style={{
                           background: "rgba(34,197,94,0.15)",
@@ -446,7 +447,7 @@ const SPSApplicationsTab = () => {
                       </button>
 
                       <button
-                        onClick={() => window.open(`tel:${app.mobile}`)}
+                        onClick={() => window.open(`tel:${app.mobile || ""}`)}
                         className="px-3 py-1 rounded-lg text-sm"
                         style={{
                           background: "rgba(245,158,11,0.15)",
