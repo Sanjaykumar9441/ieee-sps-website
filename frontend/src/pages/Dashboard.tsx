@@ -112,6 +112,9 @@ const Dashboard = () => {
   );
 
   const refreshPauseStatus = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) return;
     const role = localStorage.getItem("role");
 
     if (role === "superadmin") return;
@@ -383,6 +386,9 @@ const Dashboard = () => {
       ];
 
   const refreshPermissions = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) return;
     const role = localStorage.getItem("role");
 
     if (role === "superadmin") return;
