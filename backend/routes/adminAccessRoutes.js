@@ -364,4 +364,60 @@ router.get("/permissions", verifyToken, async (req, res) => {
   }
 });
 
+router.delete("/:id/login-history", verifyToken, async (req, res) => {
+  try {
+    await Admin.findByIdAndUpdate(req.params.id, {
+      loginHistory: [],
+      lastLogin: null,
+    });
+
+    res.json({ msg: "Login history deleted." });
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error" });
+  }
+});
+
+router.delete("/:id/login-history", verifyToken, async (req, res) => {
+  try {
+    await AdminAccess.findByIdAndUpdate(req.params.id, {
+      loginHistory: [],
+      lastLogin: null,
+    });
+
+    res.json({
+      msg: "Login history deleted.",
+    });
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      msg: "Server Error",
+    });
+  }
+});
+
+router.delete("/clear-all", verifyToken, async (req, res) => {
+  try {
+    await AdminAccess.updateMany(
+      {},
+      {
+        $set: {
+          loginHistory: [],
+          lastLogin: null,
+        },
+      }
+    );
+
+    res.json({
+      msg: "All login history deleted.",
+    });
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      msg: "Server Error",
+    });
+  }
+});
+
 module.exports = router;
