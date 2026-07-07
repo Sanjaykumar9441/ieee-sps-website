@@ -11,6 +11,7 @@ const SPSApplicationsTab = () => {
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
 
   const [search, setSearch] = useState("");
+  const [genderFilter, setGenderFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -20,19 +21,22 @@ const SPSApplicationsTab = () => {
   const filteredApplications = applications.filter((app) => {
     const fullName = (app.fullName || "").toLowerCase();
     const rollNumber = (app.rollNumber || "").toLowerCase();
+    const gender = (app.gender || "").toLowerCase();
     const department = (app.department || "").toLowerCase();
 
     const matchesSearch =
       fullName.includes(search.toLowerCase()) ||
       rollNumber.includes(search.toLowerCase()) ||
+      gender.includes(search.toLowerCase()) ||
       department.includes(search.toLowerCase());
 
     const matchesDepartment =
       !departmentFilter || app.department === departmentFilter;
 
     const matchesYear = !yearFilter || app.year === yearFilter;
+    const matchesGender = !genderFilter || app.gender === genderFilter;
 
-    return matchesSearch && matchesDepartment && matchesYear;
+    return matchesSearch && matchesDepartment && matchesYear && matchesGender;
   });
 
   const applicationsPerPage = 10;
@@ -56,7 +60,7 @@ const SPSApplicationsTab = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, departmentFilter, yearFilter]);
+  }, [search, genderFilter, departmentFilter, yearFilter]);
 
   const fetchApplications = async () => {
     try {
@@ -141,6 +145,7 @@ const SPSApplicationsTab = () => {
     const excelData = applications.map((app) => ({
       "Full Name": app.fullName,
       "Roll Number": app.rollNumber,
+      Gender: app.gender,
       Department: app.department,
       Year: app.year,
       Email: app.email,
@@ -174,6 +179,7 @@ const SPSApplicationsTab = () => {
     const excelData = selectedApplications.map((app) => ({
       "Full Name": app.fullName,
       "Roll Number": app.rollNumber,
+      Gender: app.gender,
       Department: app.department,
       Year: app.year,
       Email: app.email,
@@ -247,6 +253,16 @@ const SPSApplicationsTab = () => {
         />
 
         <select
+          value={genderFilter}
+          onChange={(e) => setGenderFilter(e.target.value)}
+          className="px-4 py-3 rounded-xl bg-[#0f1624] text-white border border-slate-700"
+        >
+          <option value="">All Genders</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+
+        <select
           value={departmentFilter}
           onChange={(e) => setDepartmentFilter(e.target.value)}
           className="px-4 py-3 rounded-xl bg-[#0f1624] text-white border border-slate-700"
@@ -282,6 +298,7 @@ const SPSApplicationsTab = () => {
         <button
           onClick={() => {
             setSearch("");
+            setGenderFilter("");
             setDepartmentFilter("");
             setYearFilter("");
           }}
@@ -376,6 +393,8 @@ const SPSApplicationsTab = () => {
 
                 <th className="text-left p-4">Roll No</th>
 
+                <th className="text-left p-4">Gender</th>
+
                 <th className="text-left p-4">Department</th>
 
                 <th className="text-left p-4">Year</th>
@@ -419,6 +438,7 @@ const SPSApplicationsTab = () => {
                   <td className="p-4">{app.rollNumber || "-"}</td>
                   <td className="p-4">{app.department || "-"}</td>
                   <td className="p-4">{app.year || "-"}</td>
+                  <td className="p-4">{app.gender || "-"}</td>
 
                   <td className="p-4">
                     {new Date(app.createdAt).toLocaleDateString()}
@@ -537,6 +557,10 @@ const SPSApplicationsTab = () => {
                 label="Roll Number"
                 value={selectedApplication.rollNumber}
               />
+
+              <InfoRow 
+                label="Gender" value={selectedApplication.gender}
+               />
 
               <InfoRow
                 label="Department"

@@ -18,7 +18,7 @@ const JoinSPS = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    rollNumber: "", fullName: "", department: "", otherDepartment: "",
+    rollNumber: "", fullName: "", gender: "", department: "", otherDepartment: "",
     year: "", email: "", mobile: "", interested: false,
   });
 
@@ -31,7 +31,7 @@ const JoinSPS = () => {
     e.preventDefault();
     setError("");
 
-    if (!formData.rollNumber || !formData.fullName || !formData.department ||
+    if (!formData.rollNumber || !formData.fullName || !formData.gender || !formData.department ||
       !formData.year || !formData.email || !formData.mobile || !formData.interested ||
       (formData.department === "Other" && !formData.otherDepartment)) {
       setError("Please fill in all required fields."); return;
@@ -168,7 +168,7 @@ const JoinSPS = () => {
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
-                <div className="grid grid-cols-2 gap-3">
+                
                   <Field label="Roll Number *">
                     <input
                       type="text" placeholder="Your roll number"
@@ -177,6 +177,21 @@ const JoinSPS = () => {
                       className={inputCls} required
                     />
                   </Field>
+
+                  <Field label="Full Name *">
+                  <input type="text" name="fullName" placeholder="Your full name"
+                    value={formData.fullName} onChange={handleChange} className={inputCls} required />
+                </Field>
+
+                <div className="grid grid-cols-2 gap-3">
+                <Field label="Gender *">
+                    <select name="gender" value={formData.gender} onChange={handleChange} className={selectCls} required>
+                      <option value="">Select</option>
+                      <option>Male</option>
+                      <option>Female</option>
+                    </select>
+                  </Field>
+
                   <Field label="Year of Study *">
                     <select name="year" value={formData.year} onChange={handleChange} className={selectCls} required>
                       <option value="">Select</option>
@@ -184,13 +199,8 @@ const JoinSPS = () => {
                       <option>3rd Year</option><option>4th Year</option>
                     </select>
                   </Field>
-                </div>
-
-                <Field label="Full Name *">
-                  <input type="text" name="fullName" placeholder="Your full name"
-                    value={formData.fullName} onChange={handleChange} className={inputCls} required />
-                </Field>
-
+                  </div>
+              
                 <Field label="Department *">
                   <select name="department" value={formData.department} onChange={handleChange} className={selectCls} required>
                     <option value="">Select department</option>
