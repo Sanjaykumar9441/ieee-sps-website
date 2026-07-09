@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import DashboardOverviewTab from "./Dashboard/components/DashboardOverviewTab";
 import UploadEventTab from "./Dashboard/components/UploadEventTab";
 import ManageEventsTab from "./Dashboard/components/ManageEventsTab";
 import TeamTab from "./Dashboard/components/TeamTab";
@@ -24,6 +25,7 @@ import {
   BookOpen,
   Shield,
   History,
+  LayoutDashboard,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -45,7 +47,9 @@ const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(false);
   const [spsApplications, setSpsApplications] = useState<any[]>([]);
-  const [membershipRegistrations, setMembershipRegistrations] = useState<any[]>([]);
+  const [membershipRegistrations, setMembershipRegistrations] = useState<any[]>(
+    [],
+  );
 
   useEffect(() => {
     if (!token) navigate("/");
@@ -96,11 +100,6 @@ const Dashboard = () => {
   /* MESSAGES */
   const [messages, setMessages] = useState<any[]>([]);
 
-  const totalEvents = events.length;
-  const upcomingEvents = events.filter((e) => e.status === "Upcoming").length;
-  const completedEvents = events.filter((e) => e.status === "Completed").length;
-  const totalTeamMembers = members.length;
-  const totalMessages = messages.length;
 
   const [isPaused, setIsPaused] = useState(
     JSON.parse(localStorage.getItem("isPaused") || "false"),
@@ -200,23 +199,23 @@ const Dashboard = () => {
   };
 
   const fetchMembershipRegistrations = async () => {
-  try {
-    const token = localStorage.getItem("token");
+    try {
+      const token = localStorage.getItem("token");
 
-    const res = await axios.get(
-      "https://ieee-sps-website.onrender.com/api/membership",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const res = await axios.get(
+        "https://ieee-sps-website.onrender.com/api/membership",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      }
-    );
+      );
 
-    setMembershipRegistrations(res.data);
-  } catch (err) {
-    console.error(err);
-  }
-};
+      setMembershipRegistrations(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const deleteMessage = async (id: string) => {
     if (!confirm("Delete this message?")) return;
@@ -359,12 +358,16 @@ const Dashboard = () => {
   /* MENU */
   const userRole = localStorage.getItem("role");
 
-const isSuperAdmin = userRole === "superadmin";
+  const isSuperAdmin = userRole === "superadmin";
 
   const menu = isPaused
     ? [{ id: "profile", label: "My Profile", icon: User }]
     : [
         { id: "profile", label: "My Profile", icon: User },
+
+        ...(permissions.dashboardOverview
+          ? [{ id: "dashboardOverview", label: "Overview", icon: LayoutDashboard }]
+          : []),
 
         ...(permissions.events
           ? [
@@ -386,7 +389,13 @@ const isSuperAdmin = userRole === "superadmin";
           : []),
 
         ...(permissions.membershipRegistrations
-          ? [{ id: "membershipRegistrations", label: "Registrations Drive", icon: Users }]
+          ? [
+              {
+                id: "membershipRegistrations",
+                label: "Registrations Drive",
+                icon: Users,
+              },
+            ]
           : []),
 
         ...(permissions.spsApplications
@@ -585,28 +594,18 @@ const isSuperAdmin = userRole === "superadmin";
           className="flex-1 overflow-y-auto p-6 lg:p-8"
           style={{ maxWidth: "1400px" }}
         >
-          {/* OVERVIEW STAT CARDS */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-8">
-            {[
-              { label: "Total Events", value: totalEvents },
-              { label: "Upcoming Events", value: upcomingEvents },
-              { label: "Completed Events", value: completedEvents },
-              { label: "Team Members", value: totalTeamMembers },
-              { label: "Messages", value: totalMessages },
-              { label: "SPS Applications", value: spsApplications.length },
-            ].map(({ label, value }) => (
-              <div
-                key={label}
-                style={cardStyle}
-                className="p-4 rounded-xl flex flex-col gap-1"
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis">
-                  {label}
-                </p>
-                <h3 className="text-2xl font-bold">{value}</h3>
-              </div>
-            ))}
-          </div>
+          {activeTab === "dashboardOverview" && (
+            <DashboardOverviewTab
+              cardStyle={cardStyle}
+              events={events}
+              members={members}
+              membershipRegistrations={membershipRegistrations}
+              spsApplications={spsApplications}
+              messages={messages}
+              admins={[]} // Temporary
+              setActiveTab={setActiveTab}
+            />
+          )}
 
           {activeTab === "profile" && <Profile />}
 
@@ -698,12 +697,12 @@ const isSuperAdmin = userRole === "superadmin";
           {!isPaused &&
             activeTab === "membershipRegistrations" &&
             (isSuperAdmin || permissions.membershipRegistrations) && (
-               <MembershipRegistrationsTab
-    registrations={membershipRegistrations}
-    fetchRegistrations={fetchMembershipRegistrations}
-    setRegistrations={setMembershipRegistrations}
-    cardStyle={cardStyle}
-  />
+              <MembershipRegistrationsTab
+                registrations={membershipRegistrations}
+                fetchRegistrations={fetchMembershipRegistrations}
+                setRegistrations={setMembershipRegistrations}
+                cardStyle={cardStyle}
+              />
             )}
 
           {/* ── REGISTRATIONS ── */}

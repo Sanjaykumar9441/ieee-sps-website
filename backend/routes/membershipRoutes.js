@@ -139,30 +139,6 @@ router.delete("/:id", async (req, res) => {
 });
 
 /* ==========================================
-   UPDATE STATUS
-========================================== */
-
-router.put("/:id", async (req, res) => {
-  try {
-    const updated = await MembershipRegistration.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      {
-        new: true,
-      },
-    );
-
-    res.json(updated);
-  } catch (err) {
-    console.error(err);
-
-    res.status(500).json({
-      message: "Failed to update registration",
-    });
-  }
-});
-
-/* ==========================================
    GET MEMBERSHIP SETTINGS
 ========================================== */
 

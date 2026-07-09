@@ -48,12 +48,6 @@ const membershipRegistrationSchema = new mongoose.Schema(
       type: String,
       default: "IEEE SPS Membership Development Drive",
     },
-
-    status: {
-      type: String,
-      enum: ["Pending", "Approved", "Rejected"],
-      default: "Pending",
-    },
   },
   {
     timestamps: true,

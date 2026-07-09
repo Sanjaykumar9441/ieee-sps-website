@@ -32,6 +32,7 @@ const AdminLogin = () => {
         localStorage.setItem(
           "permissions",
           JSON.stringify({
+            dashboardOverview: true,
             events: true,
             team: true,
             registrations: true,

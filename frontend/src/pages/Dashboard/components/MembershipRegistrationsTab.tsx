@@ -9,9 +9,6 @@ import {
   Users,
   Download,
   FileText,
-  UserCheck,
-  UserX,
-  Clock,
   Eye,
   Trash2,
   ChevronUp,
@@ -20,8 +17,6 @@ import {
   Square,
   Loader2,
 } from "lucide-react";
-
-type Status = "Pending" | "Approved" | "Rejected";
 
 interface Registration {
   _id: string;
@@ -33,7 +28,6 @@ interface Registration {
   email: string;
   mobile: string;
   interested?: boolean;
-  status: Status;
   createdAt: string;
 }
 
@@ -59,21 +53,9 @@ const DEPARTMENTS = [
   "Other",
 ];
 const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
-const STATUSES: Status[] = ["Pending", "Approved", "Rejected"];
 const PAGE_SIZES = [10, 25, 50, 100];
 
 const API_BASE = "https://ieee-sps-website.onrender.com/api/membership";
-
-const statusPill = (status: Status) => {
-  switch (status) {
-    case "Approved":
-      return "bg-green-500/10 text-green-400 border-green-500/30";
-    case "Rejected":
-      return "bg-red-500/10 text-red-400 border-red-500/30";
-    default:
-      return "bg-yellow-500/10 text-yellow-400 border-yellow-500/30";
-  }
-};
 
 /** Shared dark-theme classes for text inputs and selects */
 const fieldCls =
@@ -90,7 +72,6 @@ const MembershipRegistrationsTab = ({
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [genderFilter, setGenderFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
 
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -119,9 +100,12 @@ const MembershipRegistrationsTab = ({
   // Jump back to page 1 whenever the result set changes shape
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, departmentFilter, yearFilter, genderFilter, statusFilter, pageSize]);
+  }, [debouncedSearch, departmentFilter, yearFilter, genderFilter, pageSize]);
 
-  const showToast = (message: string, type: "success" | "error" = "success") => {
+  const showToast = (
+    message: string,
+    type: "success" | "error" = "success",
+  ) => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
@@ -137,14 +121,20 @@ const MembershipRegistrationsTab = ({
         reg.rollNumber?.toLowerCase().includes(keyword) ||
         reg.email?.toLowerCase().includes(keyword);
 
-      const matchesDepartment = !departmentFilter || reg.department === departmentFilter;
+      const matchesDepartment =
+        !departmentFilter || reg.department === departmentFilter;
       const matchesYear = !yearFilter || reg.year === yearFilter;
       const matchesGender = !genderFilter || reg.gender === genderFilter;
-      const matchesStatus = !statusFilter || reg.status === statusFilter;
 
-      return matchesSearch && matchesDepartment && matchesYear && matchesGender && matchesStatus;
+      return matchesSearch && matchesDepartment && matchesYear && matchesGender;
     });
-  }, [registrations, debouncedSearch, departmentFilter, yearFilter, genderFilter, statusFilter]);
+  }, [
+    registrations,
+    debouncedSearch,
+    departmentFilter,
+    yearFilter,
+    genderFilter,
+  ]);
 
   const sortedRegistrations = useMemo(() => {
     const list = [...filteredRegistrations];
@@ -165,7 +155,10 @@ const MembershipRegistrationsTab = ({
     return list;
   }, [filteredRegistrations, sortKey, sortDir]);
 
-  const totalPages = Math.max(1, Math.ceil(sortedRegistrations.length / pageSize));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(sortedRegistrations.length / pageSize),
+  );
   const paginatedRegistrations = useMemo(() => {
     const start = (page - 1) * pageSize;
     return sortedRegistrations.slice(start, start + pageSize);
@@ -183,16 +176,9 @@ const MembershipRegistrationsTab = ({
   const totalRegistrations = registrations.length;
   const maleCount = registrations.filter((r) => r.gender === "Male").length;
   const femaleCount = registrations.filter((r) => r.gender === "Female").length;
-  const pendingCount = registrations.filter((r) => r.status === "Pending").length;
-  const approvedCount = registrations.filter((r) => r.status === "Approved").length;
-  const rejectedCount = registrations.filter((r) => r.status === "Rejected").length;
 
-  const toggleStatFilter = (type: "gender" | "status", value: string) => {
-    if (type === "gender") {
-      setGenderFilter((prev) => (prev === value ? "" : value));
-    } else {
-      setStatusFilter((prev) => (prev === value ? "" : value));
-    }
+  const toggleGenderFilter = (value: string) => {
+    setGenderFilter((prev) => (prev === value ? "" : value));
   };
 
   const handleRefresh = async () => {
@@ -206,7 +192,7 @@ const MembershipRegistrationsTab = ({
 
   const deleteRegistration = async (id: string) => {
     const confirmDelete = window.confirm(
-      "Are you sure you want to delete this registration?"
+      "Are you sure you want to delete this registration?",
     );
     if (!confirmDelete) return;
 
@@ -227,33 +213,6 @@ const MembershipRegistrationsTab = ({
     } catch (err) {
       console.error(err);
       showToast("Failed to delete registration.", "error");
-    } finally {
-      setBusyIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    }
-  };
-
-  const updateStatus = async (id: string, status: Status) => {
-    setBusyIds((prev) => new Set(prev).add(id));
-    try {
-      const token = getToken();
-      await axios.put(
-        `${API_BASE}/${id}`,
-        { status },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setRegistrations((prev) =>
-        prev.map((item) => (item._id === id ? { ...item, status } : item))
-      );
-      if (selectedRegistration && selectedRegistration._id === id) {
-        setSelectedRegistration({ ...selectedRegistration, status });
-      }
-    } catch (err) {
-      console.error(err);
-      showToast("Failed to update status.", "error");
     } finally {
       setBusyIds((prev) => {
         const next = new Set(prev);
@@ -290,38 +249,10 @@ const MembershipRegistrationsTab = ({
 
   const clearSelection = () => setSelectedIds(new Set());
 
-  const bulkUpdateStatus = async (status: Status) => {
-    if (selectedIds.size === 0) return;
-    setBulkBusy(true);
-    const ids = Array.from(selectedIds);
-    const token = getToken();
-    const results = await Promise.allSettled(
-      ids.map((id) =>
-        axios.put(
-          `${API_BASE}/${id}`,
-          { status },
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
-      )
-    );
-    const succeededIds = ids.filter((_, i) => results[i].status === "fulfilled");
-    setRegistrations((prev) =>
-      prev.map((item) => (succeededIds.includes(item._id) ? { ...item, status } : item))
-    );
-    const failedCount = results.filter((r) => r.status === "rejected").length;
-    if (failedCount > 0) {
-      showToast(`${succeededIds.length} updated, ${failedCount} failed.`, "error");
-    } else {
-      showToast(`${succeededIds.length} registration(s) marked ${status}.`);
-    }
-    clearSelection();
-    setBulkBusy(false);
-  };
-
   const bulkDelete = async () => {
     if (selectedIds.size === 0) return;
     const confirmDelete = window.confirm(
-      `Delete ${selectedIds.size} selected registration(s)? This cannot be undone.`
+      `Delete ${selectedIds.size} selected registration(s)? This cannot be undone.`,
     );
     if (!confirmDelete) return;
 
@@ -332,14 +263,21 @@ const MembershipRegistrationsTab = ({
       ids.map((id) =>
         axios.delete(`${API_BASE}/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
-        })
-      )
+        }),
+      ),
     );
-    const succeededIds = ids.filter((_, i) => results[i].status === "fulfilled");
-    setRegistrations((prev) => prev.filter((item) => !succeededIds.includes(item._id)));
+    const succeededIds = ids.filter(
+      (_, i) => results[i].status === "fulfilled",
+    );
+    setRegistrations((prev) =>
+      prev.filter((item) => !succeededIds.includes(item._id)),
+    );
     const failedCount = results.filter((r) => r.status === "rejected").length;
     if (failedCount > 0) {
-      showToast(`${succeededIds.length} deleted, ${failedCount} failed.`, "error");
+      showToast(
+        `${succeededIds.length} deleted, ${failedCount} failed.`,
+        "error",
+      );
     } else {
       showToast(`${succeededIds.length} registration(s) deleted.`);
     }
@@ -357,26 +295,28 @@ const MembershipRegistrationsTab = ({
       Email: reg.email,
       Mobile: reg.mobile,
       Interested: reg.interested ? "Yes" : "No",
-      Status: reg.status,
       Registered: new Date(reg.createdAt).toLocaleString(),
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
     worksheet["!cols"] = [
-      { wch: 16 },
-      { wch: 28 },
-      { wch: 10 },
-      { wch: 15 },
-      { wch: 12 },
-      { wch: 35 },
-      { wch: 18 },
-      { wch: 12 },
-      { wch: 14 },
-      { wch: 24 },
-    ];
+  { wch: 16 }, // Roll No
+  { wch: 28 }, // Name
+  { wch: 10 }, // Gender
+  { wch: 15 }, // Department
+  { wch: 12 }, // Year
+  { wch: 35 }, // Email
+  { wch: 18 }, // Mobile
+  { wch: 12 }, // Interested
+  { wch: 24 }, // Registered
+];
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Membership Registrations");
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "Membership Registrations",
+    );
     const date = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(workbook, `Membership_Registrations_${date}.xlsx`);
   };
@@ -391,7 +331,6 @@ const MembershipRegistrationsTab = ({
       "Email",
       "Mobile",
       "Interested",
-      "Status",
       "Registered",
     ];
     const escapeCsv = (val: string) => `"${String(val).replace(/"/g, '""')}"`;
@@ -405,11 +344,10 @@ const MembershipRegistrationsTab = ({
         reg.email,
         reg.mobile,
         reg.interested ? "Yes" : "No",
-        reg.status,
         new Date(reg.createdAt).toLocaleString(),
       ]
         .map(escapeCsv)
-        .join(",")
+        .join(","),
     );
     const csv = [headers.map(escapeCsv).join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -427,15 +365,15 @@ const MembershipRegistrationsTab = ({
     setDepartmentFilter("");
     setYearFilter("");
     setGenderFilter("");
-    setStatusFilter("");
   };
 
   const hasActiveFilters = Boolean(
-    search || departmentFilter || yearFilter || genderFilter || statusFilter
+    search || departmentFilter || yearFilter || genderFilter,
   );
 
   const SortIcon = ({ column }: { column: SortKey }) => {
-    if (sortKey !== column) return <ChevronDown className="w-3 h-3 opacity-20" />;
+    if (sortKey !== column)
+      return <ChevronDown className="w-3 h-3 opacity-20" />;
     return sortDir === "asc" ? (
       <ChevronUp className="w-3 h-3 text-[#00629B]" />
     ) : (
@@ -459,7 +397,10 @@ const MembershipRegistrationsTab = ({
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: "'Orbitron', sans-serif" }}>
+          <h2
+            className="text-2xl font-bold"
+            style={{ fontFamily: "'Orbitron', sans-serif" }}
+          >
             Membership Registrations
           </h2>
           <p className="text-sm text-slate-400">
@@ -502,8 +443,14 @@ const MembershipRegistrationsTab = ({
       </div>
 
       {/* STATS — clickable as quick filters */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <StatCard label="Total" value={totalRegistrations} icon={Users} color="#00629B" cardStyle={cardStyle} />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 mb-6">
+        <StatCard
+          label="Total"
+          value={totalRegistrations}
+          icon={Users}
+          color="#00629B"
+          cardStyle={cardStyle}
+        />
         <StatCard
           label="Male"
           value={maleCount}
@@ -511,7 +458,7 @@ const MembershipRegistrationsTab = ({
           color="#2563eb"
           cardStyle={cardStyle}
           active={genderFilter === "Male"}
-          onClick={() => toggleStatFilter("gender", "Male")}
+          onClick={() => toggleGenderFilter("Male")}
         />
         <StatCard
           label="Female"
@@ -520,34 +467,7 @@ const MembershipRegistrationsTab = ({
           color="#db2777"
           cardStyle={cardStyle}
           active={genderFilter === "Female"}
-          onClick={() => toggleStatFilter("gender", "Female")}
-        />
-        <StatCard
-          label="Pending"
-          value={pendingCount}
-          icon={Clock}
-          color="#ca8a04"
-          cardStyle={cardStyle}
-          active={statusFilter === "Pending"}
-          onClick={() => toggleStatFilter("status", "Pending")}
-        />
-        <StatCard
-          label="Approved"
-          value={approvedCount}
-          icon={UserCheck}
-          color="#16a34a"
-          cardStyle={cardStyle}
-          active={statusFilter === "Approved"}
-          onClick={() => toggleStatFilter("status", "Approved")}
-        />
-        <StatCard
-          label="Rejected"
-          value={rejectedCount}
-          icon={UserX}
-          color="#dc2626"
-          cardStyle={cardStyle}
-          active={statusFilter === "Rejected"}
-          onClick={() => toggleStatFilter("status", "Rejected")}
+          onClick={() => toggleGenderFilter("Female")}
         />
       </div>
 
@@ -570,7 +490,9 @@ const MembershipRegistrationsTab = ({
           onChange={(e) => setDepartmentFilter(e.target.value)}
           className={fieldCls}
         >
-          <option value="" className="bg-slate-900">All Departments</option>
+          <option value="" className="bg-slate-900">
+            All Departments
+          </option>
           {DEPARTMENTS.map((d) => (
             <option key={d} value={d} className="bg-slate-900">
               {d}
@@ -583,7 +505,9 @@ const MembershipRegistrationsTab = ({
           onChange={(e) => setYearFilter(e.target.value)}
           className={fieldCls}
         >
-          <option value="" className="bg-slate-900">All Years</option>
+          <option value="" className="bg-slate-900">
+            All Years
+          </option>
           {YEARS.map((y) => (
             <option key={y} value={y} className="bg-slate-900">
               {y}
@@ -596,22 +520,11 @@ const MembershipRegistrationsTab = ({
           onChange={(e) => setGenderFilter(e.target.value)}
           className={fieldCls}
         >
-          <option value="" className="bg-slate-900">All Genders</option>
+          <option value="" className="bg-slate-900">
+            All Genders
+          </option>
           <option className="bg-slate-900">Male</option>
           <option className="bg-slate-900">Female</option>
-        </select>
-
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className={fieldCls}
-        >
-          <option value="" className="bg-slate-900">All Status</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s} className="bg-slate-900">
-              {s}
-            </option>
-          ))}
         </select>
 
         <button
@@ -632,22 +545,6 @@ const MembershipRegistrationsTab = ({
           </span>
           <button
             type="button"
-            onClick={() => bulkUpdateStatus("Approved")}
-            disabled={bulkBusy}
-            className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-medium disabled:opacity-50"
-          >
-            Approve
-          </button>
-          <button
-            type="button"
-            onClick={() => bulkUpdateStatus("Rejected")}
-            disabled={bulkBusy}
-            className="px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-medium disabled:opacity-50"
-          >
-            Reject
-          </button>
-          <button
-            type="button"
             onClick={bulkDelete}
             disabled={bulkBusy}
             className="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-800 text-white text-xs font-medium disabled:opacity-50"
@@ -665,12 +562,19 @@ const MembershipRegistrationsTab = ({
       )}
 
       {/* TABLE (desktop) */}
-      <div className="hidden md:block overflow-x-auto rounded-xl mb-4" style={cardStyle}>
+      <div
+        className="hidden md:block overflow-x-auto rounded-xl mb-4"
+        style={cardStyle}
+      >
         <table className="w-full">
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(99,179,237,0.08)" }}>
               <th className="px-4 py-4 text-left">
-                <button type="button" onClick={toggleSelectAllOnPage} className="flex items-center">
+                <button
+                  type="button"
+                  onClick={toggleSelectAllOnPage}
+                  className="flex items-center"
+                >
                   {allOnPageSelected ? (
                     <CheckSquare className="w-4 h-4 text-[#00629B]" />
                   ) : (
@@ -678,15 +582,36 @@ const MembershipRegistrationsTab = ({
                   )}
                 </button>
               </th>
-              <SortableHeader label="Roll No" column="rollNumber" sortKey={sortKey} onSort={toggleSort} SortIcon={SortIcon} />
-              <SortableHeader label="Name" column="fullName" sortKey={sortKey} onSort={toggleSort} SortIcon={SortIcon} />
-              <SortableHeader label="Department" column="department" sortKey={sortKey} onSort={toggleSort} SortIcon={SortIcon} />
-              <SortableHeader label="Year" column="year" sortKey={sortKey} onSort={toggleSort} SortIcon={SortIcon} />
+              <SortableHeader
+                label="Roll No"
+                column="rollNumber"
+                sortKey={sortKey}
+                onSort={toggleSort}
+                SortIcon={SortIcon}
+              />
+              <SortableHeader
+                label="Name"
+                column="fullName"
+                sortKey={sortKey}
+                onSort={toggleSort}
+                SortIcon={SortIcon}
+              />
+              <SortableHeader
+                label="Department"
+                column="department"
+                sortKey={sortKey}
+                onSort={toggleSort}
+                SortIcon={SortIcon}
+              />
+              <SortableHeader
+                label="Year"
+                column="year"
+                sortKey={sortKey}
+                onSort={toggleSort}
+                SortIcon={SortIcon}
+              />
               <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-widest text-slate-400">
                 Email
-              </th>
-              <th className="px-5 py-4 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
-                Status
               </th>
               <SortableHeader
                 label="Registered"
@@ -704,10 +629,12 @@ const MembershipRegistrationsTab = ({
           <tbody>
             {paginatedRegistrations.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center py-16">
+                <td colSpan={8} className="text-center py-16">
                   <div className="flex flex-col items-center">
                     <Users size={45} className="text-slate-600 mb-3" />
-                    <h3 className="text-lg font-semibold text-slate-300">No Registrations Found</h3>
+                    <h3 className="text-lg font-semibold text-slate-300">
+                      No Registrations Found
+                    </h3>
                     <p className="text-sm text-slate-500 mt-1">
                       {hasActiveFilters
                         ? "Try adjusting your filters."
@@ -720,9 +647,15 @@ const MembershipRegistrationsTab = ({
               paginatedRegistrations.map((reg) => {
                 const isBusy = busyIds.has(reg._id);
                 return (
-                  <tr key={reg._id} className="border-b border-white/5 hover:bg-white/5 transition">
+                  <tr
+                    key={reg._id}
+                    className="border-b border-white/5 hover:bg-white/5 transition"
+                  >
                     <td className="px-4 py-4">
-                      <button type="button" onClick={() => toggleSelectRow(reg._id)}>
+                      <button
+                        type="button"
+                        onClick={() => toggleSelectRow(reg._id)}
+                      >
                         {selectedIds.has(reg._id) ? (
                           <CheckSquare className="w-4 h-4 text-[#00629B]" />
                         ) : (
@@ -730,27 +663,15 @@ const MembershipRegistrationsTab = ({
                         )}
                       </button>
                     </td>
-                    <td className="px-5 py-4 font-medium text-slate-100">{reg.rollNumber}</td>
+                    <td className="px-5 py-4 font-medium text-slate-100">
+                      {reg.rollNumber}
+                    </td>
                     <td className="px-5 py-4 text-slate-200">{reg.fullName}</td>
-                    <td className="px-5 py-4 text-slate-300">{reg.department}</td>
+                    <td className="px-5 py-4 text-slate-300">
+                      {reg.department}
+                    </td>
                     <td className="px-5 py-4 text-slate-300">{reg.year}</td>
                     <td className="px-5 py-4 text-slate-400">{reg.email}</td>
-                    <td className="px-5 py-4 text-center">
-                      <select
-                        value={reg.status}
-                        disabled={isBusy}
-                        onChange={(e) => updateStatus(reg._id, e.target.value as Status)}
-                        className={`px-3 py-2 rounded-lg border text-sm outline-none focus:border-[#00629B] disabled:opacity-50 ${statusPill(
-                          reg.status
-                        )}`}
-                      >
-                        {STATUSES.map((s) => (
-                          <option key={s} value={s} className="bg-slate-900 text-slate-100">
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
                     <td className="px-5 py-4 text-center text-sm text-slate-400">
                       {new Date(reg.createdAt).toLocaleDateString()}
                     </td>
@@ -771,7 +692,11 @@ const MembershipRegistrationsTab = ({
                           className="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition disabled:opacity-50"
                           title="Delete"
                         >
-                          {isBusy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                          {isBusy ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
                         </button>
                       </div>
                     </td>
@@ -788,9 +713,13 @@ const MembershipRegistrationsTab = ({
         {paginatedRegistrations.length === 0 ? (
           <div className="rounded-xl p-8 text-center" style={cardStyle}>
             <Users size={40} className="text-slate-600 mx-auto mb-3" />
-            <h3 className="text-base font-semibold text-slate-300">No Registrations Found</h3>
+            <h3 className="text-base font-semibold text-slate-300">
+              No Registrations Found
+            </h3>
             <p className="text-sm text-slate-500 mt-1">
-              {hasActiveFilters ? "Try adjusting your filters." : "Students who register will appear here."}
+              {hasActiveFilters
+                ? "Try adjusting your filters."
+                : "Students who register will appear here."}
             </p>
           </div>
         ) : (
@@ -800,12 +729,17 @@ const MembershipRegistrationsTab = ({
               <div key={reg._id} className="rounded-xl p-4" style={cardStyle}>
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
-                    <p className="font-semibold text-slate-100">{reg.fullName}</p>
+                    <p className="font-semibold text-slate-100">
+                      {reg.fullName}
+                    </p>
                     <p className="text-xs text-slate-400">
                       {reg.rollNumber} · {reg.department} · {reg.year}
                     </p>
                   </div>
-                  <button type="button" onClick={() => toggleSelectRow(reg._id)}>
+                  <button
+                    type="button"
+                    onClick={() => toggleSelectRow(reg._id)}
+                  >
                     {selectedIds.has(reg._id) ? (
                       <CheckSquare className="w-4 h-4 text-[#00629B]" />
                     ) : (
@@ -815,20 +749,6 @@ const MembershipRegistrationsTab = ({
                 </div>
                 <p className="text-xs text-slate-400 mb-3">{reg.email}</p>
                 <div className="flex items-center justify-between gap-2">
-                  <select
-                    value={reg.status}
-                    disabled={isBusy}
-                    onChange={(e) => updateStatus(reg._id, e.target.value as Status)}
-                    className={`px-3 py-2 rounded-lg border text-xs outline-none focus:border-[#00629B] disabled:opacity-50 ${statusPill(
-                      reg.status
-                    )}`}
-                  >
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s} className="bg-slate-900 text-slate-100">
-                        {s}
-                      </option>
-                    ))}
-                  </select>
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -843,7 +763,11 @@ const MembershipRegistrationsTab = ({
                       disabled={isBusy}
                       className="p-2 rounded-lg bg-red-500 text-white disabled:opacity-50"
                     >
-                      {isBusy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                      {isBusy ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Trash2 size={14} />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -864,7 +788,11 @@ const MembershipRegistrationsTab = ({
               className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-slate-200"
             >
               {PAGE_SIZES.map((size) => (
-                <option key={size} value={size} className="bg-slate-900 text-slate-100">
+                <option
+                  key={size}
+                  value={size}
+                  className="bg-slate-900 text-slate-100"
+                >
                   {size}
                 </option>
               ))}
@@ -907,7 +835,9 @@ const MembershipRegistrationsTab = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center p-6 border-b border-white/10">
-              <h2 className="text-2xl font-bold text-slate-100">Membership Registration</h2>
+              <h2 className="text-2xl font-bold text-slate-100">
+                Membership Registration
+              </h2>
               <button
                 type="button"
                 onClick={() => setSelectedRegistration(null)}
@@ -918,10 +848,19 @@ const MembershipRegistrationsTab = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6">
-              <DetailField label="Roll Number" value={selectedRegistration.rollNumber} />
-              <DetailField label="Full Name" value={selectedRegistration.fullName} />
+              <DetailField
+                label="Roll Number"
+                value={selectedRegistration.rollNumber}
+              />
+              <DetailField
+                label="Full Name"
+                value={selectedRegistration.fullName}
+              />
               <DetailField label="Gender" value={selectedRegistration.gender} />
-              <DetailField label="Department" value={selectedRegistration.department} />
+              <DetailField
+                label="Department"
+                value={selectedRegistration.department}
+              />
               <DetailField label="Year" value={selectedRegistration.year} />
               <DetailField label="Email" value={selectedRegistration.email} />
               <DetailField label="Mobile" value={selectedRegistration.mobile} />
@@ -930,26 +869,11 @@ const MembershipRegistrationsTab = ({
                 value={selectedRegistration.interested ? "Yes" : "No"}
               />
 
-              <div>
-                <p className="text-xs text-slate-500">Status</p>
-                <select
-                  value={selectedRegistration.status}
-                  onChange={(e) =>
-                    updateStatus(selectedRegistration._id, e.target.value as Status)
-                  }
-                  className="mt-1 w-full bg-white/5 border border-white/10 rounded-lg p-2 text-slate-100 outline-none focus:border-[#00629B]"
-                >
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s} className="bg-slate-900 text-slate-100">
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               <DetailField
                 label="Registered On"
-                value={new Date(selectedRegistration.createdAt).toLocaleString()}
+                value={new Date(
+                  selectedRegistration.createdAt,
+                ).toLocaleString()}
               />
             </div>
           </div>

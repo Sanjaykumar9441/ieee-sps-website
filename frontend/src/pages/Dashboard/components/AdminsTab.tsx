@@ -19,6 +19,7 @@ const AdminsTab = () => {
   const [showPermissionForm, setShowPermissionForm] = useState(false);
 
   const [permissions, setPermissions] = useState({
+    dashboardOverview: false,
     events: false,
     team: false,
     registrations: false,
@@ -130,6 +131,7 @@ const AdminsTab = () => {
     }
     setUsername(admin.username);
     setPermissions({
+      dashboardOverview: admin.permissions.dashboardOverview,
       events: admin.permissions.events,
       team: admin.permissions.team,
       registrations: admin.permissions.registrations,
@@ -191,6 +193,7 @@ const AdminsTab = () => {
       setEditingAdminId(null);
 
       setPermissions({
+        dashboardOverview: false,
         events: false,
         team: false,
         registrations: false,
@@ -275,6 +278,7 @@ const AdminsTab = () => {
   };
 
   const permissionKeys = [
+    { key: "dashboardOverview", label: "Dashboard Overview" },
     { key: "events", label: "Events" },
     { key: "team", label: "Team" },
     { key: "registrations", label: "Registrations" },
@@ -374,6 +378,7 @@ const AdminsTab = () => {
                       setEditingAdminId(existingAdmin._id);
                       setShowPermissionForm(false);
                       setPermissions({
+                        dashboardOverview: existingAdmin.permissions.dashboardOverview,
                         events: existingAdmin.permissions.events,
                         team: existingAdmin.permissions.team,
                         registrations: existingAdmin.permissions.registrations,
@@ -451,6 +456,7 @@ const AdminsTab = () => {
                   setUsername("");
                   setPassword("");
                   setPermissions({
+                    dashboardOverview: false,
                     events: false,
                     team: false,
                     registrations: false,

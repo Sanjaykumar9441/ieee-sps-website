@@ -102,6 +102,11 @@ const adminAccessSchema = new mongoose.Schema(
         type: Boolean,
         default: false,
       },
+
+      dashboardOverview: {
+        type: Boolean,
+        default: false,
+      },
     },
   },
   { timestamps: true },
