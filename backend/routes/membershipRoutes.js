@@ -11,13 +11,14 @@ const MembershipSettings = require("../models/MembershipSettings");
 router.post("/register", async (req, res) => {
   try {
     const {
+      rollNumber,
       fullName,
-      email,
-      phone,
-      college,
+      gender,
       department,
       year,
-      ieeeMembershipNumber,
+      email,
+      mobile,
+      interested,
       event,
     } = req.body;
 
@@ -68,13 +69,14 @@ router.post("/register", async (req, res) => {
     }
 
     const registration = new MembershipRegistration({
+      rollNumber,
       fullName,
-      email,
-      phone,
-      college,
+      gender,
       department,
       year,
-      ieeeMembershipNumber,
+      email,
+      mobile,
+      interested,
       event,
     });
 

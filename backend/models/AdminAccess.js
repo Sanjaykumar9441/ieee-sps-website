@@ -97,6 +97,11 @@ const adminAccessSchema = new mongoose.Schema(
         type: Boolean,
         default: false,
       },
+
+      membershipRegistrations: {
+        type: Boolean,
+        default: false,
+      },
     },
   },
   { timestamps: true },

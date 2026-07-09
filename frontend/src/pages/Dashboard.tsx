@@ -110,9 +110,9 @@ const Dashboard = () => {
     const token = localStorage.getItem("token");
 
     if (!token) return;
-    const role = localStorage.getItem("role");
+    const userRole = localStorage.getItem("role");
 
-    if (role === "superadmin") return;
+    if (userRole === "superadmin") return;
     try {
       const res = await axios.get(
         "https://ieee-sps-website.onrender.com/api/admin-access/profile",
@@ -132,9 +132,9 @@ const Dashboard = () => {
   useEffect(() => {
     if (!token) return;
 
-    const role = localStorage.getItem("role");
+    const userRole = localStorage.getItem("role");
 
-    if (role === "admin") {
+    if (userRole === "admin") {
       refreshPermissions();
       refreshPauseStatus();
     }
@@ -357,7 +357,9 @@ const Dashboard = () => {
   };
 
   /* MENU */
-  const isSuperAdmin = permissions.admins === true;
+  const userRole = localStorage.getItem("role");
+
+const isSuperAdmin = userRole === "superadmin";
 
   const menu = isPaused
     ? [{ id: "profile", label: "My Profile", icon: User }]
@@ -408,9 +410,9 @@ const Dashboard = () => {
     const token = localStorage.getItem("token");
 
     if (!token) return;
-    const role = localStorage.getItem("role");
+    const userRole = localStorage.getItem("role");
 
-    if (role === "superadmin") return;
+    if (userRole === "superadmin") return;
     try {
       const res = await axios.get(
         "https://ieee-sps-website.onrender.com/api/admin-access/permissions",
