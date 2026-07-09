@@ -67,13 +67,17 @@ const API_BASE = "https://ieee-sps-website.onrender.com/api/membership";
 const statusPill = (status: Status) => {
   switch (status) {
     case "Approved":
-      return "bg-green-50 text-green-700 border-green-200";
+      return "bg-green-500/10 text-green-400 border-green-500/30";
     case "Rejected":
-      return "bg-red-50 text-red-600 border-red-200";
+      return "bg-red-500/10 text-red-400 border-red-500/30";
     default:
-      return "bg-yellow-50 text-yellow-700 border-yellow-200";
+      return "bg-yellow-500/10 text-yellow-400 border-yellow-500/30";
   }
 };
+
+/** Shared dark-theme classes for text inputs and selects */
+const fieldCls =
+  "bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 outline-none focus:border-[#00629B] focus:bg-white/10 transition";
 
 const MembershipRegistrationsTab = ({
   registrations,
@@ -81,12 +85,6 @@ const MembershipRegistrationsTab = ({
   setRegistrations,
   cardStyle,
 }: MembershipRegistrationsTabProps) => {
-  const [settings, setSettings] = useState({
-  maxRegistrations: 100,
-  registrationOpen: true,
-  currentCount: 0,
-});
-  const [savingSettings, setSavingSettings] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
@@ -121,23 +119,9 @@ const MembershipRegistrationsTab = ({
   // Jump back to page 1 whenever the result set changes shape
   useEffect(() => {
     setPage(1);
-  }, [
-    debouncedSearch,
-    departmentFilter,
-    yearFilter,
-    genderFilter,
-    statusFilter,
-    pageSize,
-  ]);
+  }, [debouncedSearch, departmentFilter, yearFilter, genderFilter, statusFilter, pageSize]);
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  const showToast = (
-    message: string,
-    type: "success" | "error" = "success",
-  ) => {
+  const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
@@ -153,28 +137,14 @@ const MembershipRegistrationsTab = ({
         reg.rollNumber?.toLowerCase().includes(keyword) ||
         reg.email?.toLowerCase().includes(keyword);
 
-      const matchesDepartment =
-        !departmentFilter || reg.department === departmentFilter;
+      const matchesDepartment = !departmentFilter || reg.department === departmentFilter;
       const matchesYear = !yearFilter || reg.year === yearFilter;
       const matchesGender = !genderFilter || reg.gender === genderFilter;
       const matchesStatus = !statusFilter || reg.status === statusFilter;
 
-      return (
-        matchesSearch &&
-        matchesDepartment &&
-        matchesYear &&
-        matchesGender &&
-        matchesStatus
-      );
+      return matchesSearch && matchesDepartment && matchesYear && matchesGender && matchesStatus;
     });
-  }, [
-    registrations,
-    debouncedSearch,
-    departmentFilter,
-    yearFilter,
-    genderFilter,
-    statusFilter,
-  ]);
+  }, [registrations, debouncedSearch, departmentFilter, yearFilter, genderFilter, statusFilter]);
 
   const sortedRegistrations = useMemo(() => {
     const list = [...filteredRegistrations];
@@ -195,10 +165,7 @@ const MembershipRegistrationsTab = ({
     return list;
   }, [filteredRegistrations, sortKey, sortDir]);
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(sortedRegistrations.length / pageSize),
-  );
+  const totalPages = Math.max(1, Math.ceil(sortedRegistrations.length / pageSize));
   const paginatedRegistrations = useMemo(() => {
     const start = (page - 1) * pageSize;
     return sortedRegistrations.slice(start, start + pageSize);
@@ -216,15 +183,9 @@ const MembershipRegistrationsTab = ({
   const totalRegistrations = registrations.length;
   const maleCount = registrations.filter((r) => r.gender === "Male").length;
   const femaleCount = registrations.filter((r) => r.gender === "Female").length;
-  const pendingCount = registrations.filter(
-    (r) => r.status === "Pending",
-  ).length;
-  const approvedCount = registrations.filter(
-    (r) => r.status === "Approved",
-  ).length;
-  const rejectedCount = registrations.filter(
-    (r) => r.status === "Rejected",
-  ).length;
+  const pendingCount = registrations.filter((r) => r.status === "Pending").length;
+  const approvedCount = registrations.filter((r) => r.status === "Approved").length;
+  const rejectedCount = registrations.filter((r) => r.status === "Rejected").length;
 
   const toggleStatFilter = (type: "gender" | "status", value: string) => {
     if (type === "gender") {
@@ -243,53 +204,9 @@ const MembershipRegistrationsTab = ({
     }
   };
 
-  const fetchSettings = async () => {
-    try {
-      const token = localStorage.getItem("token");
-
-      const res = await axios.get(`${API_BASE}/settings`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      setSettings(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const saveSettings = async () => {
-    try {
-      setSavingSettings(true);
-
-      const token = localStorage.getItem("token");
-
-      await axios.put(
-        `${API_BASE}/settings`,
-        {
-          maxRegistrations: settings.maxRegistrations,
-          registrationOpen: settings.registrationOpen,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      showToast("Membership settings updated.");
-    } catch (err) {
-      console.error(err);
-      showToast("Failed to update settings.", "error");
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
   const deleteRegistration = async (id: string) => {
     const confirmDelete = window.confirm(
-      "Are you sure you want to delete this registration?",
+      "Are you sure you want to delete this registration?"
     );
     if (!confirmDelete) return;
 
@@ -326,10 +243,10 @@ const MembershipRegistrationsTab = ({
       await axios.put(
         `${API_BASE}/${id}`,
         { status },
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       setRegistrations((prev) =>
-        prev.map((item) => (item._id === id ? { ...item, status } : item)),
+        prev.map((item) => (item._id === id ? { ...item, status } : item))
       );
       if (selectedRegistration && selectedRegistration._id === id) {
         setSelectedRegistration({ ...selectedRegistration, status });
@@ -383,24 +300,17 @@ const MembershipRegistrationsTab = ({
         axios.put(
           `${API_BASE}/${id}`,
           { status },
-          { headers: { Authorization: `Bearer ${token}` } },
-        ),
-      ),
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+      )
     );
-    const succeededIds = ids.filter(
-      (_, i) => results[i].status === "fulfilled",
-    );
+    const succeededIds = ids.filter((_, i) => results[i].status === "fulfilled");
     setRegistrations((prev) =>
-      prev.map((item) =>
-        succeededIds.includes(item._id) ? { ...item, status } : item,
-      ),
+      prev.map((item) => (succeededIds.includes(item._id) ? { ...item, status } : item))
     );
     const failedCount = results.filter((r) => r.status === "rejected").length;
     if (failedCount > 0) {
-      showToast(
-        `${succeededIds.length} updated, ${failedCount} failed.`,
-        "error",
-      );
+      showToast(`${succeededIds.length} updated, ${failedCount} failed.`, "error");
     } else {
       showToast(`${succeededIds.length} registration(s) marked ${status}.`);
     }
@@ -411,7 +321,7 @@ const MembershipRegistrationsTab = ({
   const bulkDelete = async () => {
     if (selectedIds.size === 0) return;
     const confirmDelete = window.confirm(
-      `Delete ${selectedIds.size} selected registration(s)? This cannot be undone.`,
+      `Delete ${selectedIds.size} selected registration(s)? This cannot be undone.`
     );
     if (!confirmDelete) return;
 
@@ -422,21 +332,14 @@ const MembershipRegistrationsTab = ({
       ids.map((id) =>
         axios.delete(`${API_BASE}/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
-        }),
-      ),
+        })
+      )
     );
-    const succeededIds = ids.filter(
-      (_, i) => results[i].status === "fulfilled",
-    );
-    setRegistrations((prev) =>
-      prev.filter((item) => !succeededIds.includes(item._id)),
-    );
+    const succeededIds = ids.filter((_, i) => results[i].status === "fulfilled");
+    setRegistrations((prev) => prev.filter((item) => !succeededIds.includes(item._id)));
     const failedCount = results.filter((r) => r.status === "rejected").length;
     if (failedCount > 0) {
-      showToast(
-        `${succeededIds.length} deleted, ${failedCount} failed.`,
-        "error",
-      );
+      showToast(`${succeededIds.length} deleted, ${failedCount} failed.`, "error");
     } else {
       showToast(`${succeededIds.length} registration(s) deleted.`);
     }
@@ -473,11 +376,7 @@ const MembershipRegistrationsTab = ({
     ];
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      "Membership Registrations",
-    );
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Membership Registrations");
     const date = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(workbook, `Membership_Registrations_${date}.xlsx`);
   };
@@ -510,7 +409,7 @@ const MembershipRegistrationsTab = ({
         new Date(reg.createdAt).toLocaleString(),
       ]
         .map(escapeCsv)
-        .join(","),
+        .join(",")
     );
     const csv = [headers.map(escapeCsv).join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -532,12 +431,11 @@ const MembershipRegistrationsTab = ({
   };
 
   const hasActiveFilters = Boolean(
-    search || departmentFilter || yearFilter || genderFilter || statusFilter,
+    search || departmentFilter || yearFilter || genderFilter || statusFilter
   );
 
   const SortIcon = ({ column }: { column: SortKey }) => {
-    if (sortKey !== column)
-      return <ChevronDown className="w-3 h-3 opacity-20" />;
+    if (sortKey !== column) return <ChevronDown className="w-3 h-3 opacity-20" />;
     return sortDir === "asc" ? (
       <ChevronUp className="w-3 h-3 text-[#00629B]" />
     ) : (
@@ -561,13 +459,10 @@ const MembershipRegistrationsTab = ({
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
-          <h2
-            className="text-2xl font-bold"
-            style={{ fontFamily: "'Orbitron', sans-serif" }}
-          >
+          <h2 className="text-2xl font-bold" style={{ fontFamily: "'Orbitron', sans-serif" }}>
             Membership Registrations
           </h2>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-400">
             Manage IEEE SPS Membership Drive registrations
           </p>
         </div>
@@ -606,127 +501,9 @@ const MembershipRegistrationsTab = ({
         </div>
       </div>
 
-      {/* MEMBERSHIP SETTINGS */}
-
-      <div className="rounded-2xl p-6 mb-6" style={cardStyle}>
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h3 className="text-xl font-bold text-slate-800">
-              Membership Registration Settings
-            </h3>
-
-            <p className="text-sm text-slate-500">
-              Control the registration limit and registration status.
-            </p>
-          </div>
-
-          <button
-            onClick={saveSettings}
-            disabled={savingSettings}
-            className="px-5 py-2 rounded-xl bg-[#00629B] text-white hover:bg-[#005080] disabled:opacity-50"
-          >
-            {savingSettings ? "Saving..." : "Save"}
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Maximum */}
-
-          <div>
-            <label className="block text-sm font-medium text-slate-600 mb-2">
-              Maximum Registrations
-            </label>
-
-            <input
-              type="number"
-              min={1}
-              value={settings.maxRegistrations}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  maxRegistrations: Number(e.target.value),
-                })
-              }
-              className="w-full border rounded-xl px-4 py-3 outline-none focus:border-[#00629B]"
-            />
-          </div>
-
-          {/* Current */}
-
-          <div>
-            <label className="block text-sm font-medium text-slate-600 mb-2">
-              Current Registrations
-            </label>
-
-            <div className="border rounded-xl px-4 py-3 bg-slate-50 font-semibold">
-              {settings.currentCount} / {settings.maxRegistrations}
-            </div>
-          </div>
-
-          {/* Status */}
-
-          <div>
-            <label className="block text-sm font-medium text-slate-600 mb-2">
-              Registration Status
-            </label>
-
-            <select
-              value={settings.registrationOpen ? "Open" : "Closed"}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  registrationOpen: e.target.value === "Open",
-                })
-              }
-              className="w-full border rounded-xl px-4 py-3 outline-none focus:border-[#00629B]"
-            >
-              <option value="Open">🟢 Open</option>
-
-              <option value="Closed">🔴 Closed</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Progress */}
-
-        <div className="mt-6">
-          <div className="flex justify-between text-sm mb-2">
-            <span className="text-slate-600">Registration Progress</span>
-
-            <span className="font-semibold">
-              {Math.min(
-                100,
-                Math.round(
-                  (settings.currentCount / settings.maxRegistrations) * 100,
-                ),
-              )}
-              %
-            </span>
-          </div>
-
-          <div className="h-3 rounded-full bg-slate-200 overflow-hidden">
-            <div
-              className="h-full bg-[#00629B] transition-all"
-              style={{
-                width: `${Math.min(
-                  100,
-                  (settings.currentCount / settings.maxRegistrations) * 100,
-                )}%`,
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
       {/* STATS — clickable as quick filters */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <StatCard
-          label="Total"
-          value={totalRegistrations}
-          icon={Users}
-          color="#00629B"
-          cardStyle={cardStyle}
-        />
+        <StatCard label="Total" value={totalRegistrations} icon={Users} color="#00629B" cardStyle={cardStyle} />
         <StatCard
           label="Male"
           value={maleCount}
@@ -776,13 +553,13 @@ const MembershipRegistrationsTab = ({
 
       {/* SEARCH */}
       <div className="mb-4 relative">
-        <Search size={18} className="absolute left-4 top-3.5 text-slate-400" />
+        <Search size={18} className="absolute left-4 top-3.5 text-slate-500" />
         <input
           type="text"
           placeholder="Search by Name, Roll Number or Email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-300 outline-none focus:border-[#00629B]"
+          className={`w-full pl-11 pr-4 py-3 ${fieldCls}`}
         />
       </div>
 
@@ -791,11 +568,11 @@ const MembershipRegistrationsTab = ({
         <select
           value={departmentFilter}
           onChange={(e) => setDepartmentFilter(e.target.value)}
-          className="border rounded-xl px-4 py-3 text-sm"
+          className={fieldCls}
         >
-          <option value="">All Departments</option>
+          <option value="" className="bg-slate-900">All Departments</option>
           {DEPARTMENTS.map((d) => (
-            <option key={d} value={d}>
+            <option key={d} value={d} className="bg-slate-900">
               {d}
             </option>
           ))}
@@ -804,11 +581,11 @@ const MembershipRegistrationsTab = ({
         <select
           value={yearFilter}
           onChange={(e) => setYearFilter(e.target.value)}
-          className="border rounded-xl px-4 py-3 text-sm"
+          className={fieldCls}
         >
-          <option value="">All Years</option>
+          <option value="" className="bg-slate-900">All Years</option>
           {YEARS.map((y) => (
-            <option key={y} value={y}>
+            <option key={y} value={y} className="bg-slate-900">
               {y}
             </option>
           ))}
@@ -817,21 +594,21 @@ const MembershipRegistrationsTab = ({
         <select
           value={genderFilter}
           onChange={(e) => setGenderFilter(e.target.value)}
-          className="border rounded-xl px-4 py-3 text-sm"
+          className={fieldCls}
         >
-          <option value="">All Genders</option>
-          <option>Male</option>
-          <option>Female</option>
+          <option value="" className="bg-slate-900">All Genders</option>
+          <option className="bg-slate-900">Male</option>
+          <option className="bg-slate-900">Female</option>
         </select>
 
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="border rounded-xl px-4 py-3 text-sm"
+          className={fieldCls}
         >
-          <option value="">All Status</option>
+          <option value="" className="bg-slate-900">All Status</option>
           {STATUSES.map((s) => (
-            <option key={s} value={s}>
+            <option key={s} value={s} className="bg-slate-900">
               {s}
             </option>
           ))}
@@ -841,7 +618,7 @@ const MembershipRegistrationsTab = ({
           type="button"
           onClick={clearFilters}
           disabled={!hasActiveFilters}
-          className="rounded-xl bg-slate-200 hover:bg-slate-300 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+          className="rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium text-slate-300"
         >
           Clear Filters
         </button>
@@ -849,8 +626,8 @@ const MembershipRegistrationsTab = ({
 
       {/* BULK ACTION BAR */}
       {selectedIds.size > 0 && (
-        <div className="flex flex-wrap items-center gap-3 mb-4 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
-          <span className="text-sm font-medium text-[#0C447C]">
+        <div className="flex flex-wrap items-center gap-3 mb-4 bg-[#00629B]/10 border border-[#00629B]/30 rounded-xl px-4 py-3">
+          <span className="text-sm font-medium text-cyan-300">
             {selectedIds.size} selected
           </span>
           <button
@@ -880,7 +657,7 @@ const MembershipRegistrationsTab = ({
           <button
             type="button"
             onClick={clearSelection}
-            className="ml-auto text-xs text-slate-500 hover:text-slate-700"
+            className="ml-auto text-xs text-slate-400 hover:text-slate-200"
           >
             Clear selection
           </button>
@@ -888,58 +665,27 @@ const MembershipRegistrationsTab = ({
       )}
 
       {/* TABLE (desktop) */}
-      <div
-        className="hidden md:block overflow-x-auto rounded-xl mb-4"
-        style={cardStyle}
-      >
+      <div className="hidden md:block overflow-x-auto rounded-xl mb-4" style={cardStyle}>
         <table className="w-full">
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(99,179,237,0.08)" }}>
               <th className="px-4 py-4 text-left">
-                <button
-                  type="button"
-                  onClick={toggleSelectAllOnPage}
-                  className="flex items-center"
-                >
+                <button type="button" onClick={toggleSelectAllOnPage} className="flex items-center">
                   {allOnPageSelected ? (
                     <CheckSquare className="w-4 h-4 text-[#00629B]" />
                   ) : (
-                    <Square className="w-4 h-4 text-slate-300" />
+                    <Square className="w-4 h-4 text-slate-600" />
                   )}
                 </button>
               </th>
-              <SortableHeader
-                label="Roll No"
-                column="rollNumber"
-                sortKey={sortKey}
-                onSort={toggleSort}
-                SortIcon={SortIcon}
-              />
-              <SortableHeader
-                label="Name"
-                column="fullName"
-                sortKey={sortKey}
-                onSort={toggleSort}
-                SortIcon={SortIcon}
-              />
-              <SortableHeader
-                label="Department"
-                column="department"
-                sortKey={sortKey}
-                onSort={toggleSort}
-                SortIcon={SortIcon}
-              />
-              <SortableHeader
-                label="Year"
-                column="year"
-                sortKey={sortKey}
-                onSort={toggleSort}
-                SortIcon={SortIcon}
-              />
-              <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-widest text-slate-500">
+              <SortableHeader label="Roll No" column="rollNumber" sortKey={sortKey} onSort={toggleSort} SortIcon={SortIcon} />
+              <SortableHeader label="Name" column="fullName" sortKey={sortKey} onSort={toggleSort} SortIcon={SortIcon} />
+              <SortableHeader label="Department" column="department" sortKey={sortKey} onSort={toggleSort} SortIcon={SortIcon} />
+              <SortableHeader label="Year" column="year" sortKey={sortKey} onSort={toggleSort} SortIcon={SortIcon} />
+              <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-widest text-slate-400">
                 Email
               </th>
-              <th className="px-5 py-4 text-center text-xs font-semibold uppercase tracking-widest text-slate-500">
+              <th className="px-5 py-4 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
                 Status
               </th>
               <SortableHeader
@@ -950,7 +696,7 @@ const MembershipRegistrationsTab = ({
                 SortIcon={SortIcon}
                 align="center"
               />
-              <th className="px-5 py-4 text-center text-xs font-semibold uppercase tracking-widest text-slate-500">
+              <th className="px-5 py-4 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
                 Actions
               </th>
             </tr>
@@ -960,11 +706,9 @@ const MembershipRegistrationsTab = ({
               <tr>
                 <td colSpan={9} className="text-center py-16">
                   <div className="flex flex-col items-center">
-                    <Users size={45} className="text-slate-300 mb-3" />
-                    <h3 className="text-lg font-semibold text-slate-600">
-                      No Registrations Found
-                    </h3>
-                    <p className="text-sm text-slate-400 mt-1">
+                    <Users size={45} className="text-slate-600 mb-3" />
+                    <h3 className="text-lg font-semibold text-slate-300">No Registrations Found</h3>
+                    <p className="text-sm text-slate-500 mt-1">
                       {hasActiveFilters
                         ? "Try adjusting your filters."
                         : "Students who register will appear here."}
@@ -976,46 +720,38 @@ const MembershipRegistrationsTab = ({
               paginatedRegistrations.map((reg) => {
                 const isBusy = busyIds.has(reg._id);
                 return (
-                  <tr
-                    key={reg._id}
-                    className="border-b border-slate-100 hover:bg-slate-50 transition"
-                  >
+                  <tr key={reg._id} className="border-b border-white/5 hover:bg-white/5 transition">
                     <td className="px-4 py-4">
-                      <button
-                        type="button"
-                        onClick={() => toggleSelectRow(reg._id)}
-                      >
+                      <button type="button" onClick={() => toggleSelectRow(reg._id)}>
                         {selectedIds.has(reg._id) ? (
                           <CheckSquare className="w-4 h-4 text-[#00629B]" />
                         ) : (
-                          <Square className="w-4 h-4 text-slate-300" />
+                          <Square className="w-4 h-4 text-slate-600" />
                         )}
                       </button>
                     </td>
-                    <td className="px-5 py-4 font-medium">{reg.rollNumber}</td>
-                    <td className="px-5 py-4">{reg.fullName}</td>
-                    <td className="px-5 py-4">{reg.department}</td>
-                    <td className="px-5 py-4">{reg.year}</td>
-                    <td className="px-5 py-4 text-slate-600">{reg.email}</td>
+                    <td className="px-5 py-4 font-medium text-slate-100">{reg.rollNumber}</td>
+                    <td className="px-5 py-4 text-slate-200">{reg.fullName}</td>
+                    <td className="px-5 py-4 text-slate-300">{reg.department}</td>
+                    <td className="px-5 py-4 text-slate-300">{reg.year}</td>
+                    <td className="px-5 py-4 text-slate-400">{reg.email}</td>
                     <td className="px-5 py-4 text-center">
                       <select
                         value={reg.status}
                         disabled={isBusy}
-                        onChange={(e) =>
-                          updateStatus(reg._id, e.target.value as Status)
-                        }
+                        onChange={(e) => updateStatus(reg._id, e.target.value as Status)}
                         className={`px-3 py-2 rounded-lg border text-sm outline-none focus:border-[#00629B] disabled:opacity-50 ${statusPill(
-                          reg.status,
+                          reg.status
                         )}`}
                       >
                         {STATUSES.map((s) => (
-                          <option key={s} value={s}>
+                          <option key={s} value={s} className="bg-slate-900 text-slate-100">
                             {s}
                           </option>
                         ))}
                       </select>
                     </td>
-                    <td className="px-5 py-4 text-center text-sm text-slate-600">
+                    <td className="px-5 py-4 text-center text-sm text-slate-400">
                       {new Date(reg.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-5 py-4">
@@ -1035,11 +771,7 @@ const MembershipRegistrationsTab = ({
                           className="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition disabled:opacity-50"
                           title="Delete"
                         >
-                          {isBusy ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Trash2 size={14} />
-                          )}
+                          {isBusy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                         </button>
                       </div>
                     </td>
@@ -1055,14 +787,10 @@ const MembershipRegistrationsTab = ({
       <div className="md:hidden flex flex-col gap-3 mb-4">
         {paginatedRegistrations.length === 0 ? (
           <div className="rounded-xl p-8 text-center" style={cardStyle}>
-            <Users size={40} className="text-slate-300 mx-auto mb-3" />
-            <h3 className="text-base font-semibold text-slate-600">
-              No Registrations Found
-            </h3>
-            <p className="text-sm text-slate-400 mt-1">
-              {hasActiveFilters
-                ? "Try adjusting your filters."
-                : "Students who register will appear here."}
+            <Users size={40} className="text-slate-600 mx-auto mb-3" />
+            <h3 className="text-base font-semibold text-slate-300">No Registrations Found</h3>
+            <p className="text-sm text-slate-500 mt-1">
+              {hasActiveFilters ? "Try adjusting your filters." : "Students who register will appear here."}
             </p>
           </div>
         ) : (
@@ -1072,38 +800,31 @@ const MembershipRegistrationsTab = ({
               <div key={reg._id} className="rounded-xl p-4" style={cardStyle}>
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
-                    <p className="font-semibold text-slate-800">
-                      {reg.fullName}
-                    </p>
+                    <p className="font-semibold text-slate-100">{reg.fullName}</p>
                     <p className="text-xs text-slate-400">
                       {reg.rollNumber} · {reg.department} · {reg.year}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleSelectRow(reg._id)}
-                  >
+                  <button type="button" onClick={() => toggleSelectRow(reg._id)}>
                     {selectedIds.has(reg._id) ? (
                       <CheckSquare className="w-4 h-4 text-[#00629B]" />
                     ) : (
-                      <Square className="w-4 h-4 text-slate-300" />
+                      <Square className="w-4 h-4 text-slate-600" />
                     )}
                   </button>
                 </div>
-                <p className="text-xs text-slate-500 mb-3">{reg.email}</p>
+                <p className="text-xs text-slate-400 mb-3">{reg.email}</p>
                 <div className="flex items-center justify-between gap-2">
                   <select
                     value={reg.status}
                     disabled={isBusy}
-                    onChange={(e) =>
-                      updateStatus(reg._id, e.target.value as Status)
-                    }
+                    onChange={(e) => updateStatus(reg._id, e.target.value as Status)}
                     className={`px-3 py-2 rounded-lg border text-xs outline-none focus:border-[#00629B] disabled:opacity-50 ${statusPill(
-                      reg.status,
+                      reg.status
                     )}`}
                   >
                     {STATUSES.map((s) => (
-                      <option key={s} value={s}>
+                      <option key={s} value={s} className="bg-slate-900 text-slate-100">
                         {s}
                       </option>
                     ))}
@@ -1122,11 +843,7 @@ const MembershipRegistrationsTab = ({
                       disabled={isBusy}
                       className="p-2 rounded-lg bg-red-500 text-white disabled:opacity-50"
                     >
-                      {isBusy ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <Trash2 size={14} />
-                      )}
+                      {isBusy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                     </button>
                   </div>
                 </div>
@@ -1138,16 +855,16 @@ const MembershipRegistrationsTab = ({
 
       {/* PAGINATION */}
       {sortedRegistrations.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4 text-sm text-slate-500">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4 text-sm text-slate-400">
           <div className="flex items-center gap-2">
             <span>Rows per page</span>
             <select
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
-              className="border rounded-lg px-2 py-1.5 text-sm"
+              className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-slate-200"
             >
               {PAGE_SIZES.map((size) => (
-                <option key={size} value={size}>
+                <option key={size} value={size} className="bg-slate-900 text-slate-100">
                   {size}
                 </option>
               ))}
@@ -1162,7 +879,7 @@ const MembershipRegistrationsTab = ({
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 rounded-lg border disabled:opacity-40"
+                className="px-3 py-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 disabled:opacity-40"
               >
                 Prev
               </button>
@@ -1170,7 +887,7 @@ const MembershipRegistrationsTab = ({
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1.5 rounded-lg border disabled:opacity-40"
+                className="px-3 py-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 disabled:opacity-40"
               >
                 Next
               </button>
@@ -1182,38 +899,29 @@ const MembershipRegistrationsTab = ({
       {/* DETAIL MODAL */}
       {selectedRegistration && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[999] p-5"
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-[999] p-5"
           onClick={() => setSelectedRegistration(null)}
         >
           <div
-            className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+            className="rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-white/10 bg-[#0B1220]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center p-6 border-b">
-              <h2 className="text-2xl font-bold">Membership Registration</h2>
+            <div className="flex justify-between items-center p-6 border-b border-white/10">
+              <h2 className="text-2xl font-bold text-slate-100">Membership Registration</h2>
               <button
                 type="button"
                 onClick={() => setSelectedRegistration(null)}
-                className="text-3xl leading-none text-slate-400 hover:text-slate-600"
+                className="text-3xl leading-none text-slate-500 hover:text-slate-300"
               >
                 ×
               </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-6">
-              <DetailField
-                label="Roll Number"
-                value={selectedRegistration.rollNumber}
-              />
-              <DetailField
-                label="Full Name"
-                value={selectedRegistration.fullName}
-              />
+              <DetailField label="Roll Number" value={selectedRegistration.rollNumber} />
+              <DetailField label="Full Name" value={selectedRegistration.fullName} />
               <DetailField label="Gender" value={selectedRegistration.gender} />
-              <DetailField
-                label="Department"
-                value={selectedRegistration.department}
-              />
+              <DetailField label="Department" value={selectedRegistration.department} />
               <DetailField label="Year" value={selectedRegistration.year} />
               <DetailField label="Email" value={selectedRegistration.email} />
               <DetailField label="Mobile" value={selectedRegistration.mobile} />
@@ -1223,19 +931,16 @@ const MembershipRegistrationsTab = ({
               />
 
               <div>
-                <p className="text-xs text-slate-400">Status</p>
+                <p className="text-xs text-slate-500">Status</p>
                 <select
                   value={selectedRegistration.status}
                   onChange={(e) =>
-                    updateStatus(
-                      selectedRegistration._id,
-                      e.target.value as Status,
-                    )
+                    updateStatus(selectedRegistration._id, e.target.value as Status)
                   }
-                  className="mt-1 w-full border rounded-lg p-2 outline-none focus:border-[#00629B]"
+                  className="mt-1 w-full bg-white/5 border border-white/10 rounded-lg p-2 text-slate-100 outline-none focus:border-[#00629B]"
                 >
                   {STATUSES.map((s) => (
-                    <option key={s} value={s}>
+                    <option key={s} value={s} className="bg-slate-900 text-slate-100">
                       {s}
                     </option>
                   ))}
@@ -1244,9 +949,7 @@ const MembershipRegistrationsTab = ({
 
               <DetailField
                 label="Registered On"
-                value={new Date(
-                  selectedRegistration.createdAt,
-                ).toLocaleString()}
+                value={new Date(selectedRegistration.createdAt).toLocaleString()}
               />
             </div>
           </div>
@@ -1285,7 +988,7 @@ const StatCard = ({
     } ${active ? "ring-2 ring-[#00629B]" : ""}`}
   >
     <div className="flex items-center justify-between mb-2">
-      <p className="text-xs uppercase text-slate-500">{label}</p>
+      <p className="text-xs uppercase tracking-wide text-slate-400">{label}</p>
       <Icon size={16} color={color} />
     </div>
     <h2 className="text-3xl font-bold" style={{ color }}>
@@ -1312,7 +1015,7 @@ const SortableHeader = ({
   <th
     className={`px-5 py-4 ${
       align === "center" ? "text-center" : "text-left"
-    } text-xs font-semibold uppercase tracking-widest text-slate-500`}
+    } text-xs font-semibold uppercase tracking-widest text-slate-400`}
   >
     <button
       type="button"
@@ -1327,8 +1030,8 @@ const SortableHeader = ({
 
 const DetailField = ({ label, value }: { label: string; value: string }) => (
   <div>
-    <p className="text-xs text-slate-400">{label}</p>
-    <p className="font-semibold">{value}</p>
+    <p className="text-xs text-slate-500">{label}</p>
+    <p className="font-semibold text-slate-100">{value}</p>
   </div>
 );
 

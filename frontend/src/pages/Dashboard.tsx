@@ -386,7 +386,7 @@ const isSuperAdmin = userRole === "superadmin";
           : []),
 
         ...(permissions.membershipRegistrations
-          ? [{ id: "membershipRegistrations", label: "Membership Registrations", icon: Users }]
+          ? [{ id: "membershipRegistrations", label: "Registrations Drive", icon: Users }]
           : []),
 
         ...(permissions.spsApplications
