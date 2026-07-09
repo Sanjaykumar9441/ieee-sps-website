@@ -111,6 +111,7 @@ const UploadEventTab = ({
             >
               <option value="">Select Page</option>
               <option value="arduino-days">Arduino Days</option>
+              <option value="membership-drive">Membership Drive</option>
             </InputField>
           )}
 

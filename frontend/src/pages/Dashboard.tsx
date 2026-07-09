@@ -1,9 +1,5 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import InputField from "./Dashboard/components/InputField";
-import GradientButton from "./Dashboard/components/GradientButton";
-import StatusBadge from "./Dashboard/components/StatusBadge";
-import EditableEvent from "./Dashboard/components/EditableEvent";
 import UploadEventTab from "./Dashboard/components/UploadEventTab";
 import ManageEventsTab from "./Dashboard/components/ManageEventsTab";
 import TeamTab from "./Dashboard/components/TeamTab";
@@ -14,7 +10,7 @@ import Profile from "./Profile";
 import SPSApplicationsTab from "./Dashboard/components/SPSApplicationsTab";
 import LoginHistoryTab from "./Dashboard/components/LoginHistoryTab";
 import RegistrationsTab from "./Dashboard/components/RegistrationsTab";
-
+import MembershipRegistrationsTab from "./Dashboard/components/MembershipRegistrationsTab";
 import {
   Calendar,
   Mail,
@@ -28,7 +24,6 @@ import {
   BookOpen,
   Shield,
   History,
-  Linkedin,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -50,6 +45,7 @@ const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(false);
   const [spsApplications, setSpsApplications] = useState<any[]>([]);
+  const [membershipRegistrations, setMembershipRegistrations] = useState<any[]>([]);
 
   useEffect(() => {
     if (!token) navigate("/");
@@ -80,7 +76,6 @@ const Dashboard = () => {
   const [pageType, setPageType] = useState("regular");
   const [customPage, setCustomPage] = useState("");
   const [images, setImages] = useState<FileList | null>(null);
-  const [editingEvent, setEditingEvent] = useState<any>(null);
 
   /* TEAM */
   const [members, setMembers] = useState<any[]>([]);
@@ -147,6 +142,7 @@ const Dashboard = () => {
     fetchEvents();
     fetchMembers();
     fetchSPSApplications();
+    fetchMembershipRegistrations();
   }, [token]);
 
   useEffect(() => {
@@ -202,6 +198,25 @@ const Dashboard = () => {
       console.error(err);
     }
   };
+
+  const fetchMembershipRegistrations = async () => {
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await axios.get(
+      "https://ieee-sps-website.onrender.com/api/membership",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    setMembershipRegistrations(res.data);
+  } catch (err) {
+    console.error(err);
+  }
+};
 
   const deleteMessage = async (id: string) => {
     if (!confirm("Delete this message?")) return;
@@ -366,6 +381,10 @@ const Dashboard = () => {
 
         ...(permissions.registrations
           ? [{ id: "registrations", label: "Registrations", icon: BookOpen }]
+          : []),
+
+        ...(permissions.membershipRegistrations
+          ? [{ id: "membershipRegistrations", label: "Membership Registrations", icon: Users }]
           : []),
 
         ...(permissions.spsApplications
@@ -672,6 +691,17 @@ const Dashboard = () => {
             activeTab === "spsApplications" &&
             (isSuperAdmin || permissions.spsApplications) && (
               <SPSApplicationsTab />
+            )}
+
+          {!isPaused &&
+            activeTab === "membershipRegistrations" &&
+            (isSuperAdmin || permissions.membershipRegistrations) && (
+               <MembershipRegistrationsTab
+    registrations={membershipRegistrations}
+    fetchRegistrations={fetchMembershipRegistrations}
+    setRegistrations={setMembershipRegistrations}
+    cardStyle={cardStyle}
+  />
             )}
 
           {/* ── REGISTRATIONS ── */}

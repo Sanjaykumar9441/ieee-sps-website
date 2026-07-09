@@ -24,6 +24,7 @@ const AdminsTab = () => {
     registrations: false,
     messages: false,
     spsApplications: false,
+    membershipRegistrations: false,
   });
 
   useEffect(() => {
@@ -134,6 +135,7 @@ const AdminsTab = () => {
       registrations: admin.permissions.registrations,
       messages: admin.permissions.messages,
       spsApplications: admin.permissions.spsApplications,
+      membershipRegistrations: admin.permissions.membershipRegistrations,
     });
     setShowPermissionForm(true);
   };
@@ -194,6 +196,7 @@ const AdminsTab = () => {
         registrations: false,
         messages: false,
         spsApplications: false,
+        membershipRegistrations: false,
       });
     } catch (err) {
       console.error(err);
@@ -277,6 +280,7 @@ const AdminsTab = () => {
     { key: "registrations", label: "Registrations" },
     { key: "messages", label: "Messages" },
     { key: "spsApplications", label: "SPS Applications" },
+    { key: "membershipRegistrations", label: "Membership Registrations" },
   ] as const;
 
   const isExternalMode =
@@ -375,6 +379,7 @@ const AdminsTab = () => {
                         registrations: existingAdmin.permissions.registrations,
                         messages: existingAdmin.permissions.messages,
                         spsApplications: existingAdmin.permissions.spsApplications,
+                        membershipRegistrations: existingAdmin.permissions.membershipRegistrations,
                       });
                       return;
                     }
@@ -451,6 +456,7 @@ const AdminsTab = () => {
                     registrations: false,
                     messages: false,
                     spsApplications: false,
+                    membershipRegistrations: false,
                   });
                 }
               }}
