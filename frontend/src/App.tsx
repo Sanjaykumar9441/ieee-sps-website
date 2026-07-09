@@ -8,7 +8,7 @@ import AllEvents from "./pages/AllEvents";
 import AllMembers from "./pages/AllMembers";
 import TeamDetails from "./pages/TeamDetails";
 import ArduinoDays from "./pages/ArduinoDays";
-import MembershipDrive from "./pages/Membershipdrive";
+import MembershipDrive from "./pages/MembershipDrive";
 import { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import LoadingScreen from "./components/LoadingScreen";
