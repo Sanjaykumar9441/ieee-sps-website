@@ -75,20 +75,18 @@ const statusPill = (status: Status) => {
   }
 };
 
-const [settings, setSettings] = useState({
-  maxRegistrations: 100,
-  registrationOpen: true,
-  currentCount: 0,
-});
-
-const [savingSettings, setSavingSettings] = useState(false);
-
 const MembershipRegistrationsTab = ({
   registrations,
   fetchRegistrations,
   setRegistrations,
   cardStyle,
 }: MembershipRegistrationsTabProps) => {
+  const [settings, setSettings] = useState({
+  maxRegistrations: 100,
+  registrationOpen: true,
+  currentCount: 0,
+});
+  const [savingSettings, setSavingSettings] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
