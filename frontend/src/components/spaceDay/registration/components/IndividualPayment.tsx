@@ -3,6 +3,7 @@ import { EventType } from "../types";
 import { calculateFees } from "../components/feeCalculator";
 import { eventThemes } from "../eventTheme";
 import { paymentDetails } from "../data/paymentConfig";
+import toast from "react-hot-toast";
 
 interface IndividualPaymentProps {
   eventType: EventType;
@@ -12,6 +13,8 @@ interface IndividualPaymentProps {
 
   onBack: () => void;
   onSubmit: () => void;
+
+  isSubmitting: boolean;
 }
 
 export default function IndividualPayment({
@@ -20,6 +23,7 @@ export default function IndividualPayment({
   updateField,
   onBack,
   onSubmit,
+  isSubmitting,
 }: IndividualPaymentProps) {
   const config = registrationConfig[eventType];
   const theme = eventThemes[eventType];
@@ -33,11 +37,13 @@ export default function IndividualPayment({
     departureDate: formData.departureDate,
   });
   const canSubmit =
-    formData.transactionId?.trim() && formData.paymentScreenshot;
+    formData.transactionId?.trim() &&
+    formData.paymentScreenshot &&
+    !isSubmitting;
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      alert("Copied to clipboard!");
+      toast.success("Copied to clipboard!");
     } catch (err) {
       console.error("Failed to copy:", err);
     }
@@ -178,13 +184,12 @@ export default function IndividualPayment({
 
           <div className="grid gap-6">
             <div>
-              <label className="mb-2 block font-medium">
-                 UTR Number
-              </label>
+              <label className="mb-2 block font-medium">UTR Number</label>
 
               <input
                 type="tel"
                 inputMode="numeric"
+                disabled={isSubmitting}
                 pattern="[0-9]*"
                 minLength={12}
                 maxLength={22}
@@ -192,7 +197,10 @@ export default function IndividualPayment({
                 autoComplete="off"
                 value={formData.transactionId || ""}
                 onChange={(e) =>
-                  updateField("transactionId", e.target.value.replace(/\D/g, ""))
+                  updateField(
+                    "transactionId",
+                    e.target.value.replace(/\D/g, ""),
+                  )
                 }
                 placeholder="Enter UTR Number"
                 className={`
@@ -216,6 +224,7 @@ export default function IndividualPayment({
               </label>
               <input
                 type="file"
+                disabled={isSubmitting}
                 accept="image/*"
                 required
                 onChange={(e) =>
@@ -241,6 +250,7 @@ export default function IndividualPayment({
         <div className="flex justify-between mt-12">
           <button
             onClick={onBack}
+            disabled={isSubmitting}
             className={`
   rounded-xl
   border
@@ -252,6 +262,7 @@ export default function IndividualPayment({
   font-medium
   transition
   hover:shadow-md
+  ${isSubmitting ? "opacity-60 cursor-not-allowed" : "hover:shadow-md"}
 `}
           >
             ← Back
@@ -261,20 +272,20 @@ export default function IndividualPayment({
             onClick={onSubmit}
             disabled={!canSubmit}
             className={`
-  rounded-xl
-  bg-gradient-to-r
-  ${theme.gradient}
-  px-8
-  py-3
-  font-semibold
-  text-white
-  shadow-lg
-  transition-all
-  duration-300
-  hover:scale-105
-`}
+    rounded-xl
+    bg-gradient-to-r
+    ${theme.gradient}
+    px-8
+    py-3
+    font-semibold
+    text-white
+    shadow-lg
+    transition-all
+    duration-300
+    ${isSubmitting ? "opacity-60 cursor-not-allowed" : "hover:scale-105"}
+  `}
           >
-            Submit Registration
+            {isSubmitting ? "Submitting..." : "Submit Registration"}
           </button>
         </div>
       </div>

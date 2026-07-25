@@ -21,6 +21,8 @@ export default function IndividualRegistration({
   eventType,
   onBack,
 }: IndividualRegistrationProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -124,13 +126,19 @@ export default function IndividualRegistration({
             formData={formData}
             updateField={updateField}
             onBack={() => setStep(2)}
+            isSubmitting={isSubmitting}
             onSubmit={async () => {
-              try {
-                if (!formData.paymentScreenshot) {
-                  toast.error("Please upload the payment screenshot.");
-                  return;
-                }
+              if (isSubmitting) return;
 
+              if (!formData.paymentScreenshot) {
+                toast.error("Please upload the payment screenshot.");
+                return;
+              }
+
+              setIsSubmitting(true);
+              const toastId = toast.loading("Submitting registration...");
+
+              try {
                 const registration = {
                   eventType,
 
@@ -146,8 +154,6 @@ export default function IndividualRegistration({
 
                   transactionId: formData.transactionId,
                 };
-
-                const toastId = toast.loading("Submitting registration...");
 
                 const response = await submitSpaceDayRegistration(
                   registration,
@@ -166,7 +172,12 @@ export default function IndividualRegistration({
 
                 toast.error(
                   error.response?.data?.message || "Registration Failed.",
+                  {
+                    id: toastId,
+                  },
                 );
+              } finally {
+                setIsSubmitting(false);
               }
             }}
           />

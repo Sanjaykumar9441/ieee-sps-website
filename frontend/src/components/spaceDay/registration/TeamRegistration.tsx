@@ -21,6 +21,8 @@ export default function TeamRegistration({
   eventType,
   onBack,
 }: TeamRegistrationProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   const [teamSize, setTeamSize] = useState<2 | 3>(2);
@@ -177,13 +179,20 @@ export default function TeamRegistration({
             formData={formData}
             updateField={updateField}
             onBack={() => setStep(2)}
+            isSubmitting={isSubmitting}
             onSubmit={async () => {
-              try {
-                if (!formData.paymentScreenshot) {
-                  toast.error("Please upload the payment screenshot.");
-                  return;
-                }
+              if (isSubmitting) return;
 
+              if (!formData.paymentScreenshot) {
+                toast.error("Please upload the payment screenshot.");
+                return;
+              }
+
+              setIsSubmitting(true);
+
+              const toastId = toast.loading("Submitting registration...");
+
+              try {
                 const registration = {
                   eventType,
                   teamName: formData.teamName,
@@ -203,8 +212,6 @@ export default function TeamRegistration({
                   transactionId: formData.transactionId,
                 };
 
-                const toastId = toast.loading("Submitting registration...");
-
                 const response = await submitSpaceDayRegistration(
                   registration,
                   formData.paymentScreenshot,
@@ -222,7 +229,12 @@ export default function TeamRegistration({
 
                 toast.error(
                   error.response?.data?.message || "Registration Failed.",
+                  {
+                    id: toastId,
+                  },
                 );
+              } finally {
+                setIsSubmitting(false);
               }
             }}
           />
