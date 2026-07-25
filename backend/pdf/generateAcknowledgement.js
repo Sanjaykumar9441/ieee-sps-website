@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const puppeteer = require("puppeteer");
+const { chromium } = require("playwright");
 const QRCode = require("qrcode");
 
 const themes = require("./theme");
@@ -173,13 +173,8 @@ const generateAcknowledgement = async (registration) => {
     .replace(/{{registeredOn}}/g, registeredOn)
     .replace(/{{qrCode}}/g, qrCode);
 
-  const browser = await puppeteer.launch({
+  const browser = await chromium.launch({
     headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-    ],
   });
 
   const page = await browser.newPage();
