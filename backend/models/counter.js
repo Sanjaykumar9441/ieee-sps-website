@@ -1,8 +1,37 @@
 const mongoose = require("mongoose");
 
-const counterSchema = new mongoose.Schema({
-  name: String,
-  seq: Number,
-});
+const CounterSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-module.exports = mongoose.model("Counter", counterSchema);
+    year: {
+      type: Number,
+      required: true,
+    },
+
+    seq: {
+      type: Number,
+      default: 0,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+// One counter per type per year
+CounterSchema.index(
+  {
+    name: 1,
+    year: 1,
+  },
+  {
+    unique: true,
+  }
+);
+
+module.exports = mongoose.model("Counter", CounterSchema);

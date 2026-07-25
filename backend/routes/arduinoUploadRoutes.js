@@ -26,7 +26,7 @@ router.post("/", upload.single("image"), async (req, res) => {
 
     const result = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
-        { folder: "registrations" },
+        { folder: "arduino-days-2026" },
         (error, result) => {
           if (result) resolve(result);
           else reject(error);

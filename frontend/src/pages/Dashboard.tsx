@@ -10,7 +10,7 @@ import ActivityLogsTab from "./Dashboard/components/ActivityLogsTab";
 import Profile from "./Profile";
 import SPSApplicationsTab from "./Dashboard/components/SPSApplicationsTab";
 import LoginHistoryTab from "./Dashboard/components/LoginHistoryTab";
-import RegistrationsTab from "./Dashboard/components/RegistrationsTab";
+import ArduinoRegistrationsTab from "./Dashboard/components/ArduinoRegistrationsTab";
 import MembershipRegistrationsTab from "./Dashboard/components/MembershipRegistrationsTab";
 import {
   Calendar,
@@ -709,7 +709,7 @@ const Dashboard = () => {
           {!isPaused &&
             activeTab === "registrations" &&
             (permissions.registrations || isSuperAdmin) && (
-              <RegistrationsTab
+              <ArduinoRegistrationsTab
                 token={token}
                 navigate={navigate}
                 registrationOpen={registrationOpen}

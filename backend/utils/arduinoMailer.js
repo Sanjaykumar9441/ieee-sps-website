@@ -24,7 +24,7 @@ const sendMail = async (to, subject, htmlContent, pdfBuffer, filename) => {
 
       // 👇 Prevent Gmail showing quoted / collapsed message
       headers: {
-        "X-Mailer": "ArduinoDaysMailer",
+        "X-Mailer": "ArduinoRegistrationMailer",
         "Auto-Submitted": "auto-generated",
         "Precedence": "bulk"
       },

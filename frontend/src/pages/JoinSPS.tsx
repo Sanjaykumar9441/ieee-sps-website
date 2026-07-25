@@ -11,6 +11,70 @@ const perks = [
   { icon: Users,    title: "Professional Network",  desc: "Connect with IEEE members, alumni, and industry professionals." },
 ];
 
+/** One full sine period, tileable at x=0 and x=100 */
+const SINE_UNIT = "M0,20 C12,20 13,8 25,8 C37,8 38,20 50,20 C62,20 63,32 75,32 C87,32 88,20 100,20";
+const REPEATS = 6;
+const TILE_WIDTH = REPEATS * 100;
+ 
+const WaveLayer = ({
+  color,
+  opacity,
+  duration,
+  strokeWidth,
+  reverse = false,
+}: {
+  color: string;
+  opacity: number;
+  duration: number;
+  strokeWidth: number;
+  reverse?: boolean;
+}) => (
+  <div
+    className="flex"
+    style={{
+      width: TILE_WIDTH * 2,
+      opacity,
+      animation: `sps-scroll ${duration}s linear infinite ${reverse ? "reverse" : ""}`,
+    }}
+  >
+    {[0, 1].map((copy) => (
+      <svg
+        key={copy}
+        viewBox={`0 0 ${TILE_WIDTH} 40`}
+        width={TILE_WIDTH}
+        height="40"
+        className="flex-shrink-0"
+        preserveAspectRatio="none"
+      >
+        {Array.from({ length: REPEATS }).map((_, i) => (
+          <path
+            key={i}
+            d={SINE_UNIT}
+            transform={`translate(${i * 100}, 0)`}
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+          />
+        ))}
+      </svg>
+    ))}
+  </div>
+);
+ 
+const WaveformStrip = () => (
+  <div className="relative h-20 sm:h-24 w-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+    <div className="absolute inset-0 flex items-center">
+      <WaveLayer color="#0F6E56" opacity={0.35} duration={22} strokeWidth={1} reverse />
+    </div>
+    <div className="absolute inset-0 flex items-center translate-y-1">
+      <WaveLayer color="#22D3EE" opacity={0.9} duration={14} strokeWidth={1.5} />
+    </div>
+    <div className="absolute top-2 left-3 font-osc text-[10px] tracking-widest text-slate-500">
+      SIG // IEEE&#8209;SPS
+    </div>
+  </div>
+);
+
 const JoinSPS = () => {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -57,10 +121,24 @@ const JoinSPS = () => {
     }
   };
 
+   
+  const sharedStyles = (
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+      .font-display { font-family: 'Space Grotesk', sans-serif; }
+      .font-osc { font-family: 'JetBrains Mono', monospace; }
+      @keyframes sps-scroll {
+        from { transform: translateX(0); }
+        to { transform: translateX(-${TILE_WIDTH}px); }
+      }
+    `}</style>
+  );
+
   /* ── SUCCESS STATE ── */
   if (submitted) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-4">
+        {sharedStyles}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -88,6 +166,7 @@ const JoinSPS = () => {
   /* ── MAIN PAGE ── */
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
+      {sharedStyles}
       <div className="px-4 sm:px-6 py-10 sm:py-16 max-w-6xl mx-auto">
 
         {/* BACK */}
@@ -100,6 +179,16 @@ const JoinSPS = () => {
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to Home
         </motion.button>
+
+         {/* SIGNATURE WAVEFORM STRIP */}
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-10"
+        >
+          <WaveformStrip />
+        </motion.div>
 
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
 

@@ -12,9 +12,8 @@ const adminRoutes = require("./routes/adminRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const Admin = require("./models/admin");
-const registrationRoutes = require("./routes/registrationRoutes");
 const membershipRoutes = require("./routes/membershipRoutes");
-const uploadRoutes = require("./routes/uploadRoutes");
+const spaceDayRegistrationRoutes = require("./routes/spaceDayRegistrationRoutes");
 const adminAccessRoutes = require("./routes/adminAccessRoutes");
 const compression = require("compression");
 const axios = require("axios");
@@ -33,24 +32,17 @@ const activityRoutes = require(
   "./routes/activityRoutes"
 );
 
+
+
+const questionCategoryRoutes = require("./routes/questionCategoryRoutes");
+const questionBankRoutes = require("./routes/questionBankRoutes");
+const questionRoutes = require("./routes/questionRoutes");
+const questionBankQuestionRoutes = require("./routes/questionBankQuestionRoutes");
+const assessmentRoutes = require("./routes/assessmentRoutes");
+
+
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
-}
-async function setTelegramCommands() {
-  try {
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-
-    await axios.post(`https://api.telegram.org/bot${token}/setMyCommands`, {
-      commands: [
-        { command: "stats", description: "Show Arduino Days statistics" }
-      ],
-      scope: { type: "all_private_chats" },
-    });
-
-    console.log("✅ Telegram commands registered");
-  } catch (error) {
-    console.error("❌ Telegram command setup failed:", error.message);
-  }
 }
 /* ===============================
    ✅ CORS (Allow Vercel + Local)
@@ -97,13 +89,21 @@ app.use("/events", eventRoutes);
 app.use("/contact", contactRoutes);
 app.use("/team", teamRoutes);
 app.use("/api/activity-logs",activityRoutes);
-app.use("/api", registrationRoutes);
 app.use("/api/membership", membershipRoutes);
-app.use("/api/upload", uploadRoutes);
+app.use("/api/space-day", spaceDayRegistrationRoutes);
 app.use("/api/admin-access", adminAccessRoutes);
 app.use("/api", galleryRoutes);
 app.use("/api/sps-applications", spsApplicationRoutes);
 app.use("/uploads", express.static("uploads"));
+
+/* ===============================
+   Assessement Routes
+================================= */
+app.use("/api/question-categories", questionCategoryRoutes);
+app.use("/api/question-banks", questionBankRoutes);
+app.use("/api/questions", questionRoutes);
+app.use("/api/question-bank-questions",questionBankQuestionRoutes);
+app.use("/api/assessments", assessmentRoutes);
 
 /* ===============================
    ✅ MongoDB Connection

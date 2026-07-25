@@ -20,7 +20,7 @@ const registrationSchema = new mongoose.Schema(
     eventType: {
       type: String,
       enum: ["combo", "buildathon"],
-      default: "combo"
+      default: "combo",
     },
 
     eventName: {
@@ -86,6 +86,9 @@ const registrationSchema = new mongoose.Schema(
       default: "Pending",
     },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+    collection: "arduino2026registrations",
+  },
 );
-module.exports = mongoose.model("Registration", registrationSchema);
+module.exports = mongoose.model("ArduinoRegistration", registrationSchema);

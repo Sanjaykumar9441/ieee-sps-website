@@ -147,7 +147,7 @@ interface RegistrationsTabProps {
 /* ══════════════════════════════════════════
   REGISTRATIONS TAB
 ══════════════════════════════════════════ */
-const RegistrationsTab = ({
+const ArduinoRegistrationsTab = ({
   token,
   navigate,
   registrationOpen,
@@ -1087,4 +1087,4 @@ const RegistrationsTab = ({
   );
 };
 
-export default RegistrationsTab;
+export default ArduinoRegistrationsTab;

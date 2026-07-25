@@ -14,7 +14,9 @@ import { AnimatePresence } from "framer-motion";
 import LoadingScreen from "./components/LoadingScreen";
 import ChangePassword from "./pages/ChangePassword";
 import JoinSPS from "./pages/JoinSPS";
+import SpaceDay from "./pages/SpaceDay";
 import ScrollToTop from "./components/ScrollToTop";
+import SpaceDayRegistration from "./pages/SpaceDayRegistration";
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -50,6 +52,8 @@ function App() {
             <Route path="/all-members" element={<AllMembers />} />
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/join-sps" element={<JoinSPS />} />
+            <Route path="/space-day" element={<SpaceDay />} />
+            <Route path="/space-day/register" element={<SpaceDayRegistration />} />
           </Routes>
         </div>
 

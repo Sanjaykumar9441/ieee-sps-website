@@ -1,12 +1,12 @@
 const verifyToken = require("../middleware/verifyToken");
 const express = require("express");
 const router = express.Router();
-const Registration = require("../models/registration");
+const ArduinoRegistration = require("../models/ArduinoRegistration");
 const Event = require("../models/event"); // adjust path if needed
 const rateLimit = require("express-rate-limit");
 const PDFDocument = require("pdfkit");
 const axios = require("axios");
-const sendMail = require("../utils/mailer");
+const sendMail = require("../utils/arduinoMailer");
 const path = require("path");
 const registerLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
@@ -18,7 +18,7 @@ const registerLimiter = rateLimit({
 ===================================== */
 router.get("/registrations", verifyToken, async (req, res) => {
   try {
-    const registrations = await Registration.find()
+    const registrations = await ArduinoRegistration.find()
       .sort({ createdAt: -1 })
       .lean({ virtuals: true });
 
@@ -36,7 +36,7 @@ router.get("/check-team", async (req, res) => {
   try {
     const { teamName, event } = req.query;
 
-    const existingTeam = await Registration.findOne({
+    const existingTeam = await ArduinoRegistration.findOne({
       teamName: teamName.toUpperCase(),
     });
 
@@ -131,7 +131,7 @@ router.post("/register", registerLimiter, async (req, res) => {
     }
 
     // 🚫 Prevent duplicate transaction ID
-    const existingTransaction = await Registration.findOne({
+    const existingTransaction = await ArduinoRegistration({
       "payment.userTransactionId": userTransactionId,
     });
     if (existingTransaction) {
@@ -141,7 +141,7 @@ router.post("/register", registerLimiter, async (req, res) => {
     }
 
     // 🚫 Prevent duplicate team name
-    const existingTeam = await Registration.findOne({
+    const existingTeam = await ArduinoRegistration.findOne({
       teamName: teamName.toUpperCase(),
     });
     if (existingTeam) {
@@ -151,7 +151,7 @@ router.post("/register", registerLimiter, async (req, res) => {
     }
 
     // 🚫 Check for duplicate members (Email, Phone, or RollNo)
-    const duplicateMember = await Registration.findOne({
+    const duplicateMember = await ArduinoRegistration.findOne({
       $or: [
         { "teamMembers.email": { $in: teamMembers.map((m) => m.email) } },
         { "teamMembers.phone": { $in: teamMembers.map((m) => m.phone) } },
@@ -175,14 +175,14 @@ router.post("/register", registerLimiter, async (req, res) => {
 
       registrationId = `${prefix}-${randomNumber}`;
 
-      const existing = await Registration.findOne({ registrationId });
+      const existing = await ArduinoRegistration.findOne({ registrationId });
 
       if (!existing) {
         exists = false;
       }
     }
 
-    const registration = new Registration({
+    const registration = new ArduinoRegistration({
       registrationId,
       eventType,
       eventName,
@@ -223,7 +223,7 @@ router.post("/register", registerLimiter, async (req, res) => {
       .map((m, i) => `${i + 1}. ${m.fullName} (${m.rollNo})`)
       .join("\n");
     // Count pending registrations
-    const pendingCount = await Registration.countDocuments({
+    const pendingCount = await ArduinoRegistration.countDocuments({
       registrationStatus: "Pending",
     });
     const telegramRes = await axios.post(
@@ -759,19 +759,19 @@ router.post("/telegram-webhook", async (req, res) => {
     // STATS
     if (command === "/stats") {
       // Total teams from both events
-      const totalTeams = await Registration.countDocuments({
+      const totalTeams = await ArduinoRegistration.countDocuments({
         registrationStatus: "Confirmed",
         eventType: { $in: ["combo", "buildathon"] },
       });
 
       // Total participants
-      const totalParticipants = await Registration.aggregate([
+      const totalParticipants = await ArduinoRegistration.aggregate([
         { $match: { eventType: { $in: ["combo", "buildathon"] } } },
         { $group: { _id: null, total: { $sum: "$teamSize" } } },
       ]);
 
       // Total revenue
-      const revenue = await Registration.aggregate([
+      const revenue = await ArduinoRegistration.aggregate([
         {
           $match: {
             eventType: { $in: ["combo", "buildathon"] },
@@ -831,7 +831,7 @@ router.post("/telegram-webhook", async (req, res) => {
   if (callbackData.startsWith("confirm_")) {
     const registrationId = callbackData.split("_")[1];
 
-    const registration = await Registration.findOne({ registrationId });
+    const registration = await ArduinoRegistration.findOne({ registrationId });
 
     if (!registration) return res.sendStatus(200);
 
@@ -883,7 +883,7 @@ Status: ✅ Confirmed`,
   if (callbackData.startsWith("reject_")) {
     const registrationId = callbackData.split("_")[1];
 
-    const registration = await Registration.findOne({ registrationId });
+    const registration = await ArduinoRegistration.findOne({ registrationId });
 
     if (!registration) return res.sendStatus(200);
 
