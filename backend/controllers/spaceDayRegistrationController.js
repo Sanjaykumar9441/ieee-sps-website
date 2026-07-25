@@ -33,6 +33,7 @@ exports.submitRegistration = async (req, res) => {
     const validationErrors = validateRegistration(registrationData);
 
     if (validationErrors.length > 0) {
+      console.log("Validation Errors:", validationErrors);
       return res.status(400).json({
         success: false,
         errors: validationErrors,
