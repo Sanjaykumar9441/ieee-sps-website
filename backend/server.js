@@ -34,11 +34,11 @@ const activityRoutes = require(
 
 
 
-const questionCategoryRoutes = require("./routes/questionCategoryRoutes");
-const questionBankRoutes = require("./routes/questionBankRoutes");
-const questionRoutes = require("./routes/questionRoutes");
-const questionBankQuestionRoutes = require("./routes/questionBankQuestionRoutes");
-const assessmentRoutes = require("./routes/assessmentRoutes");
+//const questionCategoryRoutes = require("./routes/questionCategoryRoutes");
+//const questionBankRoutes = require("./routes/questionBankRoutes");
+//const questionRoutes = require("./routes/questionRoutes");
+//const questionBankQuestionRoutes = require("./routes/questionBankQuestionRoutes");
+//const assessmentRoutes = require("./routes/assessmentRoutes");
 
 
 if (!fs.existsSync(uploadDir)) {
@@ -99,11 +99,11 @@ app.use("/uploads", express.static("uploads"));
 /* ===============================
    Assessement Routes
 ================================= */
-app.use("/api/question-categories", questionCategoryRoutes);
-app.use("/api/question-banks", questionBankRoutes);
-app.use("/api/questions", questionRoutes);
-app.use("/api/question-bank-questions",questionBankQuestionRoutes);
-app.use("/api/assessments", assessmentRoutes);
+//app.use("/api/question-categories", questionCategoryRoutes);
+//app.use("/api/question-banks", questionBankRoutes);
+//app.use("/api/questions", questionRoutes);
+//app.use("/api/question-bank-questions",questionBankQuestionRoutes);
+//app.use("/api/assessments", assessmentRoutes);
 
 /* ===============================
    ✅ MongoDB Connection
