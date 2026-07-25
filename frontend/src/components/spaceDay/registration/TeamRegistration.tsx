@@ -6,7 +6,10 @@ import TeamSummary from "./components/TeamSummary";
 import TeamPayment from "./components/TeamPayment";
 import { validateTeamForm } from "./components/teamValidation";
 import RegistrationHeader from "./components/RegistrationHeader";
-import { submitSpaceDayRegistration } from "../../../services/spaceDayRegistrationService";
+import {
+  submitSpaceDayRegistration,
+  checkMembers,
+} from "../../../services/spaceDayRegistrationService";
 interface TeamRegistrationProps {
   eventType: EventType;
   onBack: () => void;
@@ -123,7 +126,8 @@ export default function TeamRegistration({
             formData={formData}
             updateMember={updateMember}
             updateField={updateField}
-            onNext={() => {
+            onNext={async () => {
+              // Local validation
               const validationErrors =
                 validateTeamForm(formData, teamSize, eventType) ?? {};
 
@@ -131,7 +135,23 @@ export default function TeamRegistration({
 
               if (Object.keys(validationErrors).length > 0) return;
 
-              setStep(2);
+              try {
+                const result = await checkMembers(
+                  eventType,
+                  formData.teamName,
+                  formData.members.slice(0, teamSize),
+                );
+
+                if (result.exists) {
+                  alert(result.message); 
+                  return;
+                }
+
+                setStep(2);
+              } catch (err) {
+                console.error(err);
+                alert("Unable to verify registration. Please try again.");
+              }
             }}
             onBack={onBack}
             errors={errors}

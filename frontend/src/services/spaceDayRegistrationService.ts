@@ -32,3 +32,35 @@ export const submitSpaceDayRegistration = async (
 
   return response.data;
 };
+
+/* ==========================================
+   CHECK TEAM NAME / MEMBERS
+========================================== */
+
+export const checkMembers = async (
+  eventType: string,
+  teamName: string,
+  members: any[]
+) => {
+  const response = await API.post(
+    "/api/space-day/check-members",
+    {
+      eventType,
+      teamName,
+      members,
+    }
+  );
+
+  return response.data;
+};
+
+export const checkIndividual = async (participant: any) => {
+  const response = await API.post(
+    "/api/space-day/check-members",
+    {
+      members: [participant],
+    }
+  );
+
+  return response.data;
+};

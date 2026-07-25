@@ -131,7 +131,7 @@ router.post("/register", registerLimiter, async (req, res) => {
     }
 
     // 🚫 Prevent duplicate transaction ID
-    const existingTransaction = await ArduinoRegistration({
+    const existingTransaction = await ArduinoRegistration.findOne({
       "payment.userTransactionId": userTransactionId,
     });
     if (existingTransaction) {
@@ -439,7 +439,7 @@ const generateReceiptPDF = async (registration) => {
 ===================================== */
 router.put("/confirm/:id", verifyToken, async (req, res) => {
   try {
-    const registration = await Registration.findById(req.params.id);
+    const registration = await ArduinoRegistration.findById(req.params.id);
 
     if (!registration) {
       return res.status(404).json({ message: "Registration not found" });
@@ -500,7 +500,7 @@ Status: ✅ Confirmed`,
 ===================================== */
 router.delete("/:id", verifyToken, async (req, res) => {
   try {
-    const registration = await Registration.findById(req.params.id);
+    const registration = await ArduinoRegistration.findById(req.params.id);
 
     if (!registration) {
       return res.status(404).json({ message: "Registration not found" });
@@ -535,7 +535,7 @@ Status: ❌ Rejected`,
       );
     }
 
-    await Registration.findByIdAndDelete(req.params.id);
+    await ArduinoRegistration.findByIdAndDelete(req.params.id);
 
     res.json({ message: "Registration deleted successfully" });
   } catch (error) {

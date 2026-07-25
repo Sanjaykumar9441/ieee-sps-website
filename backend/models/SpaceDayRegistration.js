@@ -114,7 +114,7 @@ const SpaceDayRegistrationSchema = new mongoose.Schema(
 
     teamSize: {
       type: Number,
-      required: true,
+      default: 1,
     },
 
     selectedTheme: {
@@ -194,5 +194,5 @@ const SpaceDayRegistrationSchema = new mongoose.Schema(
 module.exports = mongoose.model(
   "SpaceDayRegistration",
   SpaceDayRegistrationSchema,
-  "spaceday2026registrations"
+  "spaceday2026registrations",
 );

@@ -14,6 +14,7 @@ const calculateFees = ({
   departureDate,
 }) => {
   const config = spaceDayConfig[eventType];
+  const participants = config.registrationType === "individual" ? 1 : teamSize;
 
   if (!config) {
     throw new Error("Invalid Event Type.");
@@ -26,7 +27,7 @@ const calculateFees = ({
   const registrationFee =
     config.feeType === "team"
       ? config.eventFee
-      : config.eventFee * teamSize;
+      : config.eventFee * participants;
 
   /* ==========================
      Accommodation Fee
@@ -35,31 +36,22 @@ const calculateFees = ({
   let accommodationTotal = 0;
   let numberOfDays = 0;
 
-  if (
-    accommodation &&
-    arrivalDate &&
-    departureDate
-  ) {
+  if (accommodation && arrivalDate && departureDate) {
     const arrival = new Date(arrivalDate);
     const departure = new Date(departureDate);
 
     const oneDay = 1000 * 60 * 60 * 24;
 
     numberOfDays =
-      Math.floor(
-        (departure.getTime() - arrival.getTime()) /
-          oneDay
-      ) + 1;
+      Math.floor((departure.getTime() - arrival.getTime()) / oneDay) + 1;
 
     const stayingMembers =
       accommodationMembers.length > 0
         ? accommodationMembers.filter(Boolean).length
-        : teamSize;
+        : participants;
 
     accommodationTotal =
-      config.accommodationFee *
-      stayingMembers *
-      numberOfDays;
+      config.accommodationFee * stayingMembers * numberOfDays;
   }
 
   return {
@@ -69,9 +61,7 @@ const calculateFees = ({
 
     numberOfDays,
 
-    totalFee:
-      registrationFee +
-      accommodationTotal,
+    totalFee: registrationFee + accommodationTotal,
   };
 };
 

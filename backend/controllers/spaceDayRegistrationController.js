@@ -60,6 +60,7 @@ exports.submitRegistration = async (req, res) => {
 
     for (const member of members) {
       const existingMember = await SpaceDayRegistration.findOne({
+        eventType,
         $or: [
           { "members.rollNumber": member.rollNumber },
           { "members.email": member.email },
@@ -80,7 +81,7 @@ exports.submitRegistration = async (req, res) => {
     ------------------------------ */
 
     const registrationId = await generateRegistrationId();
-    
+
     /* ------------------------------
    CALCULATE FEES
 ------------------------------ */
@@ -187,7 +188,7 @@ exports.submitRegistration = async (req, res) => {
 
 exports.checkMembers = async (req, res) => {
   try {
-    const { members } = req.body;
+    const { members, eventType } = req.body;
 
     if (!members || !Array.isArray(members)) {
       return res.status(400).json({
@@ -196,8 +197,33 @@ exports.checkMembers = async (req, res) => {
       });
     }
 
+    /* -------------------------
+   TEAM NAME
+------------------------- */
+
+    if (req.body.teamName) {
+      const existingTeam = await SpaceDayRegistration.findOne({
+  eventType,
+  teamName: req.body.teamName.trim(),
+});
+
+      if (existingTeam) {
+        return res.json({
+          success: true,
+          exists: true,
+          type: "teamName",
+          message: "Team Name already exists.",
+        });
+      }
+    }
+
+    /* -------------------------
+   MEMBERS
+------------------------- */
+
     for (const member of members) {
       const existing = await SpaceDayRegistration.findOne({
+        eventType,
         $or: [
           { "members.rollNumber": member.rollNumber },
           { "members.email": member.email },
@@ -206,10 +232,22 @@ exports.checkMembers = async (req, res) => {
       });
 
       if (existing) {
+        let type = "";
+
+        if (existing.members.some((m) => m.rollNumber === member.rollNumber)) {
+          type = "rollNumber";
+        } else if (existing.members.some((m) => m.email === member.email)) {
+          type = "email";
+        } else if (existing.members.some((m) => m.phone === member.phone)) {
+          type = "phone";
+        }
+
         return res.json({
           success: true,
           exists: true,
-          message: `Member ${member.fullName} is already registered.`,
+          type,
+          member: member.fullName,
+          message: `${type} already registered.`,
         });
       }
     }
@@ -218,13 +256,10 @@ exports.checkMembers = async (req, res) => {
       success: true,
       exists: false,
     });
-
   } catch (err) {
-
     return res.status(500).json({
       success: false,
       message: err.message,
     });
-
   }
 };
