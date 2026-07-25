@@ -33,7 +33,6 @@ exports.submitRegistration = async (req, res) => {
     const validationErrors = validateRegistration(registrationData);
 
     if (validationErrors.length > 0) {
-      console.log("Validation Errors:", validationErrors);
       return res.status(400).json({
         success: false,
         errors: validationErrors,
@@ -204,9 +203,9 @@ exports.checkMembers = async (req, res) => {
 
     if (req.body.teamName) {
       const existingTeam = await SpaceDayRegistration.findOne({
-  eventType,
-  teamName: req.body.teamName.trim(),
-});
+        eventType,
+        teamName: req.body.teamName.trim(),
+      });
 
       if (existingTeam) {
         return res.json({

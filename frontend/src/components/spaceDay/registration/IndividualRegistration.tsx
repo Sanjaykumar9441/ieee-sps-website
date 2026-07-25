@@ -90,7 +90,10 @@ export default function IndividualRegistration({
               if (Object.keys(validationErrors).length > 0) return;
 
               try {
-                const duplicate = await checkIndividual(formData);
+                const duplicate = await checkIndividual(
+  eventType,
+  formData
+);
 
                 if (duplicate.exists) {
                   alert(duplicate.message);

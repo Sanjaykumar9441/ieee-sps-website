@@ -54,10 +54,14 @@ export const checkMembers = async (
   return response.data;
 };
 
-export const checkIndividual = async (participant: any) => {
+export const checkIndividual = async (
+  eventType: string,
+  participant: any
+) => {
   const response = await API.post(
     "/api/space-day/check-members",
     {
+      eventType,
       members: [participant],
     }
   );
