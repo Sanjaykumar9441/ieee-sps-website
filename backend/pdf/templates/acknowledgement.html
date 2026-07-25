@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Registration Acknowledgement</title>
+    <link rel="stylesheet" href="../styles/acknowledgement.css" />
+  </head>
+  <body
+    style="
+    --primary-color: {{primaryColor}};
+    --secondary-color: {{secondaryColor}};
+    --gradient: {{gradient}};
+  "
+  >
+    <div class="page">
+      <!-- MASTHEAD -->
+      <header class="masthead">
+        <div class="masthead-sky">
+          <div class="orbit-ring"></div>
+          <div class="star s1"></div>
+          <div class="star s2"></div>
+          <div class="star s3"></div>
+          <div class="star s4"></div>
+          <div class="rocket">🚀</div>
+        </div>
+
+        <div class="masthead-row">
+          <div class="brand-logos">
+            <img src="{{ieeeLogo}}" class="ieee-logo" />
+            <img src="{{spsLogo}}" class="sps-logo" />
+            <div class="brand-divider"></div>
+            <img src="{{adityaLogo}}" class="aditya-logo" />
+          </div>
+
+          <div class="masthead-center">
+            <p class="eyebrow">
+              IEEE SPS Student Branch Chapter · Aditya University, Surampalem
+            </p>
+            <h1>National Space Day 2026</h1>
+            <p class="tagline">Explore · Innovate · Inspire</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="event-bar">{{eventTitle}} Registration Acknowledgement</div>
+
+      <!-- CONTENT -->
+      <main class="content">
+        <section class="field-group">
+          <h2 class="section-label">Participant Details</h2>
+          <div class="grid two-col">
+            {{participantSection}} {{academicSection}}
+          </div>
+        </section>
+
+        <section class="field-group">
+          <h2 class="section-label">Registration Details</h2>
+          <div class="grid two-col">
+            <div class="label">Registration ID</div>
+            <div class="value mono">{{registrationId}}</div>
+
+            <div class="label">Type</div>
+            <div class="value">{{registrationType}}</div>
+
+            <div class="label">Total Paid</div>
+            <div class="value">₹{{totalFee}}</div>
+
+            <div class="label">Accommodation</div>
+            <div class="value">{{accommodation}}</div>
+
+            <div class="label">Payment</div>
+            <div class="value">
+              <span class="status {{statusClass}}">{{paymentStatus}}</span>
+            </div>
+
+            <div class="label">UTR Number</div>
+            <div class="value">{{transactionId}}</div>
+
+            <div class="label">Registered On</div>
+            <div class="value">{{registeredOn}}</div>
+          </div>
+
+          {{themeSection}}
+        </section>
+      </main>
+
+      <div class="perforation">
+        <span class="hole left"></span>
+        <span class="hole right"></span>
+      </div>
+
+      <!-- STUB -->
+      <div class="stub">
+        <div class="qr-wrap">
+          <img src="{{qrCode}}" class="qr" />
+        </div>
+        <div class="stub-info">
+          <p class="stub-eyebrow">Verification Pass</p>
+          <p class="stub-id">{{registrationId}}</p>
+          <span class="status {{statusClass}}">{{paymentStatus}}</span>
+        </div>
+        <p class="stub-hint">
+          Scan this code to verify the authenticity of this registration.
+        </p>
+      </div>
+
+      <!-- FOOTER -->
+      <footer class="footer">
+        <div class="footer-line"></div>
+        <div class="footer-content">
+          <div>
+            This acknowledgement confirms that your registration has
+            been&nbsp;successfully&nbsp;received.
+          </div>
+          <div class="footer-org">
+            <strong>IEEE SPS Student Branch Chapter</strong><br />
+            Aditya University, Surampalem<br />
+            https://ieeespsaditya.vercel.app
+          </div>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

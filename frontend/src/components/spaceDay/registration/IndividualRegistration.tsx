@@ -6,10 +6,12 @@ import IndividualPayment from "./components/IndividualPayment";
 import { EventType } from "./types";
 import { validateIndividualForm } from "./components/individualValidation";
 import RegistrationHeader from "./components/RegistrationHeader";
+import toast from "react-hot-toast";
 import {
   submitSpaceDayRegistration,
   checkIndividual,
 } from "../../../services/spaceDayRegistrationService";
+import { useNavigate } from "react-router-dom";
 interface IndividualRegistrationProps {
   eventType: EventType;
   onBack: () => void;
@@ -69,7 +71,7 @@ export default function IndividualRegistration({
       };
     });
   };
-
+  const navigate = useNavigate();
   return (
     <section className="py-24 bg-[#F8FAFC]">
       <div className="max-w-5xl mx-auto px-6">
@@ -90,20 +92,17 @@ export default function IndividualRegistration({
               if (Object.keys(validationErrors).length > 0) return;
 
               try {
-                const duplicate = await checkIndividual(
-  eventType,
-  formData
-);
+                const duplicate = await checkIndividual(eventType, formData);
 
                 if (duplicate.exists) {
-                  alert(duplicate.message);
+                  toast.error(duplicate.message);
                   return;
                 }
 
                 setStep(2);
               } catch (err) {
                 console.error(err);
-                alert("Unable to verify registration. Please try again.");
+                toast.error("Unable to verify registration. Please try again.");
               }
             }}
             onBack={onBack}
@@ -128,7 +127,7 @@ export default function IndividualRegistration({
             onSubmit={async () => {
               try {
                 if (!formData.paymentScreenshot) {
-                  alert("Please upload the payment screenshot.");
+                  toast.error("Please upload the payment screenshot.");
                   return;
                 }
 
@@ -148,20 +147,26 @@ export default function IndividualRegistration({
                   transactionId: formData.transactionId,
                 };
 
+                const toastId = toast.loading("Submitting registration...");
+
                 const response = await submitSpaceDayRegistration(
                   registration,
                   formData.paymentScreenshot,
                 );
 
-                alert(
-                  `Registration Successful!\nRegistration ID: ${response.registrationId}`,
-                );
+                toast.success("Registration Submitted Successfully!", {
+                  id: toastId,
+                });
 
-                console.log(response);
+                navigate("/space-day/registration-success", {
+                  state: response,
+                });
               } catch (error: any) {
                 console.error(error);
 
-                alert(error.response?.data?.message || "Registration Failed.");
+                toast.error(
+                  error.response?.data?.message || "Registration Failed.",
+                );
               }
             }}
           />

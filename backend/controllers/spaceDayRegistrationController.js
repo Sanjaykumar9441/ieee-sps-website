@@ -4,6 +4,7 @@ const { validateRegistration } = require("../utils/spaceDayValidation");
 const calculateFees = require("../utils/spaceDayFeeCalculator");
 const spaceDayConfig = require("../config/spaceDayConfig");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
+const generateAcknowledgement = require("../pdf/generateAcknowledgement");
 
 /* ============================================
    SUBMIT REGISTRATION
@@ -257,6 +258,44 @@ exports.checkMembers = async (req, res) => {
       exists: false,
     });
   } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+/* ============================================
+   DOWNLOAD ACKNOWLEDGEMENT
+============================================ */
+
+exports.downloadAcknowledgement = async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+
+    const registration = await SpaceDayRegistration.findOne({
+      registrationId,
+    });
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: "Registration not found.",
+      });
+    }
+
+    const pdf = await generateAcknowledgement(registration);
+
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename=${registration.registrationId}.pdf`,
+      "Content-Length": pdf.length,
+    });
+
+    return res.send(pdf);
+  } catch (err) {
+    console.error(err);
+
     return res.status(500).json({
       success: false,
       message: err.message,

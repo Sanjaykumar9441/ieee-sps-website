@@ -7,6 +7,7 @@ const upload = require("../middleware/spaceDayUpload");
 const {
   submitRegistration,
   checkMembers,
+  downloadAcknowledgement,
 } = require("../controllers/spaceDayRegistrationController");
 
 /* ============================================
@@ -26,6 +27,11 @@ router.post(
   "/register",
   upload.single("paymentScreenshot"),
   submitRegistration
+);
+
+router.get(
+  "/acknowledgement/:registrationId",
+  downloadAcknowledgement
 );
 
 module.exports = router;
