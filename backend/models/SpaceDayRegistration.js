@@ -194,5 +194,5 @@ const SpaceDayRegistrationSchema = new mongoose.Schema(
 module.exports = mongoose.model(
   "SpaceDayRegistration",
   SpaceDayRegistrationSchema,
-  process.env.SPACE_DAY_COLLECTION,
+  "spaceday2026registrations"
 );

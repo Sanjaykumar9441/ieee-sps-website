@@ -32,7 +32,7 @@ export default function TeamDetails({
         <input
           type="text"
           value={teamName}
-          onChange={(e) => onTeamNameChange(e.target.value)}
+          onChange={(e) => onTeamNameChange(e.target.value.replace(/[^A-Za-z\s]/g, "").toUpperCase())}
           placeholder="Enter Team Name"
           className={`
   w-full

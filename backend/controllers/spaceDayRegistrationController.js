@@ -180,3 +180,51 @@ exports.submitRegistration = async (req, res) => {
     });
   }
 };
+
+/* ============================================
+   CHECK MEMBERS
+============================================ */
+
+exports.checkMembers = async (req, res) => {
+  try {
+    const { members } = req.body;
+
+    if (!members || !Array.isArray(members)) {
+      return res.status(400).json({
+        success: false,
+        message: "Members are required.",
+      });
+    }
+
+    for (const member of members) {
+      const existing = await SpaceDayRegistration.findOne({
+        $or: [
+          { "members.rollNumber": member.rollNumber },
+          { "members.email": member.email },
+          { "members.phone": member.phone },
+        ],
+      });
+
+      if (existing) {
+        return res.json({
+          success: true,
+          exists: true,
+          message: `Member ${member.fullName} is already registered.`,
+        });
+      }
+    }
+
+    return res.json({
+      success: true,
+      exists: false,
+    });
+
+  } catch (err) {
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+
+  }
+};
