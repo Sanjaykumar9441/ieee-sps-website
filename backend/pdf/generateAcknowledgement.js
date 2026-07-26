@@ -174,8 +174,12 @@ const generateAcknowledgement = async (registration) => {
     .replace(/{{qrCode}}/g, qrCode);
 
   const browser = await chromium.launch({
-    headless: true,
-  });
+  headless: true,
+  args: [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+  ],
+});
 
   const page = await browser.newPage();
 
@@ -187,6 +191,7 @@ const generateAcknowledgement = async (registration) => {
     format: "A4",
     landscape: false,
     printBackground: true,
+    preferCSSPageSize: true,
   });
 
   await browser.close();
