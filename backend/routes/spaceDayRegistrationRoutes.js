@@ -8,6 +8,7 @@ const {
   submitRegistration,
   checkMembers,
   downloadAcknowledgement,
+  getRegistrations,
 } = require("../controllers/spaceDayRegistrationController");
 
 /* ============================================
@@ -32,6 +33,11 @@ router.post(
 router.get(
   "/acknowledgement/:registrationId",
   downloadAcknowledgement
+);
+
+router.get(
+  "/registrations",
+  getRegistrations
 );
 
 module.exports = router;

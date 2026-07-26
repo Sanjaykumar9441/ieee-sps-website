@@ -302,3 +302,26 @@ exports.downloadAcknowledgement = async (req, res) => {
     });
   }
 };
+
+/* ============================================
+   GET ALL REGISTRATIONS
+============================================ */
+
+exports.getRegistrations = async (req, res) => {
+  try {
+    const registrations = await SpaceDayRegistration.find()
+      .sort({ createdAt: -1 });
+
+    return res.json({
+      success: true,
+      registrations,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

@@ -1,5 +1,9 @@
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import toast from "react-hot-toast";
+import axios from "axios";
+import { saveAs } from "file-saver";
 import {
   CheckCircle2,
   CreditCard,
@@ -26,6 +30,7 @@ interface RegistrationSuccessState {
 }
 export default function RegistrationSuccess() {
   const navigate = useNavigate();
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const { state } = useLocation() as {
     state: RegistrationSuccessState;
@@ -40,11 +45,35 @@ export default function RegistrationSuccess() {
 
   const theme = eventThemes[registration.eventType as EventType];
 
-  const downloadAcknowledgement = () => {
-    window.open(
-      `${import.meta.env.VITE_API_URL}/api/space-day/acknowledgement/${registrationId}`,
-      "_blank",
-    );
+  const downloadAcknowledgement = async () => {
+    if (isDownloading) return;
+
+    setIsDownloading(true);
+
+    const toastId = toast.loading("Preparing your acknowledgement...");
+
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/space-day/acknowledgement/${registrationId}`,
+        {
+          responseType: "blob",
+        },
+      );
+
+      saveAs(response.data, `National-Space-Day-2026-${registrationId}.pdf`);
+
+      toast.success("Acknowledgement downloaded successfully!", {
+        id: toastId,
+      });
+    } catch (error) {
+      console.error(error);
+
+      toast.error("Failed to download acknowledgement.", {
+        id: toastId,
+      });
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -222,6 +251,7 @@ export default function RegistrationSuccess() {
 
           <button
             onClick={downloadAcknowledgement}
+            disabled={isDownloading}
             className={`
       flex-1
       rounded-3xl
@@ -233,15 +263,22 @@ export default function RegistrationSuccess() {
       shadow-xl
       transition-all
       duration-300
-      hover:scale-[1.02]
-      hover:shadow-2xl
+      ${
+        isDownloading
+          ? "opacity-60 cursor-not-allowed"
+          : "hover:scale-[1.02] hover:shadow-2xl"
+      }
     `}
           >
             <div className="flex items-center justify-center gap-3">
               <Download size={22} />
 
               <div className="text-left">
-                <p className="text-lg font-bold">Download Acknowledgement</p>
+                <p className="text-lg font-bold">
+                  {isDownloading
+                    ? "Downloading..."
+                    : "Download Acknowledgement"}
+                </p>
 
                 <p className="text-sm text-white/80">
                   Download your registration acknowledgement
@@ -254,16 +291,17 @@ export default function RegistrationSuccess() {
 
           <button
             onClick={() => navigate("/space-day")}
+            disabled={isDownloading}
             className={`
-      rounded-3xl
-      border
-      ${theme.border}
-      bg-white
-      px-8
-      py-5
-      transition
-      hover:shadow-lg
-    `}
+    rounded-3xl
+    border
+    ${theme.border}
+    bg-white
+    px-8
+    py-5
+    transition
+    ${isDownloading ? "opacity-60 cursor-not-allowed" : "hover:shadow-lg"}
+  `}
           >
             <div className="flex items-center justify-center gap-3">
               <Home className={theme.text} size={22} />

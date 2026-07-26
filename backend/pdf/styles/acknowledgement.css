@@ -400,22 +400,31 @@ body {
   margin-bottom: 12px;
 }
 
-.footer-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  font-size: 12px;
-  color: var(--muted);
+.footer-content{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:40px;
+    font-size:12px;
+    color:var(--muted);
 }
 
-.footer-org {
-  text-align: right;
-  line-height: 1.6;
-  font-weight: 500;
+.footer-content > div:first-child{
+    flex:1;
 }
 
-.footer-org strong {
-  color: var(--ink);
+.footer-org{
+    width:250px;
+    flex-shrink:0;
+    text-align:right;
+    line-height:1.6;
+    white-space:nowrap;
+}
+
+.footer-org strong{
+    display:block;
+    color:var(--ink);
+    font-size:13px;
 }
 
 .member {

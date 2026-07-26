@@ -7,6 +7,7 @@ const QRCode = require("qrcode");
 const themes = require("./theme");
 
 const generateAcknowledgement = async (registration) => {
+
   const htmlPath = path.join(__dirname, "templates", "acknowledgement.html");
   let html = fs.readFileSync(htmlPath, "utf8");
 

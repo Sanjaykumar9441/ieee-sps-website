@@ -12,6 +12,7 @@ import SPSApplicationsTab from "./Dashboard/components/SPSApplicationsTab";
 import LoginHistoryTab from "./Dashboard/components/LoginHistoryTab";
 import ArduinoRegistrationsTab from "./Dashboard/components/ArduinoRegistrationsTab";
 import MembershipRegistrationsTab from "./Dashboard/components/MembershipRegistrationsTab";
+import SpaceDayRegistrationsTab from "./Dashboard/components/SpaceDayRegistrationsTab";
 import {
   Calendar,
   Mail,
@@ -99,7 +100,6 @@ const Dashboard = () => {
 
   /* MESSAGES */
   const [messages, setMessages] = useState<any[]>([]);
-
 
   const [isPaused, setIsPaused] = useState(
     JSON.parse(localStorage.getItem("isPaused") || "false"),
@@ -366,7 +366,13 @@ const Dashboard = () => {
         { id: "profile", label: "My Profile", icon: User },
 
         ...(permissions.dashboardOverview
-          ? [{ id: "dashboardOverview", label: "Overview", icon: LayoutDashboard }]
+          ? [
+              {
+                id: "dashboardOverview",
+                label: "Overview",
+                icon: LayoutDashboard,
+              },
+            ]
           : []),
 
         ...(permissions.events
@@ -385,7 +391,14 @@ const Dashboard = () => {
           : []),
 
         ...(permissions.registrations
-          ? [{ id: "registrations", label: "Registrations", icon: BookOpen }]
+          ? [
+              { id: "registrations", label: "Registrations", icon: BookOpen },
+              {
+                id: "spaceDayRegistrations",
+                label: "Space Day",
+                icon: BookOpen,
+              },
+            ]
           : []),
 
         ...(permissions.membershipRegistrations
@@ -714,6 +727,12 @@ const Dashboard = () => {
                 navigate={navigate}
                 registrationOpen={registrationOpen}
               />
+            )}
+
+          {!isPaused &&
+            activeTab === "spaceDayRegistrations" &&
+            (permissions.registrations || isSuperAdmin) && (
+              <SpaceDayRegistrationsTab />
             )}
 
           {!isPaused && activeTab === "admins" && isSuperAdmin && <AdminsTab />}
