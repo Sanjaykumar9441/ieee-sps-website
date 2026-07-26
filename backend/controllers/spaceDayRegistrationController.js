@@ -163,6 +163,14 @@ exports.submitRegistration = async (req, res) => {
       totalFee: fees.totalFee,
     });
 
+    const telegramMessage = await sendRegistrationToTelegram(registration);
+
+    registration.telegramChatId = telegramMessage.chat.id;
+
+    registration.telegramMessageId = telegramMessage.message_id;
+
+    await registration.save();
+
     return res.status(201).json({
       success: true,
 

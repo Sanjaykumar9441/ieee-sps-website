@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import OverviewTab from "./SpaceDayDetails/OverviewTab";
 import MembersTab from "./SpaceDayDetails/MembersTab";
 import PaymentTab from "./SpaceDayDetails/PaymentTab";
@@ -11,13 +11,22 @@ import { SpaceDayRegistration } from "../../../components/spaceDay/registration/
 interface Props {
   registration: SpaceDayRegistration;
   onClose: () => void;
+  onStatusChanged: () => void;
 }
 
 export default function SpaceDayRegistrationDetailsModal({
   registration,
   onClose,
+  onStatusChanged,
 }: Props) {
   const [activeTab, setActiveTab] = useState("overview");
+  useEffect(() => {
+    const close = () => onClose();
+
+    window.addEventListener("close-space-day-modal", close);
+
+    return () => window.removeEventListener("close-space-day-modal", close);
+  }, []);
 
   if (!registration) return null;
 
@@ -111,7 +120,10 @@ export default function SpaceDayRegistrationDetailsModal({
           )}
 
           {activeTab === "payment" && (
-            <PaymentTab registration={registration} />
+            <PaymentTab
+              registration={registration}
+              onStatusChanged={onStatusChanged}
+            />
           )}
 
           {activeTab === "accommodation" && (

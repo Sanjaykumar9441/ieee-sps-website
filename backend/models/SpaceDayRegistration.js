@@ -185,6 +185,30 @@ const SpaceDayRegistrationSchema = new mongoose.Schema(
       enum: ["Pending", "Approved", "Rejected"],
       default: "Pending",
     },
+
+    verifiedBy: {
+      type: String,
+      default: "",
+    },
+
+    verificationMethod: {
+      type: String,
+      enum: ["Dashboard", "Telegram", ""],
+      default: "",
+    },
+
+    verifiedAt: {
+      type: Date,
+    },
+    
+    telegramChatId: {
+      type: String,
+      default: "",
+    },
+
+    telegramMessageId: {
+      type: Number,
+    },
   },
   {
     timestamps: true,

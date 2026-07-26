@@ -1,46 +1,25 @@
-const SpaceDayRegistration = require("../models/SpaceDayRegistration");
+const {
+  verifyRegistration,
+} = require("../services/spaceDayVerificationService");
 
 exports.updatePaymentStatus = async (req, res) => {
   try {
     const { registrationId } = req.params;
     const { paymentStatus } = req.body;
 
-    if (!["Verified", "Rejected"].includes(paymentStatus)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid payment status.",
-      });
-    }
-
-    const registration = await SpaceDayRegistration.findOne({
+    const registration = await verifyRegistration({
       registrationId,
+      paymentStatus,
+      verifiedBy: "Dashboard Admin",
+      method: "Dashboard",
     });
-
-    if (!registration) {
-      return res.status(404).json({
-        success: false,
-        message: "Registration not found.",
-      });
-    }
-
-    registration.paymentStatus = paymentStatus;
-
-    registration.status =
-      paymentStatus === "Verified"
-        ? "Approved"
-        : "Rejected";
-
-    await registration.save();
 
     return res.json({
       success: true,
-      message: `Payment ${paymentStatus}.`,
+      message: "Payment updated successfully.",
       registration,
     });
-
   } catch (error) {
-    console.error(error);
-
     return res.status(500).json({
       success: false,
       message: error.message,

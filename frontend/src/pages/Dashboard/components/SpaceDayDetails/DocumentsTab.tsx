@@ -1,92 +1,146 @@
+import { useState } from "react";
+import SpaceDayImagePreviewModal from "./SpaceDayImagePreviewModal";
 import { SpaceDayRegistration } from "../../../../components/spaceDay/registration/types";
 
 interface Props {
   registration: SpaceDayRegistration;
 }
 
-export default function DocumentsTab({
-  registration,
-}: Props) {
+export default function DocumentsTab({ registration }: Props) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+
   const downloadAcknowledgement = () => {
     window.open(
       `${import.meta.env.VITE_API_URL}/api/space-day/acknowledgement/${registration.registrationId}`,
-      "_blank"
+      "_blank",
     );
   };
 
   return (
     <div className="space-y-6">
-
       {/* Registration Documents */}
 
-      <div className="rounded-2xl border bg-white shadow-sm p-6">
+      <div className="rounded-2xl border bg-white shadow-sm">
+        <div className="border-b px-6 py-5">
+          <h3 className="text-2xl font-bold">Documents</h3>
 
-        <h3 className="text-xl font-bold mb-6">
-          Registration Documents
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-          <button
-            onClick={downloadAcknowledgement}
-            className="rounded-xl border bg-blue-600 text-white p-5 text-left hover:bg-blue-700 transition"
-          >
-            <h4 className="text-lg font-semibold">
-              📄 Acknowledgement
-            </h4>
-
-            <p className="mt-1 text-sm text-blue-100">
-              Download registration acknowledgement PDF.
-            </p>
-          </button>
-
-          <a
-            href={registration.paymentScreenshot}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-xl border bg-slate-100 p-5 hover:bg-slate-200 transition"
-          >
-            <h4 className="text-lg font-semibold">
-              🖼 Payment Screenshot
-            </h4>
-
-            <p className="mt-1 text-sm text-slate-600">
-              Open uploaded payment proof.
-            </p>
-          </a>
-
+          <p className="mt-1 text-slate-500">
+            Download or preview registration related documents.
+          </p>
         </div>
 
+        <div className="divide-y">
+          {/* Acknowledgement */}
+
+          <div className="flex items-center justify-between px-6 py-5">
+            <div>
+              <h4 className="font-semibold text-lg">
+                📄 Registration Acknowledgement
+              </h4>
+
+              <p className="text-sm text-slate-500 mt-1">
+                Generated immediately after successful registration.
+              </p>
+            </div>
+
+            <button
+              onClick={downloadAcknowledgement}
+              className="rounded-xl bg-blue-600 px-5 py-2 text-white hover:bg-blue-700"
+            >
+              Download
+            </button>
+          </div>
+
+          {/* Screenshot */}
+
+          <div className="flex items-center justify-between px-6 py-5">
+            <div>
+              <h4 className="font-semibold text-lg">🖼 Payment Screenshot</h4>
+
+              <p className="text-sm text-slate-500 mt-1">
+                Uploaded by participant.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setPreviewOpen(true)}
+              className="rounded-xl border px-5 py-2 hover:bg-slate-100"
+            >
+              Preview
+            </button>
+          </div>
+
+          {/* Email */}
+
+          <div className="flex items-center justify-between px-6 py-5">
+            <div>
+              <h4 className="font-semibold text-lg">📧 Confirmation Email</h4>
+
+              <p className="text-sm text-slate-500 mt-1">
+                {registration.paymentStatus === "Verified"
+                  ? "Confirmation email has been sent."
+                  : "Will be sent automatically after payment verification."}
+              </p>
+            </div>
+
+            <span
+              className={`rounded-full px-4 py-2 text-sm font-semibold
+        ${
+          registration.paymentStatus === "Verified"
+            ? "bg-green-100 text-green-700"
+            : "bg-yellow-100 text-yellow-700"
+        }`}
+            >
+              {registration.paymentStatus === "Verified" ? "Sent" : "Pending"}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Future Documents */}
 
-      <div className="rounded-2xl border border-dashed bg-slate-50 p-6">
-
-        <h3 className="text-xl font-bold mb-4">
-          Future Documents
-        </h3>
-
-        <div className="space-y-3">
-
-          <div className="flex justify-between border rounded-lg p-4">
-            <span>Participation Certificate</span>
-            <span className="text-slate-400">
-              Available After Event
-            </span>
-          </div>
-
-          <div className="flex justify-between border rounded-lg p-4">
-            <span>Winner Certificate</span>
-            <span className="text-slate-400">
-              Available If Applicable
-            </span>
-          </div>
-
+      <div className="rounded-2xl border bg-white shadow-sm">
+        <div className="border-b px-6 py-5">
+          <h3 className="text-2xl font-bold">Upcoming Documents</h3>
         </div>
 
-      </div>
+        <div className="divide-y">
+          <div className="flex justify-between px-6 py-5">
+            <div>
+              <h4 className="font-semibold">🎓 Participation Certificate</h4>
 
+              <p className="text-sm text-slate-500 mt-1">
+                Available after the completion of National Space Day.
+              </p>
+            </div>
+
+            <span className="rounded-full bg-slate-100 px-4 py-2 text-slate-500">
+              Coming Soon
+            </span>
+          </div>
+
+          <div className="flex justify-between px-6 py-5">
+            <div>
+              <h4 className="font-semibold">🏆 Winner Certificate</h4>
+
+              <p className="text-sm text-slate-500 mt-1">
+                Available only for winning teams.
+              </p>
+            </div>
+
+            <span className="rounded-full bg-slate-100 px-4 py-2 text-slate-500">
+              If Applicable
+            </span>
+          </div>
+        </div>
+      </div>
+      {previewOpen && (
+        <SpaceDayImagePreviewModal
+          image={registration.paymentScreenshot}
+          title="Payment Screenshot"
+          onClose={() => setPreviewOpen(false)}
+        />
+      )}
     </div>
   );
 }

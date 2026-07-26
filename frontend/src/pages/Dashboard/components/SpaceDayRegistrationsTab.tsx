@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import SpaceDayRegistrationDetailsModal from "./SpaceDayRegistrationDetailsModal";
+import { eventThemes } from "@/components/spaceDay/registration/eventTheme";
 import {
   Member,
   SpaceDayRegistration,
 } from "@/components/spaceDay/registration/types";
+import { Eye, CheckCircle, XCircle, Download, User, Users } from "lucide-react";
 
 export default function SpaceDayRegistrationsTab() {
   const [registrations, setRegistrations] = useState<SpaceDayRegistration[]>(
@@ -75,6 +77,12 @@ export default function SpaceDayRegistrationsTab() {
   if (loading) {
     return <div className="p-8 text-center">Loading registrations...</div>;
   }
+
+  const eventNames = {
+    astroquiz: "Astro Quiz",
+    astrodesign: "AI Astro Design",
+    astromodeler: "Astro Modeler",
+  };
 
   return (
     <div className="space-y-6">
@@ -165,6 +173,8 @@ export default function SpaceDayRegistrationsTab() {
 
                 <th className="px-6 py-4 text-left">Event</th>
 
+                <th className="px-6 py-4 text-center">Type</th>
+
                 <th className="px-6 py-4 text-left">Participant / Team</th>
 
                 <th className="px-6 py-4 text-left">Payment</th>
@@ -178,64 +188,120 @@ export default function SpaceDayRegistrationsTab() {
             </thead>
 
             <tbody>
-              {filteredRegistrations.map((registration) => (
-                <tr
-                  key={registration._id}
-                  className="border-b hover:bg-slate-50 transition"
-                >
-                  <td className="px-6 py-5 font-semibold">
-                    {registration.registrationId}
-                  </td>
+              {filteredRegistrations.map((registration) => {
+                const theme = eventThemes[registration.eventType];
 
-                  <td className="px-6 py-5">
-                    {registration.eventType === "astroquiz" && "Astro Quiz"}
+                return (
+                  <tr
+                    key={registration._id}
+                    className="border-b hover:bg-slate-50 transition"
+                  >
+                    <td className="px-6 py-5 font-semibold">
+                      {registration.registrationId}
+                    </td>
 
-                    {registration.eventType === "astrodesign" &&
-                      "AI Astro Design"}
+                    <td className="px-6 py-5">
+                      <span
+                        className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold
+      ${theme.light}
+      ${theme.text}`}
+                      >
+                        {eventNames[registration.eventType]}
+                      </span>
+                    </td>
 
-                    {registration.eventType === "astromodeler" &&
-                      "Astro Modeler"}
-                  </td>
+                    <td className="px-6 py-5 text-center">
+                      {registration.registrationType === "individual" ? (
+                        <span className="inline-flex items-center gap-2 rounded-full bg-sky-100 px-3 py-1 text-sm font-semibold text-sky-700">
+                          <User size={14} />
+                          Individual
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-3 py-1 text-sm font-semibold text-purple-700">
+                          <Users size={14} />
+                          Team
+                        </span>
+                      )}
+                    </td>
 
-                  <td className="px-6 py-5">
-                    {registration.registrationType === "individual"
-                      ? registration.members[0].fullName
-                      : registration.teamName}
-                  </td>
+                    <td className="px-6 py-5">
+                      {registration.registrationType === "individual"
+                        ? registration.members[0].fullName
+                        : registration.teamName}
+                    </td>
 
-                  <td className="px-6 py-5">
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-semibold
-        ${
-          registration.paymentStatus === "Verified"
-            ? "bg-green-100 text-green-700"
-            : registration.paymentStatus === "Rejected"
-              ? "bg-red-100 text-red-700"
-              : "bg-yellow-100 text-yellow-700"
-        }`}
-                    >
-                      {registration.paymentStatus}
-                    </span>
-                  </td>
+                    <td className="px-6 py-5">
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm font-semibold
+    ${
+      registration.paymentStatus === "Verified"
+        ? "bg-green-100 text-green-700"
+        : registration.paymentStatus === "Rejected"
+          ? "bg-red-100 text-red-700"
+          : "bg-yellow-100 text-yellow-700"
+    }`}
+                      >
+                        {registration.paymentStatus}
+                      </span>
+                    </td>
 
-                  <td className="px-6 py-5 font-semibold">
-                    ₹{registration.totalFee}
-                  </td>
+                    <td className="px-6 py-5 font-semibold">
+                      ₹{registration.totalFee}
+                    </td>
 
-                  <td className="px-6 py-5">
-                    {new Date(registration.createdAt).toLocaleDateString()}
-                  </td>
+                    <td className="px-6 py-5">
+                      {new Date(registration.createdAt).toLocaleDateString()}
+                    </td>
 
-                  <td className="px-6 py-5 text-center">
-                    <button
-                      onClick={() => setSelectedRegistration(registration)}
-                      className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-                    >
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    <td className="px-6 py-5 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {/* View */}
+
+                        <button
+                          onClick={() => setSelectedRegistration(registration)}
+                          className="rounded-lg border p-2 hover:bg-slate-100"
+                          title="View Registration"
+                        >
+                          <Eye size={18} />
+                        </button>
+
+                        {/* Verify */}
+
+                        {registration.paymentStatus === "Pending" && (
+                          <button
+                            className="rounded-lg bg-green-600 p-2 text-white hover:bg-green-700"
+                            title="Verify Payment"
+                          >
+                            <CheckCircle size={18} />
+                          </button>
+                        )}
+
+                        {/* Reject */}
+
+                        {registration.paymentStatus === "Pending" && (
+                          <button
+                            className="rounded-lg bg-red-600 p-2 text-white hover:bg-red-700"
+                            title="Reject Payment"
+                          >
+                            <XCircle size={18} />
+                          </button>
+                        )}
+
+                        {/* Download */}
+
+                        {registration.paymentStatus === "Verified" && (
+                          <button
+                            className="rounded-lg bg-blue-600 p-2 text-white hover:bg-blue-700"
+                            title="Download Acknowledgement"
+                          >
+                            <Download size={18} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -244,6 +310,7 @@ export default function SpaceDayRegistrationsTab() {
         <SpaceDayRegistrationDetailsModal
           registration={selectedRegistration}
           onClose={() => setSelectedRegistration(null)}
+          onStatusChanged={fetchRegistrations}
         />
       )}
     </div>
