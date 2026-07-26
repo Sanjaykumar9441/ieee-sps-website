@@ -120,7 +120,7 @@ exports.submitRegistration = async (req, res) => {
     if (req.file) {
       const uploadResult = await uploadToCloudinary(
         req.file.buffer,
-        `SpaceDay${process.env.SPACE_DAY_YEAR}/Payments`,
+        "SpaceDay2026/Payments",
       );
 
       paymentScreenshot = uploadResult.secure_url;
@@ -309,8 +309,9 @@ exports.downloadAcknowledgement = async (req, res) => {
 
 exports.getRegistrations = async (req, res) => {
   try {
-    const registrations = await SpaceDayRegistration.find()
-      .sort({ createdAt: -1 });
+    const registrations = await SpaceDayRegistration.find().sort({
+      createdAt: -1,
+    });
 
     return res.json({
       success: true,
