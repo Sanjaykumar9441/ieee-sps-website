@@ -1,9 +1,11 @@
-import {
+const React = require("react");
+
+const {
   Section,
   Text,
-} from "@react-email/components";
+} = require("@react-email/components");
 
-export default function EmailFooter() {
+function EmailFooter() {
   return (
     <Section
       style={{
@@ -27,3 +29,5 @@ export default function EmailFooter() {
     </Section>
   );
 }
+
+module.exports = EmailFooter;

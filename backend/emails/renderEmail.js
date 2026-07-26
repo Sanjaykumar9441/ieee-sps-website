@@ -2,7 +2,7 @@ const { render } = require("@react-email/render");
 const React = require("react");
 
 const VerificationEmail =
-  require("./templates/VerificationEmail").default;
+  require("./templates/VerificationEmail.jsx");
 
 const themes = require("./theme");
 
@@ -25,42 +25,26 @@ const whatsappLinks = {
     "https://chat.whatsapp.com/G7wc65lWxuGAZgHMHOttFi?s=cl&p=a&ilr=1",
 };
 
-const renderVerificationEmail = (registration) => {
-
- const theme =
-  themes[registration.eventType] ||
-  themes.astroquiz;
+const renderVerificationEmail = async (registration) => {
+  const theme =
+    themes[registration.eventType] ||
+    themes.astroquiz;
 
   const member = registration.members[0];
 
-  return render(
-    React.createElement(
-      VerificationEmail,
-      {
-        participantName: member.fullName,
-
-        registrationId:
-          registration.registrationId,
-
-        eventName:
-          eventNames[registration.eventType],
-
-        paymentStatus:
-          registration.paymentStatus,
-
-        whatsappLink:
-          whatsappLinks[
-            registration.eventType
-          ],
-
-        statusLink:
-`https://ieeespsaditya.vercel.app/space-day/status/${registration.registrationId}`,
-
-        primaryColor: theme.primary,
-      }
-    )
+  return await render(
+    React.createElement(VerificationEmail, {
+      participantName: member.fullName,
+      registrationId: registration.registrationId,
+      eventName: eventNames[registration.eventType],
+      paymentStatus: registration.paymentStatus,
+      whatsappLink:
+        whatsappLinks[registration.eventType],
+      statusLink:
+        `https://ieeespsaditya.vercel.app/space-day/status/${registration.registrationId}`,
+      primaryColor: theme.primary,
+    })
   );
-
 };
 
 module.exports = {

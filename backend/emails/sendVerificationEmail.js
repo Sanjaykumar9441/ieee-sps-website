@@ -1,8 +1,6 @@
 const SibApiV3Sdk = require("sib-api-v3-sdk");
 
-const {
-  renderVerificationEmail,
-} = require("./renderEmail");
+const { renderVerificationEmail } = require("./renderEmail");
 
 /* ==========================================
    BREVO CONFIGURATION
@@ -10,8 +8,7 @@ const {
 
 const client = SibApiV3Sdk.ApiClient.instance;
 
-client.authentications["api-key"].apiKey =
-  process.env.BREVO_API_KEY;
+client.authentications["api-key"].apiKey = process.env.BREVO_API_KEY;
 
 const api = new SibApiV3Sdk.TransactionalEmailsApi();
 
@@ -19,15 +16,14 @@ const api = new SibApiV3Sdk.TransactionalEmailsApi();
    SEND VERIFICATION EMAIL
 ========================================== */
 
-const sendVerificationEmail = async (
-  registration,
-  pdfBuffer,
-) => {
-  const member = registration.members[0];
+const sendVerificationEmail = async (registration, pdfBuffer) => {
+  const member = registration.members?.[0];
 
-  const html = renderVerificationEmail(
-    registration,
-  );
+  if (!member?.email) {
+    throw new Error("Participant email not found.");
+  }
+
+  const html = await renderVerificationEmail(registration);
 
   const subject = `National Space Day 2026 | Registration Verified | ${registration.registrationId}`;
 
@@ -50,7 +46,7 @@ const sendVerificationEmail = async (
 
     attachment: [
       {
-        name: `${registration.registrationId}_Acknowledgement.pdf`,
+        name: `National_Space_Day_2026_Verified_Acknowledgement_${registration.registrationId}.pdf`,
         content: pdfBuffer.toString("base64"),
       },
     ],

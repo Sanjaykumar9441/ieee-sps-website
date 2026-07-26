@@ -1,17 +1,11 @@
-import {
+const React = require("react");
+
+const {
   Section,
   Text,
-} from "@react-email/components";
+} = require("@react-email/components");
 
-interface Props {
-  label: string;
-  value: string;
-}
-
-export default function InfoCard({
-  label,
-  value,
-}: Props) {
+function InfoCard({ label, value }) {
   return (
     <Section
       style={{
@@ -41,3 +35,5 @@ export default function InfoCard({
     </Section>
   );
 }
+
+module.exports = InfoCard;

@@ -130,6 +130,7 @@ const EditableEvent = ({ event, onUpdate, onDelete }: any) => {
                   <option value="">Select Page</option>
                   <option value="arduino-days">Arduino Days</option>
                   <option value="membership-drive">Membership Drive</option>
+                  <option value="space-day">Space Day</option>
                 </InputField>
               )}
               <div className="col-span-2">

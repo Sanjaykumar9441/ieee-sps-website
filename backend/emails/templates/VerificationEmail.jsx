@@ -1,4 +1,6 @@
-import {
+const React = require("react");
+
+const {
   Html,
   Head,
   Body,
@@ -6,24 +8,14 @@ import {
   Section,
   Text,
   Hr,
-} from "@react-email/components";
+} = require("@react-email/components");
 
-import EmailHeader from "../components/EmailHeader";
-import EmailFooter from "../components/EmailFooter";
-import InfoCard from "../components/InfoCard";
-import PrimaryButton from "../components/PrimaryButton";
+const EmailHeader = require("../components/EmailHeader.jsx");
+const EmailFooter = require("../components/EmailFooter.jsx");
+const InfoCard = require("../components/InfoCard.jsx");
+const PrimaryButton = require("../components/PrimaryButton.jsx");
 
-interface Props {
-  participantName: string;
-  registrationId: string;
-  eventName: string;
-  paymentStatus: string;
-  whatsappLink: string;
-  statusLink: string;
-  primaryColor: string;
-}
-
-export default function VerificationEmail({
+function VerificationEmail({
   participantName,
   registrationId,
   eventName,
@@ -31,7 +23,7 @@ export default function VerificationEmail({
   whatsappLink,
   statusLink,
   primaryColor,
-}: Props) {
+}) {
   return (
     <Html>
       <Head />
@@ -54,8 +46,6 @@ export default function VerificationEmail({
           <EmailHeader primary={primaryColor} />
 
           <Section style={{ padding: "42px" }}>
-            {/* Hero */}
-
             <Text
               style={{
                 fontSize: "36px",
@@ -89,15 +79,22 @@ export default function VerificationEmail({
                 style={{
                   display: "inline-block",
                   backgroundColor:
-                    paymentStatus === "Verified" ? "#DCFCE7" : "#FEE2E2",
-                  color: paymentStatus === "Verified" ? "#166534" : "#991B1B",
+                    paymentStatus === "Verified"
+                      ? "#DCFCE7"
+                      : "#FEE2E2",
+                  color:
+                    paymentStatus === "Verified"
+                      ? "#166534"
+                      : "#991B1B",
                   padding: "10px 22px",
                   borderRadius: "999px",
                   fontSize: "18px",
                   fontWeight: "700",
                 }}
               >
-                {paymentStatus === "Verified" ? "🟢 VERIFIED" : "🔴 REJECTED"}
+                {paymentStatus === "Verified"
+                  ? "🟢 VERIFIED"
+                  : "🔴 REJECTED"}
               </Text>
             </Section>
 
@@ -117,19 +114,26 @@ export default function VerificationEmail({
                 lineHeight: "30px",
               }}
             >
-              Congratulations! Your payment has been verified successfully. Your
-              registration is now confirmed for National Space Day 2026.
+              Congratulations! Your payment has been verified successfully.
+              Your registration is now confirmed for National Space Day 2026.
             </Text>
 
             <Hr style={{ margin: "32px 0" }} />
 
-            {/* Registration Details */}
+            <InfoCard
+              label="Registration ID"
+              value={registrationId}
+            />
 
-            <InfoCard label="Registration ID" value={registrationId} />
+            <InfoCard
+              label="Event"
+              value={eventName}
+            />
 
-            <InfoCard label="Event" value={eventName} />
-
-            <InfoCard label="Payment Status" value={paymentStatus} />
+            <InfoCard
+              label="Payment Status"
+              value={paymentStatus}
+            />
 
             <Section
               style={{
@@ -209,3 +213,5 @@ export default function VerificationEmail({
     </Html>
   );
 }
+
+module.exports = VerificationEmail;

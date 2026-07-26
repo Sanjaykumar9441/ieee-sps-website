@@ -1,17 +1,13 @@
-import {
+const React = require("react");
+
+const {
   Section,
   Img,
   Heading,
   Text,
-} from "@react-email/components";
+} = require("@react-email/components");
 
-interface Props {
-  primary: string;
-}
-
-export default function EmailHeader({
-  primary,
-}: Props) {
+function EmailHeader({ primary }) {
   return (
     <Section
       style={{
@@ -23,6 +19,7 @@ export default function EmailHeader({
       <Img
         src="https://ieeespsaditya.vercel.app/logos/ieee.png"
         width="90"
+        alt="IEEE SPS Logo"
       />
 
       <Heading
@@ -44,3 +41,5 @@ export default function EmailHeader({
     </Section>
   );
 }
+
+module.exports = EmailHeader;

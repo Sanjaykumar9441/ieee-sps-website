@@ -1,31 +1,30 @@
-import {
+const React = require("react");
+
+const {
   Button,
-} from "@react-email/components";
+} = require("@react-email/components");
 
-interface Props {
-  href: string;
-  text: string;
-  color: string;
-}
-
-export default function PrimaryButton({
+function PrimaryButton({
   href,
   text,
   color,
-}: Props) {
+}) {
   return (
     <Button
       href={href}
       style={{
         background: color,
-        color: "#fff",
+        color: "#FFFFFF",
         padding: "14px 28px",
         borderRadius: "8px",
         textDecoration: "none",
         display: "inline-block",
+        fontWeight: "600",
       }}
     >
       {text}
     </Button>
   );
 }
+
+module.exports = PrimaryButton;
