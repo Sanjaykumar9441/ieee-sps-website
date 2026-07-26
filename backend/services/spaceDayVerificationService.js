@@ -2,9 +2,7 @@ const SpaceDayRegistration = require("../models/SpaceDayRegistration");
 const { editTelegramMessage } = require("./telegramService");
 const generateAcknowledgement = require("../pdf/generateAcknowledgement");
 
-const {
-  sendVerificationEmail,
-} = require("../emails/sendVerificationEmail");
+//const { sendVerificationEmail } = require("../emails/sendVerificationEmail");
 
 const verifyRegistration = async ({
   registrationId,
@@ -61,6 +59,7 @@ const verifyRegistration = async ({
   }
 
   if (paymentStatus === "Verified") {
+    /*   
   const pdf =
     await generateAcknowledgement(
       registration
@@ -70,7 +69,8 @@ const verifyRegistration = async ({
     registration,
     pdf
   );
-}
+  */
+  }
 
   return registration;
 };
