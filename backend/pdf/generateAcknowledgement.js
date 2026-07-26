@@ -10,14 +10,29 @@ const generateAcknowledgement = async (registration) => {
   const htmlPath = path.join(__dirname, "templates", "acknowledgement.html");
   let html = fs.readFileSync(htmlPath, "utf8");
 
+  const cssPath = path.join(__dirname, "styles", "acknowledgement.css");
+
+  const css = fs.readFileSync(cssPath, "utf8");
+
   const theme = themes[registration.eventType];
 
-  const ieeeLogo =
-    "file://" + path.resolve(__dirname, "..", "public", "logos", "ieee.png");
-  const spsLogo =
-    "file://" + path.resolve(__dirname, "..", "public", "logos", "sps.png");
-  const adityaLogo =
-    "file://" + path.resolve(__dirname, "..", "public", "logos", "aditya.png");
+  const toBase64 = (filePath) => {
+    const ext = path.extname(filePath).slice(1);
+    const base64 = fs.readFileSync(filePath).toString("base64");
+    return `data:image/${ext};base64,${base64}`;
+  };
+
+  const ieeeLogo = toBase64(
+    path.resolve(__dirname, "..", "public", "logos", "ieee.png"),
+  );
+
+  const spsLogo = toBase64(
+    path.resolve(__dirname, "..", "public", "logos", "sps.png"),
+  );
+
+  const adityaLogo = toBase64(
+    path.resolve(__dirname, "..", "public", "logos", "aditya.png"),
+  );
 
   const qrCode = await QRCode.toDataURL(
     `https://ieeespsaditya.vercel.app/space-day/status/${registration.registrationId}`,
@@ -153,6 +168,7 @@ const generateAcknowledgement = async (registration) => {
   }
 
   html = html
+    .replace(/{{css}}/g, css)
     .replace(/{{ieeeLogo}}/g, ieeeLogo)
     .replace(/{{spsLogo}}/g, spsLogo)
     .replace(/{{adityaLogo}}/g, adityaLogo)
@@ -174,22 +190,29 @@ const generateAcknowledgement = async (registration) => {
     .replace(/{{qrCode}}/g, qrCode);
 
   const browser = await chromium.launch({
-  headless: true,
-  args: [
-    "--no-sandbox",
-    "--disable-setuid-sandbox",
-  ],
-});
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
 
   const page = await browser.newPage();
+  fs.writeFileSync(path.join(__dirname, "debug.html"), html);
 
   await page.setContent(html, {
     waitUntil: "networkidle0",
   });
 
+  await page.waitForLoadState("networkidle");
+
+  await page.screenshot({
+    path: "debug.png",
+    fullPage: true,
+  });
+
+  await page.emulateMedia({
+    media: "screen",
+  });
+
   const pdf = await page.pdf({
-    format: "A4",
-    landscape: false,
     printBackground: true,
     preferCSSPageSize: true,
   });
