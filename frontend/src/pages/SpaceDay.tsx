@@ -7,6 +7,8 @@ import Schedule from "../components/spaceDay/Timeline";
 //import Events from "../components/spaceDay/Events";
 import HelpDesk from "../components/spaceDay/HelpDesk";
 import Guidelines from "../components/spaceDay/Guidelines";
+import FAQ from "@/components/spaceDay/Faq";
+import Footer from "@/components/spaceDay/Footer";
 
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
@@ -40,7 +42,8 @@ export default function SpaceDay() {
       <Guidelines />
       <Schedule />
       <HelpDesk />
-      <section id="faq" className="h-screen"></section>
+      <FAQ />
+      <Footer />
     </div>
   );
 }

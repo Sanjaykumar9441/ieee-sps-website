@@ -1,4 +1,10 @@
 const SpaceDayRegistration = require("../models/SpaceDayRegistration");
+const { editTelegramMessage } = require("./telegramService");
+const generateAcknowledgement = require("../pdf/generateAcknowledgement");
+
+const {
+  sendVerificationEmail,
+} = require("../emails/sendVerificationEmail");
 
 const verifyRegistration = async ({
   registrationId,
@@ -50,17 +56,21 @@ const verifyRegistration = async ({
 
   await registration.save();
 
-  /* -------------------------
-     TODO
-  ------------------------- */
+  if (registration.telegramChatId && registration.telegramMessageId) {
+    await editTelegramMessage(registration);
+  }
 
-  // Telegram Message Update
+  if (paymentStatus === "Verified") {
+  const pdf =
+    await generateAcknowledgement(
+      registration
+    );
 
-  // Send Email
-
-  // Generate Final PDF
-
-  // Activity Log
+  await sendVerificationEmail(
+    registration,
+    pdf
+  );
+}
 
   return registration;
 };

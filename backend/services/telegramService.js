@@ -73,6 +73,81 @@ ${member.rollNumber}
   return response.data.result;
 };
 
+const editTelegramMessage = async (registration) => {
+  const statusEmoji = registration.paymentStatus === "Verified" ? "🟢" : "🔴";
+
+  const eventNames = {
+    astroquiz: "Astro Quiz",
+    astrodesign: "AI Astro Design",
+    astromodeler: "Astro Modeler",
+  };
+
+  const member = registration.members[0];
+
+  const caption = `
+🚀 <b>National Space Day 2026</b>
+
+━━━━━━━━━━━━━━━━━━━━
+
+<b>Registration ID</b>
+<code>${registration.registrationId}</code>
+
+<b>Event</b>
+${eventNames[registration.eventType]}
+
+<b>Participant</b>
+${
+  registration.registrationType === "team"
+    ? registration.teamName
+    : member.fullName
+}
+
+━━━━━━━━━━━━━━━━━━━━
+
+${statusEmoji} <b>${registration.paymentStatus.toUpperCase()}</b>
+
+<b>Verified By</b>
+${registration.verifiedBy}
+
+<b>Verified Via</b>
+${registration.verificationMethod}
+
+<b>Verified At</b>
+${new Date(registration.verifiedAt).toLocaleString("en-IN")}
+
+━━━━━━━━━━━━━━━━━━━━
+
+${
+  registration.paymentStatus === "Verified"
+    ? `✅ <b>Registration Completed</b>
+
+This participant has been verified successfully.
+
+No further action is required.`
+    : `❌ <b>Registration Rejected</b>
+
+This registration has been rejected.
+
+No further action is required.`
+}
+`;
+
+  await axios.post(
+    `https://api.telegram.org/bot${BOT_TOKEN}/editMessageCaption`,
+    {
+      chat_id: registration.telegramChatId,
+      message_id: registration.telegramMessageId,
+      caption,
+      parse_mode: "HTML",
+
+      reply_markup: {
+        inline_keyboard: [],
+      },
+    },
+  );
+};
+
 module.exports = {
   sendRegistrationToTelegram,
+  editTelegramMessage,
 };

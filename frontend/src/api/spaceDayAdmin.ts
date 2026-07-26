@@ -8,9 +8,7 @@ export const updatePaymentStatus = async (
 
   const res = await axios.put(
     `${import.meta.env.VITE_API_URL}/api/space-day/admin/payment/${registrationId}`,
-    {
-      paymentStatus,
-    },
+    { paymentStatus },
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -19,4 +17,20 @@ export const updatePaymentStatus = async (
   );
 
   return res.data;
+};
+
+export const exportRegistrations = async () => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.get(
+    `${import.meta.env.VITE_API_URL}/api/space-day/export/excel`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      responseType: "blob",
+    }
+  );
+
+  return response.data;
 };

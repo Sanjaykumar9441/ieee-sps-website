@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "node server.js",
     "postinstall": "npx playwright install chromium",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "email": "react-email dev"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +16,8 @@
   "type": "commonjs",
   "dependencies": {
     "@emailjs/nodejs": "^5.0.2",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.1.0",
     "axios": "^1.13.6",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
@@ -22,6 +25,7 @@
     "compression": "^1.8.1",
     "cors": "^2.8.6",
     "dotenv": "^17.2.4",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.0",
     "joi": "^18.2.3",
@@ -34,6 +38,8 @@
     "pdfkit": "^0.17.2",
     "playwright": "^1.62.0",
     "qrcode": "^1.5.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "resend": "^6.9.3",
     "sib-api-v3-sdk": "^8.5.0",
     "slugify": "^1.6.9",
@@ -41,5 +47,9 @@
     "twilio": "^5.12.2",
     "ua-parser-js": "^2.0.10",
     "uuid": "^14.0.1"
+  },
+  "devDependencies": {
+    "@react-email/ui": "^6.9.1",
+    "react-email": "^6.9.1"
   }
 }

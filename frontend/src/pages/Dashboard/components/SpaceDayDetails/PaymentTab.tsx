@@ -23,19 +23,16 @@ export default function PaymentTab({ registration, onStatusChanged }: Props) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const handleVerify = async () => {
-    console.log("Verify clicked");
-    alert("Verify clicked");
-
     try {
       setLoading(true);
 
       await updatePaymentStatus(registration.registrationId, "Verified");
-
       onStatusChanged();
-
       toast.success("Payment Verified");
+      setTimeout(() => {
+        window.dispatchEvent(new Event("close-space-day-modal"));
+      }, 300);
     } catch (err) {
-      console.error(err);
       toast.error(
         (err as any).response?.data?.message || "Verification Failed",
       );

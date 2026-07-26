@@ -6,6 +6,16 @@ import {
   Member,
   SpaceDayRegistration,
 } from "@/components/spaceDay/registration/types";
+import {
+  departments,
+  colleges,
+  years,
+} from "../../../components/spaceDay/registration/data/formOptions";
+import {
+  updatePaymentStatus,
+  exportRegistrations,
+} from "../../../api/spaceDayAdmin";
+import toast from "react-hot-toast";
 import { Eye, CheckCircle, XCircle, Download, User, Users } from "lucide-react";
 
 export default function SpaceDayRegistrationsTab() {
@@ -16,6 +26,9 @@ export default function SpaceDayRegistrationsTab() {
   const [search, setSearch] = useState("");
   const [eventFilter, setEventFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
+  const [collegeFilter, setCollegeFilter] = useState("all");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [yearFilter, setYearFilter] = useState("all");
   const [selectedRegistration, setSelectedRegistration] =
     useState<SpaceDayRegistration | null>(null);
   const stats = {
@@ -53,11 +66,50 @@ export default function SpaceDayRegistrationsTab() {
     }
   };
 
+  const handlePaymentStatus = async (
+    registrationId: string,
+    paymentStatus: "Verified" | "Rejected",
+  ) => {
+    try {
+      await updatePaymentStatus(registrationId, paymentStatus);
+
+      toast.success(`Payment ${paymentStatus}`);
+
+      fetchRegistrations();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Something went wrong");
+    }
+  };
+
+  const downloadExcel = async () => {
+    try {
+      const blob = await exportRegistrations();
+
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+
+      a.href = url;
+      a.download = "SpaceDay_Registrations.xlsx";
+
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Excel downloaded successfully.");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to download Excel.");
+    }
+  };
+
   const filteredRegistrations = registrations.filter((registration) => {
     const keyword = search.toLowerCase();
 
     const matchesSearch =
       registration.registrationId.toLowerCase().includes(keyword) ||
+      registration.transactionId.toLowerCase().includes(keyword) ||
       registration.teamName?.toLowerCase().includes(keyword) ||
       registration.members.some(
         (member: Member) =>
@@ -65,13 +117,36 @@ export default function SpaceDayRegistrationsTab() {
           member.rollNumber.toLowerCase().includes(keyword),
       );
 
+    const matchesCollege =
+      collegeFilter === "all" ||
+      registration.members.some(
+        (member: Member) => member.college === collegeFilter,
+      );
+
+    const matchesDepartment =
+      departmentFilter === "all" ||
+      registration.members.some(
+        (member: Member) => member.department === departmentFilter,
+      );
+
+    const matchesYear =
+      yearFilter === "all" ||
+      registration.members.some((member: Member) => member.year === yearFilter);
+
     const matchesEvent =
       eventFilter === "all" || registration.eventType === eventFilter;
 
     const matchesPayment =
       paymentFilter === "all" || registration.paymentStatus === paymentFilter;
 
-    return matchesSearch && matchesEvent && matchesPayment;
+    return (
+      matchesSearch &&
+      matchesEvent &&
+      matchesPayment &&
+      matchesCollege &&
+      matchesDepartment &&
+      matchesYear
+    );
   });
 
   if (loading) {
@@ -136,7 +211,9 @@ export default function SpaceDayRegistrationsTab() {
           className="w-full lg:w-96 rounded-lg border px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500"
         />
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
+          {/* Event */}
+
           <select
             value={eventFilter}
             onChange={(e) => setEventFilter(e.target.value)}
@@ -148,6 +225,8 @@ export default function SpaceDayRegistrationsTab() {
             <option value="astromodeler">Astro Modeler</option>
           </select>
 
+          {/* Payment */}
+
           <select
             value={paymentFilter}
             onChange={(e) => setPaymentFilter(e.target.value)}
@@ -158,6 +237,61 @@ export default function SpaceDayRegistrationsTab() {
             <option value="Verified">Verified</option>
             <option value="Rejected">Rejected</option>
           </select>
+
+          {/* Department */}
+
+          <select
+            value={departmentFilter}
+            onChange={(e) => setDepartmentFilter(e.target.value)}
+            className="rounded-lg border px-4 py-2"
+          >
+            <option value="all">All Departments</option>
+
+            {departments.map((department) => (
+              <option key={department} value={department}>
+                {department}
+              </option>
+            ))}
+          </select>
+
+          {/* College */}
+
+          <select
+            value={collegeFilter}
+            onChange={(e) => setCollegeFilter(e.target.value)}
+            className="rounded-lg border px-4 py-2"
+          >
+            <option value="all">All Colleges</option>
+
+            {colleges.map((college) => (
+              <option key={college} value={college}>
+                {college}
+              </option>
+            ))}
+          </select>
+
+          {/* Year */}
+
+          <select
+            value={yearFilter}
+            onChange={(e) => setYearFilter(e.target.value)}
+            className="rounded-lg border px-4 py-2"
+          >
+            <option value="all">All Years</option>
+
+            {years.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={downloadExcel}
+            className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-5 py-2 text-white hover:bg-green-700"
+          >
+            <Download size={18} />
+            Export Excel
+          </button>
         </div>
       </div>
       <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
@@ -269,6 +403,12 @@ export default function SpaceDayRegistrationsTab() {
 
                         {registration.paymentStatus === "Pending" && (
                           <button
+                            onClick={() =>
+                              handlePaymentStatus(
+                                registration.registrationId,
+                                "Verified",
+                              )
+                            }
                             className="rounded-lg bg-green-600 p-2 text-white hover:bg-green-700"
                             title="Verify Payment"
                           >
@@ -280,6 +420,12 @@ export default function SpaceDayRegistrationsTab() {
 
                         {registration.paymentStatus === "Pending" && (
                           <button
+                            onClick={() =>
+                              handlePaymentStatus(
+                                registration.registrationId,
+                                "Rejected",
+                              )
+                            }
                             className="rounded-lg bg-red-600 p-2 text-white hover:bg-red-700"
                             title="Reject Payment"
                           >
