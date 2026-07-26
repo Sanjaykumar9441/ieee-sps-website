@@ -160,8 +160,8 @@ export default function SpaceDayRegistrationsTab() {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">National Space Day Registrations</h1>
+  <div className="space-y-6 text-slate-900">
+      <h1 className="text-3xl font-bold text-white">National Space Day Registrations</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
         <div className="rounded-2xl bg-white shadow-sm border p-6">
@@ -208,7 +208,18 @@ export default function SpaceDayRegistrationsTab() {
           placeholder="Search Registration ID, Name, Team, Roll Number..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full lg:w-96 rounded-lg border px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+          className="
+w-full lg:w-96
+rounded-lg
+border
+bg-white
+text-slate-900
+placeholder:text-slate-500
+px-4 py-2
+outline-none
+focus:ring-2
+focus:ring-blue-500
+"
         />
 
         <div className="flex flex-wrap gap-3">
@@ -217,7 +228,14 @@ export default function SpaceDayRegistrationsTab() {
           <select
             value={eventFilter}
             onChange={(e) => setEventFilter(e.target.value)}
-            className="rounded-lg border px-4 py-2"
+            className="
+rounded-lg
+border
+bg-white
+text-slate-900
+px-4
+py-2
+"
           >
             <option value="all">All Events</option>
             <option value="astroquiz">Astro Quiz</option>
@@ -230,7 +248,14 @@ export default function SpaceDayRegistrationsTab() {
           <select
             value={paymentFilter}
             onChange={(e) => setPaymentFilter(e.target.value)}
-            className="rounded-lg border px-4 py-2"
+            className="
+rounded-lg
+border
+bg-white
+text-slate-900
+px-4
+py-2
+"
           >
             <option value="all">All Payments</option>
             <option value="Pending">Pending</option>
@@ -243,7 +268,14 @@ export default function SpaceDayRegistrationsTab() {
           <select
             value={departmentFilter}
             onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="rounded-lg border px-4 py-2"
+            className="
+rounded-lg
+border
+bg-white
+text-slate-900
+px-4
+py-2
+"
           >
             <option value="all">All Departments</option>
 
@@ -259,7 +291,14 @@ export default function SpaceDayRegistrationsTab() {
           <select
             value={collegeFilter}
             onChange={(e) => setCollegeFilter(e.target.value)}
-            className="rounded-lg border px-4 py-2"
+            className="
+rounded-lg
+border
+bg-white
+text-slate-900
+px-4
+py-2
+"
           >
             <option value="all">All Colleges</option>
 
@@ -275,7 +314,14 @@ export default function SpaceDayRegistrationsTab() {
           <select
             value={yearFilter}
             onChange={(e) => setYearFilter(e.target.value)}
-            className="rounded-lg border px-4 py-2"
+            className="
+rounded-lg
+border
+bg-white
+text-slate-900
+px-4
+py-2
+"
           >
             <option value="all">All Years</option>
 
@@ -301,27 +347,27 @@ export default function SpaceDayRegistrationsTab() {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50">
+            <thead className="bg-slate-100 text-slate-700">
               <tr>
-                <th className="px-6 py-4 text-left">Registration ID</th>
+                <th className="px-6 py-4 text-left font-semibold text-slate-700">Registration ID</th>
 
-                <th className="px-6 py-4 text-left">Event</th>
+               <th className="px-6 py-4 text-left font-semibold text-slate-700">Event</th>
 
-                <th className="px-6 py-4 text-center">Type</th>
+                <th className="px-6 py-4 text-center font-semibold text-slate-700">Type</th>
 
-                <th className="px-6 py-4 text-left">Participant / Team</th>
+                <th className="px-6 py-4 text-left font-semibold text-slate-700">Participant / Team</th>
 
-                <th className="px-6 py-4 text-left">Payment</th>
+                <th className="px-6 py-4 text-left font-semibold text-slate-700">Payment</th>
 
-                <th className="px-6 py-4 text-left">Fee</th>
+                <th className="px-6 py-4 text-left font-semibold text-slate-700">Fee</th>
 
-                <th className="px-6 py-4 text-left">Registered On</th>
+                <th className="px-6 py-4 text-left font-semibold text-slate-700">Registered On</th>
 
-                <th className="px-6 py-4 text-center">Action</th>
+                <th className="px-6 py-4 text-center font-semibold text-slate-700">Action</th>
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="text-slate-900">
               {filteredRegistrations.map((registration) => {
                 const theme = eventThemes[registration.eventType];
 
