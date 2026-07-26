@@ -51,3 +51,65 @@ export interface IndividualRegistrationData {
   departureDate: string;
   departureTime: string;
 }
+
+export type RegistrationType =
+  | "individual"
+  | "team";
+
+export type PaymentStatus =
+  | "Pending"
+  | "Verified"
+  | "Rejected";
+
+export type RegistrationStatus =
+  | "Pending"
+  | "Approved"
+  | "Rejected";
+
+  export interface SpaceDayRegistration {
+  _id: string;
+
+  registrationId: string;
+
+  eventType: EventType;
+
+  registrationType: RegistrationType;
+
+  teamName: string;
+
+  teamSize: number;
+
+  selectedTheme: string;
+
+  members: Member[];
+
+  accommodation: boolean;
+
+  accommodationMembers: boolean[];
+
+  arrivalDate: string;
+
+  arrivalTime: string;
+
+  departureDate: string;
+
+  departureTime: string;
+
+  transactionId: string;
+
+  paymentScreenshot: string;
+
+  registrationFee: number;
+
+  accommodationFee: number;
+
+  totalFee: number;
+
+  paymentStatus: PaymentStatus;
+
+  status: RegistrationStatus;
+
+  createdAt: string;
+
+  updatedAt: string;
+}
