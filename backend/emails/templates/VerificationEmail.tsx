@@ -12,9 +12,6 @@ import EmailHeader from "../components/EmailHeader";
 import EmailFooter from "../components/EmailFooter";
 import InfoCard from "../components/InfoCard";
 import PrimaryButton from "../components/PrimaryButton";
-import HelpCard from "../components/HelpCard";
-import SuccessBadge from "../components/SuccessBadge";
-import AttachmentCard from "../components/AttachmentCard";
 
 interface Props {
   participantName: string;
@@ -82,7 +79,27 @@ export default function VerificationEmail({
               Registration Successfully Verified
             </Text>
 
-            <SuccessBadge />
+            <Section
+              style={{
+                textAlign: "center",
+                marginBottom: "30px",
+              }}
+            >
+              <Text
+                style={{
+                  display: "inline-block",
+                  backgroundColor:
+                    paymentStatus === "Verified" ? "#DCFCE7" : "#FEE2E2",
+                  color: paymentStatus === "Verified" ? "#166534" : "#991B1B",
+                  padding: "10px 22px",
+                  borderRadius: "999px",
+                  fontSize: "18px",
+                  fontWeight: "700",
+                }}
+              >
+                {paymentStatus === "Verified" ? "🟢 VERIFIED" : "🔴 REJECTED"}
+              </Text>
+            </Section>
 
             <Text
               style={{
@@ -100,30 +117,51 @@ export default function VerificationEmail({
                 lineHeight: "30px",
               }}
             >
-              Congratulations! Your payment has been verified successfully.
-              Your registration is now confirmed for National Space Day 2026.
+              Congratulations! Your payment has been verified successfully. Your
+              registration is now confirmed for National Space Day 2026.
             </Text>
 
             <Hr style={{ margin: "32px 0" }} />
 
             {/* Registration Details */}
 
-            <InfoCard
-              label="Registration ID"
-              value={registrationId}
-            />
+            <InfoCard label="Registration ID" value={registrationId} />
 
-            <InfoCard
-              label="Event"
-              value={eventName}
-            />
+            <InfoCard label="Event" value={eventName} />
 
-            <InfoCard
-              label="Payment Status"
-              value={paymentStatus}
-            />
+            <InfoCard label="Payment Status" value={paymentStatus} />
 
-            <AttachmentCard />
+            <Section
+              style={{
+                background: "#F8FAFC",
+                border: "1px solid #E2E8F0",
+                borderRadius: "12px",
+                padding: "20px",
+                marginTop: "30px",
+                marginBottom: "30px",
+              }}
+            >
+              <Text
+                style={{
+                  fontWeight: "700",
+                  fontSize: "18px",
+                  marginBottom: "10px",
+                }}
+              >
+                📄 Verified Acknowledgement
+              </Text>
+
+              <Text
+                style={{
+                  fontSize: "15px",
+                  lineHeight: "24px",
+                  color: "#475569",
+                }}
+              >
+                Your verified acknowledgement PDF has been attached to this
+                email. Please download and keep it safe.
+              </Text>
+            </Section>
 
             <PrimaryButton
               href={whatsappLink}
@@ -131,7 +169,7 @@ export default function VerificationEmail({
               color={primaryColor}
             />
 
-            <div style={{ height: "18px" }} />
+            <Section style={{ height: "18px" }} />
 
             <PrimaryButton
               href={statusLink}
@@ -139,7 +177,30 @@ export default function VerificationEmail({
               color={primaryColor}
             />
 
-            <HelpCard />
+            <Section
+              style={{
+                background: "#F1F5F9",
+                borderRadius: "14px",
+                padding: "22px",
+                marginTop: "35px",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: "18px",
+                  fontWeight: "700",
+                  marginBottom: "12px",
+                }}
+              >
+                Need Assistance?
+              </Text>
+
+              <Text>📧 ieee.club.aus@gmail.com</Text>
+
+              <Text>📞 +91 7095009441</Text>
+
+              <Text>🌐 https://ieeespsaditya.vercel.app</Text>
+            </Section>
           </Section>
 
           <EmailFooter />
