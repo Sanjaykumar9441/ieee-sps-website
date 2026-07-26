@@ -5,6 +5,9 @@ const calculateFees = require("../utils/spaceDayFeeCalculator");
 const spaceDayConfig = require("../config/spaceDayConfig");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
 const generateAcknowledgement = require("../pdf/generateAcknowledgement");
+const {
+  sendRegistrationToTelegram,
+} = require("../services/telegramService");
 
 /* ============================================
    SUBMIT REGISTRATION

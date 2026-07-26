@@ -26,12 +26,12 @@ ${eventNames[registration.eventType]}
 <b>Type</b>
 ${registration.registrationType === "team" ? "Team" : "Individual"}
 
-<b>${
-    registration.registrationType === "team" ? "Team Name" : "Participant"
-  }</b>
-${registration.registrationType === "team"
+<b>${registration.registrationType === "team" ? "Team Name" : "Participant"}</b>
+${
+  registration.registrationType === "team"
     ? registration.teamName
-    : member.fullName}
+    : member.fullName
+}
 
 <b>Roll Number</b>
 ${member.rollNumber}
@@ -67,7 +67,7 @@ ${member.rollNumber}
           ],
         ],
       },
-    }
+    },
   );
 
   return response.data.result;
