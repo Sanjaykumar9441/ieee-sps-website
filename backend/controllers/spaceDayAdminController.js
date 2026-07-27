@@ -1,51 +1,67 @@
-const express = require("express");
-
-const router = express.Router();
-
-const verifyToken = require("../middleware/verifyToken");
-
+const SpaceDayRegistration = require("../models/SpaceDayRegistration");
+const { getIO } = require("../socket");
 const {
-  updatePaymentStatus,
-  deleteRegistration,
-} = require("../controllers/spaceDayAdminController");
+  verifyRegistration,
+} = require("../services/spaceDayVerificationService");
 
-const {
-  getSettings,
-  updateMaster,
-  updateEvent,
-} = require("../controllers/eventSettingsController");
+exports.updatePaymentStatus = async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+    const { paymentStatus } = req.body;
 
-// Payment
-router.put(
-  "/payment/:registrationId",
-  verifyToken,
-  updatePaymentStatus
-);
+    const registration = await verifyRegistration({
+      registrationId,
+      paymentStatus,
+      verifiedBy: "Dashboard Admin",
+      method: "Dashboard",
+    });
 
-// Delete
-router.delete(
-  "/:registrationId",
-  verifyToken,
-  deleteRegistration
-);
+    return res.json({
+      success: true,
+      message: "Payment updated successfully.",
+      registration,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
-// Registration Settings
-router.get(
-  "/settings",
-  verifyToken,
-  getSettings
-);
+exports.deleteRegistration = async (req, res) => {
+  try {
+    const { registrationId } = req.params;
 
-router.patch(
-  "/settings/master",
-  verifyToken,
-  updateMaster
-);
+    const registration = await SpaceDayRegistration.findOne({
+      registrationId,
+    });
 
-router.patch(
-  "/settings/event",
-  verifyToken,
-  updateEvent
-);
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: "Registration not found.",
+      });
+    }
 
-module.exports = router;
+    await SpaceDayRegistration.deleteOne({
+      registrationId,
+    });
+
+    getIO().emit("registrationDeleted", {
+      registrationId,
+    });
+
+    return res.json({
+      success: true,
+      message: "Registration deleted successfully.",
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
