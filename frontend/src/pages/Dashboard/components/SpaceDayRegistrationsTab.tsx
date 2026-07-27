@@ -17,6 +17,7 @@ import {
 } from "../../../api/spaceDayAdmin";
 import toast from "react-hot-toast";
 import { Eye, CheckCircle, XCircle, Download, User, Users } from "lucide-react";
+import { socket } from "@/lib/socket";
 
 export default function SpaceDayRegistrationsTab() {
   const [registrations, setRegistrations] = useState<SpaceDayRegistration[]>(
@@ -49,6 +50,16 @@ export default function SpaceDayRegistrationsTab() {
 
   useEffect(() => {
     fetchRegistrations();
+
+    socket.on("registrationUpdated", (data) => {
+      console.log("📡 Registration Updated:", data);
+
+      fetchRegistrations();
+    });
+
+    return () => {
+      socket.off("registrationUpdated");
+    };
   }, []);
 
   const fetchRegistrations = async () => {
@@ -160,8 +171,10 @@ export default function SpaceDayRegistrationsTab() {
   };
 
   return (
-  <div className="space-y-6 text-slate-900">
-      <h1 className="text-3xl font-bold text-white">National Space Day Registrations</h1>
+    <div className="space-y-6 text-slate-900">
+      <h1 className="text-3xl font-bold text-white">
+        National Space Day Registrations
+      </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
         <div className="rounded-2xl bg-white shadow-sm border p-6">
@@ -349,21 +362,37 @@ py-2
           <table className="w-full">
             <thead className="bg-slate-100 text-slate-700">
               <tr>
-                <th className="px-6 py-4 text-left font-semibold text-slate-700">Registration ID</th>
+                <th className="px-6 py-4 text-left font-semibold text-slate-700">
+                  Registration ID
+                </th>
 
-               <th className="px-6 py-4 text-left font-semibold text-slate-700">Event</th>
+                <th className="px-6 py-4 text-left font-semibold text-slate-700">
+                  Event
+                </th>
 
-                <th className="px-6 py-4 text-center font-semibold text-slate-700">Type</th>
+                <th className="px-6 py-4 text-center font-semibold text-slate-700">
+                  Type
+                </th>
 
-                <th className="px-6 py-4 text-left font-semibold text-slate-700">Participant / Team</th>
+                <th className="px-6 py-4 text-left font-semibold text-slate-700">
+                  Participant / Team
+                </th>
 
-                <th className="px-6 py-4 text-left font-semibold text-slate-700">Payment</th>
+                <th className="px-6 py-4 text-left font-semibold text-slate-700">
+                  Payment
+                </th>
 
-                <th className="px-6 py-4 text-left font-semibold text-slate-700">Fee</th>
+                <th className="px-6 py-4 text-left font-semibold text-slate-700">
+                  Fee
+                </th>
 
-                <th className="px-6 py-4 text-left font-semibold text-slate-700">Registered On</th>
+                <th className="px-6 py-4 text-left font-semibold text-slate-700">
+                  Registered On
+                </th>
 
-                <th className="px-6 py-4 text-center font-semibold text-slate-700">Action</th>
+                <th className="px-6 py-4 text-center font-semibold text-slate-700">
+                  Action
+                </th>
               </tr>
             </thead>
 
