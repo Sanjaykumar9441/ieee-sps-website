@@ -1,11 +1,14 @@
 const SpaceDayRegistration = require("../models/SpaceDayRegistration");
+const EventSettings = require("../models/EventSettings");
 const generateRegistrationId = require("../utils/spaceDayRegistrationId");
 const { validateRegistration } = require("../utils/spaceDayValidation");
 const calculateFees = require("../utils/spaceDayFeeCalculator");
 const spaceDayConfig = require("../config/spaceDayConfig");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
 const generateAcknowledgement = require("../pdf/generateAcknowledgement");
-const { sendRegistrationToTelegram } = require("../services/telegramService");
+const {
+  sendRegistrationToTelegram,
+} = require("../services/telegramService");
 
 /* ============================================
    SUBMIT REGISTRATION
@@ -28,6 +31,36 @@ exports.submitRegistration = async (req, res) => {
       departureTime,
       transactionId,
     } = registrationData;
+
+/* ------------------------------
+   REGISTRATION SETTINGS
+------------------------------ */
+
+const settings = await EventSettings.findOne({
+  event: "space-day",
+});
+
+if (!settings?.enabled) {
+  return res.status(403).json({
+    success: false,
+    message: "Registrations for National Space Day are closed.",
+  });
+}
+
+if (!settings.events[eventType]) {
+  const eventNames = {
+    astroquiz: "Astro Quiz",
+    astrodesign: "AI Astro Design",
+    astromodeler: "Astro Modeler",
+  };
+
+  return res.status(403).json({
+    success: false,
+    message: `Registrations for ${eventNames[eventType]} are closed.`,
+  });
+}
+
+
     /* ------------------------------
        VALIDATION
     ------------------------------ */

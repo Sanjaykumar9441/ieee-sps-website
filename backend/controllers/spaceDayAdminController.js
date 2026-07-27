@@ -1,4 +1,3 @@
-const cloudinary = require("../config/cloudinary");
 const SpaceDayRegistration = require("../models/SpaceDayRegistration");
 const { getIO } = require("../socket");
 const {
@@ -34,10 +33,9 @@ exports.deleteRegistration = async (req, res) => {
   try {
     const { registrationId } = req.params;
 
-    const registration =
-      await SpaceDayRegistration.findOne({
-        registrationId,
-      });
+    const registration = await SpaceDayRegistration.findOne({
+      registrationId,
+    });
 
     if (!registration) {
       return res.status(404).json({
@@ -46,19 +44,10 @@ exports.deleteRegistration = async (req, res) => {
       });
     }
 
-    // Delete image from Cloudinary
-    if (registration.paymentScreenshotPublicId) {
-      await cloudinary.uploader.destroy(
-        registration.paymentScreenshotPublicId
-      );
-    }
-
-    // Delete registration
     await SpaceDayRegistration.deleteOne({
       registrationId,
     });
 
-    // Notify all dashboards
     getIO().emit("registrationDeleted", {
       registrationId,
     });

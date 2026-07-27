@@ -5,12 +5,89 @@ import { ArrowLeft, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { eventThemes } from "./registration/eventTheme";
 import { EventType } from "./registration/types";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { socket } from "@/lib/socket";
+
+interface RegistrationSettings {
+  enabled: boolean;
+
+  events: {
+    astroquiz: boolean;
+    astrodesign: boolean;
+    astromodeler: boolean;
+  };
+}
 
 interface EventSelectorProps {
   onSelect: (eventId: EventType) => void;
 }
 export default function EventSelector({ onSelect }: EventSelectorProps) {
   const navigate = useNavigate();
+  const [settings, setSettings] = useState<RegistrationSettings | null>(null);
+  const fetchSettings = async () => {
+  try {
+    const res = await axios.get(
+      `${import.meta.env.VITE_API_URL}/api/space-day/settings/public`
+    );
+
+    setSettings(res.data.settings);
+  } catch (err) {
+    console.error(err);
+  }
+};
+            useEffect(() => {
+  fetchSettings();
+
+  socket.on(
+    "registrationSettingsUpdated",
+    (updatedSettings: RegistrationSettings) => {
+      console.log(
+        "⚡ Registration settings updated"
+      );
+
+      setSettings(updatedSettings);
+    }
+  );
+
+  return () => {
+    socket.off("registrationSettingsUpdated");
+  };
+}, []);
+if (!settings) return null;
+
+if (!settings.enabled) {
+  return (
+    <section className="min-h-screen flex items-center justify-center bg-[#fbfaf6] px-6">
+      <div className="max-w-2xl text-center">
+
+        <h1 className="text-5xl font-bold text-slate-900">
+          🚀 National Space Day 2026
+        </h1>
+
+        <p className="mt-8 text-2xl font-semibold text-red-600">
+          Registrations Closed
+        </p>
+
+        <p className="mt-6 text-slate-600 leading-8">
+          Registrations for National Space Day have been closed.
+
+          Thank you for your interest.
+
+          We look forward to seeing you at future IEEE SPS events.
+        </p>
+
+        <button
+          onClick={() => navigate("/space-day")}
+          className="mt-10 rounded-xl bg-[#00629B] px-8 py-4 text-white font-semibold hover:bg-[#004d78]"
+        >
+          Back to Space Day
+        </button>
+
+      </div>
+    </section>
+  );
+}
   return (
     <section className="py-24">
       <div className="max-w-7xl mx-auto px-6">
@@ -95,6 +172,12 @@ export default function EventSelector({ onSelect }: EventSelectorProps) {
                   {event.subtitle}
                 </p>
 
+                {!settings.events[event.id] && (
+  <div className="mt-4 inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-sm font-semibold text-red-700">
+    🔴 Registrations Closed
+  </div>
+)}
+
                 {/* Description */}
 
                 <p className="mt-6 text-slate-600 leading-7">
@@ -149,7 +232,12 @@ export default function EventSelector({ onSelect }: EventSelectorProps) {
                 {/* Button */}
 
                 <button
-                  onClick={() => onSelect(event.id)}
+  disabled={!settings.events[event.id]}
+  onClick={() => {
+    if (!settings.events[event.id]) return;
+
+    onSelect(event.id);
+  }}
                   className={`
   mt-10
   flex
@@ -158,20 +246,25 @@ export default function EventSelector({ onSelect }: EventSelectorProps) {
   justify-center
   gap-2
   rounded-xl
-  bg-gradient-to-r
-  ${theme.gradient}
   py-4
   font-semibold
-  text-white
   shadow-lg
   transition-all
   duration-300
-  hover:scale-[1.02]
-  hover:shadow-xl
+
+  ${
+    settings.events[event.id]
+      ? `bg-gradient-to-r ${theme.gradient} text-white hover:scale-[1.02] hover:shadow-xl`
+      : "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none"
+  }
 `}
                 >
-                  Register Now
-                  <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+                  {settings.events[event.id]
+  ? "Register Now"
+  : "Registrations Closed"}
+                  {settings.events[event.id] && (
+  <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+)}
                 </button>
               </motion.div>
             );

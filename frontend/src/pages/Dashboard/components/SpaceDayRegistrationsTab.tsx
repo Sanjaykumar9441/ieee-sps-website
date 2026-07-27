@@ -26,12 +26,23 @@ import {
   Trash2,
 } from "lucide-react";
 import { socket } from "@/lib/socket";
-
+import ToggleSwitch from "../../../common/ToggleSwitch";
 export default function SpaceDayRegistrationsTab() {
   const [registrations, setRegistrations] = useState<SpaceDayRegistration[]>(
     [],
   );
+  interface Settings {
+    enabled: boolean;
+
+    events: {
+      astroquiz: boolean;
+      astrodesign: boolean;
+      astromodeler: boolean;
+    };
+  }
+
   const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [search, setSearch] = useState("");
   const [eventFilter, setEventFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
@@ -58,6 +69,7 @@ export default function SpaceDayRegistrationsTab() {
 
   useEffect(() => {
     fetchRegistrations();
+    fetchSettings();
 
     const handleRegistrationUpdate = (
       updatedRegistration: SpaceDayRegistration,
@@ -111,12 +123,22 @@ export default function SpaceDayRegistrationsTab() {
 
     socket.on("registrationDeleted", handleDeleteRegistration);
 
+    const handleSettingsUpdate = (updatedSettings: Settings) => {
+      console.log("⚙️ Registration Settings Updated");
+
+      setSettings(updatedSettings);
+    };
+
+    socket.on("registrationSettingsUpdated", handleSettingsUpdate);
+
     return () => {
       socket.off("registrationUpdated", handleRegistrationUpdate);
 
       socket.off("newRegistration", handleNewRegistration);
 
       socket.off("registrationDeleted", handleDeleteRegistration);
+
+      socket.off("registrationSettingsUpdated", handleSettingsUpdate);
     };
   }, []);
 
@@ -132,6 +154,23 @@ export default function SpaceDayRegistrationsTab() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/space-day/settings`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
+
+      setSettings(res.data.settings);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -169,6 +208,38 @@ export default function SpaceDayRegistrationsTab() {
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Delete failed");
     }
+  };
+
+  const updateMaster = async (enabled: boolean) => {
+    await axios.patch(
+      `${import.meta.env.VITE_API_URL}/api/space-day/settings/master`,
+      {
+        enabled,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      },
+    );
+  };
+
+  const updateEvent = async (
+    event: "astroquiz" | "astrodesign" | "astromodeler",
+    enabled: boolean,
+  ) => {
+    await axios.patch(
+      `${import.meta.env.VITE_API_URL}/api/space-day/settings/event`,
+      {
+        event,
+        enabled,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      },
+    );
   };
 
   const downloadExcel = async () => {
@@ -294,6 +365,80 @@ export default function SpaceDayRegistrationsTab() {
           </h2>
         </div>
       </div>
+      {settings && (
+        <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
+          <div className="border-b px-6 py-5">
+            <h2 className="text-2xl font-bold">🚀 Registration Control</h2>
+
+            <p className="mt-1 text-slate-500">
+              Manage registrations in real time.
+            </p>
+          </div>
+
+          <div className="divide-y"></div>
+
+          <div className="flex items-center justify-between border-b pb-5">
+            <div>
+              <h3 className="text-lg font-semibold">🌍 National Space Day</h3>
+
+              <p className="text-sm text-slate-500">
+                Enable or disable all registrations.
+              </p>
+            </div>
+
+            <ToggleSwitch
+              enabled={settings.enabled}
+              onChange={() => updateMaster(!settings.enabled)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between py-5 border-b">
+            <div>
+              <h3 className="font-semibold">📚 Astro Quiz</h3>
+
+              <p className="text-sm text-slate-500">
+                Individual Quiz Competition
+              </p>
+            </div>
+
+            <ToggleSwitch
+              enabled={settings.events.astroquiz}
+              onChange={() =>
+                updateEvent("astroquiz", !settings.events.astroquiz)
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between py-5 border-b">
+            <div>
+              <h3 className="font-semibold">🎨 AI Astro Design</h3>
+
+              <p className="text-sm text-slate-500">Team Design Competition</p>
+            </div>
+            <ToggleSwitch
+              enabled={settings.events.astrodesign}
+              onChange={() =>
+                updateEvent("astrodesign", !settings.events.astrodesign)
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between pt-5">
+            <div>
+              <h3 className="font-semibold">🚀 Astro Modeler</h3>
+
+              <p className="text-sm text-slate-500">Team Model Competition</p>
+            </div>
+
+            <ToggleSwitch
+              enabled={settings.events.astromodeler}
+              onChange={() =>
+                updateEvent("astromodeler", !settings.events.astromodeler)
+              }
+            />
+          </div>
+        </div>
+      )}
       <div className="rounded-2xl border bg-white shadow-sm p-5 flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
         <input
           type="text"

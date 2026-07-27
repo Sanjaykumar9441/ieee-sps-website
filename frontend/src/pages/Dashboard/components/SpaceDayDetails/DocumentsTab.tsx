@@ -1,6 +1,9 @@
 import { useState } from "react";
 import SpaceDayImagePreviewModal from "./SpaceDayImagePreviewModal";
 import { SpaceDayRegistration } from "../../../../components/spaceDay/registration/types";
+import axios from "axios";
+import toast from "react-hot-toast";
+import { saveAs } from "file-saver";
 
 interface Props {
   registration: SpaceDayRegistration;
@@ -8,12 +11,40 @@ interface Props {
 
 export default function DocumentsTab({ registration }: Props) {
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  const downloadAcknowledgement = () => {
-    window.open(
-      `${import.meta.env.VITE_API_URL}/api/space-day/acknowledgement/${registration.registrationId}`,
-      "_blank",
-    );
+  const downloadAcknowledgement = async () => {
+    if (isDownloading) return;
+
+    setIsDownloading(true);
+
+    const toastId = toast.loading("Preparing acknowledgement...");
+
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/space-day/acknowledgement/${registration.registrationId}`,
+        {
+          responseType: "blob",
+        },
+      );
+
+      saveAs(
+        response.data,
+        `National-Space-Day-2026-${registration.registrationId}.pdf`,
+      );
+
+      toast.success("Acknowledgement downloaded successfully!", {
+        id: toastId,
+      });
+    } catch (error) {
+      console.error(error);
+
+      toast.error("Failed to download acknowledgement.", {
+        id: toastId,
+      });
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -45,9 +76,10 @@ export default function DocumentsTab({ registration }: Props) {
 
             <button
               onClick={downloadAcknowledgement}
-              className="rounded-xl bg-blue-600 px-5 py-2 text-white hover:bg-blue-700"
+              disabled={isDownloading}
+              className="rounded-xl bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
             >
-              Download
+              {isDownloading ? "Downloading..." : "Download"}
             </button>
           </div>
 

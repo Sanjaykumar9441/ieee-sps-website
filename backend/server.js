@@ -9,7 +9,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-
+const EventSettings = require("./models/EventSettings");
 const teamRoutes = require("./routes/teamRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const eventRoutes = require("./routes/eventRoutes");
@@ -21,6 +21,7 @@ const spaceDayRegistrationRoutes = require("./routes/spaceDayRegistrationRoutes"
 const spaceDayAdminRoutes = require("./routes/spaceDayAdminRoutes");
 const telegramRoutes = require("./routes/telegramRoutes");
 const spaceDayExportRoutes = require("./routes/spaceDayExportRoutes");
+const eventSettingsRoutes = require("./routes/eventSettingsRoutes");
 const adminAccessRoutes = require("./routes/adminAccessRoutes");
 const compression = require("compression");
 const axios = require("axios");
@@ -95,6 +96,7 @@ app.use("/api/space-day", spaceDayRegistrationRoutes);
 app.use("/api/space-day/admin", spaceDayAdminRoutes);
 app.use("/api/telegram", telegramRoutes);
 app.use("/api/space-day/export", spaceDayExportRoutes);
+app.use("/api/space-day/settings", eventSettingsRoutes);
 app.use("/api/admin-access", adminAccessRoutes);
 app.use("/api", galleryRoutes);
 app.use("/api/sps-applications", spsApplicationRoutes);
@@ -148,6 +150,41 @@ async function ensureAdmin() {
     console.error("❌ Error creating admin:", err.message);
   }
 }
+
+/* ===============================
+   🚀 AUTO CREATE EVENT SETTINGS
+================================= */
+
+async function ensureEventSettings() {
+  try {
+    const existing = await EventSettings.findOne({
+      event: "space-day",
+    });
+
+    if (!existing) {
+      await EventSettings.create({
+        event: "space-day",
+
+        enabled: true,
+
+        events: {
+          astroquiz: true,
+          astrodesign: true,
+          astromodeler: true,
+        },
+      });
+
+      console.log("✅ Space Day settings created");
+    } else {
+      console.log("ℹ️ Space Day settings already exist");
+    }
+  } catch (err) {
+    console.error(
+      "❌ Error creating Event Settings:",
+      err.message,
+    );
+  }
+}
 /* ===============================
    🚀 Start Server
 ================================= */
@@ -184,6 +221,9 @@ server.listen(PORT, "0.0.0.0", () => {
 
     await ensureAdmin();
     console.log("✅ Admin ensured");
+
+    await ensureEventSettings();
+    console.log("✅ Event settings ensured");
 
     // ❗ TEMP DISABLE THIS
     // await setTelegramCommands();
