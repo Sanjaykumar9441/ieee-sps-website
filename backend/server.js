@@ -1,6 +1,9 @@
 require("dotenv").config();
 console.log("MONGO_URI from ENV:", process.env.MONGO_URI);
 
+const http = require("http");
+const { Server } = require("socket.io");
+const { initSocket } = require("./socket");
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -22,6 +25,7 @@ const adminAccessRoutes = require("./routes/adminAccessRoutes");
 const compression = require("compression");
 const axios = require("axios");
 const app = express();
+const server = http.createServer(app);
 app.set("trust proxy", 1);
 
 const fs = require("fs");
@@ -32,18 +36,13 @@ const galleryRoutes = require("./routes/galleryRoutes");
 
 const spsApplicationRoutes = require("./routes/spsApplicationRoutes");
 
-const activityRoutes = require(
-  "./routes/activityRoutes"
-);
-
-
+const activityRoutes = require("./routes/activityRoutes");
 
 //const questionCategoryRoutes = require("./routes/questionCategoryRoutes");
 //const questionBankRoutes = require("./routes/questionBankRoutes");
 //const questionRoutes = require("./routes/questionRoutes");
 //const questionBankQuestionRoutes = require("./routes/questionBankQuestionRoutes");
 //const assessmentRoutes = require("./routes/assessmentRoutes");
-
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
@@ -53,12 +52,9 @@ if (!fs.existsSync(uploadDir)) {
 ================================= */
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://ieeespsaditya.vercel.app"
-    ],
-    credentials: true
-  })
+    origin: ["http://localhost:5173", "https://ieeespsaditya.vercel.app"],
+    credentials: true,
+  }),
 );
 app.use(compression());
 app.use(express.json({ limit: "10mb" }));
@@ -92,13 +88,13 @@ app.use("/admin", adminRoutes);
 app.use("/events", eventRoutes);
 app.use("/contact", contactRoutes);
 app.use("/team", teamRoutes);
-app.use("/api/activity-logs",activityRoutes);
+app.use("/api/activity-logs", activityRoutes);
 app.use("/api", arduinoRegistrationRoutes);
 app.use("/api/membership", membershipRoutes);
 app.use("/api/space-day", spaceDayRegistrationRoutes);
 app.use("/api/space-day/admin", spaceDayAdminRoutes);
 app.use("/api/telegram", telegramRoutes);
-app.use( "/api/space-day/export", spaceDayExportRoutes);
+app.use("/api/space-day/export", spaceDayExportRoutes);
 app.use("/api/admin-access", adminAccessRoutes);
 app.use("/api", galleryRoutes);
 app.use("/api/sps-applications", spsApplicationRoutes);
@@ -160,7 +156,29 @@ const PORT = process.env.PORT;
 console.log("🚀 Starting server...");
 
 // ✅ START SERVER IMMEDIATELY
-app.listen(PORT, "0.0.0.0", () => {
+const http = require("http");
+const { Server } = require("socket.io");
+
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: ["http://localhost:5173", "https://ieeespsaditya.vercel.app"],
+    credentials: true,
+  },
+});
+
+app.set("io", io);
+
+io.on("connection", (socket) => {
+  console.log("🟢 Admin Connected:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("🔴 Admin Disconnected:", socket.id);
+  });
+});
+
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
 
@@ -175,7 +193,6 @@ app.listen(PORT, "0.0.0.0", () => {
 
     // ❗ TEMP DISABLE THIS
     // await setTelegramCommands();
-
   } catch (err) {
     console.error("❌ Background error:", err);
   }

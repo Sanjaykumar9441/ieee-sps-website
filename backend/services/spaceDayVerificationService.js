@@ -3,7 +3,7 @@ const { editTelegramMessage } = require("./telegramService");
 const generateAcknowledgement = require("../pdf/generateAcknowledgement");
 
 const { sendVerificationEmail } = require("../emails/sendVerificationEmail");
-
+const { getIO } = require("../socket");
 const verifyRegistration = async ({
   registrationId,
   paymentStatus,
@@ -53,6 +53,13 @@ const verifyRegistration = async ({
   registration.verifiedAt = new Date();
 
   await registration.save();
+  getIO().emit("registrationUpdated", {
+    registrationId: registration.registrationId,
+    paymentStatus: registration.paymentStatus,
+    status: registration.status,
+  });
+
+  console.log(`📡 Socket Event Sent → ${registration.registrationId}`);
 
   if (registration.telegramChatId && registration.telegramMessageId) {
     await editTelegramMessage(registration);
@@ -60,7 +67,6 @@ const verifyRegistration = async ({
 
   if (paymentStatus === "Verified") {
     try {
-
       const pdfBuffer = await generateAcknowledgement(registration);
 
       await sendVerificationEmail(registration, pdfBuffer);
