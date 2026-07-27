@@ -11,7 +11,7 @@ export default function MissionBrief() {
     {
       icon: CalendarDays,
       title: "Event Date",
-      value: "23 August 2026",
+      value: "13 August 2026",
     },
     {
       icon: MapPin,

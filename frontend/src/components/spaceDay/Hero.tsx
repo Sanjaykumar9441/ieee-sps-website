@@ -209,7 +209,7 @@ export default function Hero() {
           <div className="flex items-center gap-2 text-slate-700">
             <CalendarDays size={20} />
 
-            <span>23 August 2026</span>
+            <span>13 August 2026</span>
           </div>
 
           <div className="flex items-center gap-2 text-slate-700">

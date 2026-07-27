@@ -60,21 +60,10 @@ const verifyRegistration = async ({
 
   if (paymentStatus === "Verified") {
     try {
-      console.log(
-        `Generating acknowledgement for ${registration.registrationId}...`,
-      );
 
       const pdfBuffer = await generateAcknowledgement(registration);
 
-      console.log("Acknowledgement generated successfully.");
-
-      console.log(
-        `Sending verification email to ${registration.members[0].email}...`,
-      );
-
       await sendVerificationEmail(registration, pdfBuffer);
-
-      console.log("Verification email sent successfully.");
     } catch (error) {
       console.error(
         "Verification email failed:",

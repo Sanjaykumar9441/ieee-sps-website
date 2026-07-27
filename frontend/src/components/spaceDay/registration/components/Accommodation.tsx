@@ -164,8 +164,8 @@ export default function Accommodation({
               <input
                 type="date"
                 value={arrivalDate}
-                min="2026-08-22"
-                max="2026-08-23"
+                min="2026-08-12"
+                max="2026-08-13"
                 onChange={(e) => onChange("arrivalDate", e.target.value)}
                 className={errors?.arrivalDate ? errorInputClass : inputClass}
                 disabled={!hasAccommodationMember}
@@ -221,8 +221,8 @@ export default function Accommodation({
               <input
                 type="date"
                 value={departureDate}
-                min="2026-08-23"
-                max="2026-08-24"
+                min="2026-08-13"
+                max="2026-08-14"
                 onChange={(e) => onChange("departureDate", e.target.value)}
                 className={errors?.departureDate ? errorInputClass : inputClass}
                 disabled={!hasAccommodationMember}

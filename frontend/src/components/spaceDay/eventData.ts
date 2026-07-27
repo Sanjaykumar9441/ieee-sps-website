@@ -3,7 +3,7 @@ export const eventData = {
 
   tagline: "Exploring Beyond Boundaries",
 
-  date: "2026-08-23T09:00:00+05:30",
+  date: "2026-08-13T09:00:00+05:30",
 
   venue: "Aditya University, Surampalem",
 

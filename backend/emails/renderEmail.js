@@ -8,8 +8,6 @@ const renderVerificationEmail = async (registration) => {
 
   const theme = themes[registration.eventType] || themes.astroquiz;
 
-  console.log("Rendering verification email...");
-
   const html = await ejs.renderFile(
     path.join(__dirname, "templates", "verification.ejs"),
     {
@@ -22,7 +20,6 @@ const renderVerificationEmail = async (registration) => {
       primaryColor: theme.primary,
     },
   );
-  console.log("Email rendered successfully.");
   return html;
 };
 
