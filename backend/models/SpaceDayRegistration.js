@@ -154,6 +154,11 @@ const SpaceDayRegistrationSchema = new mongoose.Schema(
       default: "",
     },
 
+    paymentScreenshotPublicId: {
+      type: String,
+      default: "",
+    },
+
     registrationFee: {
       type: Number,
       default: 0,
@@ -200,7 +205,7 @@ const SpaceDayRegistrationSchema = new mongoose.Schema(
     verifiedAt: {
       type: Date,
     },
-    
+
     telegramChatId: {
       type: String,
       default: "",

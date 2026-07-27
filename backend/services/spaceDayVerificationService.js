@@ -53,11 +53,16 @@ const verifyRegistration = async ({
   registration.verifiedAt = new Date();
 
   await registration.save();
-  getIO().emit("registrationUpdated", {
-    registrationId: registration.registrationId,
-    paymentStatus: registration.paymentStatus,
-    status: registration.status,
-  });
+
+  const updatedRegistration = await SpaceDayRegistration.findById(
+    registration._id,
+  ).lean();
+
+  getIO().emit("registrationUpdated", updatedRegistration);
+
+  console.log(
+    `📡 Registration Updated → ${updatedRegistration.registrationId}`,
+  );
 
   console.log(`📡 Socket Event Sent → ${registration.registrationId}`);
 

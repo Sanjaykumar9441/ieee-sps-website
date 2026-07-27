@@ -5,9 +5,7 @@ const calculateFees = require("../utils/spaceDayFeeCalculator");
 const spaceDayConfig = require("../config/spaceDayConfig");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
 const generateAcknowledgement = require("../pdf/generateAcknowledgement");
-const {
-  sendRegistrationToTelegram,
-} = require("../services/telegramService");
+const { sendRegistrationToTelegram } = require("../services/telegramService");
 
 /* ============================================
    SUBMIT REGISTRATION
@@ -119,6 +117,7 @@ exports.submitRegistration = async (req, res) => {
     ------------------------------ */
 
     let paymentScreenshot = "";
+    let paymentScreenshotPublicId = "";
 
     if (req.file) {
       const uploadResult = await uploadToCloudinary(
@@ -127,6 +126,8 @@ exports.submitRegistration = async (req, res) => {
       );
 
       paymentScreenshot = uploadResult.secure_url;
+
+      paymentScreenshotPublicId = uploadResult.public_id;
     }
 
     /* ------------------------------
@@ -159,6 +160,8 @@ exports.submitRegistration = async (req, res) => {
 
       paymentScreenshot,
 
+      paymentScreenshotPublicId,
+
       registrationFee: fees.registrationFee,
 
       accommodationFee: fees.accommodationFee,
@@ -173,6 +176,15 @@ exports.submitRegistration = async (req, res) => {
     registration.telegramMessageId = telegramMessage.message_id;
 
     await registration.save();
+    const { getIO } = require("../socket");
+
+    const newRegistration = await SpaceDayRegistration.findById(
+      registration._id,
+    ).lean();
+
+    getIO().emit("newRegistration", newRegistration);
+
+    console.log(`🆕 New Registration → ${newRegistration.registrationId}`);
 
     return res.status(201).json({
       success: true,

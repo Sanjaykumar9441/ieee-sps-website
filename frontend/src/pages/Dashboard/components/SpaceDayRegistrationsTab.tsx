@@ -16,7 +16,15 @@ import {
   exportRegistrations,
 } from "../../../api/spaceDayAdmin";
 import toast from "react-hot-toast";
-import { Eye, CheckCircle, XCircle, Download, User, Users } from "lucide-react";
+import {
+  Eye,
+  CheckCircle,
+  XCircle,
+  Download,
+  User,
+  Users,
+  Trash2,
+} from "lucide-react";
 import { socket } from "@/lib/socket";
 
 export default function SpaceDayRegistrationsTab() {
@@ -51,14 +59,64 @@ export default function SpaceDayRegistrationsTab() {
   useEffect(() => {
     fetchRegistrations();
 
-    socket.on("registrationUpdated", (data) => {
-      console.log("📡 Registration Updated:", data);
+    const handleRegistrationUpdate = (
+      updatedRegistration: SpaceDayRegistration,
+    ) => {
+      console.log("📡 Registration Updated:", updatedRegistration);
 
-      fetchRegistrations();
-    });
+      // Update the table
+      setRegistrations((prev) =>
+        prev.map((registration) =>
+          registration.registrationId === updatedRegistration.registrationId
+            ? updatedRegistration
+            : registration,
+        ),
+      );
+
+      // Update the open modal (if it's open)
+      setSelectedRegistration((prev) =>
+        prev?.registrationId === updatedRegistration.registrationId
+          ? updatedRegistration
+          : prev,
+      );
+    };
+
+    const handleNewRegistration = (newRegistration: SpaceDayRegistration) => {
+      console.log("🆕 New Registration:", newRegistration);
+
+      setRegistrations((prev) => [newRegistration, ...prev]);
+    };
+
+    socket.on("registrationUpdated", handleRegistrationUpdate);
+
+    socket.on("newRegistration", handleNewRegistration);
+
+    const handleDeleteRegistration = ({
+      registrationId,
+    }: {
+      registrationId: string;
+    }) => {
+      console.log("🗑 Registration Deleted:", registrationId);
+
+      setRegistrations((prev) =>
+        prev.filter(
+          (registration) => registration.registrationId !== registrationId,
+        ),
+      );
+
+      setSelectedRegistration((prev) =>
+        prev?.registrationId === registrationId ? null : prev,
+      );
+    };
+
+    socket.on("registrationDeleted", handleDeleteRegistration);
 
     return () => {
-      socket.off("registrationUpdated");
+      socket.off("registrationUpdated", handleRegistrationUpdate);
+
+      socket.off("newRegistration", handleNewRegistration);
+
+      socket.off("registrationDeleted", handleDeleteRegistration);
     };
   }, []);
 
@@ -85,10 +143,31 @@ export default function SpaceDayRegistrationsTab() {
       await updatePaymentStatus(registrationId, paymentStatus);
 
       toast.success(`Payment ${paymentStatus}`);
-
-      fetchRegistrations();
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Something went wrong");
+    }
+  };
+
+  const handleDelete = async (registration: SpaceDayRegistration) => {
+    const confirmed = window.confirm(
+      `Delete ${registration.registrationId}?\n\nThis will permanently delete:\n\n• Registration\n• Payment Screenshot\n\nThis action cannot be undone.`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await axios.delete(
+        `${import.meta.env.VITE_API_URL}/api/space-day/admin/${registration.registrationId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
+
+      toast.success("Registration deleted successfully");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Delete failed");
     }
   };
 
@@ -510,12 +589,13 @@ py-2
 
                         {/* Download */}
 
-                        {registration.paymentStatus === "Verified" && (
+                        {registration.paymentStatus !== "Pending" && (
                           <button
-                            className="rounded-lg bg-blue-600 p-2 text-white hover:bg-blue-700"
-                            title="Download Acknowledgement"
+                            onClick={() => handleDelete(registration)}
+                            className="rounded-md bg-red-600 p-2 text-white hover:bg-red-700 transition"
+                            title="Delete Registration"
                           >
-                            <Download size={18} />
+                            <Trash2 size={18} />
                           </button>
                         )}
                       </div>
@@ -531,7 +611,7 @@ py-2
         <SpaceDayRegistrationDetailsModal
           registration={selectedRegistration}
           onClose={() => setSelectedRegistration(null)}
-          onStatusChanged={fetchRegistrations}
+          onStatusChanged={() => {}}
         />
       )}
     </div>
