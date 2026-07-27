@@ -2,7 +2,7 @@ const SpaceDayRegistration = require("../models/SpaceDayRegistration");
 const { editTelegramMessage } = require("./telegramService");
 const generateAcknowledgement = require("../pdf/generateAcknowledgement");
 
-//const { sendVerificationEmail } = require("../emails/sendVerificationEmail");
+const { sendVerificationEmail } = require("../emails/sendVerificationEmail");
 
 const verifyRegistration = async ({
   registrationId,
@@ -59,17 +59,28 @@ const verifyRegistration = async ({
   }
 
   if (paymentStatus === "Verified") {
-    /*   
-  const pdf =
-    await generateAcknowledgement(
-      registration
-    );
+    try {
+      console.log(
+        `Generating acknowledgement for ${registration.registrationId}...`,
+      );
 
-  await sendVerificationEmail(
-    registration,
-    pdf
-  );
-  */
+      const pdfBuffer = await generateAcknowledgement(registration);
+
+      console.log("Acknowledgement generated successfully.");
+
+      console.log(
+        `Sending verification email to ${registration.members[0].email}...`,
+      );
+
+      await sendVerificationEmail(registration, pdfBuffer);
+
+      console.log("Verification email sent successfully.");
+    } catch (error) {
+      console.error(
+        "Verification email failed:",
+        error.response?.body || error.message || error,
+      );
+    }
   }
 
   return registration;

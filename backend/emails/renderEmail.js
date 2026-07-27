@@ -1,50 +1,29 @@
-const { render } = require("@react-email/render");
-const React = require("react");
+const ejs = require("ejs");
+const path = require("path");
 
-const VerificationEmail =
-  require("./templates/VerificationEmail.jsx");
-
-const themes = require("./theme");
-
-const eventNames = {
-  astroquiz: "Astro Quiz Competition",
-
-  astrodesign: "AI Astro Design Competition",
-
-  astromodeler: "Astro Modeler Competition",
-};
-
-const whatsappLinks = {
-  astroquiz:
-    "https://chat.whatsapp.com/IKoC6O57ezV0VUR7LxXR2p?s=cl&p=a&ilr=1",
-
-  astrodesign:
-    "https://chat.whatsapp.com/L0f3qeoV0MhJAmUZLTv8NL?s=cl&p=a&ilr=1",
-
-  astromodeler:
-    "https://chat.whatsapp.com/G7wc65lWxuGAZgHMHOttFi?s=cl&p=a&ilr=1",
-};
+const themes = require("./templates/theme");
 
 const renderVerificationEmail = async (registration) => {
-  const theme =
-    themes[registration.eventType] ||
-    themes.astroquiz;
-
   const member = registration.members[0];
 
-  return await render(
-    React.createElement(VerificationEmail, {
+  const theme = themes[registration.eventType] || themes.astroquiz;
+
+  console.log("Rendering verification email...");
+
+  const html = await ejs.renderFile(
+    path.join(__dirname, "templates", "verification.ejs"),
+    {
       participantName: member.fullName,
       registrationId: registration.registrationId,
-      eventName: eventNames[registration.eventType],
+      eventName: theme.eventName,
       paymentStatus: registration.paymentStatus,
-      whatsappLink:
-        whatsappLinks[registration.eventType],
-      statusLink:
-        `https://ieeespsaditya.vercel.app/space-day/status/${registration.registrationId}`,
+      whatsappLink: theme.whatsapp,
+      statusLink: `https://ieeespsaditya.vercel.app/space-day/status/${registration.registrationId}`,
       primaryColor: theme.primary,
-    })
+    },
   );
+  console.log("Email rendered successfully.");
+  return html;
 };
 
 module.exports = {
