@@ -1,67 +1,51 @@
-const SpaceDayRegistration = require("../models/SpaceDayRegistration");
-const { getIO } = require("../socket");
+const express = require("express");
+
+const router = express.Router();
+
+const verifyToken = require("../middleware/verifyToken");
+
 const {
-  verifyRegistration,
-} = require("../services/spaceDayVerificationService");
+  updatePaymentStatus,
+  deleteRegistration,
+} = require("../controllers/spaceDayAdminController");
 
-exports.updatePaymentStatus = async (req, res) => {
-  try {
-    const { registrationId } = req.params;
-    const { paymentStatus } = req.body;
+const {
+  getSettings,
+  updateMaster,
+  updateEvent,
+} = require("../controllers/eventSettingsController");
 
-    const registration = await verifyRegistration({
-      registrationId,
-      paymentStatus,
-      verifiedBy: "Dashboard Admin",
-      method: "Dashboard",
-    });
+// Payment
+router.put(
+  "/payment/:registrationId",
+  verifyToken,
+  updatePaymentStatus
+);
 
-    return res.json({
-      success: true,
-      message: "Payment updated successfully.",
-      registration,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
+// Delete
+router.delete(
+  "/:registrationId",
+  verifyToken,
+  deleteRegistration
+);
 
-exports.deleteRegistration = async (req, res) => {
-  try {
-    const { registrationId } = req.params;
+// Registration Settings
+router.get(
+  "/settings",
+  verifyToken,
+  getSettings
+);
 
-    const registration = await SpaceDayRegistration.findOne({
-      registrationId,
-    });
+router.patch(
+  "/settings/master",
+  verifyToken,
+  updateMaster
+);
 
-    if (!registration) {
-      return res.status(404).json({
-        success: false,
-        message: "Registration not found.",
-      });
-    }
+router.patch(
+  "/settings/event",
+  verifyToken,
+  updateEvent
+);
 
-    await SpaceDayRegistration.deleteOne({
-      registrationId,
-    });
-
-    getIO().emit("registrationDeleted", {
-      registrationId,
-    });
-
-    return res.json({
-      success: true,
-      message: "Registration deleted successfully.",
-    });
-  } catch (err) {
-    console.error(err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
+module.exports = router;

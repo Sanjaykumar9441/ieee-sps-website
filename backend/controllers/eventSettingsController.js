@@ -92,3 +92,21 @@ exports.updateEvent = async (req, res) => {
     });
   }
 };
+
+exports.getPublicSettings = async (req, res) => {
+  try {
+    const settings = await EventSettings.findOne({
+      event: "space-day",
+    });
+
+    return res.json({
+      success: true,
+      settings,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};

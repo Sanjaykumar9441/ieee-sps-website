@@ -11,6 +11,10 @@ const {
   getRegistrations,
 } = require("../controllers/spaceDayRegistrationController");
 
+const {
+  getPublicSettings,
+} = require("../controllers/eventSettingsController");
+
 /* ============================================
    CHECKING
 ============================================ */
@@ -23,6 +27,11 @@ router.post(
 /* ============================================
    SPACE DAY REGISTRATION
 ============================================ */
+
+router.get(
+  "/settings/public",
+  getPublicSettings
+);
 
 router.post(
   "/register",

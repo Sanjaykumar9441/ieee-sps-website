@@ -160,7 +160,7 @@ export default function SpaceDayRegistrationsTab() {
   const fetchSettings = async () => {
     try {
       const res = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/space-day/settings`,
+        `${import.meta.env.VITE_API_URL}/api/space-day/admin/settings`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -212,7 +212,7 @@ export default function SpaceDayRegistrationsTab() {
 
   const updateMaster = async (enabled: boolean) => {
     await axios.patch(
-      `${import.meta.env.VITE_API_URL}/api/space-day/settings/master`,
+      `${import.meta.env.VITE_API_URL}/api/space-day/admin/settings/master`,
       {
         enabled,
       },
@@ -229,7 +229,7 @@ export default function SpaceDayRegistrationsTab() {
     enabled: boolean,
   ) => {
     await axios.patch(
-      `${import.meta.env.VITE_API_URL}/api/space-day/settings/event`,
+      `${import.meta.env.VITE_API_URL}/api/space-day/admin/settings/event`,
       {
         event,
         enabled,
