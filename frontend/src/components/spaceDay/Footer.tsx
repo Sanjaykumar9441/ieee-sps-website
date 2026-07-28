@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import {
   Linkedin,
   Mail,
@@ -6,6 +7,8 @@ import {
 } from "lucide-react";
 
 export default function Footer() {
+  const navigate = useNavigate();
+
   return (
     <footer className="border-t border-slate-200 bg-white">
       <div className="mx-auto max-w-7xl px-6 py-12">
@@ -15,15 +18,12 @@ export default function Footer() {
             <h3 className="text-lg font-bold text-slate-900">
               IEEE SPS Student Branch Chapter
             </h3>
-
             <p className="mt-2 text-slate-600">
               Aditya University
             </p>
-
             <p className="text-slate-500">
               Surampalem, Andhra Pradesh
             </p>
-
             <div className="mt-5 flex items-center gap-2 text-slate-600">
               <MapPin size={18} />
               <span className="text-sm">
@@ -37,7 +37,6 @@ export default function Footer() {
             <h3 className="text-lg font-bold text-slate-900">
               Quick Links
             </h3>
-
             <ul className="mt-4 space-y-3 text-sm">
               <li>
                 <a
@@ -47,34 +46,30 @@ export default function Footer() {
                   About Event
                 </a>
               </li>
-
               <li>
                 <a
-                  href="#events"
+                  href="#guidelines"
                   className="text-slate-600 transition hover:text-[#00629B]"
                 >
-                  Competitions
+                  Guidelines
                 </a>
               </li>
-
               <li>
                 <a
-                  href="#shedule"
+                  href="#schedule"
                   className="text-slate-600 transition hover:text-[#00629B]"
                 >
-                  Shedule
+                  Schedule
                 </a>
               </li>
-
               <li>
                 <a
-                  href="#helpdesk"
+                  href="#help"
                   className="text-slate-600 transition hover:text-[#00629B]"
                 >
                   Help Desk
                 </a>
               </li>
-
               <li>
                 <a
                   href="#faq"
@@ -83,8 +78,14 @@ export default function Footer() {
                   FAQ
                 </a>
               </li>
-
-              
+              <li className="pt-2">
+                <button
+                  onClick={() => navigate("/space-day/register")}
+                  className="rounded-xl bg-[#00629B] px-4 py-2 text-xs font-semibold text-white transition-all duration-300 hover:bg-[#004E7C] hover:shadow-md"
+                >
+                  Register
+                </button>
+              </li>
             </ul>
           </div>
 
@@ -93,7 +94,6 @@ export default function Footer() {
             <h3 className="text-lg font-bold text-slate-900">
               Contact
             </h3>
-
             <div className="mt-4 space-y-4 text-sm">
               <a
                 href="https://ieeespsaditya.vercel.app"
@@ -104,17 +104,15 @@ export default function Footer() {
                 <Globe size={18} />
                 ieeespsaditya.vercel.app
               </a>
-
               <a
-                href="mailto:ieeesps@adityauniversity.in"
+                href="mailto:ieee.club.aus@gmail.com"
                 className="flex items-center gap-3 text-slate-600 transition hover:text-[#00629B]"
               >
                 <Mail size={18} />
-                ieeesps@adityauniversity.in
+                ieee.club.aus@gmail.com
               </a>
-
               <a
-                href="https://www.linkedin.com/company/ieee-sps-student-branch-chapter-aditya-university/"
+                href="https://www.linkedin.com/company/ieee-student-chapter-aditya-university/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 text-slate-600 transition hover:text-[#00629B]"
@@ -132,7 +130,6 @@ export default function Footer() {
               © {new Date().getFullYear()} IEEE SPS Student Branch Chapter,
               Aditya University. All Rights Reserved.
             </p>
-
             <p className="text-sm text-slate-500 text-center md:text-right">
               Developed by{" "}
               <a

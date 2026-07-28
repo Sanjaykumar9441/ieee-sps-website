@@ -18,6 +18,7 @@ import SpaceDay from "./pages/SpaceDay";
 import ScrollToTop from "./components/ScrollToTop";
 import SpaceDayRegistration from "./pages/SpaceDayRegistration";
 import RegistrationSuccess from "./pages/RegistrationSuccess";
+import SpaceDayRegistrationStatus from "./pages/SpaceDayRegistrationStatus";
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -56,6 +57,7 @@ function App() {
             <Route path="/space-day" element={<SpaceDay />} />
             <Route path="/space-day/register" element={<SpaceDayRegistration />} />
             <Route path="/space-day/registration-success" element={<RegistrationSuccess />} />
+            <Route path="/space-day/status/:registrationId" element={<SpaceDayRegistrationStatus />} />
           </Routes>
         </div>
 

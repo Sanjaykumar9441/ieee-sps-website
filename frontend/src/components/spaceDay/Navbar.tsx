@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import ieeeLogo from "../../../src/assets/logos/ieee.png";
+import spsLogo from "../../../src/assets/logos/sps.png";
+import adityaLogo from "../../../src/assets/logos/aditya.png";
 
 const sections = [
   { id: "home", label: "Home" },
@@ -56,18 +59,18 @@ export default function Navbar() {
   };
 
   const handleNavigation = (id: string) => {
-  setMenuOpen(false);
+    setMenuOpen(false);
 
-  if (id === "register") {
-    navigate("/space-day/register");
-    return;
-  }
+    if (id === "register") {
+      navigate("/space-day/register");
+      return;
+    }
 
-  document.getElementById(id)?.scrollIntoView({
-    behavior: "smooth",
-    block: "start",
-  });
-};
+    document.getElementById(id)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
 
   return (
     <>
@@ -81,32 +84,34 @@ export default function Navbar() {
         }`}
       >
         <div className="max-w-7xl mx-auto h-16 px-6 flex items-center justify-between">
-
           {/* Logo */}
 
           <button
             onClick={() => scrollToSection("home")}
-            className="flex items-center gap-3"
+            className="flex items-center gap-8"
           >
-            <div className="w-9 h-9 rounded-xl bg-[#00629B] flex items-center justify-center text-white font-bold text-sm">
-              SPS
-            </div>
+            <img
+              src={ieeeLogo}
+              alt="IEEE"
+              className="h-12 w-auto object-contain"
+            />
 
-            <div className="text-left hidden sm:block">
-              <h2 className="text-sm font-bold text-slate-900">
-                IEEE SPS
-              </h2>
+            <img
+              src={spsLogo}
+              alt="IEEE SPS"
+              className="h-12 w-auto object-contain"
+            />
 
-              <p className="text-xs text-slate-500">
-                National Space Day
-              </p>
-            </div>
+            <img
+              src={adityaLogo}
+              alt="Aditya"
+              className="h-12 w-auto object-contain"
+            />
           </button>
 
           {/* Desktop */}
 
-          <div className="hidden md:flex items-center gap-8">
-
+          <div className="hidden md:flex items-center gap-7">
             {sections.map((item) => (
               <button
                 key={item.id}
@@ -124,24 +129,26 @@ export default function Navbar() {
               </button>
             ))}
 
+            {/* Register Button */}
+            <button
+              onClick={() => navigate("/space-day/register")}
+              className="rounded-xl bg-[#00629B] px-4 py-2 text-xs font-semibold text-white transition-all duration-300 hover:bg-[#004E7C] hover:shadow-md"
+            >
+              Register
+            </button>
           </div>
 
           {/* Mobile */}
 
-          <button
-            className="md:hidden"
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
+          <button className="md:hidden" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
-
         </div>
       </nav>
 
       {/* ================= Mobile Menu ================= */}
 
       <AnimatePresence>
-
         {menuOpen && (
           <>
             <motion.div
@@ -164,7 +171,6 @@ export default function Navbar() {
               className="fixed right-0 top-0 h-screen w-72 bg-white z-50 shadow-xl p-8"
             >
               <div className="mt-14 space-y-2">
-
                 {sections.map((item) => (
                   <button
                     key={item.id}
@@ -179,11 +185,16 @@ export default function Navbar() {
                   </button>
                 ))}
 
+                <button
+                  onClick={() => navigate("/space-day/register")}
+                  className="w-full mt-4 rounded-xl bg-[#00629B] px-4 py-3 text-sm font-semibold text-white transition-all duration-300 hover:bg-[#004E7C]"
+                >
+                  Register
+                </button>
               </div>
             </motion.div>
           </>
         )}
-
       </AnimatePresence>
     </>
   );

@@ -9,6 +9,7 @@ const {
   checkMembers,
   downloadAcknowledgement,
   getRegistrations,
+  getRegistrationStatus,
 } = require("../controllers/spaceDayRegistrationController");
 
 const {
@@ -42,6 +43,11 @@ router.post(
 router.get(
   "/acknowledgement/:registrationId",
   downloadAcknowledgement
+);
+
+router.get(
+  "/status/:registrationId",
+  getRegistrationStatus
 );
 
 router.get(

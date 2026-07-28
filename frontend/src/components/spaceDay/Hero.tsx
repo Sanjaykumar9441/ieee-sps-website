@@ -16,16 +16,13 @@ function SpaceIllustration() {
     { cx: 300, cy: 260, r: 1.6, delay: 0.2 },
     { cx: 180, cy: 300, r: 1.3, delay: 1.1 },
   ];
- 
+
   return (
     <div
       aria-hidden="true"
       className="pointer-events-none absolute right-8 top-24 hidden lg:block w-[340px] h-[340px] xl:w-[400px] xl:h-[400px]"
     >
-      <svg
-        viewBox="0 0 400 400"
-        className="w-full h-full overflow-visible"
-      >
+      <svg viewBox="0 0 400 400" className="w-full h-full overflow-visible">
         {/* twinkling stars */}
         {stars.map((s, i) => (
           <motion.circle
@@ -44,7 +41,7 @@ function SpaceIllustration() {
             }}
           />
         ))}
- 
+
         {/* dashed orbit ring */}
         <ellipse
           cx="200"
@@ -57,7 +54,7 @@ function SpaceIllustration() {
           strokeDasharray="4 8"
           opacity="0.55"
         />
- 
+
         {/* orbiting satellite — rotates the whole group around the ring center */}
         <motion.g
           style={{ originX: "200px", originY: "190px" }}
@@ -68,14 +65,39 @@ function SpaceIllustration() {
             {/* satellite body */}
             <rect x="-10" y="-7" width="20" height="14" rx="3" fill="#00629B" />
             {/* solar panels */}
-            <rect x="-34" y="-3" width="20" height="6" rx="1.5" fill="#BFDBFE" stroke="#3B82F6" strokeWidth="0.75" />
-            <rect x="14" y="-3" width="20" height="6" rx="1.5" fill="#BFDBFE" stroke="#3B82F6" strokeWidth="0.75" />
+            <rect
+              x="-34"
+              y="-3"
+              width="20"
+              height="6"
+              rx="1.5"
+              fill="#BFDBFE"
+              stroke="#3B82F6"
+              strokeWidth="0.75"
+            />
+            <rect
+              x="14"
+              y="-3"
+              width="20"
+              height="6"
+              rx="1.5"
+              fill="#BFDBFE"
+              stroke="#3B82F6"
+              strokeWidth="0.75"
+            />
             {/* antenna */}
-            <line x1="0" y1="-7" x2="0" y2="-16" stroke="#00629B" strokeWidth="1.5" />
+            <line
+              x1="0"
+              y1="-7"
+              x2="0"
+              y2="-16"
+              stroke="#00629B"
+              strokeWidth="1.5"
+            />
             <circle cx="0" cy="-17" r="1.8" fill="#00629B" />
           </g>
         </motion.g>
- 
+
         {/* ascending rocket, gentle float + slight tilt */}
         <motion.g
           initial={{ y: 0, rotate: -2 }}
@@ -88,17 +110,25 @@ function SpaceIllustration() {
               d="M0 46 C -6 60, -3 74, 0 84 C 3 74, 6 60, 0 46 Z"
               fill="#FDBA74"
               animate={{ scaleY: [1, 1.25, 1], opacity: [0.9, 1, 0.9] }}
-              transition={{ duration: 0.5, repeat: Infinity, ease: "easeInOut" }}
+              transition={{
+                duration: 0.5,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
               style={{ originX: "0px", originY: "46px" }}
             />
             <motion.path
               d="M0 46 C -3 56, -1.5 66, 0 72 C 1.5 66, 3 56, 0 46 Z"
               fill="#F97316"
               animate={{ scaleY: [1, 1.3, 1] }}
-              transition={{ duration: 0.4, repeat: Infinity, ease: "easeInOut" }}
+              transition={{
+                duration: 0.4,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
               style={{ originX: "0px", originY: "46px" }}
             />
- 
+
             {/* body */}
             <path
               d="M0 -60 C 16 -40, 16 10, 16 40 L -16 40 C -16 10, -16 -40, 0 -60 Z"
@@ -107,9 +137,19 @@ function SpaceIllustration() {
               strokeWidth="2"
             />
             {/* nose accent */}
-            <path d="M0 -60 C 9 -47, 12 -28, 13 -10 L -13 -10 C -12 -28, -9 -47, 0 -60 Z" fill="#00629B" />
+            <path
+              d="M0 -60 C 9 -47, 12 -28, 13 -10 L -13 -10 C -12 -28, -9 -47, 0 -60 Z"
+              fill="#00629B"
+            />
             {/* window */}
-            <circle cx="0" cy="-14" r="7" fill="#BFDBFE" stroke="#00629B" strokeWidth="2" />
+            <circle
+              cx="0"
+              cy="-14"
+              r="7"
+              fill="#BFDBFE"
+              stroke="#00629B"
+              strokeWidth="2"
+            />
             {/* fins */}
             <path d="M-16 20 L-32 42 L-16 42 Z" fill="#00629B" />
             <path d="M16 20 L32 42 L16 42 Z" fill="#00629B" />
@@ -119,7 +159,6 @@ function SpaceIllustration() {
     </div>
   );
 }
- 
 
 export default function Hero() {
   const navigate = useNavigate();
@@ -156,7 +195,7 @@ export default function Hero() {
       </div>
 
       {/* Rocket + Orbiting Satellite */}
-<SpaceIllustration />
+      <SpaceIllustration />
 
       {/* Main */}
 
@@ -172,7 +211,7 @@ export default function Hero() {
           <span className="w-2 h-2 rounded-full bg-blue-600"></span>
 
           <span className="text-sm font-semibold text-blue-700 tracking-wide uppercase">
-            IEEE SPS Student Branch Chapter
+            IEEE SPS Student Branch Chapter - Electronics and Communication Engineering
           </span>
         </motion.div>
 

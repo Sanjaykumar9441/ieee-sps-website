@@ -79,6 +79,24 @@ const MemberSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+
+    attendance: {
+      present: {
+        type: Boolean,
+        default: false,
+      },
+
+      attendedAt: {
+        type: Date,
+        default: null,
+      },
+
+      markedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "AdminAccess",
+        default: null,
+      },
+    },
   },
   { _id: false },
 );

@@ -76,11 +76,11 @@ export default function IndividualRegistration({
   };
   const navigate = useNavigate();
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  }, []);
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+}, [step]);
   return (
     <section className="py-24 bg-[#F8FAFC]">
       <div className="max-w-5xl mx-auto px-6">

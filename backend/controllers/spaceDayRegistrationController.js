@@ -382,3 +382,38 @@ exports.getRegistrations = async (req, res) => {
     });
   }
 };
+
+/* ============================================
+   GET REGISTRATION STATUS
+============================================ */
+
+exports.getRegistrationStatus = async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+
+    const registration = await SpaceDayRegistration.findOne({
+      registrationId,
+    })
+      .populate("members.attendance.markedBy", "username name")
+      .lean();
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: "Registration not found.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      registration,
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ProgressStepper from "./ProgressStepper";
 import { EventType } from "./types";
 import TeamStep1 from "./components/TeamStep1";
@@ -113,6 +113,12 @@ export default function TeamRegistration({
     });
   };
   const navigate = useNavigate();
+  useEffect(() => {
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+}, [step]);
   return (
     <section className="py-24 bg-[#F8FAFC]">
       <div className="max-w-5xl mx-auto px-6">

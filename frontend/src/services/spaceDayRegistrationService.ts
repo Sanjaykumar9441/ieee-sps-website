@@ -68,3 +68,13 @@ export const checkIndividual = async (
 
   return response.data;
 };
+
+export const getRegistrationStatus = async (
+  registrationId: string
+) => {
+  const response = await API.get(
+    `/api/space-day/status/${registrationId}`
+  );
+
+  return response.data;
+};
