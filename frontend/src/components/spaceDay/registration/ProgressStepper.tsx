@@ -34,7 +34,7 @@ export default function ProgressStepper({
   const theme = eventThemes[eventType];
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-6 mb-6">
+    <div className="w-full max-w-4xl mx-auto px-6 mb-16">
       <div className="grid grid-cols-3">
         {steps.map((step, index) => {
           const completed = step.id < currentStep;
@@ -49,7 +49,7 @@ export default function ProgressStepper({
               {index !== steps.length - 1 && (
                 <div
                   className={clsx(
-                    "absolute top-5 left-1/2 w-full h-1 rounded-full",
+                    "absolute top-7 left-1/2 w-full h-1.5 rounded-full",
                     completed ? theme.bg : "bg-slate-200"
                   )}
                 />
@@ -58,12 +58,12 @@ export default function ProgressStepper({
               {/* Circle */}
               <div
                 className={clsx(
-                  "relative z-10 w-11 h-11 rounded-full flex items-center justify-center font-bold text-base transition-all duration-300",
+                  "relative z-10 w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg transition-all duration-300",
 
                   completed && `${theme.bg} text-white`,
 
                   active &&
-                    `${theme.bg} text-white ring-2 ${theme.light} scale-105 shadow-lg`,
+                    `${theme.bg} text-white ring-4 ${theme.light} scale-110 shadow-lg`,
 
                   !completed &&
                     !active &&
@@ -71,18 +71,18 @@ export default function ProgressStepper({
                 )}
               >
                 {completed ? (
-                  <Check className="w-5 h-5" />
+                  <Check className="w-6 h-6" />
                 ) : (
                   step.id
                 )}
               </div>
 
               {/* Text */}
-              <h4 className="mt-3 text-base font-semibold text-slate-900 text-center">
+              <h4 className="mt-5 text-lg font-semibold text-slate-900 text-center">
                 {step.title}
               </h4>
 
-              <p className="mt-1 text-xs text-slate-500 text-center">
+              <p className="mt-1 text-sm text-slate-500 text-center">
                 {step.subtitle}
               </p>
             </div>
