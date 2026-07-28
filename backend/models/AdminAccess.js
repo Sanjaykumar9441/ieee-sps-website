@@ -83,7 +83,12 @@ const adminAccessSchema = new mongoose.Schema(
         default: false,
       },
 
-      registrations: {
+      arduinoRegistrations: {
+        type: Boolean,
+        default: false,
+      },
+
+      spaceDayRegistrations: {
         type: Boolean,
         default: false,
       },

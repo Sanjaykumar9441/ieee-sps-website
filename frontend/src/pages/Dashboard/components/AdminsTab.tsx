@@ -22,7 +22,8 @@ const AdminsTab = () => {
     dashboardOverview: false,
     events: false,
     team: false,
-    registrations: false,
+    arduinoRegistrations: false,
+    spaceDayRegistrations: false,
     messages: false,
     spsApplications: false,
     membershipRegistrations: false,
@@ -134,7 +135,8 @@ const AdminsTab = () => {
       dashboardOverview: admin.permissions.dashboardOverview,
       events: admin.permissions.events,
       team: admin.permissions.team,
-      registrations: admin.permissions.registrations,
+      arduinoRegistrations: admin.permissions.arduinoRegistrations,
+      spaceDayRegistrations: admin.permissions.spaceDayRegistrations,
       messages: admin.permissions.messages,
       spsApplications: admin.permissions.spsApplications,
       membershipRegistrations: admin.permissions.membershipRegistrations,
@@ -196,7 +198,8 @@ const AdminsTab = () => {
         dashboardOverview: false,
         events: false,
         team: false,
-        registrations: false,
+        arduinoRegistrations: false,
+        spaceDayRegistrations: false,
         messages: false,
         spsApplications: false,
         membershipRegistrations: false,
@@ -281,7 +284,8 @@ const AdminsTab = () => {
     { key: "dashboardOverview", label: "Dashboard Overview" },
     { key: "events", label: "Events" },
     { key: "team", label: "Team" },
-    { key: "registrations", label: "Registrations" },
+    { key: "arduinoRegistrations", label: "Arduino Days Registrations" },
+    { key: "spaceDayRegistrations", label: "National Space Day Registrations" },
     { key: "messages", label: "Messages" },
     { key: "spsApplications", label: "SPS Applications" },
     { key: "membershipRegistrations", label: "Membership Registrations" },
@@ -378,13 +382,20 @@ const AdminsTab = () => {
                       setEditingAdminId(existingAdmin._id);
                       setShowPermissionForm(false);
                       setPermissions({
-                        dashboardOverview: existingAdmin.permissions.dashboardOverview,
+                        dashboardOverview:
+                          existingAdmin.permissions.dashboardOverview,
                         events: existingAdmin.permissions.events,
                         team: existingAdmin.permissions.team,
-                        registrations: existingAdmin.permissions.registrations,
+                        arduinoRegistrations:
+                          existingAdmin.permissions.arduinoRegistrations,
+
+                        spaceDayRegistrations:
+                          existingAdmin.permissions.spaceDayRegistrations,
                         messages: existingAdmin.permissions.messages,
-                        spsApplications: existingAdmin.permissions.spsApplications,
-                        membershipRegistrations: existingAdmin.permissions.membershipRegistrations,
+                        spsApplications:
+                          existingAdmin.permissions.spsApplications,
+                        membershipRegistrations:
+                          existingAdmin.permissions.membershipRegistrations,
                       });
                       return;
                     }
@@ -459,7 +470,8 @@ const AdminsTab = () => {
                     dashboardOverview: false,
                     events: false,
                     team: false,
-                    registrations: false,
+                    arduinoRegistrations: false,
+                    spaceDayRegistrations: false,
                     messages: false,
                     spsApplications: false,
                     membershipRegistrations: false,
@@ -551,7 +563,9 @@ const AdminsTab = () => {
                     </p>
                   </div>
 
-                  <div style={{ borderTop: "1px solid rgba(99,179,237,0.08)" }} />
+                  <div
+                    style={{ borderTop: "1px solid rgba(99,179,237,0.08)" }}
+                  />
 
                   {/* Credentials */}
                   <div className="space-y-3">
@@ -570,7 +584,8 @@ const AdminsTab = () => {
                       style={{
                         ...inputStyle,
                         opacity: selectedMember !== null ? 0.6 : 1,
-                        cursor: selectedMember !== null ? "not-allowed" : "text",
+                        cursor:
+                          selectedMember !== null ? "not-allowed" : "text",
                       }}
                     />
                     {!editingAdminId && (
@@ -585,7 +600,9 @@ const AdminsTab = () => {
                     )}
                   </div>
 
-                  <div style={{ borderTop: "1px solid rgba(99,179,237,0.08)" }} />
+                  <div
+                    style={{ borderTop: "1px solid rgba(99,179,237,0.08)" }}
+                  />
 
                   {/* Permissions */}
                   <div className="space-y-3">

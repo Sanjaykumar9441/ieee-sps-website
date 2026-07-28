@@ -390,12 +390,21 @@ const Dashboard = () => {
           ? [{ id: "messages", label: "Messages", icon: Mail }]
           : []),
 
-        ...(permissions.registrations
+        ...(permissions.arduinoRegistrations
           ? [
-              { id: "registrations", label: "Registrations", icon: BookOpen },
+              {
+                id: "registrations",
+                label: "Arduino Registrations",
+                icon: BookOpen,
+              },
+            ]
+          : []),
+
+        ...(permissions.spaceDayRegistrations
+          ? [
               {
                 id: "spaceDayRegistrations",
-                label: "Space Day",
+                label: "Space Day Registrations",
                 icon: BookOpen,
               },
             ]
@@ -721,7 +730,7 @@ const Dashboard = () => {
           {/* ── REGISTRATIONS ── */}
           {!isPaused &&
             activeTab === "registrations" &&
-            (permissions.registrations || isSuperAdmin) && (
+            (permissions.arduinoRegistrations || isSuperAdmin) && (
               <ArduinoRegistrationsTab
                 token={token}
                 navigate={navigate}
@@ -731,7 +740,7 @@ const Dashboard = () => {
 
           {!isPaused &&
             activeTab === "spaceDayRegistrations" &&
-            (permissions.registrations || isSuperAdmin) && (
+            (permissions.spaceDayRegistrations || isSuperAdmin) && (
               <SpaceDayRegistrationsTab />
             )}
 

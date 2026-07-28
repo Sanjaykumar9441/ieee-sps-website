@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ProgressStepper from "./ProgressStepper";
 import IndividualStep1 from "./components/IndividualStep1";
 import IndividualSummary from "./components/IndividualSummary";
@@ -12,6 +12,7 @@ import {
   checkIndividual,
 } from "../../../services/spaceDayRegistrationService";
 import { useNavigate } from "react-router-dom";
+
 interface IndividualRegistrationProps {
   eventType: EventType;
   onBack: () => void;
@@ -74,6 +75,12 @@ export default function IndividualRegistration({
     });
   };
   const navigate = useNavigate();
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }, []);
   return (
     <section className="py-24 bg-[#F8FAFC]">
       <div className="max-w-5xl mx-auto px-6">
