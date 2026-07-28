@@ -10,49 +10,41 @@ const {
   downloadAcknowledgement,
   getRegistrations,
   getRegistrationStatus,
+  markAttendance,
+  getRegistrationForAttendance,
+  getAttendanceSummary,
 } = require("../controllers/spaceDayRegistrationController");
 
-const {
-  getPublicSettings,
-} = require("../controllers/eventSettingsController");
+const { getPublicSettings } = require("../controllers/eventSettingsController");
 
 /* ============================================
    CHECKING
 ============================================ */
 
-router.post(
-  "/check-members",
-  checkMembers
-);
+router.post("/check-members", checkMembers);
 
 /* ============================================
    SPACE DAY REGISTRATION
 ============================================ */
 
-router.get(
-  "/settings/public",
-  getPublicSettings
-);
+router.get("/settings/public", getPublicSettings);
 
 router.post(
   "/register",
   upload.single("paymentScreenshot"),
-  submitRegistration
+  submitRegistration,
 );
 
-router.get(
-  "/acknowledgement/:registrationId",
-  downloadAcknowledgement
-);
+router.get("/acknowledgement/:registrationId", downloadAcknowledgement);
 
-router.get(
-  "/status/:registrationId",
-  getRegistrationStatus
-);
+router.get("/status/:registrationId", getRegistrationStatus);
 
-router.get(
-  "/registrations",
-  getRegistrations
-);
+router.get("/registrations", getRegistrations);
+
+router.post("/attendance", markAttendance);
+
+router.get("/attendance/:registrationId", getRegistrationForAttendance);
+
+router.get("/attendance-summary", getAttendanceSummary);
 
 module.exports = router;

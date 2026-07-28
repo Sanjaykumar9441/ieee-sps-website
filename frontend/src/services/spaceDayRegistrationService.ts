@@ -78,3 +78,35 @@ export const getRegistrationStatus = async (
 
   return response.data;
 };
+
+export const getAttendanceRegistration = async (
+  registrationId: string
+) => {
+  const response = await API.get(
+    `/api/space-day/attendance/${registrationId}`
+  );
+
+  return response.data;
+};
+
+export const markAttendance = async (
+  registrationId: string,
+  memberIndex: number
+) => {
+  const token = localStorage.getItem("token");
+
+  const response = await API.post(
+    "/api/space-day/attendance",
+    {
+      registrationId,
+      memberIndex,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};

@@ -13,6 +13,7 @@ import LoginHistoryTab from "./Dashboard/components/LoginHistoryTab";
 import ArduinoRegistrationsTab from "./Dashboard/components/ArduinoRegistrationsTab";
 import MembershipRegistrationsTab from "./Dashboard/components/MembershipRegistrationsTab";
 import SpaceDayRegistrationsTab from "./Dashboard/components/SpaceDayRegistrationsTab";
+import SpaceDayAttendance from "./Dashboard/components/SpaceDayAttendance";
 import {
   Calendar,
   Mail,
@@ -410,6 +411,16 @@ const Dashboard = () => {
             ]
           : []),
 
+        ...(permissions.spaceDayAttendance
+          ? [
+              {
+                id: "attendance",
+                label: "Space Day Attendance",
+                icon: Users,
+              },
+            ]
+          : []),
+
         ...(permissions.membershipRegistrations
           ? [
               {
@@ -742,6 +753,12 @@ const Dashboard = () => {
             activeTab === "spaceDayRegistrations" &&
             (permissions.spaceDayRegistrations || isSuperAdmin) && (
               <SpaceDayRegistrationsTab />
+            )}
+
+          {!isPaused &&
+            activeTab === "attendance" &&
+            (permissions.spaceDayAttendance || isSuperAdmin) && (
+              <SpaceDayAttendance />
             )}
 
           {!isPaused && activeTab === "admins" && isSuperAdmin && <AdminsTab />}

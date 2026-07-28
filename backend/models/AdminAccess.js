@@ -93,6 +93,11 @@ const adminAccessSchema = new mongoose.Schema(
         default: false,
       },
 
+      spaceDayAttendance: {
+        type: Boolean,
+        default: false,
+      },
+
       messages: {
         type: Boolean,
         default: false,

@@ -6,9 +6,7 @@ const calculateFees = require("../utils/spaceDayFeeCalculator");
 const spaceDayConfig = require("../config/spaceDayConfig");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
 const generateAcknowledgement = require("../pdf/generateAcknowledgement");
-const {
-  sendRegistrationToTelegram,
-} = require("../services/telegramService");
+const { sendRegistrationToTelegram } = require("../services/telegramService");
 
 /* ============================================
    SUBMIT REGISTRATION
@@ -30,36 +28,36 @@ exports.submitRegistration = async (req, res) => {
       departureDate,
       departureTime,
       transactionId,
+      markAttendance,
     } = registrationData;
 
-/* ------------------------------
+    /* ------------------------------
    REGISTRATION SETTINGS
 ------------------------------ */
 
-const settings = await EventSettings.findOne({
-  event: "space-day",
-});
+    const settings = await EventSettings.findOne({
+      event: "space-day",
+    });
 
-if (!settings?.enabled) {
-  return res.status(403).json({
-    success: false,
-    message: "Registrations for National Space Day are closed.",
-  });
-}
+    if (!settings?.enabled) {
+      return res.status(403).json({
+        success: false,
+        message: "Registrations for National Space Day are closed.",
+      });
+    }
 
-if (!settings.events[eventType]) {
-  const eventNames = {
-    astroquiz: "Astro Quiz",
-    astrodesign: "AI Astro Design",
-    astromodeler: "Astro Modeler",
-  };
+    if (!settings.events[eventType]) {
+      const eventNames = {
+        astroquiz: "Astro Quiz",
+        astrodesign: "AI Astro Design",
+        astromodeler: "Astro Modeler",
+      };
 
-  return res.status(403).json({
-    success: false,
-    message: `Registrations for ${eventNames[eventType]} are closed.`,
-  });
-}
-
+      return res.status(403).json({
+        success: false,
+        message: `Registrations for ${eventNames[eventType]} are closed.`,
+      });
+    }
 
     /* ------------------------------
        VALIDATION
@@ -412,6 +410,152 @@ exports.getRegistrationStatus = async (req, res) => {
     console.error(err);
 
     return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+/* ==========================================
+   MARK ATTENDANCE
+========================================== */
+
+exports.markAttendance = async (req, res) => {
+  try {
+    const { registrationId, memberIndex, markedBy } = req.body;
+
+    const registration = await SpaceDayRegistration.findOne({
+      registrationId,
+    });
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: "Registration not found.",
+      });
+    }
+
+    if (memberIndex < 0 || memberIndex >= registration.members.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid member.",
+      });
+    }
+
+    const member = registration.members[memberIndex];
+
+    if (member.attendance?.present) {
+      return res.json({
+        success: true,
+        alreadyPresent: true,
+        attendance: member.attendance,
+      });
+    }
+
+    member.attendance = {
+      present: true,
+      markedAt: new Date(),
+      markedBy: markedBy || "Admin",
+    };
+
+    registration.markModified("members");
+
+    await registration.save();
+
+    const { getIO } = require("../socket");
+
+    getIO().emit("attendanceUpdated", {
+      registrationId,
+      memberIndex,
+      attendance: member.attendance,
+    });
+
+    const updatedRegistration = await SpaceDayRegistration.findOne({
+      registrationId,
+    }).lean();
+
+    return res.json({
+      success: true,
+      message: "Attendance marked successfully.",
+      attendance: member.attendance,
+      registration: updatedRegistration,
+    });
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to mark attendance.",
+    });
+  }
+};
+
+/* ==========================================
+   GET REGISTRATION FOR ADMIN
+========================================== */
+
+exports.getRegistrationForAttendance = async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+
+    const registration = await SpaceDayRegistration.findOne({
+      registrationId,
+    }).lean();
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: "Registration not found.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      registration,
+    });
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+/* ==========================================
+   ATTENDANCE SUMMARY
+========================================== */
+
+exports.getAttendanceSummary = async (req, res) => {
+  try {
+    const registrations = await SpaceDayRegistration.find().lean();
+
+    let registered = 0;
+    let present = 0;
+
+    registrations.forEach((registration) => {
+      registered += registration.members.length;
+
+      registration.members.forEach((member) => {
+        if (member.attendance?.present) {
+          present++;
+        }
+      });
+    });
+
+    return res.json({
+      success: true,
+      registered,
+      present,
+      absent: registered - present,
+      percentage:
+        registered === 0
+          ? 0
+          : Number(((present / registered) * 100).toFixed(1)),
+    });
+  } catch (err) {
+    res.status(500).json({
       success: false,
       message: err.message,
     });
