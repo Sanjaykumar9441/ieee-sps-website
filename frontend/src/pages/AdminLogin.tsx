@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { Lock, Zap } from "lucide-react";
+import SpaceDayAttendance from "./Dashboard/components/SpaceDayAttendance";
 
 const AdminLogin = () => {
   const [loginType, setLoginType] = useState("superadmin");
@@ -37,6 +38,7 @@ const AdminLogin = () => {
             team: true,
             arduinoRegistrations: true,
             spaceDayRegistrations: true,
+            SpaceDayAttendance: true,
             membershipRegistrations: true,
             messages: true,
             spsApplications: true,
