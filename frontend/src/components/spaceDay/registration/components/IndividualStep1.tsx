@@ -25,23 +25,23 @@ export default function IndividualStep1({
 }: IndividualStep1Props) {
   const theme = eventThemes[eventType];
   return (
-    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg">
+   <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg h-[78vh] flex flex-col">
       <div className={`h-2 bg-gradient-to-r ${theme.gradient}`} />
 
-      <div className="p-8 md:p-10">
-        <h2 className="text-3xl font-bold text-slate-900">
-          Individual Registration
-        </h2>
+     <div className="flex flex-col h-full">
+        <div className="px-8 pt-6 pb-4 border-b border-slate-200">
+          <h2 className="text-2xl font-bold text-slate-900">
+            Individual Registration
+          </h2>
 
-        <div
-          className={`mt-3 h-1 w-32 rounded-full bg-gradient-to-r ${theme.gradient}`}
-        />
+          <div
+            className={`mt-2 h-1 w-24 rounded-full bg-gradient-to-r ${theme.gradient}`}
+          />
 
-        <p className={`mt-3 font-medium ${theme.text}`}>
-          Fill in your details.
-        </p>
+          <p className={`mt-2 text-sm ${theme.text}`}>Fill in your details.</p>
+        </div>
 
-        <div className="mt-10">
+        <div className="flex-1 overflow-y-auto px-8 py-6">
           <MemberCard
             eventType={eventType}
             member={formData}
@@ -62,11 +62,11 @@ export default function IndividualStep1({
           onChange={updateField}
           errors={errors}
         />
-
-        <div className="flex justify-between mt-12">
-          <button
-            onClick={onBack}
-            className={`
+      </div>
+      <div className="border-t border-slate-200 px-8 py-5 flex justify-between bg-white">
+        <button
+          onClick={onBack}
+          className={`
   rounded-xl
   border
   ${theme.border}
@@ -78,13 +78,13 @@ export default function IndividualStep1({
   transition
   hover:shadow-md
 `}
-          >
-            ← Back
-          </button>
+        >
+          ← Back
+        </button>
 
-          <button
-            onClick={onNext}
-            className={`
+        <button
+          onClick={onNext}
+          className={`
   rounded-xl
   bg-gradient-to-r
   ${theme.gradient}
@@ -97,10 +97,9 @@ export default function IndividualStep1({
   duration-300
   hover:scale-105
 `}
-          >
-            Next →
-          </button>
-        </div>
+        >
+          Next →
+        </button>
       </div>
     </div>
   );
