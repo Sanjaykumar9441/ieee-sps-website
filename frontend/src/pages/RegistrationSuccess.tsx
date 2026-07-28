@@ -20,6 +20,7 @@ interface RegistrationSuccessState {
     eventType: EventType;
     registrationType: "team" | "individual";
     teamName?: string;
+    selectedTheme?: string;
     members: any[];
     registrationFee: number;
     totalFee: number;
@@ -222,20 +223,45 @@ export default function RegistrationSuccess() {
                   Pending Verification
                 </div>
               </div>
+              {/* Registration Date / Selected Theme */}
 
-              {/* Registration Date */}
+              {registration.eventType === "astromodeler" ? (
+                <>
+                  <div className="rounded-2xl border border-slate-200 p-5">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays size={18} className={theme.text} />
 
-              <div className="rounded-2xl border border-slate-200 p-5 md:col-span-2">
-                <div className="flex items-center gap-2">
-                  <CalendarDays size={18} className={theme.text} />
+                      <p className="text-sm text-slate-500">
+                        Registration Date
+                      </p>
+                    </div>
 
-                  <p className="text-sm text-slate-500">Registration Date</p>
+                    <p className="mt-3 text-lg font-semibold">
+                      {new Date().toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 p-5">
+                    <p className="text-sm text-slate-500">Selected Theme</p>
+
+                    <p className={`mt-3 text-lg font-bold ${theme.text}`}>
+                      {registration.selectedTheme || "-"}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-2xl border border-slate-200 p-5 md:col-span-2">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays size={18} className={theme.text} />
+
+                    <p className="text-sm text-slate-500">Registration Date</p>
+                  </div>
+
+                  <p className="mt-3 text-lg font-semibold">
+                    {new Date().toLocaleString()}
+                  </p>
                 </div>
-
-                <p className="mt-3 text-lg font-semibold">
-                  {new Date().toLocaleString()}
-                </p>
-              </div>
+              )}
             </div>
           </div>
         </motion.div>

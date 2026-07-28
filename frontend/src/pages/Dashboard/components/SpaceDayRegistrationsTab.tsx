@@ -189,7 +189,7 @@ export default function SpaceDayRegistrationsTab() {
 
   const handleDelete = async (registration: SpaceDayRegistration) => {
     const confirmed = window.confirm(
-      `Delete ${registration.registrationId}?\n\nThis will permanently delete:\n\n• Registration\n• Payment Screenshot\n\nThis action cannot be undone.`,
+      `Delete ${registration.registrationId}?\n\nThis will permanently delete:\n\n• Registration \n\nThis action cannot be undone.`,
     );
 
     if (!confirmed) return;
