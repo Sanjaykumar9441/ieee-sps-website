@@ -213,11 +213,12 @@ router.get("/excel", verifyToken, async (req, res) => {
       ];
 
       // Auto filter
-      sheet.autoFilter = {
-        from: "A1",
-        to: sheet.getRow(1).lastCell.address,
-      };
 
+      if (sheet === accommodationSheet) {
+        sheet.autoFilter = "A1:L1";
+      } else {
+        sheet.autoFilter = "A1:Q1";
+      }
       // Style header
       const header = sheet.getRow(1);
 
@@ -428,7 +429,15 @@ router.get("/excel", verifyToken, async (req, res) => {
 
     summarySheet.addRow(["Pending Amount (₹)", pendingAmount]);
 
-    summarySheet.addRow(["Total Registration Value (₹)", totalAmount]);
+    const totalRegistrationValue = registrations.reduce(
+      (sum, r) => sum + r.totalFee,
+      0,
+    );
+
+    summarySheet.addRow([
+      "Total Registration Value (₹)",
+      totalRegistrationValue,
+    ]);
 
     summarySheet.addRow([]);
 
@@ -438,7 +447,7 @@ router.get("/excel", verifyToken, async (req, res) => {
    SUMMARY SECTION HEADERS
 ------------------------------ */
 
-    [4, 10, 15, 20].forEach((rowNumber) => {
+    [4, 10, 14, 18].forEach((rowNumber) => {
       const titleCell = summarySheet.getCell(`A${rowNumber}`);
 
       titleCell.font = {
@@ -497,7 +506,7 @@ router.get("/excel", verifyToken, async (req, res) => {
         max = Math.max(max, cell.value ? cell.value.toString().length + 2 : 10);
       });
 
-      column.width = max;
+      column.width = Math.min(max, 35);
     });
 
     summarySheet.mergeCells("A1:B1");

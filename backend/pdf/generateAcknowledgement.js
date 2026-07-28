@@ -6,8 +6,9 @@ const QRCode = require("qrcode");
 
 const themes = require("./theme");
 
-const generateAcknowledgement = async (registration) => {
+const { astroModelerThemes } = require("../config/themeConfig");
 
+const generateAcknowledgement = async (registration) => {
   const htmlPath = path.join(__dirname, "templates", "acknowledgement.html");
   let html = fs.readFileSync(htmlPath, "utf8");
 
@@ -44,6 +45,11 @@ const generateAcknowledgement = async (registration) => {
     astrodesign: "AI Astro-Design Competition",
     astromodeler: "Astro-Modeler Competition",
   };
+
+  const selectedTheme = astroModelerThemes.find(
+    (theme) => theme.id === registration.selectedTheme,
+  );
+
   const eventTitle = eventNames[registration.eventType];
 
   const registrationType =
@@ -163,7 +169,17 @@ const generateAcknowledgement = async (registration) => {
     themeSection = `
       <div class="theme-note">
         <div class="label">Selected Theme</div>
-        <div class="value">${registration.selectedTheme}</div>
+        <div class="value">
+  ${selectedTheme?.title || registration.selectedTheme}
+</div>
+
+${
+  selectedTheme?.subtitle
+    ? `<div style="font-size:13px;color:#666;margin-top:4px;">
+         ${selectedTheme.subtitle}
+       </div>`
+    : ""
+}
       </div>
   `;
   }

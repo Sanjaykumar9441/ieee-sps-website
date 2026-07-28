@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { eventThemes } from "../components/spaceDay/registration/eventTheme";
 import { EventType } from "../components/spaceDay/registration/types";
+import { astroModelerThemes } from "../components/spaceDay/registration/data/themeConfig";
 
 interface RegistrationSuccessState {
   registration: {
@@ -45,6 +46,16 @@ export default function RegistrationSuccess() {
   const { registration, registrationId } = state;
 
   const theme = eventThemes[registration.eventType as EventType];
+  
+  const selectedTheme = astroModelerThemes.find(
+    (theme) => theme.id === registration.selectedTheme,
+  );
+
+  const eventNames = {
+  astroquiz: "Astro Quiz",
+  astrodesign: "AI Astro Design",
+  astromodeler: "Astro Modeler",
+};
 
   const downloadAcknowledgement = async () => {
     if (isDownloading) return;
@@ -151,7 +162,7 @@ export default function RegistrationSuccess() {
                 <p className="text-sm text-slate-500">Event</p>
 
                 <p className="mt-2 text-xl font-semibold">
-                  {registration.eventType}
+                  {eventNames[registration.eventType]}
                 </p>
               </div>
 
@@ -244,9 +255,17 @@ export default function RegistrationSuccess() {
                   <div className="rounded-2xl border border-slate-200 p-5">
                     <p className="text-sm text-slate-500">Selected Theme</p>
 
-                    <p className={`mt-3 text-lg font-bold ${theme.text}`}>
-                      {registration.selectedTheme || "-"}
-                    </p>
+                    <div className="mt-3">
+                      <p className={`text-lg font-bold ${theme.text}`}>
+                        {selectedTheme?.title || "-"}
+                      </p>
+
+                      {selectedTheme?.subtitle && (
+                        <p className="mt-1 text-sm text-slate-500">
+                          {selectedTheme.subtitle}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </>
               ) : (
