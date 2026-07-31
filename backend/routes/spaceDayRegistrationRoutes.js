@@ -48,8 +48,6 @@ router.get("/registrations", getRegistrations);
 
 router.post("/attendance", markAttendance);
 
-router.get("/attendance/:registrationId", getRegistrationForAttendance);
-
 router.get("/attendance-summary", getAttendanceSummary);
 
 router.get("/attendance/logs", getAttendanceLogs);
@@ -61,5 +59,7 @@ router.post("/attendance/bulk", bulkAttendance);
 router.post("/attendance/remove", removeAttendance);
 
 router.get("/attendance/missing", getMissingParticipants);
+
+router.get("/attendance/:registrationId", getRegistrationForAttendance);
 
 module.exports = router;
