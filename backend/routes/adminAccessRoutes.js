@@ -7,6 +7,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const logActivity = require("../utils/logActivity");
 const UAParser = require("ua-parser-js");
+const { getIO } = require("../socket");
 
 /* =========================
    GET ALL ADMINS
@@ -69,11 +70,16 @@ router.put("/:id", verifyToken, async (req, res) => {
       req.params.id,
       req.body,
       {
-        new: true,
+        returnDocument: "after"
       },
     );
 
     await logActivity("Super Admin", "Updated Admin Access", updated.username);
+    getIO().emit("adminPermissionsUpdated", {
+      adminId: updated._id,
+      permissions: updated.permissions,
+      isPaused: updated.isPaused,
+    });
 
     res.json(updated);
   } catch (err) {
@@ -139,25 +145,20 @@ router.post("/login", async (req, res) => {
 
     admin.lastLogin = new Date();
 
-const parser = new UAParser(
-  req.headers["user-agent"]
-);
+    const parser = new UAParser(req.headers["user-agent"]);
 
-const browser =
-  parser.getBrowser().name || "Unknown Browser";
+    const browser = parser.getBrowser().name || "Unknown Browser";
 
-const os =
-  parser.getOS().name || "Unknown OS";
+    const os = parser.getOS().name || "Unknown OS";
 
-admin.loginHistory.unshift({
-  loginAt: new Date(),
-  device: `${browser} • ${os}`,
-});
+    admin.loginHistory.unshift({
+      loginAt: new Date(),
+      device: `${browser} • ${os}`,
+    });
 
-admin.loginHistory =
-  admin.loginHistory.slice(0, 10);
+    admin.loginHistory = admin.loginHistory.slice(0, 10);
 
-await admin.save();
+    await admin.save();
 
     const token = jwt.sign(
       {
@@ -174,6 +175,7 @@ await admin.save();
     res.json({
       success: true,
       token,
+      adminId: admin._id,
       role: "admin",
       permissions: admin.permissions,
       member: admin.memberId,
@@ -300,6 +302,12 @@ router.put("/toggle-status/:id", verifyToken, async (req, res) => {
 
     await admin.save();
 
+    getIO().emit("adminPermissionsUpdated", {
+      adminId: admin._id,
+      permissions: admin.permissions,
+      isPaused: admin.isPaused,
+    });
+
     await logActivity(
       "Super Admin",
       admin.isPaused ? "Paused Admin" : "Resumed Admin",
@@ -405,7 +413,7 @@ router.delete("/clear-all", verifyToken, async (req, res) => {
           loginHistory: [],
           lastLogin: null,
         },
-      }
+      },
     );
 
     res.json({

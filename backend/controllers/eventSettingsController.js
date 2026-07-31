@@ -37,7 +37,7 @@ exports.updateMaster = async (req, res) => {
         enabled,
       },
       {
-        new: true,
+        returnDocument: "after"
       },
     );
     getIO().emit("registrationSettingsUpdated", settings);
@@ -125,17 +125,13 @@ exports.updateAttendanceStatus = async (req, res) => {
         attendanceOpen,
       },
       {
-        new: true,
-      }
+        returnDocument: "after"
+      },
     );
 
     getIO().emit("attendanceSettingsUpdated", settings);
 
-    console.log(
-      `⚙️ Attendance ${
-        attendanceOpen ? "Opened" : "Closed"
-      }`
-    );
+    console.log(`⚙️ Attendance ${attendanceOpen ? "Opened" : "Closed"}`);
 
     return res.json({
       success: true,

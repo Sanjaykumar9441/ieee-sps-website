@@ -65,7 +65,7 @@ router.post("/", verifyToken, upload.single("photo"), async (req, res) => {
 
     await Team.updateMany(
       { priority: { $gte: newPriority } },
-      { $inc: { priority: 1 } }
+      { $inc: { priority: 1 } },
     );
 
     await newMember.save();
@@ -99,7 +99,7 @@ router.put("/:id", verifyToken, upload.single("photo"), async (req, res) => {
             _id: { $ne: member._id },
             priority: { $gte: newPriority, $lt: oldPriority },
           },
-          { $inc: { priority: 1 } }
+          { $inc: { priority: 1 } },
         );
       } else {
         await Team.updateMany(
@@ -107,7 +107,7 @@ router.put("/:id", verifyToken, upload.single("photo"), async (req, res) => {
             _id: { $ne: member._id },
             priority: { $gt: oldPriority, $lte: newPriority },
           },
-          { $inc: { priority: -1 } }
+          { $inc: { priority: -1 } },
         );
       }
     }
@@ -122,7 +122,7 @@ router.put("/:id", verifyToken, upload.single("photo"), async (req, res) => {
     }
 
     const updated = await Team.findByIdAndUpdate(req.params.id, updateData, {
-      new: true,
+      returnDocument: "after"
     });
 
     res.json(updated);
@@ -150,7 +150,7 @@ router.delete("/:id", verifyToken, async (req, res) => {
 
     await Team.updateMany(
       { priority: { $gt: deletedPriority } },
-      { $inc: { priority: -1 } }
+      { $inc: { priority: -1 } },
     );
 
     res.json({ msg: "Member deleted successfully" });

@@ -184,6 +184,18 @@ ${
   `;
   }
 
+  /* ==========================
+   PAGE DENSITY / COMPACT MODE
+   3+ team members, or a selected theme, both push the content block
+   taller than a relaxed single-page layout can absorb. Switch to a
+   tighter spacing pass in those cases so the page still reads as
+   "designed" rather than "overflowing".
+========================== */
+
+  const memberCount = registration.members?.length || 1;
+  const isDense = memberCount >= 3 || Boolean(registration.selectedTheme);
+  const pageClass = isDense ? "compact" : "";
+
   html = html
     .replace(/{{css}}/g, css)
     .replace(/{{ieeeLogo}}/g, ieeeLogo)
@@ -204,7 +216,8 @@ ${
     .replace(/{{paymentStatus}}/g, paymentStatus)
     .replace(/{{transactionId}}/g, registration.transactionId)
     .replace(/{{registeredOn}}/g, registeredOn)
-    .replace(/{{qrCode}}/g, qrCode);
+    .replace(/{{qrCode}}/g, qrCode)
+    .replace(/{{pageClass}}/g, pageClass);
 
   const browser = await chromium.launch({
     headless: true,

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { socket } from "../lib/socket";
 import DashboardOverviewTab from "./Dashboard/components/DashboardOverviewTab";
 import UploadEventTab from "./Dashboard/components/UploadEventTab";
 import ManageEventsTab from "./Dashboard/components/ManageEventsTab";
@@ -154,6 +155,25 @@ const Dashboard = () => {
   useEffect(() => {
     if (activeTab === "messages") fetchMessages();
   }, [activeTab]);
+
+  useEffect(() => {
+    socket.on("adminPermissionsUpdated", (data) => {
+      const myAdminId = localStorage.getItem("adminId");
+
+      if (myAdminId !== data.adminId) return;
+
+      localStorage.setItem("permissions", JSON.stringify(data.permissions));
+
+      localStorage.setItem("isPaused", JSON.stringify(data.isPaused));
+
+      setPermissions(data.permissions);
+      setIsPaused(data.isPaused);
+    });
+
+    return () => {
+      socket.off("adminPermissionsUpdated");
+    };
+  }, []);
 
   /* FETCH */
   const fetchEvents = async () => {
@@ -559,7 +579,9 @@ const Dashboard = () => {
 
         {/* SIDEBAR */}
         <aside
-          className={`fixed lg:sticky top-0 lg:top-[65px] h-screen lg:h-[calc(100vh-65px)] z-20 flex-shrink-0 transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+          className={`fixed lg:sticky top-[65px] lg:top-[65px] h-[calc(100vh-65px)] lg:h-[calc(100vh-65px)] overflow-y-auto z-20 flex-shrink-0 transition-transform duration-300 ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          }`}
           style={{
             width: "224px",
             backgroundColor: "#0a1020",

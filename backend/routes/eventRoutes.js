@@ -109,7 +109,7 @@ router.put(
       }
 
       const updated = await Event.findByIdAndUpdate(req.params.id, updateData, {
-        new: true,
+       returnDocument: "after"
       });
 
       res.json(updated);

@@ -874,18 +874,20 @@ export default function SpaceDayAttendance() {
         onClose={() => setSelectedRegistration(null)}
       />
 
-      <div className="mb-5 flex justify-end">
-        <button
-          onClick={() => setShowMissing(!showMissing)}
-          className="rounded-xl border border-red-300 bg-red-50 px-5 py-3 font-semibold text-red-700 hover:bg-red-100"
-        >
-          {showMissing
-            ? "Hide Missing Participants"
-            : "Show Missing Participants"}
-        </button>
-      </div>
+      {isSuperAdmin && (
+        <div className="mb-5 flex justify-end">
+          <button
+            onClick={() => setShowMissing(!showMissing)}
+            className="rounded-xl border border-red-300 bg-red-50 px-5 py-3 font-semibold text-red-700 hover:bg-red-100"
+          >
+            {showMissing
+              ? "Hide Missing Participants"
+              : "Show Missing Participants"}
+          </button>
+        </div>
+      )}
 
-      {showMissing && (
+      {isSuperAdmin && showMissing && (
         <>
           <div className="mb-6 rounded-2xl border bg-white p-6 shadow">
             <div className="flex items-center justify-between">

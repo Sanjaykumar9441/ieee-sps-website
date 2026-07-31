@@ -24,12 +24,19 @@ body {
   --paper: #ffffff;
 }
 
+/* ============ PAGE ============
+   FIX: the page used to be a fixed 1123px box with overflow:hidden.
+   Any registration whose content grew past that (3+ members, a theme
+   box, etc) got silently clipped/overlapped instead of pushing the
+   perforation/stub/footer down. Now it has a floor of one A4 page but
+   is free to grow — Chromium's PDF export paginates cleanly onto a
+   second page if content is unusually long, instead of mangling one. */
+
 .page {
   width: 794px;
-  height: 1123px;
+  min-height: 1123px;
   background: var(--paper);
   position: relative;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -42,6 +49,7 @@ body {
   flex-shrink: 0;
   overflow: hidden;
   border-bottom: 3px solid var(--primary-color);
+  break-inside: avoid;
 }
 
 .masthead-sky {
@@ -190,15 +198,22 @@ body {
   font-weight: 600;
   letter-spacing: 0.3px;
   background: var(--gradient);
+  break-inside: avoid;
 }
 
-/* ============ CONTENT ============ */
+/* ============ CONTENT ============
+   FIX: justify-content:center used to center content within a fixed-
+   height flex box. When content grew taller than the box it overflowed
+   equally up AND down, shoving the top under the masthead and the
+   bottom into the perforation/stub. Left-aligned (flex-start) means
+   growth only ever pushes things down, which is what actually reads
+   as "the layout adapted" instead of "the layout broke". */
 
 .content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 40px;
   padding: 44px 56px;
   min-height: 0;
@@ -206,6 +221,7 @@ body {
 
 .field-group {
   width: 100%;
+  break-inside: avoid;
 }
 
 .section-label {
@@ -259,6 +275,7 @@ body {
   border-radius: 10px;
   background: var(--secondary-color);
   border: 1px solid var(--primary-color);
+  break-inside: avoid;
 }
 
 .theme-note .label {
@@ -334,6 +351,7 @@ body {
   gap: 26px;
   padding: 22px 56px;
   background: #fbfbfd;
+  break-inside: avoid;
 }
 
 .stub-eyebrow {
@@ -390,6 +408,7 @@ body {
 .footer {
   flex-shrink: 0;
   padding: 16px 56px 24px;
+  break-inside: avoid;
 }
 
 .footer-line {
@@ -400,49 +419,43 @@ body {
   margin-bottom: 12px;
 }
 
-.footer-content{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    gap:40px;
-    font-size:12px;
-    color:var(--muted);
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 40px;
+  font-size: 12px;
+  color: var(--muted);
 }
 
-.footer-content > div:first-child{
-    flex:1;
+.footer-content > div:first-child {
+  flex: 1;
 }
 
-.footer-org{
-    width:250px;
-    flex-shrink:0;
-    text-align:right;
-    line-height:1.6;
-    white-space:nowrap;
-}
-
-.footer-org strong{
-    display:block;
-    color:var(--ink);
-    font-size:13px;
-}
-
-.member {
-  margin-bottom: 12px;
+.footer-org {
+  width: 250px;
+  flex-shrink: 0;
+  text-align: right;
   line-height: 1.6;
+  white-space: nowrap;
 }
 
-.member strong {
-  color: var(--primary-color);
+.footer-org strong {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
 }
 
 .member {
   margin-bottom: 14px;
   padding-bottom: 10px;
   border-bottom: 1px dashed #e5e7eb;
+  line-height: 1.6;
 }
 
 .member:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
   border-bottom: none;
 }
 
@@ -461,4 +474,61 @@ body {
   font-size: 12px;
   color: #64748b;
   margin-top: 2px;
+}
+
+/* ============ COMPACT MODE ============
+   Applied automatically (see generateAcknowledgement.js) whenever a
+   registration is "dense" — 3+ team members, or a selected theme, or
+   both. Tightens spacing across the board so these cases still land
+   on a single, well-proportioned A4 page instead of just growing
+   past it. */
+
+.page.compact .masthead {
+  height: 138px;
+}
+
+.page.compact .masthead-center h1 {
+  font-size: 26px;
+}
+
+.page.compact .event-bar {
+  height: 36px;
+  font-size: 16px;
+}
+
+.page.compact .content {
+  gap: 24px;
+  padding: 30px 56px;
+}
+
+.page.compact .section-label {
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+}
+
+.page.compact .grid {
+  row-gap: 12px;
+}
+
+.page.compact .member {
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+}
+
+.page.compact .theme-note {
+  margin-top: 14px;
+  padding: 10px 16px;
+}
+
+.page.compact .stub {
+  padding: 14px 56px;
+}
+
+.page.compact .qr {
+  width: 70px;
+  height: 70px;
+}
+
+.page.compact .footer {
+  padding: 10px 56px 16px;
 }
