@@ -46,20 +46,22 @@ router.get("/status/:registrationId", getRegistrationStatus);
 
 router.get("/registrations", getRegistrations);
 
-router.post("/attendance", markAttendance);
+const verifyToken = require("../middleware/verifyToken");
 
-router.get("/attendance-summary", getAttendanceSummary);
+router.post("/attendance", verifyToken, markAttendance);
 
-router.get("/attendance/logs", getAttendanceLogs);
+router.get("/attendance-summary", verifyToken, getAttendanceSummary);
 
-router.get("/attendance/export", exportAttendanceExcel);
+router.get("/attendance/logs", verifyToken, getAttendanceLogs);
 
-router.post("/attendance/bulk", bulkAttendance);
+router.get("/attendance/export", verifyToken, exportAttendanceExcel);
 
-router.post("/attendance/remove", removeAttendance);
+router.post("/attendance/bulk", verifyToken, bulkAttendance);
 
-router.get("/attendance/missing", getMissingParticipants);
+router.post("/attendance/remove", verifyToken, removeAttendance);
 
-router.get("/attendance/:registrationId", getRegistrationForAttendance);
+router.get("/attendance/missing", verifyToken, getMissingParticipants);
+
+router.get("/attendance/:registrationId", verifyToken, getRegistrationForAttendance);
 
 module.exports = router;
