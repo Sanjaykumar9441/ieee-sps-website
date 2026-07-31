@@ -138,7 +138,7 @@ export const getEventSettings = async () => {
   const token = localStorage.getItem("token");
 
   const response = await axios.get(
-    `${import.meta.env.VITE_API_URL}/api/event-settings`,
+    `${import.meta.env.VITE_API_URL}/api/space-day/settings`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -155,7 +155,7 @@ export const updateAttendanceStatus = async (
   const token = localStorage.getItem("token");
 
   const response = await axios.patch(
-    `${import.meta.env.VITE_API_URL}/api/event-settings/attendance`,
+    `${import.meta.env.VITE_API_URL}/api/space-day/settings/attendance`,
     {
       attendanceOpen,
     },
@@ -167,7 +167,7 @@ export const updateAttendanceStatus = async (
   );
 
   return response.data;
-};  
+};
 
 export const bulkAttendance = async (
   registrationId: string,
