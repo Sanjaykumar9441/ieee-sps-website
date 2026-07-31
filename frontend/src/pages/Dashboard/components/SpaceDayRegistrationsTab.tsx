@@ -49,8 +49,7 @@ export default function SpaceDayRegistrationsTab() {
   const [collegeFilter, setCollegeFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [yearFilter, setYearFilter] = useState("all");
-  const [selectedRegistration, setSelectedRegistration] =
-    useState<SpaceDayRegistration | null>(null);
+  const [selectedRegistration, setSelectedRegistration] = useState<SpaceDayRegistration | null>(null);
   const stats = {
     total: registrations.length,
 
@@ -325,7 +324,6 @@ export default function SpaceDayRegistrationsTab() {
       <h1 className="text-3xl font-bold text-white">
         National Space Day Registrations
       </h1>
-
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
         <div className="rounded-2xl bg-white shadow-sm border p-6">
           <p className="text-slate-500 text-sm">Total Registrations</p>

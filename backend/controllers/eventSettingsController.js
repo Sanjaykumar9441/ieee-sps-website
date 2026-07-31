@@ -110,3 +110,41 @@ exports.getPublicSettings = async (req, res) => {
     });
   }
 };
+
+/* ==========================================
+   UPDATE ATTENDANCE STATUS
+========================================== */
+
+exports.updateAttendanceStatus = async (req, res) => {
+  try {
+    const { attendanceOpen } = req.body;
+
+    const settings = await EventSettings.findOneAndUpdate(
+      { event: "space-day" },
+      {
+        attendanceOpen,
+      },
+      {
+        new: true,
+      }
+    );
+
+    getIO().emit("attendanceSettingsUpdated", settings);
+
+    console.log(
+      `⚙️ Attendance ${
+        attendanceOpen ? "Opened" : "Closed"
+      }`
+    );
+
+    return res.json({
+      success: true,
+      settings,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};

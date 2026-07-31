@@ -110,3 +110,123 @@ export const markAttendance = async (
 
   return response.data;
 };
+
+export const getAttendanceLogs = async () => {
+  const response = await API.get(
+    "/api/space-day/attendance/logs"
+  );
+
+  return response.data;
+};
+
+export const exportAttendanceExcel = async () => {
+  const response = await API.get(
+    "/api/space-day/attendance/export",
+    {
+      responseType: "blob",
+    }
+  );
+
+  return response.data;
+};
+
+/* ==========================================
+   EVENT SETTINGS
+========================================== */
+
+export const getEventSettings = async () => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.get(
+    `${import.meta.env.VITE_API_URL}/api/event-settings`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};
+
+export const updateAttendanceStatus = async (
+  attendanceOpen: boolean
+) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.patch(
+    `${import.meta.env.VITE_API_URL}/api/event-settings/attendance`,
+    {
+      attendanceOpen,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};  
+
+export const bulkAttendance = async (
+  registrationId: string,
+  memberIndexes: number[],
+) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.post(
+    `${import.meta.env.VITE_API_URL}/api/space-day/attendance/bulk`,
+    {
+      registrationId,
+      memberIndexes,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  return response.data;
+};
+
+export const removeAttendance = async (
+  registrationId: string,
+  memberIndex: number,
+) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.post(
+    `${import.meta.env.VITE_API_URL}/api/space-day/attendance/remove`,
+    {
+      registrationId,
+      memberIndex,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  return response.data;
+};
+
+export const getMissingParticipants =
+  async () => {
+
+    const token =
+      localStorage.getItem("token");
+
+    const response = await axios.get(
+      `${import.meta.env.VITE_API_URL}/api/space-day/attendance/missing`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    return response.data;
+};

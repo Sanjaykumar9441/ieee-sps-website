@@ -13,6 +13,11 @@ const {
   markAttendance,
   getRegistrationForAttendance,
   getAttendanceSummary,
+  getAttendanceLogs,
+  exportAttendanceExcel,
+  bulkAttendance,
+  removeAttendance,
+  getMissingParticipants,
 } = require("../controllers/spaceDayRegistrationController");
 
 const { getPublicSettings } = require("../controllers/eventSettingsController");
@@ -46,5 +51,15 @@ router.post("/attendance", markAttendance);
 router.get("/attendance/:registrationId", getRegistrationForAttendance);
 
 router.get("/attendance-summary", getAttendanceSummary);
+
+router.get("/attendance/logs", getAttendanceLogs);
+
+router.get("/attendance/export", exportAttendanceExcel);
+
+router.post("/attendance/bulk", bulkAttendance);
+
+router.post("/attendance/remove", removeAttendance);
+
+router.get("/attendance/missing", getMissingParticipants);
 
 module.exports = router;

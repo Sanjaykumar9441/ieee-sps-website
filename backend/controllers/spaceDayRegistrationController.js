@@ -7,6 +7,8 @@ const spaceDayConfig = require("../config/spaceDayConfig");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
 const generateAcknowledgement = require("../pdf/generateAcknowledgement");
 const { sendRegistrationToTelegram } = require("../services/telegramService");
+const AttendanceLog = require("../models/SpaceDayAttendanceLog");
+const ExcelJS = require("exceljs");
 
 /* ============================================
    SUBMIT REGISTRATION
@@ -422,6 +424,16 @@ exports.getRegistrationStatus = async (req, res) => {
 
 exports.markAttendance = async (req, res) => {
   try {
+    const settings = await EventSettings.findOne({
+      event: "space-day",
+    });
+
+    if (!settings || !settings.attendanceOpen) {
+      return res.status(403).json({
+        success: false,
+        message: "Attendance is currently closed.",
+      });
+    }
     const { registrationId, memberIndex, markedBy } = req.body;
 
     const registration = await SpaceDayRegistration.findOne({
@@ -462,12 +474,42 @@ exports.markAttendance = async (req, res) => {
 
     await registration.save();
 
+    await AttendanceLog.create({
+      registrationId: registration.registrationId,
+
+      eventType: registration.eventType,
+
+      teamName: registration.teamName,
+
+      memberName: member.fullName,
+
+      rollNumber: member.rollNumber,
+
+      memberIndex,
+
+      markedBy: req.admin?.username || "Admin",
+
+      action: "MARK",
+
+      markedAt: member.attendance.markedAt,
+    });
+
     const { getIO } = require("../socket");
 
     getIO().emit("attendanceUpdated", {
       registrationId,
+
       memberIndex,
+
       attendance: member.attendance,
+
+      memberName: member.fullName,
+
+      eventType: registration.eventType,
+
+      teamName: registration.teamName,
+
+      markedBy: req.admin.username,
     });
 
     const updatedRegistration = await SpaceDayRegistration.findOne({
@@ -556,6 +598,364 @@ exports.getAttendanceSummary = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+/* ==========================================
+   GET ATTENDANCE LOGS
+========================================== */
+
+exports.getAttendanceLogs = async (req, res) => {
+  try {
+    const logs = await AttendanceLog.find()
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean();
+
+    return res.json({
+      success: true,
+      logs,
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.exportAttendanceExcel = async (req, res) => {
+  try {
+    const registrations = await SpaceDayRegistration.find().lean();
+
+    const workbook = new ExcelJS.Workbook();
+
+    const sheet = workbook.addWorksheet("Attendance");
+
+    sheet.columns = [
+      { header: "Registration ID", key: "registrationId", width: 20 },
+      { header: "Event", key: "event", width: 20 },
+      { header: "Team", key: "team", width: 25 },
+      { header: "Member", key: "member", width: 25 },
+      { header: "Roll Number", key: "roll", width: 18 },
+      { header: "Department", key: "department", width: 15 },
+      { header: "Year", key: "year", width: 10 },
+      { header: "Payment", key: "payment", width: 15 },
+      { header: "Attendance", key: "attendance", width: 15 },
+      { header: "Time", key: "time", width: 18 },
+      { header: "Marked By", key: "markedBy", width: 20 },
+    ];
+
+    registrations.forEach((registration) => {
+      registration.members.forEach((member) => {
+        sheet.addRow({
+          registrationId: registration.registrationId,
+          event: registration.eventType,
+          team:
+            registration.registrationType === "team"
+              ? registration.teamName
+              : "-",
+          member: member.fullName,
+          roll: member.rollNumber,
+          department: member.department,
+          year: member.year,
+          payment: registration.paymentStatus,
+          attendance: member.attendance?.present ? "Present" : "Absent",
+          time: member.attendance?.markedAt
+            ? new Date(member.attendance.markedAt).toLocaleString()
+            : "-",
+          markedBy: member.attendance?.markedBy || "-",
+        });
+      });
+    });
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="SpaceDayAttendance.xlsx"',
+    );
+
+    await workbook.xlsx.write(res);
+
+    res.end();
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.bulkAttendance = async (req, res) => {
+  try {
+    const { registrationId, memberIndexes } = req.body;
+
+    const settings = await EventSettings.findOne({
+      event: "space-day",
+    });
+
+    if (!settings.attendanceOpen) {
+      return res.status(403).json({
+        success: false,
+        message: "Attendance is currently closed.",
+      });
+    }
+
+    const registration = await SpaceDayRegistration.findOne({
+      registrationId,
+    });
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: "Registration not found.",
+      });
+    }
+    const updatedMembers = [];
+
+    for (const index of memberIndexes) {
+      const member = registration.members[index];
+
+      if (!member) continue;
+
+      if (member.attendance?.present) continue;
+
+      member.attendance = {
+        present: true,
+        markedAt: new Date(),
+        markedBy: req.admin.username,
+      };
+
+      updatedMembers.push({
+        memberIndex: index,
+        attendance: member.attendance,
+        memberName: member.fullName,
+      });
+
+      await AttendanceLog.create({
+        registrationId: registration.registrationId,
+
+        eventType: registration.eventType,
+
+        teamName: registration.teamName,
+
+        memberName: member.fullName,
+
+        rollNumber: member.rollNumber,
+
+        memberIndex: index,
+
+        markedBy: req.admin.username,
+
+        action: "MARK",
+
+        markedAt: new Date(),
+      });
+
+      getIO().emit("attendanceUpdated", {
+        registrationId,
+
+        memberIndex: index,
+
+        attendance: member.attendance,
+
+        memberName: member.fullName,
+
+        eventType: registration.eventType,
+
+        teamName: registration.teamName,
+
+        markedBy: req.admin.username,
+      });
+    }
+
+    await registration.save();
+
+    getIO().emit("attendanceBulkUpdated", {
+      registrationId,
+
+      updatedMembers,
+
+      eventType: registration.eventType,
+
+      teamName: registration.teamName,
+
+      markedBy: req.admin.username,
+    });
+
+    return res.json({
+      success: true,
+      registration,
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.removeAttendance = async (req, res) => {
+  try {
+    if (req.admin.role !== "superadmin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only Super Admin can remove attendance.",
+      });
+    }
+    const { registrationId, memberIndex } = req.body;
+
+    const registration = await SpaceDayRegistration.findOne({
+      registrationId,
+    });
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: "Registration not found.",
+      });
+    }
+
+    const member = registration.members[memberIndex];
+
+    if (!member) {
+      return res.status(404).json({
+        success: false,
+        message: "Member not found.",
+      });
+    }
+
+    if (!member.attendance?.present) {
+      return res.status(400).json({
+        success: false,
+        message: "Attendance already removed.",
+      });
+    }
+
+    member.attendance = {
+      present: false,
+      markedAt: null,
+      markedBy: "",
+    };
+
+    registration.markModified("members");
+
+    await registration.save();
+
+    await AttendanceLog.create({
+      registrationId: registration.registrationId,
+
+      eventType: registration.eventType,
+
+      teamName: registration.teamName,
+
+      memberName: member.fullName,
+
+      rollNumber: member.rollNumber,
+
+      memberIndex,
+
+      markedBy: req.admin.username,
+
+      action: "REMOVE",
+
+      markedAt: new Date(),
+    });
+
+    const { getIO } = require("../socket");
+
+    getIO().emit("attendanceRemoved", {
+      registrationId,
+
+      memberIndex,
+
+      attendance: member.attendance,
+
+      memberName: member.fullName,
+
+      eventType: registration.eventType,
+
+      teamName: registration.teamName,
+
+      removedBy: req.admin.username,
+    });
+
+    const updatedRegistration = await SpaceDayRegistration.findOne({
+      registrationId,
+    }).lean();
+
+    return res.json({
+      success: true,
+      message: "Attendance removed successfully.",
+      registration: updatedRegistration,
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.getMissingParticipants = async (req, res) => {
+  try {
+    const registrations = await SpaceDayRegistration.find();
+
+    const missing = [];
+
+    registrations.forEach((registration) => {
+      registration.members.forEach((member, index) => {
+        if (member.attendance?.present) return;
+
+        missing.push({
+          registrationId: registration.registrationId,
+
+          eventType: registration.eventType,
+
+          registrationType: registration.registrationType,
+
+          teamName: registration.teamName,
+
+          memberIndex: index,
+
+          fullName: member.fullName,
+
+          rollNumber: member.rollNumber,
+
+          email: member.email,
+
+          phone: member.phone,
+
+          department: member.department,
+
+          year: member.year,
+        });
+      });
+    });
+    return res.json({
+      success: true,
+      total: missing.length,
+      participants: missing,
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).json({
       success: false,
       message: err.message,
     });

@@ -6,26 +6,17 @@ const {
   getSettings,
   updateMaster,
   updateEvent,
+  updateAttendanceStatus,
 } = require("../controllers/eventSettingsController");
 
 const router = express.Router();
 
-router.get(
-  "/",
-  verifyToken,
-  getSettings,
-);
+router.get("/", verifyToken, getSettings);
 
-router.patch(
-  "/master",
-  verifyToken,
-  updateMaster,
-);
+router.patch("/master", verifyToken, updateMaster);
 
-router.patch(
-  "/event",
-  verifyToken,
-  updateEvent,
-);
+router.patch("/event", verifyToken, updateEvent);
+
+router.patch("/attendance", verifyToken, updateAttendanceStatus);
 
 module.exports = router;

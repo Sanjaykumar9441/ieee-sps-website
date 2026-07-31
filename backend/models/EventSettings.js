@@ -13,6 +13,12 @@ const EventSettingsSchema = new mongoose.Schema(
       default: true,
     },
 
+    // NEW
+    attendanceOpen: {
+      type: Boolean,
+      default: true,
+    },
+
     events: {
       astroquiz: {
         type: Boolean,
