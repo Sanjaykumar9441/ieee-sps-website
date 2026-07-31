@@ -365,10 +365,11 @@ exports.downloadAcknowledgement = async (req, res) => {
 
 exports.getRegistrations = async (req, res) => {
   try {
-    const registrations = await SpaceDayRegistration.find().sort({
+    const registrations = await SpaceDayRegistration.find({
+      paymentStatus: "Verified",
+    }).sort({
       createdAt: -1,
     });
-
     return res.json({
       success: true,
       registrations,
@@ -444,6 +445,13 @@ exports.markAttendance = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Registration not found.",
+      });
+    }
+
+    if (registration.paymentStatus !== "Verified") {
+      return res.status(403).json({
+        success: false,
+        message: "Registration is not verified.",
       });
     }
 
@@ -548,6 +556,13 @@ exports.getRegistrationForAttendance = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Registration not found.",
+      });
+    }
+
+    if (registration.paymentStatus !== "Verified") {
+      return res.status(403).json({
+        success: false,
+        message: "Registration is not verified.",
       });
     }
 
@@ -722,6 +737,13 @@ exports.bulkAttendance = async (req, res) => {
         message: "Registration not found.",
       });
     }
+
+    if (registration.paymentStatus !== "Verified") {
+      return res.status(403).json({
+        success: false,
+        message: "Registration is not verified.",
+      });
+    }
     const updatedMembers = [];
 
     for (const index of memberIndexes) {
@@ -835,6 +857,13 @@ exports.removeAttendance = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Member not found.",
+      });
+    }
+
+    if (registration.paymentStatus !== "Verified") {
+      return res.status(403).json({
+        success: false,
+        message: "Registration is not verified.",
       });
     }
 

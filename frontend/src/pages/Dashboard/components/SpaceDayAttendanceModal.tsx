@@ -101,6 +101,52 @@ export default function SpaceDayAttendanceModal({
           </div>
         </div>
 
+        {currentRegistration.registrationType === "team" && (
+          <div className="border-b p-6 flex justify-end">
+            <button
+              onClick={async () => {
+                try {
+                  let indexes = selectedMembers;
+
+                  if (indexes.length === 0) {
+                    indexes = currentRegistration.members
+                      .map((_: any, i: number) => i)
+                      .filter(
+                        (i: number) =>
+                          !currentRegistration.members[i].attendance?.present,
+                      );
+                  }
+
+                  if (indexes.length === 0) {
+                    toast.success("Entire team already present.");
+                    return;
+                  }
+
+                  await bulkAttendance(
+                    currentRegistration.registrationId,
+                    indexes,
+                  );
+
+                  setSuccessMessage(`${indexes.length} Members Marked Present`);
+
+                  setTimeout(() => {
+                    setSuccessMessage("");
+                    onClose();
+                  }, 2000);
+                } catch (err) {
+                  console.error(err);
+                  toast.error("Unable to mark attendance.");
+                }
+              }}
+              className="rounded-xl bg-[#00629B] px-6 py-3 font-semibold text-white hover:bg-[#004E7C]"
+            >
+              {selectedMembers.length === 0
+                ? "Mark Entire Team"
+                : `Mark Selected (${selectedMembers.length})`}
+            </button>
+          </div>
+        )}
+
         {/* Members */}
         <div className="max-h-[420px] overflow-y-auto p-6 space-y-5">
           {currentRegistration.members.map((member: any, index: number) => (
@@ -137,57 +183,6 @@ export default function SpaceDayAttendanceModal({
                       className="mt-2 h-5 w-5 accent-[#00629B]"
                     />
                   )}
-                {currentRegistration.registrationType === "team" && (
-                  <div className="border-t p-6 flex justify-end">
-                    <button
-                      onClick={async () => {
-                        try {
-                          let indexes = selectedMembers;
-
-                          if (indexes.length === 0) {
-                            indexes = currentRegistration.members
-                              .map((_: any, i: number) => i)
-                              .filter(
-                                (i: number) =>
-                                  !currentRegistration.members[i].attendance
-                                    ?.present,
-                              );
-                          }
-
-                          if (indexes.length === 0) {
-                            toast.success("Entire team already present.");
-
-                            return;
-                          }
-
-                          await bulkAttendance(
-                            currentRegistration.registrationId,
-                            indexes,
-                          );
-
-                          setSuccessMessage(
-                            `${indexes.length} Members Marked Present`,
-                          );
-
-                          setTimeout(() => {
-                            setSuccessMessage("");
-
-                            onClose();
-                          }, 2000);
-                        } catch (err) {
-                          console.error(err);
-
-                          toast.error("Unable to mark attendance.");
-                        }
-                      }}
-                      className="rounded-xl bg-[#00629B] px-6 py-3 font-semibold text-white hover:bg-[#004E7C]"
-                    >
-                      {selectedMembers.length === 0
-                        ? "Mark Entire Team"
-                        : `Mark Selected (${selectedMembers.length})`}
-                    </button>
-                  </div>
-                )}
                 {/* Right Side */}
                 <div className="flex items-start shrink-0">
                   {member.attendance?.present ? (
@@ -199,25 +194,8 @@ export default function SpaceDayAttendanceModal({
 
                       {isSuperAdmin && (
                         <button
-                          onClick={async () => {
-                            try {
-                              setRemoving(true);
-
-                              await removeAttendance(
-                                currentRegistration.registrationId,
-                                removeMemberIndex!,
-                              );
-
-                              toast.success("Attendance removed.");
-
-                              setRemoveMemberIndex(null);
-                            } catch (err) {
-                              console.error(err);
-
-                              toast.error("Unable to remove attendance.");
-                            } finally {
-                              setRemoving(false);
-                            }
+                          onClick={() => {
+                            setRemoveMemberIndex(index);
                           }}
                           className="mt-3 text-xs font-semibold text-red-600 hover:underline"
                         >
@@ -307,7 +285,26 @@ export default function SpaceDayAttendanceModal({
 
               <button
                 disabled={removing}
-                onClick={async () => {}}
+                onClick={async () => {
+                  try {
+                    setRemoving(true);
+
+                    await removeAttendance(
+                      currentRegistration.registrationId,
+                      removeMemberIndex!,
+                    );
+
+                    toast.success("Attendance removed.");
+
+                    setRemoveMemberIndex(null);
+                    onClose();
+                  } catch (err) {
+                    console.error(err);
+                    toast.error("Unable to remove attendance.");
+                  } finally {
+                    setRemoving(false);
+                  }
+                }}
                 className="rounded-xl bg-red-600 px-5 py-2 text-white hover:bg-red-700"
               >
                 {removing ? "Removing..." : "Remove Attendance"}
