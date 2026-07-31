@@ -86,7 +86,7 @@ const MemberSchema = new mongoose.Schema(
         default: false,
       },
 
-      attendedAt: {
+      markedAt: {
         type: Date,
         default: null,
       },

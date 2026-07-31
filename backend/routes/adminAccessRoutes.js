@@ -163,7 +163,7 @@ router.post("/login", async (req, res) => {
     const token = jwt.sign(
       {
         id: admin._id,
-        role: "admin",
+        role: admin.role,
         permissions: admin.permissions,
       },
       process.env.JWT_SECRET,
@@ -176,7 +176,7 @@ router.post("/login", async (req, res) => {
       success: true,
       token,
       adminId: admin._id,
-      role: "admin",
+      role: admin.role,
       permissions: admin.permissions,
       member: admin.memberId,
       mustChangePassword: admin.mustChangePassword,

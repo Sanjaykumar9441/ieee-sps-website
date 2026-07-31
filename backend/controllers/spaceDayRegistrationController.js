@@ -435,11 +435,22 @@ exports.markAttendance = async (req, res) => {
         message: "Attendance is currently closed.",
       });
     }
-    const { registrationId, memberIndex, markedBy } = req.body;
+    const { registrationId, memberIndex } = req.body;
 
     const registration = await SpaceDayRegistration.findOne({
       registrationId,
     });
+
+    const AdminAccess = require("../models/AdminAccess");
+
+    const admin = await AdminAccess.findById(req.user.id);
+
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found.",
+      });
+    }
 
     if (!registration) {
       return res.status(404).json({
@@ -475,7 +486,7 @@ exports.markAttendance = async (req, res) => {
     member.attendance = {
       present: true,
       markedAt: new Date(),
-      markedBy: markedBy || "Admin",
+      markedBy: req.user.id,
     };
 
     registration.markModified("members");
@@ -495,7 +506,7 @@ exports.markAttendance = async (req, res) => {
 
       memberIndex,
 
-      markedBy: req.admin?.username || "Admin",
+      markedBy: admin.username,
 
       action: "MARK",
 
@@ -517,7 +528,7 @@ exports.markAttendance = async (req, res) => {
 
       teamName: registration.teamName,
 
-      markedBy: req.admin.username,
+      markedBy: admin.username,
     });
 
     const updatedRegistration = await SpaceDayRegistration.findOne({
@@ -550,7 +561,9 @@ exports.getRegistrationForAttendance = async (req, res) => {
 
     const registration = await SpaceDayRegistration.findOne({
       registrationId,
-    }).lean();
+    })
+      .populate("members.attendance.markedBy", "username")
+      .lean();
 
     if (!registration) {
       return res.status(404).json({
@@ -586,7 +599,9 @@ exports.getRegistrationForAttendance = async (req, res) => {
 
 exports.getAttendanceSummary = async (req, res) => {
   try {
-    const registrations = await SpaceDayRegistration.find().lean();
+    const registrations = await SpaceDayRegistration.find({
+      paymentStatus: "Verified",
+    }).lean();
 
     let registered = 0;
     let present = 0;
@@ -646,7 +661,11 @@ exports.getAttendanceLogs = async (req, res) => {
 
 exports.exportAttendanceExcel = async (req, res) => {
   try {
-    const registrations = await SpaceDayRegistration.find().lean();
+    const registrations = await SpaceDayRegistration.find({
+      paymentStatus: "Verified",
+    })
+      .populate("members.attendance.markedBy", "username")
+      .lean();
 
     const workbook = new ExcelJS.Workbook();
 
@@ -684,7 +703,7 @@ exports.exportAttendanceExcel = async (req, res) => {
           time: member.attendance?.markedAt
             ? new Date(member.attendance.markedAt).toLocaleString()
             : "-",
-          markedBy: member.attendance?.markedBy || "-",
+          markedBy: member.attendance?.markedBy?.username || "-",
         });
       });
     });
@@ -731,6 +750,17 @@ exports.bulkAttendance = async (req, res) => {
       registrationId,
     });
 
+    const AdminAccess = require("../models/AdminAccess");
+
+    const admin = await AdminAccess.findById(req.user.id);
+
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found.",
+      });
+    }
+
     if (!registration) {
       return res.status(404).json({
         success: false,
@@ -756,7 +786,7 @@ exports.bulkAttendance = async (req, res) => {
       member.attendance = {
         present: true,
         markedAt: new Date(),
-        markedBy: req.admin.username,
+        markedBy: req.user.id,
       };
 
       updatedMembers.push({
@@ -778,7 +808,7 @@ exports.bulkAttendance = async (req, res) => {
 
         memberIndex: index,
 
-        markedBy: req.admin.username,
+        markedBy: admin.username,
 
         action: "MARK",
 
@@ -798,7 +828,7 @@ exports.bulkAttendance = async (req, res) => {
 
         teamName: registration.teamName,
 
-        markedBy: req.admin.username,
+        markedBy: admin.username,
       });
     }
 
@@ -813,7 +843,7 @@ exports.bulkAttendance = async (req, res) => {
 
       teamName: registration.teamName,
 
-      markedBy: req.admin.username,
+      markedBy: admin.username,
     });
 
     return res.json({
@@ -832,7 +862,7 @@ exports.bulkAttendance = async (req, res) => {
 
 exports.removeAttendance = async (req, res) => {
   try {
-    if (req.admin.role !== "superadmin") {
+    if (req.user.role !== "superadmin") {
       return res.status(403).json({
         success: false,
         message: "Only Super Admin can remove attendance.",
@@ -843,6 +873,17 @@ exports.removeAttendance = async (req, res) => {
     const registration = await SpaceDayRegistration.findOne({
       registrationId,
     });
+
+    const AdminAccess = require("../models/AdminAccess");
+
+    const admin = await AdminAccess.findById(req.user.id);
+
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found.",
+      });
+    }
 
     if (!registration) {
       return res.status(404).json({
@@ -877,7 +918,7 @@ exports.removeAttendance = async (req, res) => {
     member.attendance = {
       present: false,
       markedAt: null,
-      markedBy: "",
+      markedBy: null,
     };
 
     registration.markModified("members");
@@ -897,7 +938,7 @@ exports.removeAttendance = async (req, res) => {
 
       memberIndex,
 
-      markedBy: req.admin.username,
+      markedBy: admin.username,
 
       action: "REMOVE",
 
@@ -919,7 +960,7 @@ exports.removeAttendance = async (req, res) => {
 
       teamName: registration.teamName,
 
-      removedBy: req.admin.username,
+      removedBy: admin.username,
     });
 
     const updatedRegistration = await SpaceDayRegistration.findOne({
@@ -943,7 +984,9 @@ exports.removeAttendance = async (req, res) => {
 
 exports.getMissingParticipants = async (req, res) => {
   try {
-    const registrations = await SpaceDayRegistration.find();
+    const registrations = await SpaceDayRegistration.find({
+      paymentStatus: "Verified",
+    });
 
     const missing = [];
 
