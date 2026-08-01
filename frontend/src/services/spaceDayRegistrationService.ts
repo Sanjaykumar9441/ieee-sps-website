@@ -134,11 +134,13 @@ export const getAttendanceLogs = async () => {
 };
 
 export const exportAttendanceExcel = async () => {
-   const token = localStorage.getItem("token"); 
-   const response = await API.get(
+  const token = localStorage.getItem("token");
+
+  const response = await API.get(
     "/api/space-day/attendance/export",
     {
-       headers: {
+      responseType: "blob",
+      headers: {
         Authorization: `Bearer ${token}`,
       },
     }

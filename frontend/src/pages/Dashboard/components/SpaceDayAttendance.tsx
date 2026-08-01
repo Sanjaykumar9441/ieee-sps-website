@@ -27,7 +27,7 @@ export default function SpaceDayAttendance() {
   const [activityFeed, setActivityFeed] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [scannerOpen, setScannerOpen] = useState(false);
-
+  const [scannerKey, setScannerKey] = useState(0);
   const [selectedRegistration, setSelectedRegistration] = useState<any>(null);
   const [missingParticipants, setMissingParticipants] = useState<any[]>([]);
 
@@ -618,19 +618,25 @@ export default function SpaceDayAttendance() {
 
             <button
               onClick={async () => {
-                const blob = await exportAttendanceExcel();
+                try {
+                  const blob = await exportAttendanceExcel();
 
-                const url = window.URL.createObjectURL(blob);
+                  console.log(blob);
+                  console.log(blob instanceof Blob);
 
-                const link = document.createElement("a");
+                  const url = window.URL.createObjectURL(blob);
 
-                link.href = url;
+                  const link = document.createElement("a");
 
-                link.download = "SpaceDayAttendance.xlsx";
+                  link.href = url;
+                  link.download = "SpaceDayAttendance.xlsx";
 
-                link.click();
+                  link.click();
 
-                window.URL.revokeObjectURL(url);
+                  window.URL.revokeObjectURL(url);
+                } catch (err) {
+                  console.error(err);
+                }
               }}
               className="rounded-xl bg-green-600 px-5 py-3 font-semibold text-white hover:bg-green-700"
             >
@@ -844,6 +850,7 @@ export default function SpaceDayAttendance() {
 
           {attendanceOpen ? (
             <QRScanner
+              key={scannerKey}
               onScan={async (registrationId) => {
                 if (selectedRegistration) return;
 
@@ -871,7 +878,10 @@ export default function SpaceDayAttendance() {
       )}
       <SpaceDayAttendanceModal
         registration={selectedRegistration}
-        onClose={() => setSelectedRegistration(null)}
+        onClose={() => {
+          setSelectedRegistration(null);
+          setScannerKey((prev) => prev + 1);
+        }}
       />
 
       {isSuperAdmin && (

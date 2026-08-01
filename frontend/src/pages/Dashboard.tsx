@@ -158,7 +158,12 @@ const Dashboard = () => {
 
   useEffect(() => {
     socket.on("adminPermissionsUpdated", (data) => {
+      console.log("🔥 adminPermissionsUpdated", data);
+
       const myAdminId = localStorage.getItem("adminId");
+
+      console.log("My Admin:", myAdminId);
+      console.log("Incoming:", data.adminId);
 
       if (String(myAdminId) !== String(data.adminId)) return;
 
