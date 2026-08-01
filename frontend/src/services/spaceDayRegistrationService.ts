@@ -82,8 +82,15 @@ export const getRegistrationStatus = async (
 export const getAttendanceRegistration = async (
   registrationId: string
 ) => {
+  const token = localStorage.getItem("token");
+
   const response = await API.get(
-    `/api/space-day/attendance/${registrationId}`
+    `/api/space-day/attendance/${registrationId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
   );
 
   return response.data;
@@ -112,18 +119,28 @@ export const markAttendance = async (
 };
 
 export const getAttendanceLogs = async () => {
+  const token = localStorage.getItem("token");
+
   const response = await API.get(
-    "/api/space-day/attendance/logs"
+    "/api/space-day/attendance/logs",
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
   );
 
   return response.data;
 };
 
 export const exportAttendanceExcel = async () => {
-  const response = await API.get(
+   const token = localStorage.getItem("token"); 
+   const response = await API.get(
     "/api/space-day/attendance/export",
     {
-      responseType: "blob",
+       headers: {
+        Authorization: `Bearer ${token}`,
+      },
     }
   );
 

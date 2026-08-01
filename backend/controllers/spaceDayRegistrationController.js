@@ -441,15 +441,29 @@ exports.markAttendance = async (req, res) => {
       registrationId,
     });
 
+    const Admin = require("../models/admin");
+
     const AdminAccess = require("../models/AdminAccess");
 
-    const admin = await AdminAccess.findById(req.user.id);
+    let admin = await AdminAccess.findById(req.user.id);
 
-    if (!admin) {
-      return res.status(404).json({
-        success: false,
-        message: "Admin not found.",
-      });
+    let adminName = "Main Admin";
+    let adminRole = "superadmin";
+
+    if (admin) {
+      adminName = admin.username;
+      adminRole = admin.role || "admin";
+    } else {
+      const mainAdmin = await Admin.findById(req.user.id);
+
+      if (!mainAdmin) {
+        return res.status(404).json({
+          success: false,
+          message: "Admin not found.",
+        });
+      }
+
+      adminName = mainAdmin.email;
     }
 
     if (!registration) {
@@ -506,7 +520,7 @@ exports.markAttendance = async (req, res) => {
 
       memberIndex,
 
-      markedBy: admin.username,
+      markedBy: adminName,
 
       action: "MARK",
 
@@ -528,7 +542,7 @@ exports.markAttendance = async (req, res) => {
 
       teamName: registration.teamName,
 
-      markedBy: admin.username,
+      markedBy: adminName,
     });
 
     const updatedRegistration = await SpaceDayRegistration.findOne({
@@ -750,15 +764,28 @@ exports.bulkAttendance = async (req, res) => {
       registrationId,
     });
 
+    const Admin = require("../models/admin");
     const AdminAccess = require("../models/AdminAccess");
 
-    const admin = await AdminAccess.findById(req.user.id);
+    let admin = await AdminAccess.findById(req.user.id);
 
-    if (!admin) {
-      return res.status(404).json({
-        success: false,
-        message: "Admin not found.",
-      });
+    let adminName = "Main Admin";
+    let adminRole = "superadmin";
+
+    if (admin) {
+      adminName = admin.username;
+      adminRole = admin.role || "admin";
+    } else {
+      const mainAdmin = await Admin.findById(req.user.id);
+
+      if (!mainAdmin) {
+        return res.status(404).json({
+          success: false,
+          message: "Admin not found.",
+        });
+      }
+
+      adminName = mainAdmin.email;
     }
 
     if (!registration) {
@@ -808,7 +835,7 @@ exports.bulkAttendance = async (req, res) => {
 
         memberIndex: index,
 
-        markedBy: admin.username,
+        markedBy: adminName,
 
         action: "MARK",
 
@@ -828,7 +855,7 @@ exports.bulkAttendance = async (req, res) => {
 
         teamName: registration.teamName,
 
-        markedBy: admin.username,
+        markedBy: adminName,
       });
     }
 
@@ -843,7 +870,7 @@ exports.bulkAttendance = async (req, res) => {
 
       teamName: registration.teamName,
 
-      markedBy: admin.username,
+      markedBy: adminName,
     });
 
     return res.json({
@@ -862,7 +889,7 @@ exports.bulkAttendance = async (req, res) => {
 
 exports.removeAttendance = async (req, res) => {
   try {
-    if (req.user.role !== "superadmin") {
+    if (adminRole !== "superadmin") {
       return res.status(403).json({
         success: false,
         message: "Only Super Admin can remove attendance.",
@@ -874,15 +901,28 @@ exports.removeAttendance = async (req, res) => {
       registrationId,
     });
 
+    const Admin = require("../models/admin");
     const AdminAccess = require("../models/AdminAccess");
 
-    const admin = await AdminAccess.findById(req.user.id);
+    let admin = await AdminAccess.findById(req.user.id);
 
-    if (!admin) {
-      return res.status(404).json({
-        success: false,
-        message: "Admin not found.",
-      });
+    let adminName = "Main Admin";
+    let adminRole = "superadmin";
+
+    if (admin) {
+      adminName = admin.username;
+      adminRole = admin.role || "admin";
+    } else {
+      const mainAdmin = await Admin.findById(req.user.id);
+
+      if (!mainAdmin) {
+        return res.status(404).json({
+          success: false,
+          message: "Admin not found.",
+        });
+      }
+
+      adminName = mainAdmin.email;
     }
 
     if (!registration) {
@@ -938,7 +978,7 @@ exports.removeAttendance = async (req, res) => {
 
       memberIndex,
 
-      markedBy: admin.username,
+      markedBy: adminName,
 
       action: "REMOVE",
 
@@ -960,7 +1000,7 @@ exports.removeAttendance = async (req, res) => {
 
       teamName: registration.teamName,
 
-      removedBy: admin.username,
+      removedBy: adminName,
     });
 
     const updatedRegistration = await SpaceDayRegistration.findOne({
