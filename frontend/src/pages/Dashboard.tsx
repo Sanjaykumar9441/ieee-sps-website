@@ -160,13 +160,15 @@ const Dashboard = () => {
     socket.on("adminPermissionsUpdated", (data) => {
       const myAdminId = localStorage.getItem("adminId");
 
-      if (myAdminId !== data.adminId) return;
+      if (String(myAdminId) !== String(data.adminId)) return;
 
       localStorage.setItem("permissions", JSON.stringify(data.permissions));
 
       localStorage.setItem("isPaused", JSON.stringify(data.isPaused));
 
-      setPermissions(data.permissions);
+      setPermissions({ ...data.permissions });
+      setActiveTab("profile");
+      localStorage.setItem("adminTab", "profile");
       setIsPaused(data.isPaused);
     });
 
@@ -249,6 +251,7 @@ const Dashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
+    localStorage.removeItem("adminId");
     navigate("/");
   };
 

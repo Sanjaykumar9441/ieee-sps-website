@@ -747,13 +747,17 @@ exports.exportAttendanceExcel = async (req, res) => {
 
 exports.bulkAttendance = async (req, res) => {
   try {
+    const { getIO } = require("../socket");
+    const Admin = require("../models/admin");
+    const AdminAccess = require("../models/AdminAccess");
+
     const { registrationId, memberIndexes } = req.body;
 
     const settings = await EventSettings.findOne({
       event: "space-day",
     });
 
-    if (!settings.attendanceOpen) {
+    if (!settings || !settings.attendanceOpen) {
       return res.status(403).json({
         success: false,
         message: "Attendance is currently closed.",
@@ -763,30 +767,6 @@ exports.bulkAttendance = async (req, res) => {
     const registration = await SpaceDayRegistration.findOne({
       registrationId,
     });
-
-    const Admin = require("../models/admin");
-    const AdminAccess = require("../models/AdminAccess");
-
-    let admin = await AdminAccess.findById(req.user.id);
-
-    let adminName = "Main Admin";
-    let adminRole = "superadmin";
-
-    if (admin) {
-      adminName = admin.username;
-      adminRole = admin.role || "admin";
-    } else {
-      const mainAdmin = await Admin.findById(req.user.id);
-
-      if (!mainAdmin) {
-        return res.status(404).json({
-          success: false,
-          message: "Admin not found.",
-        });
-      }
-
-      adminName = mainAdmin.email;
-    }
 
     if (!registration) {
       return res.status(404).json({
@@ -801,6 +781,26 @@ exports.bulkAttendance = async (req, res) => {
         message: "Registration is not verified.",
       });
     }
+
+    let admin = await AdminAccess.findById(req.user.id);
+
+    let adminName = "Main Admin";
+
+    if (admin) {
+      adminName = admin.username;
+    } else {
+      const mainAdmin = await Admin.findById(req.user.id);
+
+      if (!mainAdmin) {
+        return res.status(404).json({
+          success: false,
+          message: "Admin not found.",
+        });
+      }
+
+      adminName = mainAdmin.email;
+    }
+
     const updatedMembers = [];
 
     for (const index of memberIndexes) {
@@ -824,52 +824,36 @@ exports.bulkAttendance = async (req, res) => {
 
       await AttendanceLog.create({
         registrationId: registration.registrationId,
-
         eventType: registration.eventType,
-
         teamName: registration.teamName,
-
         memberName: member.fullName,
-
         rollNumber: member.rollNumber,
-
         memberIndex: index,
-
         markedBy: adminName,
-
         action: "MARK",
-
-        markedAt: new Date(),
+        markedAt: member.attendance.markedAt,
       });
 
       getIO().emit("attendanceUpdated", {
         registrationId,
-
         memberIndex: index,
-
         attendance: member.attendance,
-
         memberName: member.fullName,
-
         eventType: registration.eventType,
-
         teamName: registration.teamName,
-
         markedBy: adminName,
       });
     }
+
+    registration.markModified("members");
 
     await registration.save();
 
     getIO().emit("attendanceBulkUpdated", {
       registrationId,
-
       updatedMembers,
-
       eventType: registration.eventType,
-
       teamName: registration.teamName,
-
       markedBy: adminName,
     });
 
@@ -889,20 +873,11 @@ exports.bulkAttendance = async (req, res) => {
 
 exports.removeAttendance = async (req, res) => {
   try {
-    if (adminRole !== "superadmin") {
-      return res.status(403).json({
-        success: false,
-        message: "Only Super Admin can remove attendance.",
-      });
-    }
-    const { registrationId, memberIndex } = req.body;
-
-    const registration = await SpaceDayRegistration.findOne({
-      registrationId,
-    });
-
+    const { getIO } = require("../socket");
     const Admin = require("../models/admin");
     const AdminAccess = require("../models/AdminAccess");
+
+    const { registrationId, memberIndex } = req.body;
 
     let admin = await AdminAccess.findById(req.user.id);
 
@@ -925,10 +900,28 @@ exports.removeAttendance = async (req, res) => {
       adminName = mainAdmin.email;
     }
 
+    if (adminRole !== "superadmin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only Super Admin can remove attendance.",
+      });
+    }
+
+    const registration = await SpaceDayRegistration.findOne({
+      registrationId,
+    });
+
     if (!registration) {
       return res.status(404).json({
         success: false,
         message: "Registration not found.",
+      });
+    }
+
+    if (registration.paymentStatus !== "Verified") {
+      return res.status(403).json({
+        success: false,
+        message: "Registration is not verified.",
       });
     }
 
@@ -938,13 +931,6 @@ exports.removeAttendance = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Member not found.",
-      });
-    }
-
-    if (registration.paymentStatus !== "Verified") {
-      return res.status(403).json({
-        success: false,
-        message: "Registration is not verified.",
       });
     }
 
@@ -967,39 +953,23 @@ exports.removeAttendance = async (req, res) => {
 
     await AttendanceLog.create({
       registrationId: registration.registrationId,
-
       eventType: registration.eventType,
-
       teamName: registration.teamName,
-
       memberName: member.fullName,
-
       rollNumber: member.rollNumber,
-
       memberIndex,
-
       markedBy: adminName,
-
       action: "REMOVE",
-
       markedAt: new Date(),
     });
 
-    const { getIO } = require("../socket");
-
     getIO().emit("attendanceRemoved", {
       registrationId,
-
       memberIndex,
-
       attendance: member.attendance,
-
       memberName: member.fullName,
-
       eventType: registration.eventType,
-
       teamName: registration.teamName,
-
       removedBy: adminName,
     });
 

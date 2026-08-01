@@ -1,11 +1,13 @@
 import { Html5QrcodeScanner } from "html5-qrcode";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface Props {
   onScan: (registrationId: string) => void;
 }
 
 export default function QRScanner({ onScan }: Props) {
+  const scanned = useRef(false);
+
   useEffect(() => {
     const scanner = new Html5QrcodeScanner(
       "reader",
@@ -15,11 +17,15 @@ export default function QRScanner({ onScan }: Props) {
       },
       false,
     );
+
     scanner.render(
       (decodedText) => {
-        scanner.clear();
+        if (scanned.current) return;
+
+        scanned.current = true;
 
         const registrationId = decodedText.split("/").pop();
+
         if (!registrationId) {
           console.error("Invalid QR Code");
           return;
