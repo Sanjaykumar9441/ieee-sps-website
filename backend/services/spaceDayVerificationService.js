@@ -60,12 +60,6 @@ const verifyRegistration = async ({
 
   getIO().emit("registrationUpdated", updatedRegistration);
 
-  console.log(
-    `📡 Registration Updated → ${updatedRegistration.registrationId}`,
-  );
-
-  console.log(`📡 Socket Event Sent → ${registration.registrationId}`);
-
   if (registration.telegramChatId && registration.telegramMessageId) {
     await editTelegramMessage(registration);
   }

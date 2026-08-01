@@ -217,8 +217,6 @@ exports.submitRegistration = async (req, res) => {
 
     getIO().emit("newRegistration", newRegistration);
 
-    console.log(`🆕 New Registration → ${newRegistration.registrationId}`);
-
     return res.status(201).json({
       success: true,
 
@@ -675,66 +673,553 @@ exports.getAttendanceLogs = async (req, res) => {
 
 exports.exportAttendanceExcel = async (req, res) => {
   try {
-    const registrations = await SpaceDayRegistration.find({
-      paymentStatus: "Verified",
-    })
-      .populate("members.attendance.markedBy", "username")
-      .lean();
-
     const workbook = new ExcelJS.Workbook();
 
-    const sheet = workbook.addWorksheet("Attendance");
+workbook.creator =
+  "IEEE SPS Student Branch Chapter";
 
-    sheet.columns = [
-      { header: "Registration ID", key: "registrationId", width: 20 },
-      { header: "Event", key: "event", width: 20 },
-      { header: "Team", key: "team", width: 25 },
-      { header: "Member", key: "member", width: 25 },
-      { header: "Roll Number", key: "roll", width: 18 },
-      { header: "Department", key: "department", width: 15 },
-      { header: "Year", key: "year", width: 10 },
-      { header: "Payment", key: "payment", width: 15 },
-      { header: "Attendance", key: "attendance", width: 15 },
-      { header: "Time", key: "time", width: 18 },
-      { header: "Marked By", key: "markedBy", width: 20 },
-    ];
+workbook.company =
+  "Aditya University";
 
-    registrations.forEach((registration) => {
-      registration.members.forEach((member) => {
-        sheet.addRow({
-          registrationId: registration.registrationId,
-          event: registration.eventType,
-          team:
-            registration.registrationType === "team"
-              ? registration.teamName
-              : "-",
-          member: member.fullName,
-          roll: member.rollNumber,
-          department: member.department,
-          year: member.year,
-          payment: registration.paymentStatus,
-          attendance: member.attendance?.present ? "Present" : "Absent",
-          time: member.attendance?.markedAt
-            ? new Date(member.attendance.markedAt).toLocaleString()
-            : "-",
-          markedBy: member.attendance?.markedBy?.username || "-",
+workbook.subject =
+  "National Space Day Attendance";
+
+workbook.title =
+  "Attendance Report";
+
+  const summarySheet =
+  workbook.addWorksheet("Summary");
+
+const quizSheet =
+  workbook.addWorksheet("Astro Quiz");
+
+const designSheet =
+  workbook.addWorksheet("Astro Design");
+
+const modelerSheet =
+  workbook.addWorksheet("Astro Modeler");
+
+const sheets = [
+  summarySheet,
+  quizSheet,
+  designSheet,
+  modelerSheet,
+];
+
+function createHeader(sheet){
+
+  sheet.mergeCells("A1:K1");
+
+  sheet.getCell("A1").value =
+    "IEEE SPS Student Branch Chapter";
+
+  sheet.mergeCells("A2:K2");
+
+  sheet.getCell("A2").value =
+    "Aditya University";
+
+  sheet.mergeCells("A3:K3");
+
+  sheet.getCell("A3").value =
+    "National Space Day 2026";
+
+  sheet.mergeCells("A4:K4");
+
+  sheet.getCell("A4").value =
+    "Attendance Report";
+
+  ["A1","A2","A3","A4"].forEach((cell)=>{
+
+    sheet.getCell(cell).font={
+      bold:true,
+      size:16,
+      color:{
+        argb:"FFFFFFFF",
+      },
+    };
+
+    sheet.getCell(cell).alignment={
+      horizontal:"center",
+    };
+
+    sheet.getCell(cell).fill={
+      type:"pattern",
+      pattern:"solid",
+      fgColor:{
+        argb:"00629B",
+      },
+    };
+
+  });
+
+  sheet.addRow([]);
+
+  sheet.addRow([
+    "Generated On",
+    new Date().toLocaleString(),
+  ]);
+
+  sheet.addRow([]);
+
+}
+
+sheets.forEach(createHeader);
+
+function createTable(sheet){
+
+  sheet.columns=[
+
+    {
+      header:"S.No",
+      key:"sno",
+      width:8,
+    },
+
+    {
+      header:"Registration ID",
+      key:"registrationId",
+      width:20,
+    },
+
+    {
+      header:"Team",
+      key:"team",
+      width:24,
+    },
+
+    {
+      header:"Member",
+      key:"member",
+      width:28,
+    },
+
+    {
+      header:"Roll Number",
+      key:"roll",
+      width:18,
+    },
+
+    {
+      header:"Department",
+      key:"department",
+      width:20,
+    },
+
+    {
+      header:"Year",
+      key:"year",
+      width:10,
+    },
+
+    {
+      header:"Payment",
+      key:"payment",
+      width:14,
+    },
+
+    {
+      header:"Attendance",
+      key:"attendance",
+      width:14,
+    },
+
+    {
+      header:"Time",
+      key:"time",
+      width:22,
+    },
+
+    {
+      header:"Marked By",
+      key:"markedBy",
+      width:20,
+    },
+
+  ];
+
+}
+
+createTable(quizSheet);
+createTable(designSheet);
+createTable(modelerSheet);
+
+let quizNo = 1;
+let designNo = 1;
+let modelerNo = 1;
+
+let quizPresent = 0;
+let quizAbsent = 0;
+
+let designPresent = 0;
+let designAbsent = 0;
+
+let modelerPresent = 0;
+let modelerAbsent = 0;
+
+registrations.forEach((registration) => {
+
+    // ==========================
+    // ASTRO QUIZ (Keep Existing)
+    // ==========================
+
+    if (registration.eventType === "astroquiz") {
+
+        registration.members.forEach((member) => {
+
+            quizSheet.addRow({
+                sno: quizNo++,
+                registrationId: registration.registrationId,
+                team: "-",
+                member: member.fullName,
+                roll: member.rollNumber,
+                department: member.department,
+                year: member.year,
+                payment: registration.paymentStatus,
+                attendance: member.attendance?.present
+                    ? "Present"
+                    : "Absent",
+                time: member.attendance?.markedAt
+                    ? new Date(member.attendance.markedAt).toLocaleString()
+                    : "-",
+                markedBy:
+                    member.attendance?.markedBy?.username || "-",
+            });
+
+            member.attendance?.present
+                ? quizPresent++
+                : quizAbsent++;
         });
-      });
+
+        return;
+    }
+
+    // ===========================================
+    // ASTRO DESIGN & ASTRO MODELER (Grouped)
+    // ===========================================
+
+    if (
+        registration.eventType === "astrodesign" ||
+        registration.eventType === "astromodeler"
+    ) {
+
+        const sheet =
+            registration.eventType === "astrodesign"
+                ? designSheet
+                : modelerSheet;
+
+        sheet.addRow([]);
+
+        sheet.addRow([
+            "Team Name",
+            registration.teamName,
+        ]);
+
+        sheet.addRow([
+            "Registration ID",
+            registration.registrationId,
+        ]);
+
+        sheet.addRow([
+            "Payment Status",
+            registration.paymentStatus,
+        ]);
+
+        sheet.addRow([]);
+
+        const header = sheet.addRow([
+            "S.No",
+            "Member",
+            "Roll No",
+            "Department",
+            "Year",
+            "Attendance",
+            "Time",
+            "Marked By",
+        ]);
+
+        header.font = {
+            bold: true,
+            color: {
+                argb: "FFFFFFFF",
+            },
+        };
+
+        header.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: {
+                argb: "00629B",
+            },
+        };
+
+        registration.members.forEach((member, index) => {
+
+            sheet.addRow([
+                index + 1,
+                member.fullName,
+                member.rollNumber,
+                member.department,
+                member.year,
+                member.attendance?.present
+                    ? "Present"
+                    : "Absent",
+                member.attendance?.markedAt
+                    ? new Date(
+                          member.attendance.markedAt
+                      ).toLocaleString()
+                    : "-",
+                member.attendance?.markedBy?.username || "-",
+            ]);
+
+            if (registration.eventType === "astrodesign") {
+                member.attendance?.present
+                    ? designPresent++
+                    : designAbsent++;
+            } else {
+                member.attendance?.present
+                    ? modelerPresent++
+                    : modelerAbsent++;
+            }
+        });
+
+        sheet.addRow([]);
+    }
+
+});
+
+summarySheet.columns = [
+  { header: "Event", key: "event", width: 30 },
+  { header: "Present", key: "present", width: 15 },
+  { header: "Absent", key: "absent", width: 15 },
+  { header: "Total", key: "total", width: 15 },
+  { header: "Attendance %", key: "percentage", width: 20 },
+];
+
+summarySheet.addRow({
+  event: "Astro Quiz",
+  present: quizPresent,
+  absent: quizAbsent,
+  total: quizPresent + quizAbsent,
+  percentage:
+    (
+      quizPresent /
+      Math.max(1, quizPresent + quizAbsent)
+    ) * 100,
+});
+
+summarySheet.addRow({
+  event: "Astro Design",
+  present: designPresent,
+  absent: designAbsent,
+  total: designPresent + designAbsent,
+  percentage:
+    (
+      designPresent /
+      Math.max(1, designPresent + designAbsent)
+    ) * 100,
+});
+
+summarySheet.addRow({
+  event: "Astro Modeler",
+  present: modelerPresent,
+  absent: modelerAbsent,
+  total: modelerPresent + modelerAbsent,
+  percentage:
+    (
+      modelerPresent /
+      Math.max(1, modelerPresent + modelerAbsent)
+    ) * 100,
+});
+
+function styleEventSheet(sheet) {
+
+  sheet.eachRow((row) => {
+
+    // Style every team header
+    if (row.getCell(1).value === "S.No") {
+
+      row.height = 28;
+
+      row.font = {
+        bold: true,
+        color: {
+          argb: "FFFFFFFF",
+        },
+      };
+
+      row.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: {
+          argb: "00629B",
+        },
+      };
+
+      row.alignment = {
+        horizontal: "center",
+        vertical: "middle",
+      };
+    }
+
+    // Border for all rows
+    row.eachCell((cell) => {
+      cell.border = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+
+      cell.alignment = {
+        vertical: "middle",
+      };
     });
 
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    );
+  });
 
-    res.setHeader(
-      "Content-Disposition",
-      'attachment; filename="SpaceDayAttendance.xlsx"',
-    );
+}
 
-    await workbook.xlsx.write(res);
+function colorAttendance(sheet) {
 
-    res.end();
+  sheet.eachRow((row) => {
+
+    const status = row.getCell(6).value;
+
+    if (status === "Present") {
+
+      row.getCell(6).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: {
+          argb: "C6EFCE",
+        },
+      };
+
+      row.getCell(6).font = {
+        bold: true,
+        color: {
+          argb: "006100",
+        },
+      };
+
+    }
+
+    if (status === "Absent") {
+
+      row.getCell(6).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: {
+          argb: "FFC7CE",
+        },
+      };
+
+      row.getCell(6).font = {
+        bold: true,
+        color: {
+          argb: "9C0006",
+        },
+      };
+
+    }
+
+  });
+
+}
+
+function freezeSheet(sheet){
+
+  sheet.views=[
+    {
+      state:"frozen",
+      ySplit:8,
+    },
+  ];
+
+}
+
+function addFilter(sheet){
+
+  sheet.autoFilter={
+    from:"A8",
+    to:"K8",
+  };
+
+}
+
+[quizSheet,designSheet,modelerSheet].forEach((sheet)=>{
+
+    styleEventSheet(sheet);
+
+    colorAttendance(sheet);
+
+    freezeSheet(sheet);
+
+});
+
+const summaryHeader = summarySheet.getRow(8);
+
+summaryHeader.font = {
+  bold: true,
+  color: {
+    argb: "FFFFFFFF",
+  },
+};
+
+summaryHeader.fill = {
+  type: "pattern",
+  pattern: "solid",
+  fgColor: {
+    argb: "00629B",
+  },
+};
+
+summaryHeader.alignment = {
+  horizontal: "center",
+};
+
+summarySheet.eachRow((row,rowNumber)=>{
+
+  if(rowNumber<8) return;
+
+  row.eachCell((cell)=>{
+
+    cell.border={
+      top:{style:"thin"},
+      bottom:{style:"thin"},
+      left:{style:"thin"},
+      right:{style:"thin"},
+    };
+
+  });
+
+});
+
+summarySheet.views=[
+  {
+    state:"frozen",
+    ySplit:8,
+  },
+];
+
+summarySheet.autoFilter={
+  from:"A8",
+  to:"E8",
+};
+
+res.setHeader(
+  "Content-Type",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+);
+
+res.setHeader(
+  "Content-Disposition",
+  'attachment; filename="SpaceDayAttendance.xlsx"'
+);
+
+await workbook.xlsx.write(res);
+
+res.end();
   } catch (err) {
     console.error(err);
 
