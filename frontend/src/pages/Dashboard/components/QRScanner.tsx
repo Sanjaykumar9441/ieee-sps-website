@@ -1,45 +1,58 @@
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 import { useEffect, useRef } from "react";
 
 interface Props {
   onScan: (registrationId: string) => void;
+  paused: boolean;
 }
 
-export default function QRScanner({ onScan }: Props) {
-  const scanned = useRef(false);
+export default function QRScanner({
+  onScan,
+  paused,
+}: Props) {
+  const qrRef = useRef<Html5Qrcode | null>(null);
+  const scanning = useRef(false);
 
   useEffect(() => {
-    const scanner = new Html5QrcodeScanner(
-      "reader",
+    const qr = new Html5Qrcode("reader");
+
+    qrRef.current = qr;
+
+    qr.start(
+      { facingMode: "environment" },
       {
         fps: 10,
         qrbox: 250,
       },
-      false,
-    );
-
-    scanner.render(
       (decodedText) => {
-        if (scanned.current) return;
+        if (paused) return;
 
-        scanned.current = true;
+        if (scanning.current) return;
 
-        const registrationId = decodedText.split("/").pop();
+        scanning.current = true;
 
-        if (!registrationId) {
-          console.error("Invalid QR Code");
-          return;
+        const registrationId =
+          decodedText.split("/").pop();
+
+        if (registrationId) {
+          onScan(registrationId);
         }
-
-        onScan(registrationId);
       },
       () => {},
     );
 
     return () => {
-      scanner.clear().catch(() => {});
+      qr.stop()
+        .then(() => qr.clear())
+        .catch(() => {});
     };
   }, []);
+
+  useEffect(() => {
+    if (!paused) {
+      scanning.current = false;
+    }
+  }, [paused]);
 
   return <div id="reader" />;
 }

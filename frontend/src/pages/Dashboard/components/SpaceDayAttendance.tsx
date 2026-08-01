@@ -27,7 +27,6 @@ export default function SpaceDayAttendance() {
   const [activityFeed, setActivityFeed] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [scannerKey, setScannerKey] = useState(0);
   const [selectedRegistration, setSelectedRegistration] = useState<any>(null);
   const [missingParticipants, setMissingParticipants] = useState<any[]>([]);
 
@@ -850,10 +849,8 @@ export default function SpaceDayAttendance() {
 
           {attendanceOpen ? (
             <QRScanner
-              key={scannerKey}
+              paused={selectedRegistration !== null}
               onScan={async (registrationId) => {
-                if (selectedRegistration) return;
-
                 try {
                   const data = await getAttendanceRegistration(registrationId);
 
@@ -880,7 +877,6 @@ export default function SpaceDayAttendance() {
         registration={selectedRegistration}
         onClose={() => {
           setSelectedRegistration(null);
-          setScannerKey((prev) => prev + 1);
         }}
       />
 

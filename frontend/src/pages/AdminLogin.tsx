@@ -58,6 +58,7 @@ const AdminLogin = () => {
 
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("role", "admin");
+        localStorage.setItem("adminId", res.data.adminId);
 
         localStorage.setItem(
           "permissions",
