@@ -1,10 +1,10 @@
 import { useState } from "react";
 
 const inputStyle: React.CSSProperties = {
-  backgroundColor: "#080c14",
-  border: "1px solid rgba(99,179,237,0.12)",
-  color: "#f0f4ff",
-  borderRadius: "10px",
+  backgroundColor: "#FAF9F7",
+  border: "1px solid #EBE8E2",
+  color: "#1C1B22",
+  borderRadius: "12px",
   padding: "10px 14px",
   width: "100%",
   fontSize: "14px",
@@ -24,20 +24,25 @@ const InputField = ({
   const [focused, setFocused] = useState(false);
   const focusStyle = focused
     ? {
-        border: "1px solid rgba(59,130,246,0.6)",
-        boxShadow: "0 0 0 3px rgba(59,130,246,0.08)",
+        border: "1px solid #7C6FEF",
+        boxShadow: "0 0 0 3px rgba(124,111,239,0.12)",
+        backgroundColor: "#fff",
       }
     : {};
+
+  const labelEl = (
+    <label
+      className="block text-xs font-medium mb-1.5 uppercase tracking-widest"
+      style={{ color: "#B5B1A8" }}
+    >
+      {label}
+    </label>
+  );
 
   if (as === "select") {
     return (
       <div>
-        <label
-          className="block text-xs font-medium mb-1.5 uppercase tracking-widest"
-          style={{ color: "#64748b" }}
-        >
-          {label}
-        </label>
+        {labelEl}
         <select
           value={value}
           onChange={onChange}
@@ -54,12 +59,7 @@ const InputField = ({
   if (as === "textarea") {
     return (
       <div>
-        <label
-          className="block text-xs font-medium mb-1.5 uppercase tracking-widest"
-          style={{ color: "#64748b" }}
-        >
-          {label}
-        </label>
+        {labelEl}
         <textarea
           value={value}
           onChange={onChange}
@@ -74,12 +74,7 @@ const InputField = ({
   }
   return (
     <div>
-      <label
-        className="block text-xs font-medium mb-1.5 uppercase tracking-widest"
-        style={{ color: "#64748b" }}
-      >
-        {label}
-      </label>
+      {labelEl}
       <input
         type={type}
         value={value}

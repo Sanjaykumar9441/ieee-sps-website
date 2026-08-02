@@ -75,10 +75,6 @@ router.put("/:id", verifyToken, async (req, res) => {
     );
 
     await logActivity("Super Admin", "Updated Admin Access", updated.username);
-    console.log("📤 Emitting adminPermissionsUpdated", {
-      adminId: updated._id.toString(),
-      permissions: updated.permissions,
-    });
     getIO().emit("adminPermissionsUpdated", {
       adminId: updated._id,
       permissions: updated.permissions,
@@ -305,10 +301,6 @@ router.put("/toggle-status/:id", verifyToken, async (req, res) => {
     }
 
     await admin.save();
-    console.log("📤 Emitting adminPermissionsUpdated", {
-      adminId: updated._id.toString(),
-      permissions: updated.permissions,
-    });
     getIO().emit("adminPermissionsUpdated", {
       adminId: admin._id,
       permissions: admin.permissions,

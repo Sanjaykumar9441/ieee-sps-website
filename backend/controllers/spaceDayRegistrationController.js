@@ -673,6 +673,15 @@ exports.getAttendanceLogs = async (req, res) => {
 
 exports.exportAttendanceExcel = async (req, res) => {
   try {
+    const registrations =
+  await SpaceDayRegistration.find({
+    paymentStatus: "Verified",
+  })
+    .populate(
+      "members.attendance.markedBy",
+      "username"
+    )
+    .lean();
     const workbook = new ExcelJS.Workbook();
 
 workbook.creator =
@@ -1154,7 +1163,8 @@ function addFilter(sheet){
     colorAttendance(sheet);
 
     freezeSheet(sheet);
-
+    
+    addFilter(sheet);
 });
 
 const summaryHeader = summarySheet.getRow(8);
