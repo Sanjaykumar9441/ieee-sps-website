@@ -363,11 +363,10 @@ exports.downloadAcknowledgement = async (req, res) => {
 
 exports.getRegistrations = async (req, res) => {
   try {
-    const registrations = await SpaceDayRegistration.find({
-      paymentStatus: "Verified",
-    }).sort({
+    const registrations = await SpaceDayRegistration.find().sort({
       createdAt: -1,
     });
+
     return res.json({
       success: true,
       registrations,
@@ -673,563 +672,469 @@ exports.getAttendanceLogs = async (req, res) => {
 
 exports.exportAttendanceExcel = async (req, res) => {
   try {
-    const registrations =
-  await SpaceDayRegistration.find({
-    paymentStatus: "Verified",
-  })
-    .populate(
-      "members.attendance.markedBy",
-      "username"
-    )
-    .lean();
+    const registrations = await SpaceDayRegistration.find({
+      paymentStatus: "Verified",
+    })
+      .populate("members.attendance.markedBy", "username")
+      .lean();
     const workbook = new ExcelJS.Workbook();
 
-workbook.creator =
-  "IEEE SPS Student Branch Chapter";
+    workbook.creator = "IEEE SPS Student Branch Chapter";
 
-workbook.company =
-  "Aditya University";
+    workbook.company = "Aditya University";
 
-workbook.subject =
-  "National Space Day Attendance";
+    workbook.subject = "National Space Day Attendance";
 
-workbook.title =
-  "Attendance Report";
+    workbook.title = "Attendance Report";
 
-  const summarySheet =
-  workbook.addWorksheet("Summary");
+    const summarySheet = workbook.addWorksheet("Summary");
 
-const quizSheet =
-  workbook.addWorksheet("Astro Quiz");
+    const quizSheet = workbook.addWorksheet("Astro Quiz");
 
-const designSheet =
-  workbook.addWorksheet("Astro Design");
+    const designSheet = workbook.addWorksheet("Astro Design");
 
-const modelerSheet =
-  workbook.addWorksheet("Astro Modeler");
+    const modelerSheet = workbook.addWorksheet("Astro Modeler");
 
-const sheets = [
-  summarySheet,
-  quizSheet,
-  designSheet,
-  modelerSheet,
-];
+    const sheets = [summarySheet, quizSheet, designSheet, modelerSheet];
 
-function createHeader(sheet){
+    function createHeader(sheet) {
+      sheet.mergeCells("A1:K1");
 
-  sheet.mergeCells("A1:K1");
+      sheet.getCell("A1").value = "IEEE SPS Student Branch Chapter";
 
-  sheet.getCell("A1").value =
-    "IEEE SPS Student Branch Chapter";
+      sheet.mergeCells("A2:K2");
 
-  sheet.mergeCells("A2:K2");
+      sheet.getCell("A2").value = "Aditya University";
 
-  sheet.getCell("A2").value =
-    "Aditya University";
+      sheet.mergeCells("A3:K3");
 
-  sheet.mergeCells("A3:K3");
+      sheet.getCell("A3").value = "National Space Day 2026";
 
-  sheet.getCell("A3").value =
-    "National Space Day 2026";
+      sheet.mergeCells("A4:K4");
 
-  sheet.mergeCells("A4:K4");
+      sheet.getCell("A4").value = "Attendance Report";
 
-  sheet.getCell("A4").value =
-    "Attendance Report";
+      ["A1", "A2", "A3", "A4"].forEach((cell) => {
+        sheet.getCell(cell).font = {
+          bold: true,
+          size: 16,
+          color: {
+            argb: "FFFFFFFF",
+          },
+        };
 
-  ["A1","A2","A3","A4"].forEach((cell)=>{
+        sheet.getCell(cell).alignment = {
+          horizontal: "center",
+        };
 
-    sheet.getCell(cell).font={
-      bold:true,
-      size:16,
-      color:{
-        argb:"FFFFFFFF",
-      },
-    };
+        sheet.getCell(cell).fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: {
+            argb: "00629B",
+          },
+        };
+      });
 
-    sheet.getCell(cell).alignment={
-      horizontal:"center",
-    };
+      sheet.addRow([]);
 
-    sheet.getCell(cell).fill={
-      type:"pattern",
-      pattern:"solid",
-      fgColor:{
-        argb:"00629B",
-      },
-    };
+      sheet.addRow(["Generated On", new Date().toLocaleString()]);
 
-  });
+      sheet.addRow([]);
+    }
 
-  sheet.addRow([]);
+    sheets.forEach(createHeader);
 
-  sheet.addRow([
-    "Generated On",
-    new Date().toLocaleString(),
-  ]);
+    function createTable(sheet) {
+      sheet.columns = [
+        {
+          header: "S.No",
+          key: "sno",
+          width: 8,
+        },
 
-  sheet.addRow([]);
+        {
+          header: "Registration ID",
+          key: "registrationId",
+          width: 20,
+        },
 
-}
+        {
+          header: "Team",
+          key: "team",
+          width: 24,
+        },
 
-sheets.forEach(createHeader);
+        {
+          header: "Member",
+          key: "member",
+          width: 28,
+        },
 
-function createTable(sheet){
+        {
+          header: "Roll Number",
+          key: "roll",
+          width: 18,
+        },
 
-  sheet.columns=[
+        {
+          header: "Department",
+          key: "department",
+          width: 20,
+        },
 
-    {
-      header:"S.No",
-      key:"sno",
-      width:8,
-    },
+        {
+          header: "Year",
+          key: "year",
+          width: 10,
+        },
 
-    {
-      header:"Registration ID",
-      key:"registrationId",
-      width:20,
-    },
+        {
+          header: "Payment",
+          key: "payment",
+          width: 14,
+        },
 
-    {
-      header:"Team",
-      key:"team",
-      width:24,
-    },
+        {
+          header: "Attendance",
+          key: "attendance",
+          width: 14,
+        },
 
-    {
-      header:"Member",
-      key:"member",
-      width:28,
-    },
+        {
+          header: "Time",
+          key: "time",
+          width: 22,
+        },
 
-    {
-      header:"Roll Number",
-      key:"roll",
-      width:18,
-    },
+        {
+          header: "Marked By",
+          key: "markedBy",
+          width: 20,
+        },
+      ];
+    }
 
-    {
-      header:"Department",
-      key:"department",
-      width:20,
-    },
+    createTable(quizSheet);
+    createTable(designSheet);
+    createTable(modelerSheet);
 
-    {
-      header:"Year",
-      key:"year",
-      width:10,
-    },
+    let quizNo = 1;
+    let designNo = 1;
+    let modelerNo = 1;
 
-    {
-      header:"Payment",
-      key:"payment",
-      width:14,
-    },
+    let quizPresent = 0;
+    let quizAbsent = 0;
 
-    {
-      header:"Attendance",
-      key:"attendance",
-      width:14,
-    },
+    let designPresent = 0;
+    let designAbsent = 0;
 
-    {
-      header:"Time",
-      key:"time",
-      width:22,
-    },
+    let modelerPresent = 0;
+    let modelerAbsent = 0;
 
-    {
-      header:"Marked By",
-      key:"markedBy",
-      width:20,
-    },
+    registrations.forEach((registration) => {
+      // ==========================
+      // ASTRO QUIZ (Keep Existing)
+      // ==========================
 
-  ];
-
-}
-
-createTable(quizSheet);
-createTable(designSheet);
-createTable(modelerSheet);
-
-let quizNo = 1;
-let designNo = 1;
-let modelerNo = 1;
-
-let quizPresent = 0;
-let quizAbsent = 0;
-
-let designPresent = 0;
-let designAbsent = 0;
-
-let modelerPresent = 0;
-let modelerAbsent = 0;
-
-registrations.forEach((registration) => {
-
-    // ==========================
-    // ASTRO QUIZ (Keep Existing)
-    // ==========================
-
-    if (registration.eventType === "astroquiz") {
-
+      if (registration.eventType === "astroquiz") {
         registration.members.forEach((member) => {
+          quizSheet.addRow({
+            sno: quizNo++,
+            registrationId: registration.registrationId,
+            team: "-",
+            member: member.fullName,
+            roll: member.rollNumber,
+            department: member.department,
+            year: member.year,
+            payment: registration.paymentStatus,
+            attendance: member.attendance?.present ? "Present" : "Absent",
+            time: member.attendance?.markedAt
+              ? new Date(member.attendance.markedAt).toLocaleString()
+              : "-",
+            markedBy: member.attendance?.markedBy?.username || "-",
+          });
 
-            quizSheet.addRow({
-                sno: quizNo++,
-                registrationId: registration.registrationId,
-                team: "-",
-                member: member.fullName,
-                roll: member.rollNumber,
-                department: member.department,
-                year: member.year,
-                payment: registration.paymentStatus,
-                attendance: member.attendance?.present
-                    ? "Present"
-                    : "Absent",
-                time: member.attendance?.markedAt
-                    ? new Date(member.attendance.markedAt).toLocaleString()
-                    : "-",
-                markedBy:
-                    member.attendance?.markedBy?.username || "-",
-            });
-
-            member.attendance?.present
-                ? quizPresent++
-                : quizAbsent++;
+          member.attendance?.present ? quizPresent++ : quizAbsent++;
         });
 
         return;
-    }
+      }
 
-    // ===========================================
-    // ASTRO DESIGN & ASTRO MODELER (Grouped)
-    // ===========================================
+      // ===========================================
+      // ASTRO DESIGN & ASTRO MODELER (Grouped)
+      // ===========================================
 
-    if (
+      if (
         registration.eventType === "astrodesign" ||
         registration.eventType === "astromodeler"
-    ) {
-
+      ) {
         const sheet =
-            registration.eventType === "astrodesign"
-                ? designSheet
-                : modelerSheet;
+          registration.eventType === "astrodesign" ? designSheet : modelerSheet;
 
         sheet.addRow([]);
 
-        sheet.addRow([
-            "Team Name",
-            registration.teamName,
-        ]);
+        sheet.addRow(["Team Name", registration.teamName]);
 
-        sheet.addRow([
-            "Registration ID",
-            registration.registrationId,
-        ]);
+        sheet.addRow(["Registration ID", registration.registrationId]);
 
-        sheet.addRow([
-            "Payment Status",
-            registration.paymentStatus,
-        ]);
+        sheet.addRow(["Payment Status", registration.paymentStatus]);
 
         sheet.addRow([]);
 
         const header = sheet.addRow([
-            "S.No",
-            "Member",
-            "Roll No",
-            "Department",
-            "Year",
-            "Attendance",
-            "Time",
-            "Marked By",
+          "S.No",
+          "Member",
+          "Roll No",
+          "Department",
+          "Year",
+          "Attendance",
+          "Time",
+          "Marked By",
         ]);
 
         header.font = {
-            bold: true,
-            color: {
-                argb: "FFFFFFFF",
-            },
+          bold: true,
+          color: {
+            argb: "FFFFFFFF",
+          },
         };
 
         header.fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: {
-                argb: "00629B",
-            },
+          type: "pattern",
+          pattern: "solid",
+          fgColor: {
+            argb: "00629B",
+          },
         };
 
         registration.members.forEach((member, index) => {
+          sheet.addRow([
+            index + 1,
+            member.fullName,
+            member.rollNumber,
+            member.department,
+            member.year,
+            member.attendance?.present ? "Present" : "Absent",
+            member.attendance?.markedAt
+              ? new Date(member.attendance.markedAt).toLocaleString()
+              : "-",
+            member.attendance?.markedBy?.username || "-",
+          ]);
 
-            sheet.addRow([
-                index + 1,
-                member.fullName,
-                member.rollNumber,
-                member.department,
-                member.year,
-                member.attendance?.present
-                    ? "Present"
-                    : "Absent",
-                member.attendance?.markedAt
-                    ? new Date(
-                          member.attendance.markedAt
-                      ).toLocaleString()
-                    : "-",
-                member.attendance?.markedBy?.username || "-",
-            ]);
-
-            if (registration.eventType === "astrodesign") {
-                member.attendance?.present
-                    ? designPresent++
-                    : designAbsent++;
-            } else {
-                member.attendance?.present
-                    ? modelerPresent++
-                    : modelerAbsent++;
-            }
+          if (registration.eventType === "astrodesign") {
+            member.attendance?.present ? designPresent++ : designAbsent++;
+          } else {
+            member.attendance?.present ? modelerPresent++ : modelerAbsent++;
+          }
         });
 
         sheet.addRow([]);
-    }
-
-});
-
-summarySheet.columns = [
-  { header: "Event", key: "event", width: 30 },
-  { header: "Present", key: "present", width: 15 },
-  { header: "Absent", key: "absent", width: 15 },
-  { header: "Total", key: "total", width: 15 },
-  { header: "Attendance %", key: "percentage", width: 20 },
-];
-
-summarySheet.addRow({
-  event: "Astro Quiz",
-  present: quizPresent,
-  absent: quizAbsent,
-  total: quizPresent + quizAbsent,
-  percentage:
-    (
-      quizPresent /
-      Math.max(1, quizPresent + quizAbsent)
-    ) * 100,
-});
-
-summarySheet.addRow({
-  event: "Astro Design",
-  present: designPresent,
-  absent: designAbsent,
-  total: designPresent + designAbsent,
-  percentage:
-    (
-      designPresent /
-      Math.max(1, designPresent + designAbsent)
-    ) * 100,
-});
-
-summarySheet.addRow({
-  event: "Astro Modeler",
-  present: modelerPresent,
-  absent: modelerAbsent,
-  total: modelerPresent + modelerAbsent,
-  percentage:
-    (
-      modelerPresent /
-      Math.max(1, modelerPresent + modelerAbsent)
-    ) * 100,
-});
-
-function styleEventSheet(sheet) {
-
-  sheet.eachRow((row) => {
-
-    // Style every team header
-    if (row.getCell(1).value === "S.No") {
-
-      row.height = 28;
-
-      row.font = {
-        bold: true,
-        color: {
-          argb: "FFFFFFFF",
-        },
-      };
-
-      row.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: {
-          argb: "00629B",
-        },
-      };
-
-      row.alignment = {
-        horizontal: "center",
-        vertical: "middle",
-      };
-    }
-
-    // Border for all rows
-    row.eachCell((cell) => {
-      cell.border = {
-        top: { style: "thin" },
-        bottom: { style: "thin" },
-        left: { style: "thin" },
-        right: { style: "thin" },
-      };
-
-      cell.alignment = {
-        vertical: "middle",
-      };
+      }
     });
 
-  });
+    summarySheet.columns = [
+      { header: "Event", key: "event", width: 30 },
+      { header: "Present", key: "present", width: 15 },
+      { header: "Absent", key: "absent", width: 15 },
+      { header: "Total", key: "total", width: 15 },
+      { header: "Attendance %", key: "percentage", width: 20 },
+    ];
 
-}
+    summarySheet.addRow({
+      event: "Astro Quiz",
+      present: quizPresent,
+      absent: quizAbsent,
+      total: quizPresent + quizAbsent,
+      percentage: (quizPresent / Math.max(1, quizPresent + quizAbsent)) * 100,
+    });
 
-function colorAttendance(sheet) {
+    summarySheet.addRow({
+      event: "Astro Design",
+      present: designPresent,
+      absent: designAbsent,
+      total: designPresent + designAbsent,
+      percentage:
+        (designPresent / Math.max(1, designPresent + designAbsent)) * 100,
+    });
 
-  sheet.eachRow((row) => {
+    summarySheet.addRow({
+      event: "Astro Modeler",
+      present: modelerPresent,
+      absent: modelerAbsent,
+      total: modelerPresent + modelerAbsent,
+      percentage:
+        (modelerPresent / Math.max(1, modelerPresent + modelerAbsent)) * 100,
+    });
 
-    const status = row.getCell(6).value;
+    function styleEventSheet(sheet) {
+      sheet.eachRow((row) => {
+        // Style every team header
+        if (row.getCell(1).value === "S.No") {
+          row.height = 28;
 
-    if (status === "Present") {
+          row.font = {
+            bold: true,
+            color: {
+              argb: "FFFFFFFF",
+            },
+          };
 
-      row.getCell(6).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: {
-          argb: "C6EFCE",
-        },
-      };
+          row.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: {
+              argb: "00629B",
+            },
+          };
 
-      row.getCell(6).font = {
-        bold: true,
-        color: {
-          argb: "006100",
-        },
-      };
+          row.alignment = {
+            horizontal: "center",
+            vertical: "middle",
+          };
+        }
 
+        // Border for all rows
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: "thin" },
+            bottom: { style: "thin" },
+            left: { style: "thin" },
+            right: { style: "thin" },
+          };
+
+          cell.alignment = {
+            vertical: "middle",
+          };
+        });
+      });
     }
 
-    if (status === "Absent") {
+    function colorAttendance(sheet) {
+      sheet.eachRow((row) => {
+        const status = row.getCell(6).value;
 
-      row.getCell(6).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: {
-          argb: "FFC7CE",
-        },
-      };
+        if (status === "Present") {
+          row.getCell(6).fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: {
+              argb: "C6EFCE",
+            },
+          };
 
-      row.getCell(6).font = {
-        bold: true,
-        color: {
-          argb: "9C0006",
-        },
-      };
+          row.getCell(6).font = {
+            bold: true,
+            color: {
+              argb: "006100",
+            },
+          };
+        }
 
+        if (status === "Absent") {
+          row.getCell(6).fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: {
+              argb: "FFC7CE",
+            },
+          };
+
+          row.getCell(6).font = {
+            bold: true,
+            color: {
+              argb: "9C0006",
+            },
+          };
+        }
+      });
     }
 
-  });
+    function freezeSheet(sheet) {
+      sheet.views = [
+        {
+          state: "frozen",
+          ySplit: 8,
+        },
+      ];
+    }
 
-}
+    function addFilter(sheet) {
+      sheet.autoFilter = {
+        from: "A8",
+        to: "K8",
+      };
+    }
 
-function freezeSheet(sheet){
+    [quizSheet, designSheet, modelerSheet].forEach((sheet) => {
+      styleEventSheet(sheet);
 
-  sheet.views=[
-    {
-      state:"frozen",
-      ySplit:8,
-    },
-  ];
+      colorAttendance(sheet);
 
-}
+      freezeSheet(sheet);
 
-function addFilter(sheet){
+      addFilter(sheet);
+    });
 
-  sheet.autoFilter={
-    from:"A8",
-    to:"K8",
-  };
+    const summaryHeader = summarySheet.getRow(8);
 
-}
-
-[quizSheet,designSheet,modelerSheet].forEach((sheet)=>{
-
-    styleEventSheet(sheet);
-
-    colorAttendance(sheet);
-
-    freezeSheet(sheet);
-    
-    addFilter(sheet);
-});
-
-const summaryHeader = summarySheet.getRow(8);
-
-summaryHeader.font = {
-  bold: true,
-  color: {
-    argb: "FFFFFFFF",
-  },
-};
-
-summaryHeader.fill = {
-  type: "pattern",
-  pattern: "solid",
-  fgColor: {
-    argb: "00629B",
-  },
-};
-
-summaryHeader.alignment = {
-  horizontal: "center",
-};
-
-summarySheet.eachRow((row,rowNumber)=>{
-
-  if(rowNumber<8) return;
-
-  row.eachCell((cell)=>{
-
-    cell.border={
-      top:{style:"thin"},
-      bottom:{style:"thin"},
-      left:{style:"thin"},
-      right:{style:"thin"},
+    summaryHeader.font = {
+      bold: true,
+      color: {
+        argb: "FFFFFFFF",
+      },
     };
 
-  });
+    summaryHeader.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: {
+        argb: "00629B",
+      },
+    };
 
-});
+    summaryHeader.alignment = {
+      horizontal: "center",
+    };
 
-summarySheet.views=[
-  {
-    state:"frozen",
-    ySplit:8,
-  },
-];
+    summarySheet.eachRow((row, rowNumber) => {
+      if (rowNumber < 8) return;
 
-summarySheet.autoFilter={
-  from:"A8",
-  to:"E8",
-};
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+    });
 
-res.setHeader(
-  "Content-Type",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-);
+    summarySheet.views = [
+      {
+        state: "frozen",
+        ySplit: 8,
+      },
+    ];
 
-res.setHeader(
-  "Content-Disposition",
-  'attachment; filename="SpaceDayAttendance.xlsx"'
-);
+    summarySheet.autoFilter = {
+      from: "A8",
+      to: "E8",
+    };
 
-await workbook.xlsx.write(res);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
 
-res.end();
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="SpaceDayAttendance.xlsx"',
+    );
+
+    await workbook.xlsx.write(res);
+
+    res.end();
   } catch (err) {
     console.error(err);
 
