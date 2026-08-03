@@ -183,13 +183,10 @@ export default function Hero() {
       className="relative overflow-hidden min-h-screen bg-[#F8FAFC] flex items-center"
     >
       {/* Background Blur */}
-
       <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-blue-200/30 blur-3xl" />
-
       <div className="absolute bottom-0 left-0 w-[350px] h-[350px] rounded-full bg-sky-100/40 blur-3xl" />
 
       {/* Grid */}
-
       <div className="absolute inset-0 opacity-[0.04]">
         <div className="h-full w-full bg-[linear-gradient(to_right,#94a3b8_1px,transparent_1px),linear-gradient(to_bottom,#94a3b8_1px,transparent_1px)] bg-[size:50px_50px]" />
       </div>
@@ -198,77 +195,68 @@ export default function Hero() {
       <SpaceIllustration />
 
       {/* Main */}
-
-      <div className="relative z-10 max-w-7xl mx-auto px-6 pt-24 pb-16 w-full">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-28 sm:pt-24 pb-16 w-full">
         {/* Badge */}
-
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-5 py-2"
+          className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 sm:px-5 sm:py-2"
         >
-          <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-
-          <span className="text-sm font-semibold text-blue-700 tracking-wide uppercase">
+          <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0"></span>
+          <span className="text-xs sm:text-sm font-semibold text-blue-700 tracking-wide uppercase">
             IEEE SPS Student Branch Chapter - Electronics and Communication Engineering
           </span>
         </motion.div>
 
         {/* Title */}
-
         <motion.h1
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="mt-8 text-5xl md:text-7xl font-extrabold leading-tight text-slate-900"
+          className="mt-6 sm:mt-8 text-4xl sm:text-5xl md:text-7xl font-extrabold leading-tight text-slate-900"
         >
           {eventData.title}
         </motion.h1>
 
         {/* Subtitle */}
-
         <motion.p
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
-          className="mt-6 max-w-3xl text-xl text-slate-600 leading-9"
+          className="mt-4 sm:mt-6 max-w-3xl text-base sm:text-xl text-slate-600 leading-7 sm:leading-9"
         >
           {eventData.tagline}
         </motion.p>
 
         {/* Event Info */}
-
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="mt-10 flex flex-wrap gap-6"
+          className="mt-8 sm:mt-10 flex flex-wrap items-center gap-3 sm:gap-6"
         >
-          <div className="flex items-center gap-2 text-slate-700">
-            <CalendarDays size={20} />
-
+          <div className="flex items-center gap-2 text-sm sm:text-base text-slate-700">
+            <CalendarDays size={18} className="shrink-0" />
             <span>13 August 2026</span>
           </div>
 
-          <div className="flex items-center gap-2 text-slate-700">
-            <MapPin size={20} />
-
+          <div className="flex items-center gap-2 text-sm sm:text-base text-slate-700">
+            <MapPin size={18} className="shrink-0" />
             <span>{eventData.venue}</span>
           </div>
 
-          <div className="px-4 py-1 rounded-full bg-green-100 text-green-700 font-semibold">
+          <div className="px-3 py-1 sm:px-4 sm:py-1 rounded-full bg-green-100 text-green-700 text-sm sm:text-base font-semibold">
             Registration Open
           </div>
         </motion.div>
 
         {/* Countdown */}
-
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7 }}
-          className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-5 max-w-3xl"
+          className="mt-10 sm:mt-14 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5 max-w-3xl"
         >
           {countdown.map((item, index) => (
             <motion.div
@@ -281,13 +269,13 @@ export default function Hero() {
               whileHover={{
                 y: -6,
               }}
-              className="rounded-3xl bg-white shadow-md border border-slate-200 p-8 text-center"
+              className="rounded-2xl sm:rounded-3xl bg-white shadow-md border border-slate-200 p-4 sm:p-6 md:p-8 text-center"
             >
-              <div className="text-5xl font-extrabold text-blue-700">
+              <div className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-blue-700">
                 {String(item.value).padStart(2, "0")}
               </div>
 
-              <div className="mt-2 text-slate-500 font-medium">
+              <div className="mt-1 sm:mt-2 text-xs sm:text-sm md:text-base text-slate-500 font-medium">
                 {item.label}
               </div>
             </motion.div>
@@ -295,16 +283,15 @@ export default function Hero() {
         </motion.div>
 
         {/* Buttons */}
-
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2 }}
-          className="mt-14 flex flex-wrap gap-4"
+          className="mt-10 sm:mt-14 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4"
         >
           <button
             onClick={() => navigate("/space-day/register")}
-            className="px-8 py-4 rounded-2xl bg-[#00629B] text-white font-semibold hover:bg-[#004E7C] transition flex items-center gap-2"
+            className="px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl bg-[#00629B] text-white font-semibold hover:bg-[#004E7C] transition flex items-center justify-center gap-2"
           >
             Register Now
             <ArrowRight size={18} />
@@ -312,7 +299,7 @@ export default function Hero() {
 
           <button
             onClick={scrollToAbout}
-            className="px-8 py-4 rounded-2xl border border-slate-300 bg-white hover:bg-slate-50 transition font-semibold text-slate-700"
+            className="px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl border border-slate-300 bg-white hover:bg-slate-50 transition font-semibold text-slate-700"
           >
             Learn More
           </button>
@@ -320,7 +307,6 @@ export default function Hero() {
       </div>
 
       {/* Scroll Indicator */}
-
       <motion.div
         animate={{
           y: [0, 10, 0],

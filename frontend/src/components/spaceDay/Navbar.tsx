@@ -75,7 +75,6 @@ export default function Navbar() {
   return (
     <>
       {/* ================= Navbar ================= */}
-
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
@@ -83,34 +82,32 @@ export default function Navbar() {
             : "bg-transparent"
         }`}
       >
-        <div className="max-w-7xl mx-auto h-16 px-6 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto h-14 md:h-16 px-4 md:px-6 flex items-center justify-between">
           {/* Logo */}
-
           <button
             onClick={() => scrollToSection("home")}
-            className="flex items-center gap-8"
+            className="flex items-center gap-2 sm:gap-4 md:gap-8 shrink-0"
           >
             <img
               src={ieeeLogo}
               alt="IEEE"
-              className="h-12 w-auto object-contain"
+              className="h-7 sm:h-9 md:h-12 w-auto object-contain"
             />
 
             <img
               src={spsLogo}
               alt="IEEE SPS"
-              className="h-12 w-auto object-contain"
+              className="h-7 sm:h-9 md:h-12 w-auto object-contain"
             />
 
             <img
               src={adityaLogo}
               alt="Aditya"
-              className="h-12 w-auto object-contain"
+              className="h-7 sm:h-9 md:h-12 w-auto object-contain"
             />
           </button>
 
           {/* Desktop */}
-
           <div className="hidden md:flex items-center gap-7">
             {sections.map((item) => (
               <button
@@ -139,15 +136,16 @@ export default function Navbar() {
           </div>
 
           {/* Mobile */}
-
-          <button className="md:hidden" onClick={() => setMenuOpen(!menuOpen)}>
+          <button
+            className="md:hidden shrink-0 p-2 -mr-2"
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
       </nav>
 
       {/* ================= Mobile Menu ================= */}
-
       <AnimatePresence>
         {menuOpen && (
           <>
@@ -168,7 +166,7 @@ export default function Navbar() {
                 stiffness: 260,
                 damping: 25,
               }}
-              className="fixed right-0 top-0 h-screen w-72 bg-white z-50 shadow-xl p-8"
+              className="fixed right-0 top-0 h-screen w-72 max-w-[85vw] bg-white z-50 shadow-xl p-6 sm:p-8"
             >
               <div className="mt-14 space-y-2">
                 {sections.map((item) => (

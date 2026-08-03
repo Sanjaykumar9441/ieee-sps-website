@@ -46,16 +46,16 @@ export default function RegistrationSuccess() {
   const { registration, registrationId } = state;
 
   const theme = eventThemes[registration.eventType as EventType];
-  
+
   const selectedTheme = astroModelerThemes.find(
     (theme) => theme.id === registration.selectedTheme,
   );
 
   const eventNames = {
-  astroquiz: "Astro Quiz",
-  astrodesign: "AI Astro Design",
-  astromodeler: "Astro Modeler",
-};
+    astroquiz: "Astro Quiz",
+    astrodesign: "AI Astro Design",
+    astromodeler: "Astro Modeler",
+  };
 
   const downloadAcknowledgement = async () => {
     if (isDownloading) return;
@@ -397,11 +397,15 @@ export default function RegistrationSuccess() {
               </div>
 
               <div>
-                <p className="font-semibold">Registration Confirmation</p>
+                <p className="font-semibold">Confirmation & Event Updates</p>
 
                 <p className="text-slate-600">
-                  Once verified, your registration status will be confirmed by
-                  the organizing committee.
+                  Once your payment is verified, you will receive a confirmation
+                  email with your{" "}
+                  <strong>Verified Registration Acknowledgement (PDF)</strong>{" "}
+                  attached, along with the official{" "}
+                  <strong>WhatsApp group invitation link</strong> for event
+                  updates and announcements.
                 </p>
               </div>
             </div>
@@ -414,10 +418,13 @@ export default function RegistrationSuccess() {
               </div>
 
               <div>
-                <p className="font-semibold">Event Participation</p>
+                <p className="font-semibold">Reporting on Event Day</p>
 
                 <p className="text-slate-600">
-                  Please carry your Registration ID during reporting at the
+                  Please carry your{" "}
+                  <strong>Verified Registration Acknowledgement (PDF)</strong>,
+                  either in printed form or on your mobile device, along with a
+                  valid College ID for verification during reporting at the
                   event venue.
                 </p>
               </div>

@@ -65,13 +65,14 @@ const generateAcknowledgement = async (registration) => {
 
   const totalFee = registration.totalFee;
 
-  const registeredOn = new Date(registration.createdAt).toLocaleString(
-    "en-IN",
-    {
-      dateStyle: "medium",
-      timeStyle: "short",
-    },
-  );
+  const createdAt = new Date(registration.createdAt);
+
+  createdAt.setMinutes(createdAt.getMinutes() + 330);
+
+  const registeredOn = createdAt.toLocaleString("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 
   const member = registration.members[0];
 
