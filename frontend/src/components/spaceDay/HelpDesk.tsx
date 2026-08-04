@@ -1,14 +1,11 @@
 import { motion } from "framer-motion";
-import {
-  studentCoordinators,
-  facultyCoordinators,
-} from "./helpDeskData";
+import { Phone } from "lucide-react";
+import { studentCoordinators, facultyCoordinators } from "./helpDeskData";
 
 export default function HelpDesk() {
   return (
     <section id="help" className="py-28 bg-[#F8FAFC]">
       <div className="max-w-7xl mx-auto px-6">
-
         {/* Heading */}
 
         <motion.div
@@ -26,9 +23,8 @@ export default function HelpDesk() {
           </h2>
 
           <p className="mt-6 max-w-3xl mx-auto text-slate-600 leading-8">
-            For any queries regarding registration, participation, or the
-            event, feel free to contact our student coordinators or faculty
-            advisor.
+            For any queries regarding registration, participation, or the event,
+            feel free to contact our student coordinators or faculty advisor.
           </p>
         </motion.div>
 
@@ -65,6 +61,14 @@ export default function HelpDesk() {
                 <p className="mt-1 text-slate-500 text-sm">
                   {member.department}
                 </p>
+
+                <a
+                  href={`tel:${member.phone.replace(/\s+/g, "")}`}
+                  className="mt-4 inline-flex items-center gap-2 text-[#00629B] hover:text-[#004E7C] font-medium transition"
+                >
+                  <Phone size={16} />
+                  {member.phone}
+                </a>
               </motion.div>
             ))}
           </div>
@@ -98,14 +102,19 @@ export default function HelpDesk() {
                   {faculty.designation}
                 </p>
 
-                <p className="mt-1 text-slate-500">
-                  {faculty.department}
-                </p>
+                <p className="mt-1 text-slate-500">{faculty.department}</p>
+
+                <a
+                  href={`tel:${faculty.phone.replace(/\s+/g, "")}`}
+                  className="mt-5 inline-flex items-center gap-2 text-[#00629B] hover:text-[#004E7C] font-medium transition"
+                >
+                  <Phone size={17} />
+                  {faculty.phone}
+                </a>
               </motion.div>
             ))}
           </div>
         </div>
-
       </div>
     </section>
   );

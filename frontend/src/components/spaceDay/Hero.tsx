@@ -180,7 +180,7 @@ export default function Hero() {
   return (
     <section
       id="home"
-      className="relative overflow-hidden min-h-screen bg-[#F8FAFC] flex items-center"
+      className="relative overflow-hidden min-h-screen flex items-start md:items-center bg-[#F8FAFC]"
     >
       {/* Background Blur */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-blue-200/30 blur-3xl" />
@@ -195,7 +195,7 @@ export default function Hero() {
       <SpaceIllustration />
 
       {/* Main */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-28 sm:pt-24 pb-16 w-full">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-20 sm:pt-24 md:pt-24 pb-16 w-full">
         {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -315,7 +315,7 @@ export default function Hero() {
           duration: 1.8,
           repeat: Infinity,
         }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2"
+        className="hidden md:flex absolute bottom-8 left-1/2 -translate-x-1/2"
       >
         <ChevronDown className="text-slate-500" />
       </motion.div>

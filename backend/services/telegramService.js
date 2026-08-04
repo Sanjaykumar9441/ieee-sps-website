@@ -87,7 +87,7 @@ const editTelegramMessage = async (registration) => {
   const caption = `
 🚀 <b>National Space Day 2026</b>
 
-━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
 <b>Registration ID</b>
 <code>${registration.registrationId}</code>
@@ -102,7 +102,7 @@ ${
     : member.fullName
 }
 
-━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
 ${statusEmoji} <b>${registration.paymentStatus.toUpperCase()}</b>
 
@@ -115,13 +115,11 @@ ${registration.verificationMethod}
 <b>Verified At</b>
 ${new Date(registration.verifiedAt).toLocaleString("en-IN")}
 
-━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
 ${
   registration.paymentStatus === "Verified"
     ? `✅ <b>Registration Completed</b>
-
-This participant has been verified successfully.
 
 No further action is required.`
     : `❌ <b>Registration Rejected</b>

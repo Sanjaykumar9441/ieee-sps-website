@@ -13,8 +13,8 @@ import SPSApplicationsTab from "./Dashboard/components/SPSApplicationsTab";
 import LoginHistoryTab from "./Dashboard/components/LoginHistoryTab";  
 import ArduinoRegistrationsTab from "./Dashboard/components/ArduinoRegistrationsTab";  
 import MembershipRegistrationsTab from "./Dashboard/components/MembershipRegistrationsTab";  
-import SpaceDayRegistrationsTab from "./Dashboard/components/SpaceDayRegistrationsTab";  
-import SpaceDayAttendance from "./Dashboard/components/SpaceDayAttendance";  
+import SpaceDayRegistrationsTab from "./Dashboard/components/SpaceDayDetails/SpaceDayRegistrationsTab";  
+import SpaceDayAttendance from "./Dashboard/components/SpaceDayDetails/SpaceDayAttendance";  
 import {  
   Calendar,  
   Mail,  

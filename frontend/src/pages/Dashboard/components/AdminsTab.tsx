@@ -290,7 +290,7 @@ const AdminsTab = () => {
     { key: "team", label: "Team" },  
     { key: "arduinoRegistrations", label: "Arduino Days Registrations" },  
     { key: "spaceDayRegistrations", label: "Space Day Registrations" },  
-    {key: "spaceDayAttendance", label: "Space day Attendence"},  
+    {key: "spaceDayAttendance", label: "Space day Attendance"},  
     { key: "messages", label: "Messages" },  
     { key: "spsApplications", label: "SPS Applications" },  
     { key: "membershipRegistrations", label: "Membership Registrations" },  

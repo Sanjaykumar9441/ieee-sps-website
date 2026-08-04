@@ -82,7 +82,7 @@ export default function Navbar() {
             : "bg-transparent"
         }`}
       >
-        <div className="max-w-7xl mx-auto h-14 md:h-16 px-4 md:px-6 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto h-16 md:h-16 px-4 md:px-6 flex items-center justify-between">
           {/* Logo */}
           <button
             onClick={() => scrollToSection("home")}
@@ -91,19 +91,19 @@ export default function Navbar() {
             <img
               src={ieeeLogo}
               alt="IEEE"
-              className="h-7 sm:h-9 md:h-12 w-auto object-contain"
+              className="h-8 sm:h-10 md:h-12 w-auto object-contain"
             />
 
             <img
               src={spsLogo}
               alt="IEEE SPS"
-              className="h-7 sm:h-9 md:h-12 w-auto object-contain"
+              className="h-8 sm:h-10 md:h-12 w-auto object-contain"
             />
 
             <img
               src={adityaLogo}
               alt="Aditya"
-              className="h-7 sm:h-9 md:h-12 w-auto object-contain"
+              className="h-8 sm:h-10 md:h-12 w-auto object-contain"
             />
           </button>
 
@@ -137,8 +137,9 @@ export default function Navbar() {
 
           {/* Mobile */}
           <button
-            className="md:hidden shrink-0 p-2 -mr-2"
+            className="md:hidden shrink-0 p-2 rounded-lg hover:bg-slate-100 transition-colors"
             onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle menu"
           >
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
