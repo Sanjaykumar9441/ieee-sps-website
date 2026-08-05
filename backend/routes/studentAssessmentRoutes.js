@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 
 const controller = require("../controllers/studentAssessmentController");
+const verifyStudentToken = require("../middleware/verifyStudentToken");
 
 router.get("/:assessmentId", controller.checkAssessment);
 
