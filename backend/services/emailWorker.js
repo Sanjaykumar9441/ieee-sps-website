@@ -1,6 +1,6 @@
 let isProcessing = false;
 
-const { supabase } = require("../config/supabase");
+const { supabase } = require("../lib/supabase");
 const { sendOtpEmail } = require("../lib/mailer");
 
 async function processEmailQueue() {

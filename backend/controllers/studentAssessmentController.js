@@ -3,7 +3,7 @@ const engine = require("../services/assessmentEngine");
 const session = require("../services/studentSessionService");
 const scoring = require("../services/scoringService");
 const { setAttemptStartTime, getSecondsRemaining } = require("../lib/redis");
-const { supabase } = require("../config/supabase");
+const { supabase } = require("../lib/supabase");
 const liveEvents = require("../services/liveEvents");
 
 exports.checkAssessment = async (req, res) => {

@@ -1,4 +1,4 @@
-const { supabase } = require("../config/supabase");
+const { supabase } = require("../lib/supabase");
 const randomizeQuiz = require("../lib/randomizeQuiz");
 
 exports.generateAttempt = async (assessment, studentEmail) => {

@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const { supabase } = require("../config/supabase");
+const { supabase } = require("../lib/supabase");
 
 const {
   createLoginOtp,
