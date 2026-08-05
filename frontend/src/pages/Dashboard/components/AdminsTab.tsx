@@ -28,6 +28,7 @@ const AdminsTab = () => {
     messages: false,  
     spsApplications: false,  
     membershipRegistrations: false,  
+    assessmentdashboard: false,
   });
 
   useEffect(() => {  
@@ -142,6 +143,7 @@ const AdminsTab = () => {
       messages: admin.permissions.messages,  
       spsApplications: admin.permissions.spsApplications,  
       membershipRegistrations: admin.permissions.membershipRegistrations,  
+      assessmentdashboard: admin.permissions.assessmentdashboard,  
     });  
     setShowPermissionForm(true);  
   };
@@ -206,6 +208,7 @@ const AdminsTab = () => {
         messages: false,  
         spsApplications: false,  
         membershipRegistrations: false,  
+        assessmentdashboard: false,
       });  
     } catch (err) {  
       console.error(err);  
@@ -293,7 +296,8 @@ const AdminsTab = () => {
     {key: "spaceDayAttendance", label: "Space day Attendance"},  
     { key: "messages", label: "Messages" },  
     { key: "spsApplications", label: "SPS Applications" },  
-    { key: "membershipRegistrations", label: "Membership Registrations" },  
+    { key: "membershipRegistrations", label: "Membership Registrations" },
+    {key : "assessmentdashboard", label : "Assessment Dashboard"},
   ] as const;
 
   const isExternalMode =  
@@ -402,6 +406,7 @@ const AdminsTab = () => {
                           existingAdmin.permissions.spsApplications,  
                         membershipRegistrations:  
                           existingAdmin.permissions.membershipRegistrations,  
+                        assessmentdashboard: existingAdmin.permissions.assessmentdashboard,
                       });  
                       return;  
                     }
@@ -482,6 +487,7 @@ const AdminsTab = () => {
                     messages: false,  
                     spsApplications: false,  
                     membershipRegistrations: false,  
+                    assessmentdashboard: false,
                   });  
                 }  
               }}  

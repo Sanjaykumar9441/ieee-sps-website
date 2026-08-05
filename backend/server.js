@@ -25,6 +25,7 @@ const eventSettingsRoutes = require("./routes/eventSettingsRoutes");
 const adminAccessRoutes = require("./routes/adminAccessRoutes");
 const compression = require("compression");
 const axios = require("axios");
+const verifyToken = require("./middleware/verifyToken");
 const app = express();
 const server = http.createServer(app);
 app.set("trust proxy", 1);
@@ -39,11 +40,18 @@ const spsApplicationRoutes = require("./routes/spsApplicationRoutes");
 
 const activityRoutes = require("./routes/activityRoutes");
 
-//const questionCategoryRoutes = require("./routes/questionCategoryRoutes");
-//const questionBankRoutes = require("./routes/questionBankRoutes");
-//const questionRoutes = require("./routes/questionRoutes");
-//const questionBankQuestionRoutes = require("./routes/questionBankQuestionRoutes");
-//const assessmentRoutes = require("./routes/assessmentRoutes");
+/* ===============================*/
+const assessmentRoutes = require("./routes/assessmentRoutes");
+const questionBankRoutes = require("./routes/questionBankRoutes");
+const studentAssessmentRoutes = require("./routes/studentAssessmentRoutes");
+const adminDashboardRoutes = require("./routes/adminDashboardRoutes");
+const liveMonitorRoutes = require("./routes/liveMonitorRoutes");
+const leaderboardRoutes = require("./routes/leaderboardRoutes");
+const adminForceSubmitRoutes = require("./routes/adminForceSubmitRoutes");
+const dashboardAnalyticsRoutes = require("./routes/dashboardAnalyticsRoutes");
+const exportRoutes = require("./routes/exportRoutes");
+const studentAuthRoutes = require("./routes/studentAuthRoutes");
+const emailworker = require("../backend/services/emailWorker");
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
@@ -103,13 +111,18 @@ app.use("/api/sps-applications", spsApplicationRoutes);
 app.use("/uploads", express.static("uploads"));
 
 /* ===============================
-   Assessement Routes
+   🧠 Assessment Routes
 ================================= */
-//app.use("/api/question-categories", questionCategoryRoutes);
-//app.use("/api/question-banks", questionBankRoutes);
-//app.use("/api/questions", questionRoutes);
-//app.use("/api/question-bank-questions",questionBankQuestionRoutes);
-//app.use("/api/assessments", assessmentRoutes);
+app.use("/api/assessments", assessmentRoutes);
+app.use("/api/question-banks", questionBankRoutes);
+app.use("/api/student-assessments", studentAssessmentRoutes);
+app.use("/api/admin/dashboard", adminDashboardRoutes);
+app.use("/api/admin/live-monitor", liveMonitorRoutes);
+app.use("/api/admin/leaderboard", leaderboardRoutes);
+app.use("/api/admin/force-submit", adminForceSubmitRoutes);
+app.use("/api/admin/dashboard-analytics", dashboardAnalyticsRoutes);
+app.use("/api/admin/export", exportRoutes);
+app.use("/api/student-auth", studentAuthRoutes);
 
 /* ===============================
    ✅ MongoDB Connection
@@ -179,10 +192,7 @@ async function ensureEventSettings() {
       console.log("ℹ️ Space Day settings already exist");
     }
   } catch (err) {
-    console.error(
-      "❌ Error creating Event Settings:",
-      err.message,
-    );
+    console.error("❌ Error creating Event Settings:", err.message);
   }
 }
 /* ===============================
