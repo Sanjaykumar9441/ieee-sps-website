@@ -1,5 +1,5 @@
 const ExcelJS = require("exceljs");
-const { supabase } = require("../config/supabase");
+const { supabase } = require("../lib/supabase");
 
 /* ============================================================
    EXPORT EXCEL
