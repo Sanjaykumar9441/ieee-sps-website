@@ -89,8 +89,7 @@ exports.exportExcel = async (req, res) => {
 
     leaderboardSheet.mergeCells("A1:G1");
 
-    leaderboardSheet.getCell("A1").value =
-      "IEEE SPS Student Branch Chapter";
+    leaderboardSheet.getCell("A1").value = "IEEE SPS Student Branch Chapter";
 
     leaderboardSheet.getCell("A1").font = {
       size: 18,
@@ -104,8 +103,7 @@ exports.exportExcel = async (req, res) => {
 
     leaderboardSheet.mergeCells("A2:G2");
 
-    leaderboardSheet.getCell("A2").value =
-      assessment?.title || "Assessment";
+    leaderboardSheet.getCell("A2").value = assessment?.title || "Assessment";
 
     leaderboardSheet.getCell("A2").font = {
       size: 14,
@@ -287,8 +285,7 @@ exports.exportExcel = async (req, res) => {
        DISQUALIFIED
     ======================================================= */
 
-    const disqualifiedSheet =
-      workbook.addWorksheet("Disqualified");
+    const disqualifiedSheet = workbook.addWorksheet("Disqualified");
 
     disqualifiedSheet.columns = [
       { header: "Name", key: "name" },
@@ -297,16 +294,13 @@ exports.exportExcel = async (req, res) => {
       { header: "Status", key: "status" },
     ];
 
-    disqualified.forEach((s) =>
-      disqualifiedSheet.addRow(s)
-    );
+    disqualified.forEach((s) => disqualifiedSheet.addRow(s));
 
     /* =======================================================
        INFRACTIONS
     ======================================================= */
 
-    const infractionsSheet =
-      workbook.addWorksheet("Infractions");
+    const infractionsSheet = workbook.addWorksheet("Infractions");
 
     infractionsSheet.columns = [
       { header: "Attempt", key: "attempt_id" },
@@ -314,25 +308,92 @@ exports.exportExcel = async (req, res) => {
       { header: "Occurred At", key: "occurred_at" },
     ];
 
-    infractions.forEach((i) =>
-      infractionsSheet.addRow(i)
-    );
+    infractions.forEach((i) => infractionsSheet.addRow(i));
 
     /* ======================================================= */
 
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
 
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=${assessment?.title || "Assessment"}-Report.xlsx`
+      `attachment; filename=${assessment?.title || "Assessment"}-Report.xlsx`,
     );
 
     await workbook.xlsx.write(res);
 
     res.end();
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+/* ============================================================
+   EXPORT CSV
+============================================================ */
+
+exports.exportCSV = async (req, res) => {
+  try {
+    const { assessmentId } = req.params;
+
+    const { data: assessment } = await supabase
+      .from("assessments")
+      .select("title")
+      .eq("id", assessmentId)
+      .single();
+
+    const { data: leaderboard, error } = await supabase
+      .from("live_leaderboard")
+      .select("*")
+      .eq("assessment_id", assessmentId)
+      .order("rank");
+
+    if (error) throw error;
+
+    const headers = [
+      "Rank",
+      "Name",
+      "Roll Number",
+      "Email",
+      "Score",
+      "Status",
+      "Submitted At",
+    ];
+
+    const rows = leaderboard.map((student) => [
+      student.rank,
+      student.name,
+      student.roll_no,
+      student.email,
+      student.score,
+      student.status,
+      student.submitted_at,
+    ]);
+
+    const csv = [
+      headers.join(","),
+      ...rows.map((row) =>
+        row
+          .map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`)
+          .join(","),
+      ),
+    ].join("\n");
+
+    res.setHeader("Content-Type", "text/csv");
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${assessment?.title || "Assessment"}-Leaderboard.csv"`,
+    );
+
+    res.status(200).send(csv);
   } catch (err) {
     console.error(err);
 
