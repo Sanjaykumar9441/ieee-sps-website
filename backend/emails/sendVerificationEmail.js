@@ -9,7 +9,12 @@ client.authentications["api-key"].apiKey = process.env.BREVO_API_KEY;
 const api = new SibApiV3Sdk.TransactionalEmailsApi();
 
 const sendVerificationEmail = async (registration, pdfBuffer) => {
-  const member = registration.members[0];
+  const leader = registration.members[0];
+
+  const ccMembers = registration.members.slice(1).map((member) => ({
+    email: member.email,
+    name: member.fullName,
+  }));
 
   const html = await renderVerificationEmail(registration);
 
@@ -22,10 +27,12 @@ const sendVerificationEmail = async (registration, pdfBuffer) => {
 
       to: [
         {
-          email: member.email,
-          name: member.fullName,
+          email: leader.email,
+          name: leader.fullName,
         },
       ],
+
+      cc: ccMembers,
 
       subject: `National Space Day 2026 | Registration Verified | ${registration.registrationId}`,
 
@@ -39,7 +46,9 @@ const sendVerificationEmail = async (registration, pdfBuffer) => {
       ],
     });
 
-    console.log(`Verification email sent successfully to ${member.email}`);
+    console.log(
+      `Verification email sent to ${leader.email} (CC: ${ccMembers.length} members)`,
+    );
   } catch (error) {
     console.error(
       "Brevo Error:",

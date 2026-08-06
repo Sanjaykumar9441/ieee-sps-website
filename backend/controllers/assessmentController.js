@@ -187,3 +187,40 @@ exports.resetAssessment = async (req, res) => {
     });
   }
 };
+
+exports.statistics = async (req, res) => {
+  try {
+    const { data, error } = await Assessment.statistics(req.params.id);
+
+    if (error) throw error;
+
+    return res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.history = async (req, res) => {
+  try {
+    const { data, error } =
+      await Assessment.history(req.params.id);
+
+    if (error) throw error;
+
+    return res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};

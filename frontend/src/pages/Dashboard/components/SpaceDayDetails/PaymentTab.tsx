@@ -62,7 +62,7 @@ export default function PaymentTab({ registration, onStatusChanged }: Props) {
         <h3 className="text-xl font-bold mb-6 text-[#1C1B22]">Payment Information</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">  
-          <Info label="Transaction ID" value={registration.transactionId} />
+          <Info label="UTR" value={registration.transactionId} />
 
           <Info label="Payment Status" value={registration.paymentStatus} />
 

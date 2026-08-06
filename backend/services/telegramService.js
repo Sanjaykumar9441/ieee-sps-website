@@ -113,7 +113,11 @@ ${registration.verifiedBy}
 ${registration.verificationMethod}
 
 <b>Verified At</b>
-${new Date(registration.verifiedAt).toLocaleString("en-IN")}
+${new Date(registration.verifiedAt).toLocaleString("en-IN", {
+  timeZone: "Asia/Kolkata",
+  dateStyle: "medium",
+  timeStyle: "short",
+})}
 
 ━━━━━━━━━━━━━━━━━━
 

@@ -36,12 +36,13 @@ class Assessment {
     if (error) return { error };
 
     delete assessment.id;
+    delete assessment.created_at;
+    delete assessment.updated_at;
 
-    assessment.title = assessment.title + " (Copy)";
-
-    assessment.slug = assessment.slug + "-" + Date.now();
-
-    assessment.created_at = undefined;
+    assessment.title += " (Copy)";
+    assessment.slug += "-" + Date.now();
+    assessment.status = "DRAFT";
+    assessment.is_active = false;
 
     return supabase.from(TABLE).insert(assessment).select().single();
   }
@@ -72,7 +73,9 @@ class Assessment {
     return supabase
       .from(TABLE)
       .update({
-        is_published: true,
+        status: "PUBLISHED",
+        is_active: true,
+        updated_at: new Date(),
       })
       .eq("id", id)
       .select()
@@ -83,7 +86,8 @@ class Assessment {
     return supabase
       .from(TABLE)
       .update({
-        is_published: false,
+        status: "DRAFT",
+        updated_at: new Date(),
       })
       .eq("id", id)
       .select()
@@ -94,21 +98,46 @@ class Assessment {
     return supabase
       .from(TABLE)
       .update({
-        is_deleted: true,
+        status: "ARCHIVED",
+        is_active: false,
+        updated_at: new Date(),
       })
-      .eq("id", id);
+      .eq("id", id)
+      .select()
+      .single();
   }
 
   static async restore(id) {
     return supabase
       .from(TABLE)
       .update({
-        is_deleted: false,
+        status: "DRAFT",
+        is_active: true,
+        updated_at: new Date(),
       })
       .eq("id", id)
       .select()
       .single();
   }
+
+  static async statistics(id) {
+    return supabase
+      .from("assessment_statistics")
+      .select("*")
+      .eq("assessment_id", id)
+      .single();
+  }
+
+  static async history(id) {
+  return supabase
+    .from("audit_logs")
+    .select("*")
+    .eq("table_name", "assessments")
+    .eq("record_id", id)
+    .order("created_at", {
+      ascending: false,
+    });
+}
 
   static async reset(id) {
     const tables = [

@@ -37,4 +37,6 @@ router.get("/:id/statistics", controller.statistics);
 
 router.post("/:id/reset", controller.resetAssessment);
 
+router.get("/:id/history", controller.history);
+
 module.exports = router;

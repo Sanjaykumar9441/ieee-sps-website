@@ -212,10 +212,8 @@ const io = new Server(server, {
 initSocket(io);
 
 io.on("connection", (socket) => {
-  console.log("🟢 Admin Connected:", socket.id);
 
   socket.on("disconnect", () => {
-    console.log("🔴 Admin Disconnected:", socket.id);
   });
 });
 
