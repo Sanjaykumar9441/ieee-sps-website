@@ -231,7 +231,7 @@ export default function RegistrationSuccess() {
 
                 <div className="mt-3 inline-flex items-center rounded-full bg-yellow-100 px-4 py-2 text-sm font-semibold text-yellow-700">
                   <CreditCard size={16} className="mr-2" />
-                  Pending Verification
+                  Verification Pending
                 </div>
               </div>
               {/* Registration Date / Selected Theme */}

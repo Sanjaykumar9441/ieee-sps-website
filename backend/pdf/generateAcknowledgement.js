@@ -61,7 +61,10 @@ const generateAcknowledgement = async (registration) => {
   // exists on it, so read it directly instead of a non-existent sub-property.
   const accommodation = registration.accommodation ? "Yes" : "No";
 
-  const paymentStatus = registration.paymentStatus || "Pending Verification";
+  const paymentStatus =
+    registration.paymentStatus === "Pending"
+      ? "Verification Pending"
+      : registration.paymentStatus || "Verification Pending";
 
   const totalFee = registration.totalFee;
 
@@ -159,6 +162,7 @@ const generateAcknowledgement = async (registration) => {
 
   const statusClass =
     {
+      "Verification Pending": "pending",
       Pending: "pending",
       Verified: "verified",
       Rejected: "rejected",
