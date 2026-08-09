@@ -18,6 +18,7 @@ const {
   bulkAttendance,
   removeAttendance,
   getMissingParticipants,
+  resendVerificationEmail,
 } = require("../controllers/spaceDayRegistrationController");
 
 const { getPublicSettings } = require("../controllers/eventSettingsController");
@@ -60,8 +61,18 @@ router.post("/attendance/bulk", verifyToken, bulkAttendance);
 
 router.post("/attendance/remove", verifyToken, removeAttendance);
 
+router.post(
+  "/resend-verification-email/:registrationId",
+  verifyToken,
+  resendVerificationEmail,
+);
+
 router.get("/attendance/missing", verifyToken, getMissingParticipants);
 
-router.get("/attendance/:registrationId", verifyToken, getRegistrationForAttendance);
+router.get(
+  "/attendance/:registrationId",
+  verifyToken,
+  getRegistrationForAttendance,
+);
 
 module.exports = router;

@@ -11,15 +11,19 @@ const api = new SibApiV3Sdk.TransactionalEmailsApi();
 const sendVerificationEmail = async (registration, pdfBuffer) => {
   const leader = registration.members[0];
 
-  const ccMembers = registration.members.slice(1).map((member) => ({
-    email: member.email,
-    name: member.fullName,
-  }));
+  // Only include members who actually have an email
+  const ccMembers = registration.members
+    .slice(1)
+    .filter((member) => member.email)
+    .map((member) => ({
+      email: member.email,
+      name: member.fullName,
+    }));
 
   const html = await renderVerificationEmail(registration);
 
   try {
-    await api.sendTransacEmail({
+    const emailData = {
       sender: {
         name: "IEEE SPS Student Branch Chapter",
         email: process.env.BREVO_SENDER_EMAIL,
@@ -32,8 +36,6 @@ const sendVerificationEmail = async (registration, pdfBuffer) => {
         },
       ],
 
-      cc: ccMembers,
-
       subject: `National Space Day 2026 | Registration Verified | ${registration.registrationId}`,
 
       htmlContent: html,
@@ -44,10 +46,21 @@ const sendVerificationEmail = async (registration, pdfBuffer) => {
           content: pdfBuffer.toString("base64"),
         },
       ],
-    });
+    };
+
+    // IMPORTANT:
+    // Only send "cc" when there are actually CC recipients.
+    if (ccMembers.length > 0) {
+      emailData.cc = ccMembers;
+    }
+
+    await api.sendTransacEmail(emailData);
 
     console.log(
-      `Verification email sent to ${leader.email} (CC: ${ccMembers.length} members)`,
+      `Verification email sent to ${leader.email}` +
+        (ccMembers.length > 0
+          ? ` (CC: ${ccMembers.length} members)`
+          : " (No CC members)"),
     );
   } catch (error) {
     console.error(

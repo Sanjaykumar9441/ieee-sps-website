@@ -6,6 +6,7 @@ const calculateFees = require("../utils/spaceDayFeeCalculator");
 const spaceDayConfig = require("../config/spaceDayConfig");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
 const generateAcknowledgement = require("../pdf/generateAcknowledgement");
+const { sendVerificationEmail } = require("../sendVerificationEmail");
 const { sendRegistrationToTelegram } = require("../services/telegramService");
 const AttendanceLog = require("../models/SpaceDayAttendanceLog");
 const ExcelJS = require("exceljs");
@@ -1388,6 +1389,79 @@ exports.removeAttendance = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: err.message,
+    });
+  }
+};
+
+/* ==========================================
+   RESEND VERIFICATION EMAIL
+========================================== */
+
+exports.resendVerificationEmail = async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+
+    const registration = await SpaceDayRegistration.findOne({
+      registrationId,
+    });
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: "Registration not found.",
+      });
+    }
+
+    // Only verified registrations can resend verification email
+    if (registration.paymentStatus !== "Verified") {
+      return res.status(400).json({
+        success: false,
+        message: "Registration is not verified yet.",
+      });
+    }
+
+    if (!registration.members?.length) {
+      return res.status(400).json({
+        success: false,
+        message: "No members found in this registration.",
+      });
+    }
+
+    const leader = registration.members[0];
+
+    if (!leader.email) {
+      return res.status(400).json({
+        success: false,
+        message: "Leader email not found.",
+      });
+    }
+
+    console.log(
+      `Resending verification email for ${registration.registrationId} to ${leader.email}`,
+    );
+
+    // Generate acknowledgement PDF again
+    const pdfBuffer = await generateAcknowledgement(registration);
+
+    // Send email
+    await sendVerificationEmail(
+      registration,
+      pdfBuffer,
+    );
+
+    return res.json({
+      success: true,
+      message: `Verification email sent successfully to ${leader.email}.`,
+    });
+  } catch (error) {
+    console.error(
+      "RESEND VERIFICATION EMAIL ERROR:",
+      error.response?.body || error.message || error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to resend verification email.",
     });
   }
 };
