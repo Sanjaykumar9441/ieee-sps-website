@@ -45,11 +45,15 @@ router.post(
   controller.reportInfraction,
 );
 
-router.get("/:attemptId/infractions", verifyToken, controller.getInfractions);
+router.get(
+  "/:attemptId/infractions",
+  verifyStudentToken,
+  controller.getInfractions,
+);
 
 router.delete(
   "/:attemptId/infractions",
-  verifyToken,
+  verifyStudentToken,
   controller.resetInfractions,
 );
 
@@ -58,4 +62,5 @@ router.get(
   verifyStudentToken,
   controller.getAntiCheatConfig,
 );
+
 module.exports = router;
