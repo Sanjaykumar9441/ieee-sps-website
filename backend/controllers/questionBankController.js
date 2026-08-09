@@ -12,9 +12,7 @@ function normalizeQuestion(question, bankId) {
 
     question_image_id: question.question_image_id || null,
 
-    options: Array.isArray(question.options)
-      ? question.options
-      : [],
+    options: Array.isArray(question.options) ? question.options : [],
 
     correct_answers: Array.isArray(question.correct_answers)
       ? question.correct_answers
@@ -51,7 +49,10 @@ function validateQuestion(question, index) {
     errors.push("Question type is required.");
   }
 
-  if (!Array.isArray(question.correct_answers)) {
+  if (
+    !Array.isArray(question.correct_answers) ||
+    question.correct_answers.length === 0
+  ) {
     errors.push("Correct answer is required.");
   }
 
@@ -62,6 +63,16 @@ function validateQuestion(question, index) {
     errors.push("MCQ must contain at least 2 options.");
   }
 
+  if (
+    question.question_type === "MCQ" &&
+    Array.isArray(question.correct_answers) &&
+    question.correct_answers.some(
+      (answer) => !question.options.includes(answer),
+    )
+  ) {
+    errors.push("Correct answer must match one of the options.");
+  }
+
   if (Number(question.marks) <= 0) {
     errors.push("Marks must be greater than 0.");
   }
@@ -69,10 +80,7 @@ function validateQuestion(question, index) {
   return {
     question: `Question ${index + 1}`,
     status: errors.length === 0 ? "valid" : "invalid",
-    message:
-      errors.length === 0
-        ? "Question is valid."
-        : errors.join(" "),
+    message: errors.length === 0 ? "Question is valid." : errors.join(" "),
   };
 }
 
@@ -261,49 +269,6 @@ exports.importQuestions = async (req, res) => {
 };
 
 /* ============================================================
-IMPORT QUESTIONS - RECEIVE PREVIEW
-============================================================ */
-
-exports.importQuestions = async (req, res) => {
-  try {
-    const { bankId } = req.params;
-    const { questions } = req.body;
-
-    if (!bankId) {
-      return res.status(400).json({
-        success: false,
-        message: "Question Bank ID is required.",
-      });
-    }
-
-    if (!Array.isArray(questions) || questions.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "No questions supplied.",
-      });
-    }
-
-    const normalizedQuestions = questions.map((question) =>
-      normalizeQuestion(question, bankId),
-    );
-
-    return res.json({
-      success: true,
-      message: "Questions received successfully.",
-      questions: normalizedQuestions,
-      total: normalizedQuestions.length,
-    });
-  } catch (err) {
-    console.error("Import Questions Error:", err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
-
-/* ============================================================
 DUPLICATE CHECK
 ============================================================ */
 
@@ -326,25 +291,20 @@ exports.checkDuplicates = async (req, res) => {
       });
     }
 
-    const { data: existingQuestions, error } = await Question.getAll(
-      bankId,
-    );
+    const { data: existingQuestions, error } = await Question.getAll(bankId);
 
     if (error) throw error;
 
     const duplicates = [];
 
     for (const question of questions) {
-      const incomingText = question.question_text
-        ?.trim()
-        .toLowerCase();
+      const incomingText = question.question_text?.trim().toLowerCase();
 
       if (!incomingText) continue;
 
       const match = (existingQuestions || []).find(
         (existing) =>
-          existing.question_text?.trim().toLowerCase() ===
-          incomingText,
+          existing.question_text?.trim().toLowerCase() === incomingText,
       );
 
       if (match) {
@@ -363,6 +323,60 @@ exports.checkDuplicates = async (req, res) => {
     });
   } catch (err) {
     console.error("Duplicate Check Error:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+/* ============================================================
+   VALIDATE QUESTIONS
+============================================================ */
+
+exports.validateQuestions = async (req, res) => {
+  try {
+    const { bankId } = req.params;
+    const { questions } = req.body;
+
+    if (!bankId) {
+      return res.status(400).json({
+        success: false,
+        message: "Question Bank ID is required.",
+      });
+    }
+
+    if (!Array.isArray(questions) || questions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No questions supplied for validation.",
+        results: [],
+      });
+    }
+
+    const normalizedQuestions = questions.map((question) =>
+      normalizeQuestion(question, bankId),
+    );
+
+    const results = normalizedQuestions.map((question, index) =>
+      validateQuestion(question, index),
+    );
+
+    const invalidCount = results.filter(
+      (result) => result.status === "invalid",
+    ).length;
+
+    return res.json({
+      success: true,
+      valid: invalidCount === 0,
+      results,
+      total: results.length,
+      validCount: results.length - invalidCount,
+      invalidCount,
+    });
+  } catch (err) {
+    console.error("Validate Questions Error:", err);
 
     return res.status(500).json({
       success: false,
@@ -398,8 +412,8 @@ exports.finalImport = async (req, res) => {
       normalizeQuestion(question, bankId),
     );
 
-    const validationResults = normalizedQuestions.map(
-      (question, index) => validateQuestion(question, index),
+    const validationResults = normalizedQuestions.map((question, index) =>
+      validateQuestion(question, index),
     );
 
     const invalidQuestions = validationResults.filter(
@@ -427,9 +441,7 @@ exports.finalImport = async (req, res) => {
 
     const importableQuestions = normalizedQuestions.filter(
       (question) =>
-        !existingTexts.has(
-          question.question_text.trim().toLowerCase(),
-        ),
+        !existingTexts.has(question.question_text.trim().toLowerCase()),
     );
 
     const duplicateCount =
@@ -438,9 +450,7 @@ exports.finalImport = async (req, res) => {
     let imported = 0;
 
     if (importableQuestions.length > 0) {
-      const { data, error } = await Question.bulkCreate(
-        importableQuestions,
-      );
+      const { data, error } = await Question.bulkCreate(importableQuestions);
 
       if (error) throw error;
 
@@ -458,10 +468,7 @@ exports.finalImport = async (req, res) => {
     const { data: bank } = await QuestionBank.getById(bankId);
 
     if (bank?.assessment_id) {
-      liveEvents.emitQuestionBankUpdated(
-        bank.assessment_id,
-        bank,
-      );
+      liveEvents.emitQuestionBankUpdated(bank.assessment_id, bank);
     }
 
     return res.json({
