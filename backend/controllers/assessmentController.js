@@ -18,6 +18,26 @@ exports.getAssessments = async (req, res) => {
   }
 };
 
+exports.getCategories = async (req, res) => {
+  try {
+    const { data, error } = await Assessment.getCategories();
+
+    if (error) throw error;
+
+    return res.json({
+      success: true,
+      categories: data || [],
+    });
+  } catch (err) {
+    console.error("Get assessment categories error:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
 exports.getAssessment = async (req, res) => {
   try {
     const { id } = req.params;

@@ -35,26 +35,6 @@ function getAttemptAllowedDurationSeconds(assessment, attempt) {
   );
 }
 
-exports.getCategories = async (req, res) => {
-  try {
-    const { data, error } = await Assessment.getCategories();
-
-    if (error) throw error;
-
-    return res.json({
-      success: true,
-      categories: data || [],
-    });
-  } catch (err) {
-    console.error("Get assessment categories error:", err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
-
 /* ============================================================
    CHECK ASSESSMENT
 ============================================================ */
