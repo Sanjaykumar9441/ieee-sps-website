@@ -61,7 +61,14 @@ const verifyRegistration = async ({
   getIO().emit("registrationUpdated", updatedRegistration);
 
   if (registration.telegramChatId && registration.telegramMessageId) {
-    await editTelegramMessage(registration);
+    try {
+      await editTelegramMessage(registration);
+    } catch (error) {
+      console.error(
+        "Telegram message update failed:",
+        error.code || error.message,
+      );
+    }
   }
 
   if (paymentStatus === "Verified") {

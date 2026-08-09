@@ -6,6 +6,7 @@ import { socket } from "../../../../lib/socket";
 
 import AssessmentCard, { Assessment } from "./AssessmentCard";
 import AssessmentWorkspace from "./AssessmentWorkspace";
+import CreateAssessmentModal from "./CreateAssessmentModal";
 
 import {
   getAssessments,
@@ -198,9 +199,11 @@ export default function AssessmentDashboardTab() {
 
       {/* Create Modal */}
 
-      {openCreateModal && (
-        <div>{/* We'll build CreateAssessmentModal in Phase 2 */}</div>
-      )}
+      <CreateAssessmentModal
+        open={openCreateModal}
+        onClose={() => setOpenCreateModal(false)}
+        onCreated={fetchAssessments}
+      />
     </div>
   );
 }

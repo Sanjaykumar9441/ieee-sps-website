@@ -20,7 +20,7 @@ export interface Assessment {
 
   total_questions: number;
 
-  duration_seconds: number;
+  duration_minutes: number;
 
   is_active: boolean;
 
@@ -62,7 +62,7 @@ export default function AssessmentCard({
 
   onDelete,
 }: Props) {
-  const durationMinutes = Math.floor(assessment.duration_seconds / 60);
+  const durationMinutes = assessment.duration_minutes;
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300">
       <div className="p-6">
