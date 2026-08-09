@@ -49,13 +49,32 @@ async function setAttemptStartTime(attemptId, durationSeconds) {
   return now;
 }
 
-/** Returns seconds remaining, or 0 if expired / not found. */
+/**
+ * Returns seconds remaining for an attempt.
+ *
+ * durationSeconds is the authoritative duration calculated
+ * for this specific attempt:
+ *
+ * min(
+ *   assessment.duration_minutes * 60,
+ *   assessment.end_time - attempt.started_at
+ * )
+ *
+ * Returns 0 if the attempt timer does not exist or has expired.
+ */
 async function getSecondsRemaining(attemptId, durationSeconds) {
   const key = `assessment:started_at:${attemptId}`;
+
   const startedAt = await redis.get(key);
-  if (!startedAt) return 0;
+
+  // No timer = expired / unavailable.
+  if (startedAt === null || startedAt === undefined) {
+    return 0;
+  }
+
   const elapsed = Math.floor(Date.now() / 1000) - Number(startedAt);
-  return Math.max(0, durationSeconds - elapsed);
+
+  return Math.max(0, Number(durationSeconds) - elapsed);
 }
 
 async function saveCurrentQuestion(attemptId, questionNumber) {

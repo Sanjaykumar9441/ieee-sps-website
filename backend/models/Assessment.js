@@ -10,6 +10,13 @@ class Assessment {
       .order("created_at", { ascending: false });
   }
 
+  static async getCategories() {
+    return supabase
+      .from("assessment_categories")
+      .select("id, name")
+      .order("name", { ascending: true });
+  }
+
   static async getById(id) {
     return supabase.from(TABLE).select("*").eq("id", id).single();
   }

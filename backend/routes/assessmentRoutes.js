@@ -7,6 +7,8 @@ const controller = require("../controllers/assessmentController");
 // List
 router.get("/", controller.getAssessments);
 
+router.get("/categories", controller.getCategories);
+
 // Single
 router.get("/:id", controller.getAssessment);
 

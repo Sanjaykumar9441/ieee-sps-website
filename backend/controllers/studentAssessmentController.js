@@ -7,6 +7,54 @@ const { supabase } = require("../lib/supabase");
 const liveEvents = require("../services/liveEvents");
 const antiCheat = require("../services/antiCheatService");
 
+function calculateAllowedDurationSeconds(assessment, startTime = new Date()) {
+  const configuredDurationSeconds = Number(assessment.duration_minutes) * 60;
+
+  const endTime = new Date(assessment.end_time);
+
+  const secondsUntilEnd = Math.floor(
+    (endTime.getTime() - startTime.getTime()) / 1000,
+  );
+
+  return Math.max(0, Math.min(configuredDurationSeconds, secondsUntilEnd));
+}
+
+function getAttemptAllowedDurationSeconds(assessment, attempt) {
+  const configuredDurationSeconds = Number(assessment.duration_minutes) * 60;
+
+  const startedAt = new Date(attempt.started_at);
+  const endTime = new Date(assessment.end_time);
+
+  const secondsAvailableFromStart = Math.floor(
+    (endTime.getTime() - startedAt.getTime()) / 1000,
+  );
+
+  return Math.max(
+    0,
+    Math.min(configuredDurationSeconds, secondsAvailableFromStart),
+  );
+}
+
+exports.getCategories = async (req, res) => {
+  try {
+    const { data, error } = await Assessment.getCategories();
+
+    if (error) throw error;
+
+    return res.json({
+      success: true,
+      categories: data || [],
+    });
+  } catch (err) {
+    console.error("Get assessment categories error:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
 /* ============================================================
    CHECK ASSESSMENT
 ============================================================ */
@@ -22,6 +70,44 @@ exports.checkAssessment = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Assessment not found.",
+      });
+    }
+
+    const now = new Date();
+
+    const startTime = new Date(assessment.start_time);
+    const endTime = new Date(assessment.end_time);
+
+    if (now < startTime) {
+      return res.status(403).json({
+        success: false,
+        code: "ASSESSMENT_NOT_STARTED",
+        message: "Assessment has not started yet.",
+        startTime: assessment.start_time,
+        serverTime: now.toISOString(),
+      });
+    }
+
+    if (now >= endTime) {
+      return res.status(403).json({
+        success: false,
+        code: "ASSESSMENT_CLOSED",
+        message: "Assessment has already ended.",
+        endTime: assessment.end_time,
+        serverTime: now.toISOString(),
+      });
+    }
+
+    const actualDurationSeconds = calculateAllowedDurationSeconds(
+      assessment,
+      now,
+    );
+
+    if (actualDurationSeconds <= 0) {
+      return res.status(403).json({
+        success: false,
+        code: "ASSESSMENT_CLOSED",
+        message: "Assessment has already ended.",
       });
     }
 
@@ -70,6 +156,44 @@ exports.startAssessment = async (req, res) => {
       });
     }
 
+    const now = new Date();
+
+    const startTime = new Date(assessment.start_time);
+    const endTime = new Date(assessment.end_time);
+
+    if (now < startTime) {
+      return res.status(403).json({
+        success: false,
+        code: "ASSESSMENT_NOT_STARTED",
+        message: "Assessment has not started yet.",
+        startTime: assessment.start_time,
+        serverTime: now.toISOString(),
+      });
+    }
+
+    if (now >= endTime) {
+      return res.status(403).json({
+        success: false,
+        code: "ASSESSMENT_CLOSED",
+        message: "Assessment has already ended.",
+        endTime: assessment.end_time,
+        serverTime: now.toISOString(),
+      });
+    }
+
+    const actualDurationSeconds = calculateAllowedDurationSeconds(
+      assessment,
+      now,
+    );
+
+    if (actualDurationSeconds <= 0) {
+      return res.status(403).json({
+        success: false,
+        code: "ASSESSMENT_CLOSED",
+        message: "Assessment has already ended.",
+      });
+    }
+
     /*
     --------------------------------
     Already Submitted?
@@ -110,11 +234,7 @@ exports.startAssessment = async (req, res) => {
     --------------------------------
     */
 
-    await session.lockStudent(
-      assessment.id,
-      student.id,
-      assessment.duration_minutes * 60,
-    );
+    await session.lockStudent(assessment.id, student.id, actualDurationSeconds);
 
     /*
     --------------------------------
@@ -142,7 +262,7 @@ exports.startAssessment = async (req, res) => {
     --------------------------------
     */
 
-    await setAttemptStartTime(attempt.id, assessment.duration_minutes * 60);
+    await setAttemptStartTime(attempt.id, actualDurationSeconds);
 
     /*
     --------------------------------
@@ -157,7 +277,7 @@ exports.startAssessment = async (req, res) => {
 
       attemptId: attempt.id,
 
-      remainingSeconds: assessment.duration_minutes * 60,
+      remainingSeconds: actualDurationSeconds,
 
       totalQuestions: frozenQuestions.length,
 
@@ -246,9 +366,14 @@ exports.getQuestion = async (req, res) => {
       attempt.assessment_id,
     );
 
+    const allowedDurationSeconds = getAttemptAllowedDurationSeconds(
+      assessment,
+      attempt,
+    );
+
     const remainingSeconds = await getSecondsRemaining(
       attemptId,
-      assessment.duration_minutes * 60,
+      allowedDurationSeconds,
     );
 
     await engine.updateCurrentQuestion(attemptId, Number(number));
@@ -313,9 +438,14 @@ exports.getStatus = async (req, res) => {
       attempt.assessment_id,
     );
 
+    const allowedDurationSeconds = getAttemptAllowedDurationSeconds(
+      assessment,
+      attempt,
+    );
+
     const remainingSeconds = await getSecondsRemaining(
       attemptId,
-      assessment.duration_minutes * 60,
+      allowedDurationSeconds,
     );
 
     liveEvents.emitTimer(attempt.assessment_id, {

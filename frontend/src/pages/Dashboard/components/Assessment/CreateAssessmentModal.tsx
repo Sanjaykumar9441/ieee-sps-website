@@ -9,12 +9,17 @@ import {
   Trophy,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { createAssessment } from "./assessmentApi";
+import { createAssessment, getAssessmentCategories } from "./assessmentApi";
 
 interface CreateAssessmentModalProps {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
+}
+
+interface AssessmentCategory {
+  id: string;
+  name: string;
 }
 
 interface FormState {
@@ -114,12 +119,34 @@ export default function CreateAssessmentModal({
   const [saving, setSaving] = useState(false);
   const [slugTouched, setSlugTouched] = useState(false);
 
+  const [categories, setCategories] = useState<AssessmentCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
   useEffect(() => {
     if (!open) {
       setForm(initialForm);
       setSlugTouched(false);
       setSaving(false);
+      return;
     }
+
+    const loadCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+
+        const data = await getAssessmentCategories();
+
+        setCategories(data);
+      } catch (error) {
+        console.error("Failed to load assessment categories:", error);
+        toast.error("Unable to load categories.");
+        setCategories([]);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    loadCategories();
   }, [open]);
 
   if (!open) return null;
@@ -345,13 +372,29 @@ export default function CreateAssessmentModal({
                   </p>
                 </Field>
 
-                <Field label="Category ID">
-                  <input
+                <Field label="Category">
+                  <select
                     value={form.category_id}
                     onChange={(e) => updateField("category_id", e.target.value)}
-                    placeholder="Optional category UUID"
                     className="input"
-                  />
+                    disabled={categoriesLoading}
+                  >
+                    <option value="">
+                      {categoriesLoading
+                        ? "Loading categories..."
+                        : "No Category"}
+                    </option>
+
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <p className="mt-1 text-xs text-gray-400">
+                    Select a category for this assessment.
+                  </p>
                 </Field>
 
                 <div className="md:col-span-2">
@@ -432,11 +475,11 @@ export default function CreateAssessmentModal({
                   </div>
 
                   <p className="mt-1 text-xs text-gray-400">
-                    Example: 30 = 30 minutes.
+                    Enter the duration in minutes. Example: 30 = 30 minutes.
                   </p>
                 </Field>
 
-                <Field label="Questions Per Attempt" required>
+                <Field label="Total Questions" required>
                   <input
                     type="number"
                     min={1}

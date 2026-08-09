@@ -24,6 +24,12 @@ export const getAssessments = async () => {
   return data.assessments;
 };
 
+export const getAssessmentCategories = async () => {
+  const { data } = await api.get("/assessments/categories");
+
+  return data.categories || [];
+};
+
 export const getAssessment = async (assessmentId: string) => {
   const { data } = await api.get(`/assessments/${assessmentId}`);
 
