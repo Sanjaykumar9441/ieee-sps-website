@@ -3,6 +3,10 @@ let isProcessing = false;
 const { supabase } = require("../lib/supabase");
 const { sendOtpEmail } = require("../lib/mailer");
 
+const MAX_RETRIES = 3;
+const PROCESS_LIMIT = 20;
+const PROCESS_INTERVAL = 10000;
+
 async function processEmailQueue() {
   if (isProcessing) return;
 
@@ -12,9 +16,9 @@ async function processEmailQueue() {
     const { data: emails, error } = await supabase
       .from("email_queue")
       .select("*")
-      .eq("status", "pending")
+      .eq("status", "PENDING")
       .order("created_at", { ascending: true })
-      .limit(20);
+      .limit(PROCESS_LIMIT);
 
     if (error) throw error;
 
@@ -38,14 +42,14 @@ async function processEmailQueue() {
             break;
 
           default:
-            console.log(`[EMAIL] Unknown template: ${email.template_name}`);
+            throw new Error(`Unknown email template: ${email.template_name}`);
         }
 
         await supabase
           .from("email_queue")
           .update({
-            status: "sent",
-            sent_at: new Date(),
+            status: "SENT",
+            sent_at: new Date().toISOString(),
             last_error: null,
           })
           .eq("id", email.id);
@@ -60,8 +64,8 @@ async function processEmailQueue() {
           .from("email_queue")
           .update({
             retry_count: retry,
-            status: retry >= 3 ? "failed" : "pending",
-            last_error: err.message,
+            status: retry >= MAX_RETRIES ? "FAILED" : "PENDING",
+            last_error: err?.message || "Unknown email error",
           })
           .eq("id", email.id);
 
@@ -79,6 +83,8 @@ async function processEmailQueue() {
   Check queue every 10 seconds
 */
 
-setInterval(processEmailQueue, 10000);
+processEmailQueue();
 
-console.log("📧 Email Worker Started");
+setInterval(processEmailQueue, PROCESS_INTERVAL);
+
+console.log(`📧 Email Worker Started (${PROCESS_INTERVAL / 1000}s interval)`);

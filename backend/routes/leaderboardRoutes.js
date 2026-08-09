@@ -6,10 +6,8 @@ const verifyToken = require("../middleware/verifyToken");
 
 const controller = require("../controllers/leaderboardController");
 
-router.get(
-    "/:assessmentId",
-    verifyToken,
-    controller.getLeaderboard
-);
+router.get("/:assessmentId/top-three", verifyToken, controller.getTopThree);
+
+router.get("/:assessmentId", verifyToken, controller.getLeaderboard);
 
 module.exports = router;

@@ -48,31 +48,25 @@ export default function AssessmentDashboardTab() {
   }, []);
 
   useEffect(() => {
-    socket.connect();
+    if (!socket.connected) {
+      socket.connect();
+    }
 
     socket.on("assessmentCreated", fetchAssessments);
-
     socket.on("assessmentUpdated", fetchAssessments);
-
     socket.on("assessmentDeleted", fetchAssessments);
-
     socket.on("assessmentPublished", fetchAssessments);
 
     return () => {
       socket.off("assessmentCreated", fetchAssessments);
-
       socket.off("assessmentUpdated", fetchAssessments);
-
       socket.off("assessmentDeleted", fetchAssessments);
-
       socket.off("assessmentPublished", fetchAssessments);
-
-      socket.disconnect();
     };
   }, []);
 
   const filteredAssessments = assessments.filter((assessment) =>
-    assessment.title.toLowerCase().includes(search.toLowerCase())
+    assessment.title.toLowerCase().includes(search.toLowerCase()),
   );
 
   const handleDelete = async (id: string) => {
@@ -129,9 +123,7 @@ export default function AssessmentDashboardTab() {
 
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6">
         <div>
-          <h1 className="text-3xl font-bold">
-            Assessment Dashboard
-          </h1>
+          <h1 className="text-3xl font-bold">Assessment Dashboard</h1>
 
           <p className="text-gray-500 mt-1">
             Create, manage and monitor assessments.
@@ -143,7 +135,6 @@ export default function AssessmentDashboardTab() {
           className="bg-[#00629B] text-white rounded-xl px-5 py-3 flex items-center gap-2"
         >
           <Plus size={18} />
-
           Create Assessment
         </button>
       </div>
@@ -152,10 +143,7 @@ export default function AssessmentDashboardTab() {
 
       <div className="bg-white rounded-2xl border p-5 flex flex-col lg:flex-row gap-4">
         <div className="relative flex-1">
-          <Search
-            className="absolute left-4 top-3.5 text-gray-400"
-            size={18}
-          />
+          <Search className="absolute left-4 top-3.5 text-gray-400" size={18} />
 
           <input
             value={search}
@@ -170,7 +158,6 @@ export default function AssessmentDashboardTab() {
           className="border rounded-xl px-5 flex items-center justify-center gap-2"
         >
           <RefreshCw size={18} />
-
           Refresh
         </button>
       </div>
@@ -178,9 +165,7 @@ export default function AssessmentDashboardTab() {
       {/* Loading */}
 
       {loading ? (
-        <div className="text-center py-20">
-          Loading Assessments...
-        </div>
+        <div className="text-center py-20">Loading Assessments...</div>
       ) : (
         <>
           {/* Cards */}
@@ -214,9 +199,7 @@ export default function AssessmentDashboardTab() {
       {/* Create Modal */}
 
       {openCreateModal && (
-        <div>
-          {/* We'll build CreateAssessmentModal in Phase 2 */}
-        </div>
+        <div>{/* We'll build CreateAssessmentModal in Phase 2 */}</div>
       )}
     </div>
   );

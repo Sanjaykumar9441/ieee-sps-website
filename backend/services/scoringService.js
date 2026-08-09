@@ -1,72 +1,70 @@
-const supabase = require("../lib/supabase");
+const { supabase } = require("../lib/supabase");
+
+/* ============================================================
+   CALCULATE SCORE
+============================================================ */
 
 exports.calculateScore = async (attemptId) => {
-  // Get all questions served to this attempt
-  const { data: questions, error: questionsError } = await supabase
+  const { data: questions, error } = await supabase
     .from("assessment_attempt_questions")
     .select(
       `
-            id,
-            correct_key,
-            marks,
-            negative_marks
-        `,
+      id,
+      correct_answers,
+      marks,
+      negative_marks,
+      assessment_answers(
+        selected_answers
+      )
+    `,
     )
     .eq("attempt_id", attemptId);
 
-  if (questionsError) throw questionsError;
-
-  // Get all submitted answers
-  const { data: answers, error: answersError } = await supabase
-    .from("assessment_answers")
-    .select(
-      `
-            attempt_question_id,
-            selected_answers
-        `,
-    )
-    .in(
-      "attempt_question_id",
-      questions.map((q) => q.id),
-    );
-
-  if (answersError) throw answersError;
-
-  // Fast lookup
-  const answerMap = new Map();
-
-  answers.forEach((answer) => {
-    answerMap.set(answer.attempt_question_id, answer.selected_answers);
-  });
+  if (error) throw error;
 
   let score = 0;
+
   let correct = 0;
+
   let wrong = 0;
+
   let unanswered = 0;
 
   for (const question of questions) {
-    const selected = answerMap.get(question.id);
+    const answer = question.assessment_answers?.[0];
 
-    if (!selected || selected.length === 0) {
+    if (!answer) {
       unanswered++;
       continue;
     }
 
-    // Current version:
-    // only single-correct questions
+    const selected = Array.isArray(answer.selected_answers)
+      ? [...answer.selected_answers].sort()
+      : [answer.selected_answers];
 
-    const selectedKey = Array.isArray(selected) ? selected[0] : selected;
+    const expected = Array.isArray(question.correct_answers)
+      ? [...question.correct_answers].sort()
+      : [question.correct_answers];
 
-    if (selectedKey === question.correct_key) {
+    const isCorrect = JSON.stringify(selected) === JSON.stringify(expected);
+
+    if (isCorrect) {
       correct++;
 
-      score += Number(question.marks || 1);
+      score += Number(question.marks || 0);
     } else {
       wrong++;
 
       score -= Number(question.negative_marks || 0);
     }
   }
+
+  const totalQuestions = questions.length;
+
+  const percentage =
+    totalQuestions === 0
+      ? 0
+      : Number(((correct / totalQuestions) * 100).toFixed(2));
 
   return {
     score,
@@ -76,5 +74,9 @@ exports.calculateScore = async (attemptId) => {
     wrong,
 
     unanswered,
+
+    percentage,
+
+    totalQuestions,
   };
 };

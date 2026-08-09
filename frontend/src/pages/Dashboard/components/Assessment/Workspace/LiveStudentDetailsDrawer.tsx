@@ -1,27 +1,26 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { X, User, Clock, Activity, BarChart3 } from "lucide-react";
-
 import { socket } from "../../../../../lib/socket";
 import { LiveStudent } from "./LiveMonitor";
-
-const API = import.meta.env.VITE_API_URL;
+import {
+  getLiveStudentDetails,
+  sendBulkOtp,
+  blockStudents,
+  unblockStudents,
+  deleteStudents,
+  forceSubmitAttempt,
+  disqualifyAttempt,
+} from "../../Assessment/assessmentApi";
 
 interface StudentTimeline {
-  otpSentAt?: string;
-  loggedInAt?: string;
   assessmentStartedAt?: string;
   submittedAt?: string;
 }
 
 interface StudentStatistics {
   questionsAnswered: number;
-  correct: number;
-  wrong: number;
-  unanswered: number;
   score: number;
-  timeSpent: string;
   violations: number;
 }
 
@@ -31,13 +30,35 @@ interface StudentAttempt {
   startedAt?: string;
   submittedAt?: string;
   score?: number;
+  resumedCount?: number;
+  disqualifiedReason?: string | null;
+}
+
+interface StudentInfo {
+  status: "allowed" | "blocked";
+}
+
+interface StudentQuestion {
+  id: string;
+  question_order: number;
+  questions?: {
+    question_text?: string;
+  };
+  assessment_answers?: {
+    selected_answers?: string[];
+    answered_at?: string;
+  }[];
+  assessment_question_flags?: {
+    marked_for_review?: boolean;
+  }[];
 }
 
 interface StudentDetails {
-  student: LiveStudent;
+  student: StudentInfo;
   attempt: StudentAttempt | null;
   timeline: StudentTimeline;
   statistics: StudentStatistics;
+  questions: StudentQuestion[];
 }
 
 interface Props {
@@ -61,61 +82,37 @@ export default function LiveStudentDetailsDrawer({
 
   const [details, setDetails] = useState<StudentDetails | null>(null);
 
-  const fetchDetails = async () => {
-    if (!student) return;
+  const fetchDetails = useCallback(async () => {
+  if (!student) return;
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const token = localStorage.getItem("token");
+    const data = await getLiveStudentDetails(student.attemptId);
 
-      const { data } = await axios.get(
-        `${API}/api/live-monitor/details/${student.studentId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      setDetails(data);
-    } catch (err) {
-      console.error(err);
-      toast.error("Unable to load student details.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    setDetails(data);
+  } catch (err) {
+    console.error(err);
+    toast.error("Unable to load student details");
+  } finally {
+    setLoading(false);
+  }
+}, [student]);
 
   const handleSendOtp = async () => {
     if (!student) return;
 
-    const token = localStorage.getItem("token");
-
     try {
       setProcessing(true);
 
-      const { data } = await axios.post(
-        `${API}/api/student-auth/send-bulk-otp`,
-        {
-          assessmentId,
-          studentIds: [student.studentId],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const data = await sendBulkOtp(assessmentId, [student.studentId]);
 
-      toast.success(data.message);
+      toast.success(data.message || "OTP sent successfully.");
 
       await onRefresh();
-
       await fetchDetails();
     } catch (err) {
       console.error(err);
-
       toast.error("Unable to send OTP.");
     } finally {
       setProcessing(false);
@@ -123,39 +120,32 @@ export default function LiveStudentDetailsDrawer({
   };
 
   const handleBlock = async () => {
-    if (!student) return;
+  if (!student) return;
 
-    const token = localStorage.getItem("token");
+  try {
+    setProcessing(true);
 
-    try {
-      setProcessing(true);
+    const data =
+      details?.student.status === "blocked"
+        ? await unblockStudents(assessmentId, [student.studentId])
+        : await blockStudents(assessmentId, [student.studentId]);
 
-      const { data } = await axios.post(
-        `${API}/api/student-auth/block`,
-        {
-          assessmentId,
-          studentIds: [student.studentId],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+    toast.success(data.message || "Student status updated.");
 
-      toast.success(data.message);
+    await onRefresh();
+    await fetchDetails();
+  } catch (err) {
+    console.error(err);
 
-      await onRefresh();
-
-      await fetchDetails();
-    } catch (err) {
-      console.error(err);
-
-      toast.error("Unable to block student.");
-    } finally {
-      setProcessing(false);
-    }
-  };
+    toast.error(
+      details?.student.status === "blocked"
+        ? "Unable to unblock student."
+        : "Unable to block student.",
+    );
+  } finally {
+    setProcessing(false);
+  }
+};
 
   const handleDelete = async () => {
     if (!student) return;
@@ -164,23 +154,10 @@ export default function LiveStudentDetailsDrawer({
       return;
     }
 
-    const token = localStorage.getItem("token");
-
     try {
       setProcessing(true);
 
-      const { data } = await axios.post(
-        `${API}/api/student-auth/delete`,
-        {
-          assessmentId,
-          studentIds: [student.studentId],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const data = await deleteStudents(assessmentId, [student.studentId]);
 
       toast.success(data.message);
 
@@ -199,23 +176,15 @@ export default function LiveStudentDetailsDrawer({
   const handleForceSubmit = async () => {
     if (!student) return;
 
-    const token = localStorage.getItem("token");
-
     try {
       setProcessing(true);
 
-      const { data } = await axios.post(
-        `${API}/api/live-monitor/force-submit`,
-        {
-          assessmentId,
-          attemptId: student.attemptId,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      if (!details?.attempt?.id) {
+        toast.error("No assessment attempt found.");
+        return;
+      }
+
+      const data = await forceSubmitAttempt(details.attempt.id);
 
       toast.success(data.message);
 
@@ -234,23 +203,19 @@ export default function LiveStudentDetailsDrawer({
   const handleDisqualify = async () => {
     if (!student) return;
 
-    const token = localStorage.getItem("token");
-
     try {
       setProcessing(true);
 
-      const { data } = await axios.post(
-        `${API}/api/live-monitor/disqualify`,
-        {
-          assessmentId,
-          attemptId: student.attemptId,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const reason =
+        window.prompt("Reason for disqualification?") ||
+        "Disqualified by admin";
+
+      if (!details?.attempt?.id) {
+        toast.error("No assessment attempt found.");
+        return;
+      }
+
+      const data = await disqualifyAttempt(details.attempt.id, reason);
 
       toast.success(data.message);
 
@@ -269,26 +234,24 @@ export default function LiveStudentDetailsDrawer({
   useEffect(() => {
     if (!open || !student) return;
 
-    fetchDetails();
-  }, [open, student?.studentId]);
+    void fetchDetails();
+  }, [open, student, fetchDetails]);
 
   useEffect(() => {
     if (!open) return;
 
-    socket.on("studentProgress", fetchDetails);
-    socket.on("answerSaved", fetchDetails);
-    socket.on("assessmentSubmitted", fetchDetails);
-    socket.on("studentDisqualified", fetchDetails);
+    socket.on("dashboardRefresh", fetchDetails);
 
     return () => {
-      socket.off("studentProgress", fetchDetails);
-      socket.off("answerSaved", fetchDetails);
-      socket.off("assessmentSubmitted", fetchDetails);
-      socket.off("studentDisqualified", fetchDetails);
+      socket.off("dashboardRefresh", fetchDetails);
     };
-  }, [open, student?.studentId]);
+  }, [open, fetchDetails]);
 
   if (!open || !student) return null;
+
+  const attemptFinished =
+    details?.attempt?.status === "SUBMITTED" ||
+    details?.attempt?.status === "DISQUALIFIED";
 
   return (
     <>
@@ -367,21 +330,21 @@ export default function LiveStudentDetailsDrawer({
                 <h3 className="text-xl font-bold">Live Assessment Status</h3>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
                 <div className="rounded-xl border p-4">
                   <p className="text-gray-500">Status</p>
 
                   <span
                     className={`mt-2 inline-flex rounded-full px-3 py-1 text-sm font-semibold
                     ${
-                      student.status === "LIVE"
+                      details?.attempt?.status === "IN_PROGRESS"
                         ? "bg-green-100 text-green-700"
-                        : student.status === "SUBMITTED"
+                        : details?.attempt?.status === "SUBMITTED"
                           ? "bg-blue-100 text-blue-700"
                           : "bg-red-100 text-red-700"
                     }`}
                   >
-                    {student.status}
+                    {details?.attempt?.status || "NOT STARTED"}
                   </span>
                 </div>
 
@@ -389,8 +352,16 @@ export default function LiveStudentDetailsDrawer({
                   <p className="text-gray-500">Remaining Time</p>
 
                   <p className="mt-2 text-xl font-bold">
-                    {Math.floor(student.remainingSeconds / 60)}m{" "}
-                    {student.remainingSeconds % 60}s
+                    {student.isExpired ? (
+                      <span className="text-red-600">Expired</span>
+                    ) : (
+                      `${String(
+                        Math.floor(student.remainingSeconds / 60),
+                      ).padStart(
+                        2,
+                        "0",
+                      )}:${String(student.remainingSeconds % 60).padStart(2, "0")}`
+                    )}
                   </p>
                 </div>
 
@@ -398,7 +369,11 @@ export default function LiveStudentDetailsDrawer({
                   <p className="text-gray-500">Current Question</p>
 
                   <p className="mt-2 text-xl font-bold">
-                    {student.currentQuestion} / {student.totalQuestions}
+                    {student
+                      ? student.currentQuestion > 0
+                        ? `${student.currentQuestion} / ${student.totalQuestions}`
+                        : `— / ${student.totalQuestions}`
+                      : "-"}
                   </p>
                 </div>
 
@@ -406,11 +381,32 @@ export default function LiveStudentDetailsDrawer({
                   <p className="text-gray-500">Answered</p>
 
                   <p className="mt-2 text-xl font-bold">
-                    {student.answeredQuestions}
+                    {details?.statistics?.questionsAnswered ?? 0}
                   </p>
                 </div>
               </div>
             </div>
+
+            <div className="rounded-xl border p-4">
+              <p className="text-gray-500">Resume Count</p>
+
+              <p className="mt-2 text-xl font-bold">
+                {details?.attempt?.resumedCount ?? 0}
+              </p>
+            </div>
+
+            {details?.attempt?.status === "DISQUALIFIED" &&
+              details.attempt.disqualifiedReason && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+                  <h3 className="text-lg font-bold text-red-700">
+                    Disqualification Reason
+                  </h3>
+
+                  <p className="mt-2 text-red-800">
+                    {details.attempt.disqualifiedReason}
+                  </p>
+                </div>
+              )}
             {/* =======================================
                 TIMELINE
             ======================================== */}
@@ -427,8 +423,10 @@ export default function LiveStudentDetailsDrawer({
                   <span className="text-gray-600">Assessment Started</span>
 
                   <span className="font-medium">
-                    {details?.attempt?.startedAt
-                      ? new Date(details.attempt.startedAt).toLocaleString()
+                    {details?.timeline?.assessmentStartedAt
+                      ? new Date(
+                          details?.timeline?.assessmentStartedAt,
+                        ).toLocaleString()
                       : "-"}
                   </span>
                 </div>
@@ -437,8 +435,8 @@ export default function LiveStudentDetailsDrawer({
                   <span className="text-gray-600">Submitted</span>
 
                   <span className="font-medium">
-                    {details?.attempt?.submittedAt
-                      ? new Date(details.attempt.submittedAt).toLocaleString()
+                    {details?.timeline?.submittedAt
+                      ? new Date(details.timeline.submittedAt).toLocaleString()
                       : "Not Submitted"}
                   </span>
                 </div>
@@ -461,7 +459,7 @@ export default function LiveStudentDetailsDrawer({
                   <p className="text-gray-500">Questions Answered</p>
 
                   <h3 className="mt-2 text-3xl font-bold">
-                    {student.answeredQuestions}
+                    {details?.statistics?.questionsAnswered ?? 0}
                   </h3>
                 </div>
 
@@ -477,7 +475,7 @@ export default function LiveStudentDetailsDrawer({
                   <p className="text-gray-500">Violations</p>
 
                   <h3 className="mt-2 text-3xl font-bold text-red-600">
-                    {student.violations}
+                    {details?.statistics?.violations ?? 0}
                   </h3>
                 </div>
 
@@ -507,13 +505,8 @@ export default function LiveStudentDetailsDrawer({
                   <span>Completion</span>
 
                   <span className="font-semibold">
-                    {student.totalQuestions > 0
-                      ? Math.round(
-                          (student.answeredQuestions / student.totalQuestions) *
-                            100,
-                        )
-                      : 0}
-                    %
+                    {student.answeredQuestions} / {student.totalQuestions}{" "}
+                    answered
                   </span>
                 </div>
 
@@ -522,7 +515,7 @@ export default function LiveStudentDetailsDrawer({
                     className="h-full rounded-full bg-[#00629B]"
                     style={{
                       width: `${
-                        student.totalQuestions > 0
+                        student.totalQuestions
                           ? (student.answeredQuestions /
                               student.totalQuestions) *
                             100
@@ -533,6 +526,72 @@ export default function LiveStudentDetailsDrawer({
                 </div>
               </div>
             </div>
+
+            {/* =======================================
+    QUESTION ACTIVITY
+======================================== */}
+
+            <div className="rounded-2xl border p-6">
+              <div className="mb-6 flex items-center gap-3">
+                <BarChart3 className="text-[#00629B]" />
+
+                <h3 className="text-xl font-bold">Question Activity</h3>
+              </div>
+
+              <div className="space-y-3">
+                {(details?.questions ?? []).map((question) => {
+                  const answer = question.assessment_answers?.[0];
+
+                  const flag = question.assessment_question_flags?.[0];
+
+                  const answered = Boolean(answer);
+
+                  const markedForReview = Boolean(flag?.marked_for_review);
+
+                  return (
+                    <div key={question.id} className="rounded-xl border p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="font-semibold">
+                            Question {question.question_order}
+                          </p>
+
+                          <p className="mt-1 text-sm text-gray-600">
+                            {question.questions?.question_text ||
+                              "Question text unavailable"}
+                          </p>
+                        </div>
+
+                        <div className="flex shrink-0 flex-col items-end gap-2">
+                          {answered ? (
+                            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                              Answered
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+                              Unanswered
+                            </span>
+                          )}
+
+                          {markedForReview && (
+                            <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
+                              Marked for Review
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {(!details?.questions || details.questions.length === 0) && (
+                  <p className="py-6 text-center text-gray-500">
+                    No question activity available.
+                  </p>
+                )}
+              </div>
+            </div>
+
             {/* =======================================
                 ACTIONS
             ======================================== */}
@@ -554,7 +613,7 @@ export default function LiveStudentDetailsDrawer({
                   onClick={handleBlock}
                   className="rounded-xl bg-yellow-500 px-5 py-3 text-white disabled:opacity-50"
                 >
-                  Block
+                  {details?.student.status === "blocked" ? "Unblock" : "Block"}
                 </button>
 
                 <button
@@ -566,7 +625,9 @@ export default function LiveStudentDetailsDrawer({
                 </button>
 
                 <button
-                  disabled={processing}
+                  disabled={
+                    processing || !details?.attempt?.id || attemptFinished
+                  }
                   onClick={handleForceSubmit}
                   className="rounded-xl bg-blue-600 px-5 py-3 text-white disabled:opacity-50"
                 >
@@ -574,7 +635,9 @@ export default function LiveStudentDetailsDrawer({
                 </button>
 
                 <button
-                  disabled={processing}
+                  disabled={
+                    processing || !details?.attempt?.id || attemptFinished
+                  }
                   onClick={handleDisqualify}
                   className="rounded-xl bg-red-500 px-5 py-3 text-white disabled:opacity-50"
                 >

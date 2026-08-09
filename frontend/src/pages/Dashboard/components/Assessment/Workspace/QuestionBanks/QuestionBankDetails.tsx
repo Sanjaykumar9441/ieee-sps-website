@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import toast from "react-hot-toast";
 import { ArrowLeft, Plus, Search } from "lucide-react";
 
 import { socket } from "../../../../../../lib/socket";
 import { QuestionBank } from "./QuestionBanks";
 import QuestionEditor from "./QuestionEditor";
-
-const API = import.meta.env.VITE_API_URL;
+import {
+  getQuestions,
+  deleteQuestion,
+  searchQuestions,
+  duplicateQuestion,
+} from "../../../Assessment/assessmentApi";
 
 interface Props {
   bank: QuestionBank;
@@ -16,6 +19,7 @@ interface Props {
 
 interface Question {
   id: string;
+  bank_id: string;
 
   question_text: string;
 
@@ -29,19 +33,21 @@ interface Question {
 
   explanation: string;
 
-  image_url: string;
-
-  tags: string[];
+  question_image_id: string | null;
 
   options: string[];
 
-  correct_answer: number[];
+  correct_answers: number[];
 
-  answer_key: string;
+  estimated_seconds: number;
 
-  minimum_words: number;
+  tags: string[];
 
-  maximum_words: number;
+  language: string;
+
+  version: number;
+
+  is_active: boolean;
 }
 
 export default function QuestionBankDetails({ bank, onBack }: Props) {
@@ -59,43 +65,49 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
 
   const fetchQuestions = async () => {
     try {
-      const token = localStorage.getItem("token");
+      setLoading(true);
 
-      const { data } = await axios.get(
-        `${API}/api/question-banks/${bank.id}/questions`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const data = await getQuestions(bank.id);
 
-      setQuestions(data.questions || []);
+      setQuestions(data || []);
     } catch (err) {
       console.error(err);
+
+      toast.error("Unable to load questions");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Delete this question?")) return;
+    if (!window.confirm("Delete this question?")) {
+      return;
+    }
 
     try {
-      const token = localStorage.getItem("token");
-
-      await axios.delete(`${API}/api/questions/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      await deleteQuestion(id);
 
       toast.success("Question deleted");
 
       fetchQuestions();
     } catch (err) {
       console.error(err);
+
       toast.error("Unable to delete question");
+    }
+  };
+
+  const handleDuplicate = async (id: string) => {
+    try {
+      await duplicateQuestion(id);
+
+      toast.success("Question duplicated");
+
+      fetchQuestions();
+    } catch (err) {
+      console.error(err);
+
+      toast.error("Unable to duplicate question");
     }
   };
 
@@ -112,21 +124,33 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
       socket.off("questionDeleted", fetchQuestions);
     };
   }, [bank.id]);
+  useEffect(() => {
+    if (!search.trim()) {
+      return;
+    }
 
-  const filteredQuestions = questions.filter((question) => {
-    const matchesSearch = question.question_text
-      .toLowerCase()
-      .includes(search.toLowerCase());
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchQuestions(bank.id, search);
 
-    const matchesDifficulty =
-      difficulty === "all" || question.difficulty === difficulty;
+        setQuestions(results || []);
+      } catch (err) {
+        console.error(err);
 
-    return matchesSearch && matchesDifficulty;
-  });
+        toast.error("Search failed");
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search, bank.id]);
 
   if (loading) {
     return <div className="py-20 text-center">Loading Questions...</div>;
   }
+
+  const filteredQuestions = questions.filter(
+    (question) => difficulty === "all" || question.difficulty === difficulty,
+  );
 
   if (showEditor) {
     return (
@@ -164,7 +188,7 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
         <div>
           <h1 className="text-3xl font-bold">{bank.name}</h1>
 
-          <p className="text-gray-500 mt-2">{bank.total_questions} Questions</p>
+          <p className="text-gray-500 mt-2">{questions.length} Questions</p>
         </div>
 
         <button
@@ -207,51 +231,69 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
 
       {/* Summary */}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="border rounded-xl p-5">
-          <p>Total</p>
-          <h2 className="text-3xl font-bold">{bank.total_questions}</h2>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+        <div className="rounded-xl border p-5">
+          <p className="text-sm text-gray-500">Total Questions</p>
+
+          <h2 className="text-3xl font-bold">{questions.length}</h2>
         </div>
 
-        <div className="border rounded-xl p-5">
-          <p>Easy</p>
-          <h2 className="text-3xl font-bold text-green-600">
-            {bank.easy_questions}
+        <div className="rounded-xl border p-5">
+          <p className="text-sm text-gray-500">Questions to Pick</p>
+
+          <h2 className="mt-1 text-2xl font-bold text-[#00629B]">
+            {bank.questions_to_pick ?? 0}
           </h2>
         </div>
 
-        <div className="border rounded-xl p-5">
-          <p>Medium</p>
-          <h2 className="text-3xl font-bold text-yellow-600">
-            {bank.medium_questions}
+        <div className="rounded-xl border p-5">
+          <p className="text-sm text-gray-500">Difficulty</p>
+
+          <h2 className="mt-1 text-xl font-bold">{bank.difficulty || "-"}</h2>
+        </div>
+
+        <div className="rounded-xl border p-5">
+          <p className="text-sm text-gray-500">Estimated Time</p>
+
+          <h2 className="mt-1 text-2xl font-bold">
+            {bank.estimated_minutes ?? 0}m
           </h2>
         </div>
 
-        <div className="border rounded-xl p-5">
-          <p>Hard</p>
-          <h2 className="text-3xl font-bold text-red-600">
-            {bank.hard_questions}
-          </h2>
+        <div className="rounded-xl border p-5">
+          <p className="text-sm text-gray-500">Version</p>
+
+          <h2 className="mt-1 text-2xl font-bold">{bank.version}</h2>
         </div>
       </div>
 
       {/* Empty State */}
 
       {filteredQuestions.length === 0 ? (
-        <div className="border rounded-2xl py-24 text-center">
-          <h2 className="text-2xl font-bold">No Questions Yet</h2>
+        <div className="rounded-2xl border py-24 text-center">
+          <h2 className="text-2xl font-bold">
+            {search.trim() || difficulty !== "all"
+              ? "No Matching Questions"
+              : "No Questions Yet"}
+          </h2>
 
-          <p className="text-gray-500 mt-3">Create your first question.</p>
+          <p className="mt-3 text-gray-500">
+            {search.trim() || difficulty !== "all"
+              ? "Try changing your search or difficulty filter."
+              : "Create your first question."}
+          </p>
 
-          <button
-            onClick={() => {
-              setEditingQuestion(null);
-              setShowEditor(true);
-            }}
-            className="mt-6 bg-[#00629B] text-white px-6 py-3 rounded-xl"
-          >
-            + Add Question
-          </button>
+          {!search.trim() && difficulty === "all" && (
+            <button
+              onClick={() => {
+                setEditingQuestion(null);
+                setShowEditor(true);
+              }}
+              className="mt-6 rounded-xl bg-[#00629B] px-6 py-3 text-white"
+            >
+              + Add Question
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-5">
@@ -281,6 +323,13 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
                     className="border rounded-xl px-4 py-2"
                   >
                     Edit
+                  </button>
+
+                  <button
+                    onClick={() => handleDuplicate(question.id)}
+                    className="border rounded-xl px-4 py-2"
+                  >
+                    Duplicate
                   </button>
 
                   <button

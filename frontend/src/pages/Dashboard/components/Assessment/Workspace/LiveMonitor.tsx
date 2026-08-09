@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Search, RefreshCw } from "lucide-react";
-
 import { socket } from "../../../../../lib/socket";
 import { Assessment } from "../../Assessment/AssessmentCard";
 import LiveStudentDetailsDrawer from "./LiveStudentDetailsDrawer";
-
-const API = import.meta.env.VITE_API_URL;
+import {
+  getLiveStudents,
+  forceSubmitAttempt,
+  disqualifyAttempt,
+} from "../../Assessment/assessmentApi";
 
 interface Props {
   assessment: Assessment;
@@ -15,28 +16,30 @@ interface Props {
 
 export interface LiveStudent {
   attemptId: string;
-
   studentId: string;
 
-  rollNo: string;
-
   studentName: string;
-
+  rollNo: string;
   email: string;
-
   department: string;
 
+  status: "LIVE" | "SUBMITTED" | "DISQUALIFIED";
+
+  score: number;
+
   currentQuestion: number;
-
   answeredQuestions: number;
-
   totalQuestions: number;
 
-  remainingSeconds: number;
-
   violations: number;
+  resumedCount: number;
 
-  status: "LIVE" | "SUBMITTED" | "DISQUALIFIED";
+  startedAt: string | null;
+  expiresAt: string | null;
+  submittedAt: string | null;
+
+  remainingSeconds: number;
+  isExpired: boolean;
 }
 
 export default function LiveMonitor({ assessment }: Props) {
@@ -58,27 +61,18 @@ export default function LiveMonitor({ assessment }: Props) {
 
   const [status, setStatus] = useState("all");
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
-      const token = localStorage.getItem("token");
+      const students = await getLiveStudents(assessment.id);
 
-      const { data } = await axios.get(
-        `${API}/api/live-monitor/${assessment.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      setStudents(data.students || []);
+      setStudents(students || []);
     } catch (err) {
       console.error(err);
       toast.error("Unable to load live monitor.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [assessment.id]);
 
   const handleForceSubmit = async (student: LiveStudent) => {
     if (!window.confirm(`Force submit ${student.studentName}'s assessment?`)) {
@@ -88,22 +82,9 @@ export default function LiveMonitor({ assessment }: Props) {
     try {
       setProcessingStudent(student.attemptId);
 
-      const token = localStorage.getItem("token");
+      const data = await forceSubmitAttempt(student.attemptId);
 
-      const { data } = await axios.post(
-        `${API}/api/live-monitor/force-submit`,
-        {
-          assessmentId: assessment.id,
-          attemptId: student.attemptId,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      toast.success(data.message);
+      toast.success(data.message || "Assessment force submitted successfully.");
 
       await fetchStudents();
     } catch (err) {
@@ -123,22 +104,12 @@ export default function LiveMonitor({ assessment }: Props) {
     try {
       setProcessingStudent(student.attemptId);
 
-      const token = localStorage.getItem("token");
-
-      const { data } = await axios.post(
-        `${API}/api/live-monitor/disqualify`,
-        {
-          assessmentId: assessment.id,
-          attemptId: student.attemptId,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+      const data = await disqualifyAttempt(
+        student.attemptId,
+        "Disqualified by admin",
       );
 
-      toast.success(data.message);
+      toast.success(data.message || "Student disqualified successfully.");
 
       await fetchStudents();
     } catch (err) {
@@ -155,24 +126,56 @@ export default function LiveMonitor({ assessment }: Props) {
 
     socket.emit("joinAssessmentRoom", assessment.id);
 
-    socket.on("studentProgress", fetchStudents);
+    const refresh = () => {
+      void fetchStudents();
+    };
 
-    socket.on("answerSaved", fetchStudents);
-
-    socket.on("assessmentSubmitted", fetchStudents);
-
-    socket.on("studentDisqualified", fetchStudents);
+    socket.on("dashboardRefresh", refresh);
+    socket.on("studentProgress", refresh);
+    socket.on("questionChanged", refresh);
+    socket.on("answerSaved", refresh);
+    socket.on("timerUpdated", refresh);
+    socket.on("studentSubmitted", refresh);
+    socket.on("studentDisqualified", refresh);
+    socket.on("studentInfraction", refresh);
 
     return () => {
-      socket.off("studentProgress", fetchStudents);
+      socket.off("dashboardRefresh", refresh);
+      socket.off("studentProgress", refresh);
+      socket.off("questionChanged", refresh);
+      socket.off("answerSaved", refresh);
+      socket.off("timerUpdated", refresh);
+      socket.off("studentSubmitted", refresh);
+      socket.off("studentDisqualified", refresh);
+      socket.off("studentInfraction", refresh);
 
-      socket.off("answerSaved", fetchStudents);
-
-      socket.off("assessmentSubmitted", fetchStudents);
-
-      socket.off("studentDisqualified", fetchStudents);
+      socket.emit("leaveAssessmentRoom", assessment.id);
     };
-  }, [assessment.id]);
+  }, [assessment.id, fetchStudents]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setStudents((prev) =>
+        prev.map((student) => {
+          if (student.status !== "LIVE") {
+            return student;
+          }
+
+          const remainingSeconds = Math.max(0, student.remainingSeconds - 1);
+
+          return {
+            ...student,
+            remainingSeconds,
+            isExpired: remainingSeconds <= 0,
+          };
+        }),
+      );
+    }, 1000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
 
   const stats = useMemo(() => {
     return {
@@ -326,7 +329,7 @@ export default function LiveMonitor({ assessment }: Props) {
             {filteredStudents.length === 0 ? (
               <tr>
                 <td colSpan={8} className="py-16 text-center text-gray-500">
-                  No live students found.
+                  No students found.
                 </td>
               </tr>
             ) : (
@@ -357,7 +360,9 @@ export default function LiveMonitor({ assessment }: Props) {
                     {/* Current Question */}
 
                     <td className="p-4">
-                      {student.currentQuestion} / {student.totalQuestions}
+                      {student.currentQuestion > 0
+                        ? `${student.currentQuestion} / ${student.totalQuestions}`
+                        : `— / ${student.totalQuestions}`}
                     </td>
 
                     {/* Answered */}
@@ -388,8 +393,14 @@ export default function LiveMonitor({ assessment }: Props) {
                     {/* Timer */}
 
                     <td className="p-4 font-medium">
-                      {String(minutes).padStart(2, "0")}:
-                      {String(seconds).padStart(2, "0")}
+                      {student.isExpired ? (
+                        <span className="text-red-600">Expired</span>
+                      ) : (
+                        <>
+                          {String(minutes).padStart(2, "0")}:
+                          {String(seconds).padStart(2, "0")}
+                        </>
+                      )}
                     </td>
 
                     {/* Violations */}
@@ -438,7 +449,10 @@ export default function LiveMonitor({ assessment }: Props) {
                         </button>
 
                         <button
-                          disabled={processingStudent === student.attemptId}
+                          disabled={
+                            processingStudent === student.attemptId ||
+                            student.status !== "LIVE"
+                          }
                           onClick={() => handleForceSubmit(student)}
                           className="rounded-lg border border-yellow-400 px-3 py-1 text-yellow-700 hover:bg-yellow-50 disabled:opacity-50"
                         >
@@ -446,7 +460,10 @@ export default function LiveMonitor({ assessment }: Props) {
                         </button>
 
                         <button
-                          disabled={processingStudent === student.attemptId}
+                          disabled={
+                            processingStudent === student.attemptId ||
+                            student.status !== "LIVE"
+                          }
                           onClick={() => handleDisqualify(student)}
                           className="rounded-lg border border-red-400 px-3 py-1 text-red-700 hover:bg-red-50 disabled:opacity-50"
                         >

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import {
   FileText,
   Users,
@@ -12,8 +11,7 @@ import {
 
 import { socket } from "../../../../../lib/socket";
 import { Assessment } from "../../Assessment/AssessmentCard";
-
-const API = import.meta.env.VITE_API_URL;
+import { getDashboardAnalytics } from "../../Assessment/assessmentApi";
 
 type WorkspaceTab =
   | "overview"
@@ -31,31 +29,32 @@ interface Props {
 }
 
 interface AnalyticsData {
-  registered_students: number;
-  logged_in_students: number;
-  started_students: number;
-  submitted_students: number;
-  disqualified_students: number;
-  average_score: number;
-  highest_score: number;
-  lowest_score: number;
-  pass_percentage: number;
+  participants: number;
+  loggedIn: number;
+  started: number;
+  submitted: number;
+  running: number;
+  disqualified: number;
+  averageScore: number;
+  highestScore: number;
+  lowestScore: number;
+  passPercentage: number;
+  averageTime: number;
 }
 
-export default function Overview({
-  assessment,
-  onNavigate,
-}: Props) {
+export default function Overview({ assessment, onNavigate }: Props) {
   const [analytics, setAnalytics] = useState<AnalyticsData>({
-    registered_students: 0,
-    logged_in_students: 0,
-    started_students: 0,
-    submitted_students: 0,
-    disqualified_students: 0,
-    average_score: 0,
-    highest_score: 0,
-    lowest_score: 0,
-    pass_percentage: 0,
+    participants: 0,
+    loggedIn: 0,
+    started: 0,
+    submitted: 0,
+    running: 0,
+    disqualified: 0,
+    averageScore: 0,
+    highestScore: 0,
+    lowestScore: 0,
+    passPercentage: 0,
+    averageTime: 0,
   });
 
   const [loading, setLoading] = useState(true);
@@ -64,27 +63,20 @@ export default function Overview({
 
   const fetchAnalytics = async () => {
     try {
-      const token = localStorage.getItem("token");
+      setLoading(true);
 
-      const { data } = await axios.get(
-        `${API}/api/dashboard-analytics/${assessment.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const data = await getDashboardAnalytics(assessment.id);
 
-      setAnalytics(data.analytics);
+      setAnalytics(data);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to load overview analytics:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAnalytics();
+    void fetchAnalytics();
 
     socket.emit("joinAssessmentRoom", assessment.id);
 
@@ -92,22 +84,14 @@ export default function Overview({
 
     const handleDisconnect = () => setIsLive(false);
 
-    const handleAnalytics = (data: AnalyticsData) => {
-      setAnalytics(data);
-    };
-
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
-    socket.on("dashboardAnalyticsUpdated", handleAnalytics);
-    socket.on("assessmentSubmitted", fetchAnalytics);
-    socket.on("studentProgress", fetchAnalytics);
+    socket.on("dashboardRefresh", fetchAnalytics);
 
     return () => {
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
-      socket.off("dashboardAnalyticsUpdated", handleAnalytics);
-      socket.off("assessmentSubmitted", fetchAnalytics);
-      socket.off("studentProgress", fetchAnalytics);
+      socket.off("dashboardRefresh", fetchAnalytics);
 
       socket.emit("leaveAssessmentRoom", assessment.id);
     };
@@ -121,35 +105,35 @@ export default function Overview({
     },
     {
       title: "Registered",
-      value: analytics.registered_students,
+      value: analytics.participants,
       icon: Users,
     },
     {
       title: "Logged In",
-      value: analytics.logged_in_students,
+      value: analytics.loggedIn,
       icon: UserCheck,
     },
     {
       title: "Submitted",
-      value: analytics.submitted_students,
+      value: analytics.submitted,
       icon: Trophy,
     },
     {
       title: "Disqualified",
-      value: analytics.disqualified_students,
+      value: analytics.disqualified,
       icon: AlertTriangle,
     },
     {
       title: "Average Score",
-      value: `${analytics.average_score}%`,
+      value: `${analytics.averageScore}%`,
       icon: BarChart3,
     },
   ];
 
   if (loading) {
     return (
-      <div className="py-20 text-center">
-        Loading overview...
+      <div className="flex min-h-[300px] items-center justify-center">
+        <p className="text-sm text-gray-500">Loading overview...</p>
       </div>
     );
   }
@@ -165,9 +149,7 @@ export default function Overview({
 
         <div
           className={`flex items-center gap-2 rounded-full px-4 py-2 ${
-            isLive
-              ? "bg-green-100 text-green-700"
-              : "bg-red-100 text-red-700"
+            isLive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
           }`}
         >
           <Activity size={16} />
@@ -181,26 +163,16 @@ export default function Overview({
           const Icon = card.icon;
 
           return (
-            <div
-              key={card.title}
-              className="rounded-2xl border bg-white p-6"
-            >
+            <div key={card.title} className="rounded-2xl border bg-white p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">
-                    {card.title}
-                  </p>
+                  <p className="text-sm text-gray-500">{card.title}</p>
 
-                  <h3 className="mt-2 text-3xl font-bold">
-                    {card.value}
-                  </h3>
+                  <h3 className="mt-2 text-3xl font-bold">{card.value}</h3>
                 </div>
 
                 <div className="rounded-xl bg-blue-50 p-4">
-                  <Icon
-                    size={26}
-                    className="text-[#00629B]"
-                  />
+                  <Icon size={26} className="text-[#00629B]" />
                 </div>
               </div>
             </div>
@@ -210,9 +182,7 @@ export default function Overview({
 
       {/* Quick Actions */}
       <div className="rounded-2xl border bg-white p-6">
-        <h3 className="mb-5 text-lg font-semibold">
-          Quick Actions
-        </h3>
+        <h3 className="mb-5 text-lg font-semibold">Quick Actions</h3>
 
         <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
           <button

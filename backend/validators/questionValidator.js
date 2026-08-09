@@ -1,16 +1,23 @@
-function validate(row) {
-  if (!row.question_text) return "Question missing";
+function validate(question) {
+  if (!question.bank_id) return "Question Bank is required.";
 
-  if (!row.option_a) return "Option A missing";
+  if (!question.question_text?.trim()) return "Question text is required.";
 
-  if (!row.option_b) return "Option B missing";
+  if (!question.question_type) return "Question type is required.";
 
-  if (!row.option_c) return "Option C missing";
+  if (!question.options) return "Options are required.";
 
-  if (!row.option_d) return "Option D missing";
+  const optionKeys = Object.keys(question.options);
 
-  if (!["A", "B", "C", "D"].includes(row.correct_option))
-    return "Invalid Answer";
+  if (optionKeys.length < 2) return "Minimum two options required.";
+
+  if (!question.correct_answers) return "Correct answer required.";
+
+  if (question.marks == null || question.marks <= 0)
+    return "Marks must be greater than zero.";
+
+  if (question.negative_marks != null && question.negative_marks < 0)
+    return "Negative marks cannot be negative.";
 
   return null;
 }

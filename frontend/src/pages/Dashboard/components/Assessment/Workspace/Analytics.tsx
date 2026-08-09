@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import toast from "react-hot-toast";
 import { BarChart3 } from "lucide-react";
 
@@ -9,8 +8,7 @@ import { Assessment } from "../../Assessment/AssessmentCard";
 
 import AnalyticsCards from "../Workspace/AnalyticsCards";
 import AnalyticsFilters from "../Workspace/AnalyticsFilters";
-
-const API = import.meta.env.VITE_API_URL;
+import { getDashboardAnalytics } from "../../Assessment/assessmentApi";
 
 interface Props {
   assessment: Assessment;
@@ -205,8 +203,6 @@ export default function Analytics({ assessment }: Props) {
 
   const [department, setDepartment] = useState("all");
 
-  const [section, setSection] = useState("all");
-
   const [liveUpdates, setLiveUpdates] = useState(true);
 
   const [lastUpdated, setLastUpdated] = useState(new Date());
@@ -215,23 +211,9 @@ export default function Analytics({ assessment }: Props) {
     try {
       setLoading(true);
 
-      const token = localStorage.getItem("token");
+      const data = await getDashboardAnalytics(assessment.id, department);
 
-      const { data } = await axios.get(
-        `${API}/api/dashboard-analytics/${assessment.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-
-          params: {
-            department,
-            section,
-          },
-        },
-      );
-
-      setAnalytics(data.analytics);
+      setAnalytics(data);
 
       setLastUpdated(new Date());
     } catch (err) {
@@ -254,12 +236,20 @@ export default function Analytics({ assessment }: Props) {
       void fetchAnalytics();
     };
 
-    socket.on("dashboardAnalytics", refresh);
+    const handleDashboardAnalytics = (data: AnalyticsData) => {
+      setAnalytics(data);
+      setLastUpdated(new Date());
+    };
+
+    socket.on("dashboardRefresh", refresh);
+    socket.on("dashboardAnalytics", handleDashboardAnalytics);
 
     return () => {
-      socket.off("dashboardAnalytics", refresh);
+      socket.off("dashboardRefresh", refresh);
+      socket.off("dashboardAnalytics", handleDashboardAnalytics);
+      socket.emit("leaveAssessmentRoom", assessment.id);
     };
-  }, [assessment.id, department, section, liveUpdates]);
+  }, [assessment.id, department, liveUpdates]);
 
   if (loading) {
     return (
@@ -313,17 +303,14 @@ export default function Analytics({ assessment }: Props) {
           >
             {liveUpdates ? "ON" : "OFF"}
           </button>
-      </div>
+        </div>
       </div>
       <AnalyticsFilters
         department={department}
         setDepartment={setDepartment}
-        section={section}
-        setSection={setSection}
         onRefresh={() => void fetchAnalytics()}
         onReset={() => {
           setDepartment("all");
-          setSection("all");
         }}
       />
       <AnalyticsCards analytics={analytics} />
@@ -386,7 +373,7 @@ export default function Analytics({ assessment }: Props) {
             <p className="text-sm text-gray-500">Total Attempts</p>
 
             <h3 className="mt-2 text-3xl font-bold text-red-600">
-              {analytics.participants}
+              {analytics.completion.started}
             </h3>
           </div>
         </div>
@@ -541,7 +528,7 @@ export default function Analytics({ assessment }: Props) {
                       {question.skippedPercentage}%
                     </td>
 
-                    <td className="p-4 text-center">{question.averageTime}s</td>
+                    <td className="p-4 text-center">-</td>
                   </tr>
                 ))
               )}
@@ -839,9 +826,7 @@ export default function Analytics({ assessment }: Props) {
           <div className="rounded-xl border p-5">
             <p className="text-sm text-gray-500">Avg Question Time</p>
 
-            <h3 className="mt-2 text-3xl font-bold text-purple-600">
-              {analytics.difficultyOverview.averageQuestionTime}s
-            </h3>
+            <h3 className="mt-2 text-3xl font-bold text-purple-600">-</h3>
           </div>
         </div>
       </div>
@@ -965,14 +950,22 @@ export default function Analytics({ assessment }: Props) {
           </p>
         </div>
 
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-8 grid gap-6 sm:grid-cols-2">
+          {/* Students Online */}
+
           <div className="rounded-xl border p-5 text-center">
             <p className="text-sm text-gray-500">Students Online</p>
 
             <h3 className="mt-2 text-3xl font-bold text-green-600">
               {analytics.liveActivity.online}
             </h3>
+
+            <p className="mt-1 text-sm text-gray-400">
+              Active in the last 60 seconds
+            </p>
           </div>
+
+          {/* Taking Quiz */}
 
           <div className="rounded-xl border p-5 text-center">
             <p className="text-sm text-gray-500">Taking Quiz</p>
@@ -980,22 +973,8 @@ export default function Analytics({ assessment }: Props) {
             <h3 className="mt-2 text-3xl font-bold text-blue-600">
               {analytics.liveActivity.taking}
             </h3>
-          </div>
 
-          <div className="rounded-xl border p-5 text-center">
-            <p className="text-sm text-gray-500">Reviewing Answers</p>
-
-            <h3 className="mt-2 text-3xl font-bold text-yellow-600">
-              {analytics.liveActivity.reviewing}
-            </h3>
-          </div>
-
-          <div className="rounded-xl border p-5 text-center">
-            <p className="text-sm text-gray-500">Average Current Question</p>
-
-            <h3 className="mt-2 text-3xl font-bold text-purple-600">
-              Q{analytics.liveActivity.averageQuestion}
-            </h3>
+            <p className="mt-1 text-sm text-gray-400">Currently in progress</p>
           </div>
         </div>
       </div>

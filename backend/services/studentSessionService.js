@@ -1,35 +1,63 @@
 const {
   acquireAttemptLock,
   releaseAttemptLock,
+  redis,
 } = require("../lib/redis");
 
-/**
- * Lock one assessment attempt for one student.
- * Uses student_id instead of email.
- */
+/* ============================================================
+   LOCK STUDENT
+============================================================ */
 
-exports.lockStudent = async (
-  assessmentId,
-  studentId,
-  durationSeconds
-) => {
-  return await acquireAttemptLock(
+exports.lockStudent = async (assessmentId, studentId, durationSeconds) => {
+  const locked = await acquireAttemptLock(
     assessmentId,
     studentId,
-    durationSeconds
+    durationSeconds,
   );
+
+  if (!locked) {
+    throw new Error("Student already has an active assessment session.");
+  }
+
+  return true;
 };
 
-/**
- * Release the student's assessment lock.
- */
+/* ============================================================
+   UNLOCK STUDENT
+============================================================ */
 
-exports.unlockStudent = async (
-  assessmentId,
-  studentId
-) => {
-  return await releaseAttemptLock(
-    assessmentId,
-    studentId
-  );
+exports.unlockStudent = async (assessmentId, studentId) => {
+  await releaseAttemptLock(assessmentId, studentId);
+
+  return true;
+};
+
+/* ============================================================
+   CHECK SESSION
+============================================================ */
+
+exports.hasActiveSession = async (assessmentId, studentId) => {
+  const key = `assessment:lock:${assessmentId}:${studentId}`;
+
+  const value = await redis.get(key);
+
+  return value !== null;
+};
+
+/* ============================================================
+   EXTEND SESSION
+============================================================ */
+
+exports.extendSession = async (assessmentId, studentId, durationSeconds) => {
+  const key = `assessment:lock:${assessmentId}:${studentId}`;
+
+  const exists = await redis.get(key);
+
+  if (!exists) {
+    return false;
+  }
+
+  await redis.expire(key, durationSeconds);
+
+  return true;
 };

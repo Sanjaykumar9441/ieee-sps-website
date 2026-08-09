@@ -43,7 +43,7 @@ const AdminLogin = () => {
             messages: true,  
             spsApplications: true,  
             admins: true,  
-            assessmentdashboard: true,
+            assessmentPlatform: true,
           }),  
         );
 

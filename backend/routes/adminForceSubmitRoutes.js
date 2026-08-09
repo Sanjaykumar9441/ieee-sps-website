@@ -6,20 +6,26 @@ const verifyToken = require("../middleware/verifyToken");
 
 const controller = require("../controllers/adminForceSubmitController");
 
+/* ============================================
+   Force Submit Single Student
+============================================ */
+
+router.post("/student/:attemptId", verifyToken, controller.forceSubmit);
+
+/* ============================================
+   Disqualify Single Student
+============================================ */
+
 router.post(
-  "/:attemptId",
-
+  "/student/:attemptId/disqualify",
   verifyToken,
-
-  controller.forceSubmit,
+  controller.disqualify,
 );
 
-router.post(
-  "/assessment/:assessmentId",
+/* ============================================
+   Force Submit Entire Assessment
+============================================ */
 
-  verifyToken,
-
-  controller.forceSubmitAll,
-);
+router.post("/all/:assessmentId", verifyToken, controller.forceSubmitAll);
 
 module.exports = router;

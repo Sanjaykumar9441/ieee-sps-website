@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Search, Download, Trophy } from "lucide-react";
 
 import { socket } from "../../../../../lib/socket";
 import { Assessment } from "../../Assessment/AssessmentCard";
 import LeaderboardStudentDrawer from "./LeaderboardStudentDrawer";
-
-const API = import.meta.env.VITE_API_URL;
+import { getLeaderboard } from "../../Assessment/assessmentApi";
 
 interface Props {
   assessment: Assessment;
@@ -15,32 +13,21 @@ interface Props {
 
 export interface LeaderboardStudent {
   rank: number;
-
+  attemptId: string;
   studentId: string;
-
   name: string;
-
   rollNo: string;
-
   department: string;
-
-  section: string;
-
-  status: "RUNNING" | "SUBMITTED";
-
+  status: "SUBMITTED";
   score: number;
-
   correct: number;
-
   wrong: number;
-
   unanswered: number;
-
   percentage: number;
-
+  scorePercentage: number;
   timeTaken: number;
-
-  submittedAt: string;
+  submittedAt: string | null;
+  startedAt: string | null;
 }
 
 export default function Leaderboard({ assessment }: Props) {
@@ -57,10 +44,6 @@ export default function Leaderboard({ assessment }: Props) {
 
   const [department, setDepartment] = useState("all");
 
-  const [section, setSection] = useState("all");
-
-  const [status, setStatus] = useState("all");
-
   const [sortBy, setSortBy] = useState("rank");
 
   const [liveUpdates, setLiveUpdates] = useState(true);
@@ -69,31 +52,20 @@ export default function Leaderboard({ assessment }: Props) {
 
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = useCallback(async () => {
     try {
-      const token = localStorage.getItem("token");
+      const data = await getLeaderboard(assessment.id);
 
-      const { data } = await axios.get(
-        `${API}/api/leaderboard/${assessment.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      setStudents(data.students || []);
+      setStudents(data || []);
       setLastUpdated(new Date());
     } catch (err) {
       console.error(err);
 
       toast.error("Unable to load leaderboard.");
     } finally {
-      if (loading) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-  };
+  }, [assessment.id]);
 
   useEffect(() => {
     void fetchLeaderboard();
@@ -110,43 +82,9 @@ export default function Leaderboard({ assessment }: Props) {
 
     return () => {
       socket.off("leaderboardUpdated", refreshLeaderboard);
+      socket.emit("leaveAssessmentRoom", assessment.id);
     };
-  }, [assessment.id, liveUpdates]);
-
-  const stats = useMemo(() => {
-    const participants = students.length;
-
-    const highest =
-      participants > 0 ? Math.max(...students.map((s) => s.score)) : 0;
-
-    const average =
-      participants > 0
-        ? Math.round(
-            students.reduce((sum, s) => sum + s.score, 0) / participants,
-          )
-        : 0;
-
-    const topScore = highest;
-
-    const passPercentage =
-      participants > 0
-        ? Math.round(
-            (students.filter((s) => s.percentage >= 40).length / participants) *
-              100,
-          )
-        : 0;
-
-    const submissionRate = participants > 0 ? 100 : 0;
-
-    return {
-      participants,
-      highest,
-      average,
-      topScore,
-      passPercentage,
-      submissionRate,
-    };
-  }, [students]);
+  }, [assessment.id, liveUpdates, fetchLeaderboard]);
 
   const filteredStudents = useMemo(() => {
     let data = [...students];
@@ -157,32 +95,6 @@ export default function Leaderboard({ assessment }: Props) {
 
     if (department !== "all") {
       data = data.filter((student) => student.department === department);
-    }
-
-    /* ==========================
-     Section Filter
-  ========================== */
-
-    if (section !== "all") {
-      data = data.filter((student) => student.section === section);
-    }
-
-    /* ==========================
-     Status Filter
-  ========================== */
-
-    if (status !== "all") {
-      data = data.filter((student) => {
-        if (status === "Submitted") {
-          return student.status === "SUBMITTED";
-        }
-
-        if (status === "Running") {
-          return student.status === "RUNNING";
-        }
-
-        return true;
-      });
     }
 
     /* ==========================
@@ -221,7 +133,7 @@ export default function Leaderboard({ assessment }: Props) {
     }
 
     return data;
-  }, [students, search, department, section, status, sortBy]);
+  }, [students, search, department, sortBy]);
 
   const filteredStats = useMemo(() => {
     const participants = filteredStudents.length;
@@ -237,10 +149,14 @@ export default function Leaderboard({ assessment }: Props) {
           )
         : 0;
 
+    const passingPercentage = assessment.passPercentage ?? 40;
+
     const passPercentage =
       participants > 0
         ? Math.round(
-            (filteredStudents.filter((s) => s.percentage >= 40).length /
+            (filteredStudents.filter(
+              (s) => s.scorePercentage >= passingPercentage,
+            ).length /
               participants) *
               100,
           )
@@ -252,15 +168,19 @@ export default function Leaderboard({ assessment }: Props) {
       average,
       passPercentage,
     };
-  }, [filteredStudents]);
+  }, [filteredStudents, assessment.passPercentage]);
+
+  const topStudents = [...filteredStudents]
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, 3);
 
   if (loading) {
     return (
       <div className="space-y-6">
         <div className="h-12 w-72 animate-pulse rounded-xl bg-gray-200" />
 
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-6">
-          {[...Array(6)].map((_, index) => (
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          {[...Array(4)].map((_, index) => (
             <div
               key={index}
               className="h-32 animate-pulse rounded-2xl bg-gray-200"
@@ -317,7 +237,7 @@ export default function Leaderboard({ assessment }: Props) {
 
       {/* Statistics */}
 
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl border bg-white p-6">
           <p className="text-gray-500">Participants</p>
 
@@ -349,29 +269,13 @@ export default function Leaderboard({ assessment }: Props) {
             {filteredStats.passPercentage}%
           </h2>
         </div>
-
-        <div className="rounded-2xl border bg-white p-6">
-          <p className="text-gray-500">Top Score</p>
-
-          <h2 className="mt-3 text-3xl font-bold text-purple-600">
-            {stats.topScore}
-          </h2>
-        </div>
-
-        <div className="rounded-2xl border bg-white p-6">
-          <p className="text-gray-500">Submission Rate</p>
-
-          <h2 className="mt-3 text-3xl font-bold text-orange-600">
-            {stats.submissionRate}%
-          </h2>
-        </div>
       </div>
 
       {/* Top 3 */}
 
       <div className="grid gap-6 md:grid-cols-3">
         {[0, 1, 2].map((index) => {
-          const student = filteredStudents[index];
+          const student = topStudents[index];
 
           if (!student) {
             return (
@@ -408,7 +312,7 @@ export default function Leaderboard({ assessment }: Props) {
 
           return (
             <div
-              key={student.studentId}
+              key={student.attemptId}
               className={`rounded-2xl border-2 ${medals[index].border} ${medals[index].bg} p-8 text-center shadow-sm transition hover:shadow-lg`}
             >
               <div className="text-5xl">{medals[index].emoji}</div>
@@ -437,7 +341,7 @@ export default function Leaderboard({ assessment }: Props) {
       <div className="flex flex-col gap-4 rounded-2xl border bg-white p-5 xl:flex-row xl:items-center xl:justify-between">
         {/* Left */}
 
-        <div className="grid flex-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid flex-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {/* Search */}
 
           <div className="relative">
@@ -476,38 +380,6 @@ export default function Leaderboard({ assessment }: Props) {
             <option value="CIVIL">CIVIL</option>
           </select>
 
-          {/* Section */}
-
-          <select
-            value={section}
-            onChange={(e) => setSection(e.target.value)}
-            className="rounded-xl border px-4 py-3"
-          >
-            <option value="all">All Sections</option>
-
-            <option value="A">A</option>
-
-            <option value="B">B</option>
-
-            <option value="C">C</option>
-
-            <option value="D">D</option>
-          </select>
-
-          {/* Status */}
-
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="rounded-xl border px-4 py-3"
-          >
-            <option value="all">All Status</option>
-
-            <option value="Submitted">Submitted</option>
-
-            <option value="Running">Running</option>
-          </select>
-
           {/* Sort */}
 
           <select
@@ -527,52 +399,51 @@ export default function Leaderboard({ assessment }: Props) {
 
         {/* Right */}
 
-        <div className="relative">
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setExportOpen((prev) => !prev)}
-            className="flex items-center gap-2 rounded-xl border px-5 py-3 hover:bg-gray-50"
+            onClick={() => {
+              setSearch("");
+              setDepartment("all");
+              setSortBy("rank");
+            }}
+            className="rounded-xl border px-5 py-3 hover:bg-gray-50"
           >
-            <Download size={18} />
-            Export
+            Reset Filters
           </button>
-          {exportOpen && (
-            <div className="absolute right-0 top-14 z-30 w-44 rounded-xl border bg-white shadow-xl">
-              <button
-                onClick={() => {
-                  setExportOpen(false);
 
-                  handleExportExcel();
-                }}
-                className="block w-full px-4 py-3 text-left hover:bg-gray-50"
-              >
-                Export Excel
-              </button>
+          <div className="relative">
+            <button
+              onClick={() => setExportOpen((prev) => !prev)}
+              className="flex items-center gap-2 rounded-xl border px-5 py-3 hover:bg-gray-50"
+            >
+              <Download size={18} />
+              Export
+            </button>
 
-              <button
-                onClick={() => {
-                  setExportOpen(false);
+            {exportOpen && (
+              <div className="absolute right-0 top-14 z-30 w-44 rounded-xl border bg-white shadow-xl">
+                <button
+                  onClick={() => {
+                    setExportOpen(false);
+                    handleExportExcel();
+                  }}
+                  className="block w-full px-4 py-3 text-left hover:bg-gray-50"
+                >
+                  Export Excel
+                </button>
 
-                  handleExportPdf();
-                }}
-                className="block w-full px-4 py-3 text-left hover:bg-gray-50"
-              >
-                Export PDF
-              </button>
-
-              <button
-                onClick={() => {
-                  setSearch("");
-                  setDepartment("all");
-                  setSection("all");
-                  setStatus("all");
-                  setSortBy("rank");
-                }}
-                className="rounded-xl border px-5 py-3 hover:bg-gray-50"
-              >
-                Reset Filters
-              </button>
-            </div>
-          )}
+                <button
+                  onClick={() => {
+                    setExportOpen(false);
+                    handleExportPdf();
+                  }}
+                  className="block w-full px-4 py-3 text-left hover:bg-gray-50"
+                >
+                  Export PDF
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -645,7 +516,7 @@ export default function Leaderboard({ assessment }: Props) {
 
                 return (
                   <tr
-                    key={student.studentId}
+                    key={student.attemptId}
                     className="border-t hover:bg-gray-50"
                   >
                     {/* Rank */}
@@ -723,7 +594,9 @@ export default function Leaderboard({ assessment }: Props) {
                     {/* Submitted */}
 
                     <td className="p-4 whitespace-nowrap">
-                      {new Date(student.submittedAt).toLocaleTimeString()}
+                      {student.submittedAt
+                        ? new Date(student.submittedAt).toLocaleTimeString()
+                        : "-"}
                     </td>
 
                     {/* Action */}
@@ -749,7 +622,6 @@ export default function Leaderboard({ assessment }: Props) {
       <LeaderboardStudentDrawer
         open={drawerOpen}
         student={selectedStudent}
-        assessmentId={assessment.id}
         onClose={() => {
           setDrawerOpen(false);
           setSelectedStudent(null);

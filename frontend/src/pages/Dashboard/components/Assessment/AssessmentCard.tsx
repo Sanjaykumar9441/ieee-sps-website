@@ -27,6 +27,8 @@ export interface Assessment {
   is_published: boolean;
 
   created_at: string;
+
+  passPercentage?: number;
 }
 
 interface Props {

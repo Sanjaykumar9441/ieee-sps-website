@@ -35,7 +35,7 @@ const tabs: WorkspaceTab[] = [
   "live",
   "leaderboard",
   "analytics",
-  "export",
+  //"export",
   "settings",
 ];
 
@@ -64,7 +64,7 @@ export default function AssessmentWorkspace({ assessment, onClose }: Props) {
         </button>
       </div>
 
-      <div className="p-8">
+      <div>
         {/* Tabs */}
         <div className="border-b">
           <div className="flex overflow-x-auto">
@@ -78,7 +78,9 @@ export default function AssessmentWorkspace({ assessment, onClose }: Props) {
                     : "text-gray-500"
                 }`}
               >
-                {tab}
+                {tab === "questionBanks"
+                  ? "Question Banks"
+                  : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>

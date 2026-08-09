@@ -46,7 +46,7 @@ export default function AnalyticsCards({ analytics }: Props) {
 
     {
       title: "Average Score",
-      value: analytics.averageScore,
+      value: analytics.averageScore.toFixed(2),
       description: "Overall Performance",
       icon: TrendingUp,
       color: "text-purple-600",
@@ -55,7 +55,7 @@ export default function AnalyticsCards({ analytics }: Props) {
 
     {
       title: "Highest Score",
-      value: analytics.highestScore,
+      value: analytics.highestScore.toFixed(2),
       description: "Top Performer",
       icon: Award,
       color: "text-emerald-600",
@@ -64,7 +64,7 @@ export default function AnalyticsCards({ analytics }: Props) {
 
     {
       title: "Lowest Score",
-      value: analytics.lowestScore,
+      value: analytics.lowestScore.toFixed(2),
       description: "Needs Improvement",
       icon: AlertTriangle,
       color: "text-red-600",

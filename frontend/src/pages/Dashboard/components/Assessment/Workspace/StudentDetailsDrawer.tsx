@@ -22,35 +22,28 @@ interface Props {
 
 interface StudentAttempt {
   id: string;
-  assessment_id: string;
-  student_id: string;
-  started_at: string | null;
-  submitted_at: string | null;
+  status: string;
+  startedAt: string | null;
+  submittedAt: string | null;
   score: number;
-  time_spent: number;
 }
 
 interface StudentTimeline {
-  otp_sent_at: string | null;
-  logged_in_at: string | null;
-  attempt_started_at: string | null;
-  submitted_at: string | null;
+  loggedInAt: string | null;
+  assessmentStartedAt: string | null;
+  submittedAt: string | null;
 }
 
 interface StudentStatistics {
-  answered_questions: number;
-  correct_answers: number;
-  wrong_answers: number;
+  questionsAnswered: number;
   score: number;
-  time_spent: string;
-  violations: number;
 }
 
 interface StudentDetails {
   student: AllowedStudent;
   attempt: StudentAttempt | null;
-  timeline: StudentTimeline;
   statistics: StudentStatistics;
+  timeline: StudentTimeline;
 }
 
 export default function StudentDetailsDrawer({
@@ -97,17 +90,19 @@ export default function StudentDetailsDrawer({
     fetchDetails();
 
     socket.on("studentStatusChanged", fetchDetails);
-
     socket.on("studentLoggedIn", fetchDetails);
-
     socket.on("studentSubmitted", fetchDetails);
+    socket.on("studentBlocked", fetchDetails);
+    socket.on("studentUnblocked", fetchDetails);
+    socket.on("dashboardRefresh", fetchDetails);
 
     return () => {
       socket.off("studentStatusChanged", fetchDetails);
-
       socket.off("studentLoggedIn", fetchDetails);
-
       socket.off("studentSubmitted", fetchDetails);
+      socket.off("studentBlocked", fetchDetails);
+      socket.off("studentUnblocked", fetchDetails);
+      socket.off("dashboardRefresh", fetchDetails);
     };
   }, [open, student]);
 
@@ -310,10 +305,8 @@ export default function StudentDetailsDrawer({
                     <p className="font-medium">OTP Sent</p>
 
                     <p className="text-sm text-gray-500">
-                      {details?.timeline?.otp_sent_at
-                        ? new Date(
-                            details.timeline.otp_sent_at,
-                          ).toLocaleString()
+                      {details?.student?.otp_sent
+                        ? "OTP sent"
                         : "Not Available"}
                     </p>
                   </div>
@@ -328,10 +321,8 @@ export default function StudentDetailsDrawer({
                     <p className="font-medium">Logged In</p>
 
                     <p className="text-sm text-gray-500">
-                      {details?.timeline?.logged_in_at
-                        ? new Date(
-                            details.timeline.logged_in_at,
-                          ).toLocaleString()
+                      {details?.timeline?.loggedInAt
+                        ? new Date(details.timeline.loggedInAt).toLocaleString()
                         : "Not Available"}
                     </p>
                   </div>
@@ -346,9 +337,9 @@ export default function StudentDetailsDrawer({
                     <p className="font-medium">Assessment Started</p>
 
                     <p className="text-sm text-gray-500">
-                      {details?.timeline?.attempt_started_at
+                      {details?.timeline?.assessmentStartedAt
                         ? new Date(
-                            details.timeline.attempt_started_at,
+                            details.timeline.assessmentStartedAt,
                           ).toLocaleString()
                         : "Not Available"}
                     </p>
@@ -364,9 +355,9 @@ export default function StudentDetailsDrawer({
                     <p className="font-medium">Submitted</p>
 
                     <p className="text-sm text-gray-500">
-                      {details?.timeline?.submitted_at
+                      {details?.timeline?.submittedAt
                         ? new Date(
-                            details.timeline.submitted_at,
+                            details.timeline.submittedAt,
                           ).toLocaleString()
                         : "Not Available"}
                     </p>
@@ -380,28 +371,12 @@ export default function StudentDetailsDrawer({
             <div className="rounded-2xl border bg-white p-6">
               <h3 className="mb-5 text-xl font-semibold">Statistics</h3>
 
-              <div className="grid gap-5 md:grid-cols-3">
+              <div className="grid gap-5 md:grid-cols-2">
                 <div className="rounded-xl border p-4">
                   <p className="text-sm text-gray-500">Questions Answered</p>
 
                   <h2 className="mt-2 text-2xl font-bold">
-                    {details?.statistics?.answered_questions ?? 0}
-                  </h2>
-                </div>
-
-                <div className="rounded-xl border p-4">
-                  <p className="text-sm text-gray-500">Correct Answers</p>
-
-                  <h2 className="mt-2 text-2xl font-bold text-green-600">
-                    {details?.statistics?.correct_answers ?? 0}
-                  </h2>
-                </div>
-
-                <div className="rounded-xl border p-4">
-                  <p className="text-sm text-gray-500">Wrong Answers</p>
-
-                  <h2 className="mt-2 text-2xl font-bold text-red-600">
-                    {details?.statistics?.wrong_answers ?? 0}
+                    {details?.statistics?.questionsAnswered ?? 0}
                   </h2>
                 </div>
 
@@ -414,18 +389,20 @@ export default function StudentDetailsDrawer({
                 </div>
 
                 <div className="rounded-xl border p-4">
-                  <p className="text-sm text-gray-500">Time Spent</p>
+                  <p className="text-sm text-gray-500">Attempt Status</p>
 
-                  <h2 className="mt-2 text-2xl font-bold">
-                    {details?.statistics?.time_spent ?? "0 min"}
+                  <h2 className="mt-2 text-xl font-bold">
+                    {details?.attempt?.status ?? "Not Started"}
                   </h2>
                 </div>
 
                 <div className="rounded-xl border p-4">
-                  <p className="text-sm text-gray-500">Violations</p>
+                  <p className="text-sm text-gray-500">Started At</p>
 
-                  <h2 className="mt-2 text-2xl font-bold text-orange-600">
-                    {details?.statistics?.violations ?? 0}
+                  <h2 className="mt-2 text-sm font-semibold">
+                    {details?.attempt?.startedAt
+                      ? new Date(details.attempt.startedAt).toLocaleString()
+                      : "Not Started"}
                   </h2>
                 </div>
               </div>
@@ -519,7 +496,7 @@ export default function StudentDetailsDrawer({
                 }}
                 className="rounded-xl bg-yellow-500 px-5 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Block
+                {student.status === "blocked" ? "Unblock" : "Block"}
               </button>
 
               <button

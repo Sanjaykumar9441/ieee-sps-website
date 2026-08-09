@@ -1,9 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { socket } from "../../../../../lib/socket";
 import { Assessment } from "../../Assessment/AssessmentCard";
 import StudentDetailsDrawer from "./StudentDetailsDrawer";
+import {
+  getAllowedStudents,
+  sendBulkOtp,
+  blockStudents,
+  unblockStudents,
+  deleteStudents,
+} from "../../Assessment/assessmentApi";
 
 export interface AllowedStudent {
   id: string;
@@ -35,8 +41,6 @@ interface Props {
   assessment: Assessment;
 }
 
-const API = import.meta.env.VITE_API_URL;
-
 export default function Students({ assessment }: Props) {
   const [loading, setLoading] = useState(true);
 
@@ -60,55 +64,67 @@ export default function Students({ assessment }: Props) {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const fetchStudents = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
+  const fetchStudents = useCallback(async () => {
+  try {
+    setLoading(true);
 
-      const { data } = await axios.get(
-        `${API}/api/student-auth/${assessment.id}`,
+    const students = await getAllowedStudents(assessment.id);
 
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+    setStudents(students || []);
+  } catch (err) {
+    console.error(err);
 
-      setStudents(data.students || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    toast.error("Unable to load students");
+  } finally {
+    setLoading(false);
+  }
+}, [assessment.id]);
 
   useEffect(() => {
-    fetchStudents();
+  void fetchStudents();
 
-    socket.emit("joinAssessmentRoom", assessment.id);
+  socket.emit("joinAssessmentRoom", assessment.id);
 
-    socket.on("studentStatusChanged", fetchStudents);
+  const refresh = () => {
+    void fetchStudents();
+  };
 
-    socket.on("studentLoggedIn", fetchStudents);
+  socket.on("studentStatusChanged", refresh);
+  socket.on("studentLoggedIn", refresh);
+  socket.on("studentSubmitted", refresh);
+  socket.on("dashboardRefresh", refresh);
+  socket.on("studentBlocked", refresh);
+  socket.on("studentUnblocked", refresh);
+  socket.on("studentDeleted", refresh);
 
-    socket.on("studentSubmitted", fetchStudents);
+  return () => {
+    socket.off("studentStatusChanged", refresh);
+    socket.off("studentLoggedIn", refresh);
+    socket.off("studentSubmitted", refresh);
+    socket.off("dashboardRefresh", refresh);
+    socket.off("studentBlocked", refresh);
+    socket.off("studentUnblocked", refresh);
+    socket.off("studentDeleted", refresh);
 
-    return () => {
-      socket.emit("leaveAssessmentRoom", assessment.id);
-
-      socket.off("studentStatusChanged", fetchStudents);
-      socket.off("studentLoggedIn", fetchStudents);
-      socket.off("studentSubmitted", fetchStudents);
-    };
-  }, [assessment.id]);
+    socket.emit("leaveAssessmentRoom", assessment.id);
+  };
+}, [assessment.id, fetchStudents]);
 
   const stats = useMemo(() => {
+    const started = students.filter((s) => s.attempt_started).length;
+
     return {
       allowed: students.filter((s) => s.status === "allowed").length,
+
       blocked: students.filter((s) => s.status === "blocked").length,
+
       loggedIn: students.filter((s) => s.logged_in).length,
+
+      started,
+
       submitted: students.filter((s) => s.submitted).length,
+
+      notStarted: students.length - started,
     };
   }, [students]);
 
@@ -129,27 +145,20 @@ export default function Students({ assessment }: Props) {
   });
 
   const handleSendOtp = async () => {
+    if (selectedStudents.length === 0) {
+      toast.error("Please select at least one student.");
+      return;
+    }
+
     try {
       setProcessing(true);
 
-      const token = localStorage.getItem("token");
+      const data = await sendBulkOtp(assessment.id, selectedStudents);
 
-      const { data } = await axios.post(
-        `${API}/api/student-auth/send-bulk-otp`,
-        {
-          assessmentId: assessment.id,
-          studentIds: selectedStudents,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      toast.success(data.message);
+      toast.success(data.message || "OTP sent successfully.");
 
       setSelectedStudents([]);
+
       fetchStudents();
     } catch (err) {
       console.error(err);
@@ -161,27 +170,24 @@ export default function Students({ assessment }: Props) {
   };
 
   const handleBlock = async () => {
+    if (selectedStudents.length === 0) {
+      toast.error("Please select at least one student.");
+      return;
+    }
+
+    if (!window.confirm("Block selected students?")) {
+      return;
+    }
+
     try {
       setProcessing(true);
 
-      const token = localStorage.getItem("token");
+      const data = await blockStudents(assessment.id, selectedStudents);
 
-      const { data } = await axios.post(
-        `${API}/api/student-auth/block`,
-        {
-          assessmentId: assessment.id,
-          studentIds: selectedStudents,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      toast.success(data.message);
+      toast.success(data.message || "Students blocked.");
 
       setSelectedStudents([]);
+
       fetchStudents();
     } catch (err) {
       console.error(err);
@@ -193,27 +199,20 @@ export default function Students({ assessment }: Props) {
   };
 
   const handleUnblock = async () => {
+    if (selectedStudents.length === 0) {
+      toast.error("Please select at least one student.");
+      return;
+    }
+
     try {
       setProcessing(true);
 
-      const token = localStorage.getItem("token");
+      const data = await unblockStudents(assessment.id, selectedStudents);
 
-      const { data } = await axios.post(
-        `${API}/api/student-auth/unblock`,
-        {
-          assessmentId: assessment.id,
-          studentIds: selectedStudents,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      toast.success(data.message);
+      toast.success(data.message || "Students unblocked.");
 
       setSelectedStudents([]);
+
       fetchStudents();
     } catch (err) {
       console.error(err);
@@ -225,31 +224,26 @@ export default function Students({ assessment }: Props) {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Delete selected students?")) {
+    if (selectedStudents.length === 0) {
+      toast.error("Please select at least one student.");
+      return;
+    }
+
+    if (
+      !window.confirm("Delete selected students? This action cannot be undone.")
+    ) {
       return;
     }
 
     try {
       setProcessing(true);
 
-      const token = localStorage.getItem("token");
+      const data = await deleteStudents(assessment.id, selectedStudents);
 
-      const { data } = await axios.post(
-        `${API}/api/student-auth/delete`,
-        {
-          assessmentId: assessment.id,
-          studentIds: selectedStudents,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      toast.success(data.message);
+      toast.success(data.message || "Students deleted.");
 
       setSelectedStudents([]);
+
       fetchStudents();
     } catch (err) {
       console.error(err);
@@ -285,7 +279,7 @@ export default function Students({ assessment }: Props) {
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-5 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-5 md:grid-cols-3 xl:grid-cols-6">
         <div className="rounded-xl border p-5">
           <p className="text-gray-500">Allowed</p>
 
@@ -309,10 +303,26 @@ export default function Students({ assessment }: Props) {
         </div>
 
         <div className="rounded-xl border p-5">
+          <p className="text-gray-500">Started</p>
+
+          <h2 className="mt-2 text-3xl font-bold text-blue-600">
+            {stats.started}
+          </h2>
+        </div>
+
+        <div className="rounded-xl border p-5">
           <p className="text-gray-500">Submitted</p>
 
           <h2 className="mt-2 text-3xl font-bold text-green-600">
             {stats.submitted}
+          </h2>
+        </div>
+
+        <div className="rounded-xl border p-5">
+          <p className="text-gray-500">Not Started</p>
+
+          <h2 className="mt-2 text-3xl font-bold text-gray-600">
+            {stats.notStarted}
           </h2>
         </div>
       </div>
@@ -333,8 +343,10 @@ export default function Students({ assessment }: Props) {
           <option value="all">All Departments</option>
           <option value="ECE">ECE</option>
           <option value="CSE">CSE</option>
+          <option value="IT">IT</option>
           <option value="EEE">EEE</option>
-          <option value="ME">ME</option>
+          <option value="MECH">MECH</option>
+          <option value="CIVIL">CIVIL</option>
         </select>
 
         <select
@@ -417,16 +429,25 @@ export default function Students({ assessment }: Props) {
                   type="checkbox"
                   checked={
                     filteredStudents.length > 0 &&
-                    selectedStudents.length === filteredStudents.length
+                    filteredStudents.every((student) =>
+                      selectedStudents.includes(student.id),
+                    )
                   }
                   onChange={(e) => {
                     if (e.target.checked) {
-                      setSelectedStudents(
-                        filteredStudents.map((student) => student.id),
-                      );
+                      setSelectedStudents((prev) => [
+                        ...new Set([
+                          ...prev,
+                          ...filteredStudents.map((student) => student.id),
+                        ]),
+                      ]);
                     } else {
-                      setSelectedStudents([]);
-                    }
+  setSelectedStudents((prev) =>
+    prev.filter(
+      (id) => !filteredStudents.some((student) => student.id === id),
+    ),
+  );
+}
                   }}
                 />
               </th>
@@ -462,7 +483,11 @@ export default function Students({ assessment }: Props) {
                     checked={selectedStudents.includes(student.id)}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setSelectedStudents([...selectedStudents, student.id]);
+                        setSelectedStudents((prev) =>
+                          prev.includes(student.id)
+                            ? prev
+                            : [...prev, student.id],
+                        );
                       } else {
                         setSelectedStudents(
                           selectedStudents.filter((id) => id !== student.id),
@@ -510,7 +535,7 @@ export default function Students({ assessment }: Props) {
                       student.logged_in ? "text-green-600" : "text-gray-400"
                     }
                   >
-                    {student.logged_in ? "Online" : "Offline"}
+                    {student.logged_in ? "Logged In" : "Not Logged In"}
                   </span>
                 </td>
 
@@ -545,18 +570,88 @@ export default function Students({ assessment }: Props) {
                       View
                     </button>
 
-                    <button className="rounded border px-3 py-1">Edit</button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const data = await sendBulkOtp(assessment.id, [
+                            student.id,
+                          ]);
+
+                          toast.success(
+                            data.message || "OTP sent successfully.",
+                          );
+
+                          fetchStudents();
+                        } catch (err) {
+                          console.error(err);
+
+                          toast.error("Unable to send OTP.");
+                        }
+                      }}
+                      className="rounded border px-3 py-1 text-blue-600"
+                    >
+                      Send OTP
+                    </button>
 
                     <button
-                      disabled={student.status === "blocked"}
-                      className="rounded border px-3 py-1 text-red-600"
+                      onClick={async () => {
+                        try {
+                          if (student.status === "blocked") {
+                            const data = await unblockStudents(assessment.id, [
+                              student.id,
+                            ]);
+
+                            toast.success(data.message || "Student unblocked.");
+                          } else {
+                            if (!window.confirm("Block this student?")) {
+                              return;
+                            }
+
+                            const data = await blockStudents(assessment.id, [
+                              student.id,
+                            ]);
+
+                            toast.success(data.message || "Student blocked.");
+                          }
+
+                          fetchStudents();
+                        } catch (err) {
+                          console.error(err);
+
+                          toast.error("Operation failed.");
+                        }
+                      }}
+                      className={`rounded border px-3 py-1 ${
+                        student.status === "blocked"
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
                     >
-                      Block
+                      {student.status === "blocked" ? "Unblock" : "Block"}
                     </button>
 
                     <button
                       disabled={student.logged_in}
-                      className="rounded border px-3 py-1 text-red-600"
+                      onClick={async () => {
+                        if (!window.confirm("Delete this student?")) {
+                          return;
+                        }
+
+                        try {
+                          const data = await deleteStudents(assessment.id, [
+                            student.id,
+                          ]);
+
+                          toast.success(data.message || "Student deleted.");
+
+                          fetchStudents();
+                        } catch (err) {
+                          console.error(err);
+
+                          toast.error("Unable to delete student.");
+                        }
+                      }}
+                      className="rounded border px-3 py-1 text-red-600 disabled:opacity-50"
                     >
                       Delete
                     </button>

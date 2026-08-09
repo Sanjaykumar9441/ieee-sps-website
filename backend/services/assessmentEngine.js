@@ -1,83 +1,195 @@
 const { supabase } = require("../lib/supabase");
-const randomizeQuiz = require("../lib/randomizeQuiz");
 
-exports.generateAttempt = async (assessment, studentEmail) => {
-  const { data: questions, error } = await supabase
+const {
+  shuffle,
+  selectRandomQuestions,
+  buildAttemptQuestions,
+} = require("../lib/randomizeQuiz");
+
+/* ============================================================
+   PRIVATE HELPERS
+============================================================ */
+
+/**
+ * Returns all question banks linked to an assessment.
+ */
+async function getAssessmentBanks(assessmentId) {
+  const { data, error } = await supabase
+    .from("assessment_question_banks")
+    .select(
+      `
+        question_bank_id,
+        questions_to_pick,
+        question_banks(
+          id,
+          name,
+          difficulty,
+          is_active
+        )
+      `,
+    )
+    .eq("assessment_id", assessmentId);
+
+  if (error) throw error;
+
+  return data || [];
+}
+
+/**
+ * Returns all active questions for one bank.
+ */
+async function getBankQuestions(bankId) {
+  const { data, error } = await supabase
     .from("questions")
     .select("*")
-    .eq("assessment_id", assessment.id)
+    .eq("bank_id", bankId)
     .eq("is_active", true);
 
   if (error) throw error;
 
-  return randomizeQuiz(questions, assessment.questions_per_attempt);
+  return data || [];
+}
+
+/**
+ * Builds one combined question paper from all linked banks.
+ */
+async function buildQuestionPaper(assessmentId) {
+  const mappings = await getAssessmentBanks(assessmentId);
+
+  let paper = [];
+
+  for (const mapping of mappings) {
+    const bankQuestions = await getBankQuestions(mapping.question_bank_id);
+
+    const picked = selectRandomQuestions(
+      bankQuestions,
+      mapping.questions_to_pick,
+    );
+
+    paper.push(...picked);
+  }
+
+  return shuffle(paper);
+}
+
+/**
+ * Converts DB row into randomizer format.
+ */
+function normalizeQuestion(question) {
+  return {
+    ...question,
+
+    options: question.options,
+
+    correct_answers: question.correct_answers,
+  };
+}
+
+/* ============================================================
+   GENERATE ATTEMPT QUESTIONS
+============================================================ */
+
+exports.generateAttempt = async (assessment) => {
+  const paper = await buildQuestionPaper(assessment.id);
+
+  const normalized = paper.map(normalizeQuestion);
+
+  /*
+      Randomize question order
+      Randomize options
+      Freeze correct answers
+  */
+
+  return buildAttemptQuestions(null, normalized, normalized.length);
 };
 
-exports.createAttempt = async (assessment, student) => {
+/* ============================================================
+   CREATE ATTEMPT
+============================================================ */
+
+exports.createAttempt = async (assessment, student, questions) => {
+  if (!assessment.duration_minutes) {
+    throw new Error("Assessment duration missing.");
+  }
+  const durationSeconds = assessment.duration_minutes * 60;
+
+  const expiresAt = new Date(Date.now() + durationSeconds * 1000).toISOString();
+
   const { data, error } = await supabase
-    .from("attempts")
+    .from("assessment_attempts")
     .insert({
       assessment_id: assessment.id,
 
-      student_email: student.email,
-
-      status: "in_progress",
+      student_id: student.id,
 
       started_at: new Date().toISOString(),
+
+      expires_at: expiresAt,
+
+      resumed_count: 0,
+
+      current_question: 1,
+
+      answered_questions: 0,
+
+      score: 0,
+
+      status: "IN_PROGRESS",
     })
     .select()
     .single();
 
   if (error) throw error;
 
+  await exports.storeQuestions(data.id, questions);
+
   return data;
 };
 
+/* ============================================================
+   STORE ATTEMPT QUESTIONS
+============================================================ */
+
 exports.storeQuestions = async (attemptId, questions) => {
-  const rows = [];
-
-  questions.forEach((q, index) => {
-    rows.push({
-      attempt_id: attemptId,
-
-      question_id: q.id,
-
-      serve_order: index + 1,
-
-      shuffled_options: q.options,
-
-      correct_key: q.correct_option,
-
-      marks: q.marks,
-
-      negative_marks: q.negative_marks,
-    });
+  questions.forEach((question) => {
+    question.attempt_id = attemptId;
   });
 
   const { error } = await supabase
     .from("assessment_attempt_questions")
-    .insert(rows);
+    .insert(questions);
 
   if (error) throw error;
+
+  return true;
 };
 
-exports.getQuestion = async (attemptId, number) => {
+/* ============================================================
+   GET QUESTION
+============================================================ */
+
+exports.getQuestion = async (attemptId, questionNumber) => {
   const { data, error } = await supabase
     .from("assessment_attempt_questions")
     .select(
       `
-    *,
-    questions(
+      *,
+      questions(
+        id,
         question_text,
-        image_url
-    ),
-    answers(
-        selected_key
-    )
-`,
+        question_type,
+        question_image_id,
+        explanation
+      ),
+      assessment_answers(
+        id,
+        selected_answers,
+        answered_at
+      )
+    `,
     )
     .eq("attempt_id", attemptId)
-    .eq("serve_order", number)
+    .eq("question_order", questionNumber)
     .single();
 
   if (error) throw error;
@@ -85,52 +197,125 @@ exports.getQuestion = async (attemptId, number) => {
   return data;
 };
 
-exports.saveAnswer = async (attemptId, attemptQuestionId, selectedKey) => {
+/* ============================================================
+   SAVE ANSWER
+============================================================ */
+
+exports.saveAnswer = async (attemptId, attemptQuestionId, selectedAnswers) => {
   const { data, error } = await supabase
-    .from("answers")
-    .upsert({
-      attempt_id: attemptId,
-      attempt_question_id: attemptQuestionId,
-      selected_key: selectedKey,
-      answered_at: new Date().toISOString(),
-    })
+    .from("assessment_answers")
+    .upsert(
+      {
+        attempt_question_id: attemptQuestionId,
+
+        selected_answers: selectedAnswers,
+
+        answered_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "attempt_question_id",
+      },
+    )
     .select()
     .single();
 
   if (error) throw error;
 
+  /*
+      Update current answered count
+  */
+
+  const { count, error: countError } = await supabase
+    .from("assessment_attempt_questions")
+    .select(
+      `
+      id,
+      assessment_answers!inner(id)
+    `,
+      {
+        count: "exact",
+        head: true,
+      },
+    )
+    .eq("attempt_id", attemptId);
+
+  if (countError) throw countError;
+
+  await supabase
+    .from("assessment_attempts")
+    .update({
+      answered_questions: count ?? 0,
+    })
+    .eq("id", attemptId);
+
   return data;
 };
+
+/* ============================================================
+   QUESTION PALETTE
+============================================================ */
 
 exports.getPalette = async (attemptId) => {
   const { data, error } = await supabase
     .from("assessment_attempt_questions")
     .select(
       `
-            id,
-            serve_order,
-            answers(
-                selected_key
-            )
-        `,
+        id,
+        question_order,
+        assessment_answers(
+          id,
+          selected_answers
+        ),
+        assessment_question_flags(
+          marked_for_review
+        )
+      `,
     )
     .eq("attempt_id", attemptId)
-    .order("serve_order");
+    .order("question_order");
 
   if (error) throw error;
 
-  return data;
+  return data.map((q) => ({
+    id: q.id,
+
+    questionOrder: q.question_order,
+
+    answered: q.assessment_answers?.length > 0,
+
+    markedForReview: q.assessment_question_flags?.marked_for_review ?? false,
+  }));
 };
 
-exports.finishAttempt = async (attemptId, score) => {
+/* ============================================================
+   FINISH ATTEMPT
+============================================================ */
+
+exports.finishAttempt = async (
+  attemptId,
+  result,
+  status = "SUBMITTED",
+) => {
+  const now = new Date().toISOString();
+
   const { data, error } = await supabase
     .from("assessment_attempts")
     .update({
-      status: "submitted",
+      status,
 
-      score,
+      score: Number(result.score || 0),
 
-      submitted_at: new Date().toISOString(),
+      correct: Number(result.correct || 0),
+
+      wrong: Number(result.wrong || 0),
+
+      unanswered: Number(result.unanswered || 0),
+
+      percentage: Number(result.percentage || 0),
+
+      submitted_at: now,
+
+      completed_at: now,
     })
     .eq("id", attemptId)
     .select()
@@ -140,6 +325,10 @@ exports.finishAttempt = async (attemptId, score) => {
 
   return data;
 };
+
+/* ============================================================
+   GET ATTEMPT
+============================================================ */
 
 exports.getAttempt = async (attemptId) => {
   const { data, error } = await supabase
@@ -151,4 +340,76 @@ exports.getAttempt = async (attemptId) => {
   if (error) throw error;
 
   return data;
+};
+
+/* ============================================================
+   UPDATE CURRENT QUESTION
+============================================================ */
+
+exports.updateCurrentQuestion = async (attemptId, questionNumber) => {
+  const { error } = await supabase
+    .from("assessment_attempts")
+    .update({
+      current_question: questionNumber,
+    })
+    .eq("id", attemptId);
+
+  if (error) throw error;
+
+  return true;
+};
+
+/* ============================================================
+   INCREMENT RESUME COUNT
+============================================================ */
+
+exports.incrementResumeCount = async (attemptId) => {
+  const attempt = await exports.getAttempt(attemptId);
+
+  const { error } = await supabase
+    .from("assessment_attempts")
+    .update({
+      resumed_count: (attempt.resumed_count || 0) + 1,
+    })
+    .eq("id", attemptId);
+
+  if (error) throw error;
+
+  return true;
+};
+
+/* ============================================================
+   MARK QUESTION
+============================================================ */
+
+exports.markQuestion = async (attemptQuestionId, marked) => {
+  const { error } = await supabase.from("assessment_question_flags").upsert(
+    {
+      attempt_question_id: attemptQuestionId,
+
+      marked_for_review: marked,
+    },
+    {
+      onConflict: "attempt_question_id",
+    },
+  );
+
+  if (error) throw error;
+
+  return true;
+};
+
+/* ============================================================
+   UNMARK QUESTION
+============================================================ */
+
+exports.unmarkQuestion = async (attemptQuestionId) => {
+  const { error } = await supabase
+    .from("assessment_question_flags")
+    .delete()
+    .eq("attempt_question_id", attemptQuestionId);
+
+  if (error) throw error;
+
+  return true;
 };

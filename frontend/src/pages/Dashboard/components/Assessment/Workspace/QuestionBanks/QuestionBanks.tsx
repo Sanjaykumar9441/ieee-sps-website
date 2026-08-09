@@ -1,35 +1,39 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import toast from "react-hot-toast";
-import { Plus, Search, Upload } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 
 import { socket } from "../../../../../../lib/socket";
 
 import QuestionBankCard from "./QuestionBankCard";
 import QuestionBankDetails from "./QuestionBankDetails";
-import ImportQuestionsModal from "./ImportQuestionsModal";
+import CreateQuestionBankModal from "./CreateQuestionBankModal";
 import { Assessment } from "../../../Assessment/AssessmentCard";
-
-const API = import.meta.env.VITE_API_URL;
+import {
+  getQuestionBanks,
+  deleteQuestionBank,
+  duplicateQuestionBank
+} from "../../../Assessment/assessmentApi";
 
 export interface QuestionBank {
   id: string;
+  subject_id: string | null;
   name: string;
-  description: string;
+  description: string | null;
+  difficulty: string | null;
+  estimated_minutes: number | null;
   total_questions: number;
-  easy_questions: number;
-  medium_questions: number;
-  hard_questions: number;
+  version: number;
+  is_active: boolean;
   created_at: string;
+  updated_at: string;
+  questions_to_pick?: number;
 }
 
 interface Props {
-    assessment: Assessment;
+  assessment: Assessment;
 }
 
-export default function QuestionBanks({
-    assessment,
-}: Props) {
+export default function QuestionBanks({ assessment }: Props) {
   const [loading, setLoading] = useState(true);
 
   const [banks, setBanks] = useState<QuestionBank[]>([]);
@@ -38,25 +42,20 @@ export default function QuestionBanks({
 
   const [search, setSearch] = useState("");
 
-  //const [openCreate, setOpenCreate] = useState(false);
+  const [openCreate, setOpenCreate] = useState(false);
 
-  const [openImport, setOpenImport] = useState(false);
+  const [editingBank, setEditingBank] = useState<QuestionBank | null>(null);
 
   const fetchBanks = async () => {
     try {
       setLoading(true);
 
-      const token = localStorage.getItem("token");
+      const questionBanks = await getQuestionBanks(assessment.id);
 
-      const { data } = await axios.get(`${API}/api/question-banks`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      setBanks(data.questionBanks || []);
+      setBanks(questionBanks || []);
     } catch (err) {
       console.error(err);
+
       toast.error("Unable to load Question Banks");
     } finally {
       setLoading(false);
@@ -64,18 +63,36 @@ export default function QuestionBanks({
   };
 
   const handleEdit = (bank: QuestionBank) => {
-    console.log("Edit", bank);
-    // Open Edit Modal here later
+    setEditingBank(bank);
+    setOpenCreate(true);
   };
 
   const handleDuplicate = async (id: string) => {
-    console.log("Duplicate", id);
-    // Call duplicate API later
-  };
+  try {
+    await duplicateQuestionBank(id);
+
+    toast.success("Question Bank duplicated");
+
+    fetchBanks();
+  } catch (err) {
+    console.error(err);
+
+    toast.error("Duplicate failed");
+  }
+};
 
   const handleDelete = async (id: string) => {
-    console.log("Delete", id);
-    // Call delete API later
+    try {
+      await deleteQuestionBank(id);
+
+      toast.success("Question Bank deleted");
+
+      fetchBanks();
+    } catch (err) {
+      console.error(err);
+
+      toast.error("Delete failed");
+    }
   };
 
   useEffect(() => {
@@ -90,7 +107,7 @@ export default function QuestionBanks({
       socket.off("questionBankUpdated", fetchBanks);
       socket.off("questionBankDeleted", fetchBanks);
     };
-  }, []);
+  }, [assessment.id]);
 
   const filteredBanks = banks.filter((bank) =>
     bank.name.toLowerCase().includes(search.toLowerCase()),
@@ -111,15 +128,11 @@ export default function QuestionBanks({
 
         <div className="flex gap-3">
           <button
-            onClick={() => setOpenImport(true)}
-            className="flex items-center gap-2 rounded-xl border px-5 py-3"
-          >
-            <Upload size={18} />
-            Import CSV
-          </button>
-
-          <button
-            //onClick={() => setOpenCreate(true)}
+            type="button"
+            onClick={() => {
+              setEditingBank(null);
+              setOpenCreate(true);
+            }}
             className="flex items-center gap-2 rounded-xl bg-[#00629B] px-5 py-3 text-white"
           >
             <Plus size={18} />
@@ -139,42 +152,62 @@ export default function QuestionBanks({
         />
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {filteredBanks.map((bank) => (
-          <QuestionBankCard
-            key={bank.id}
-            bank={bank}
-            onOpen={setSelectedBank}
-            onEdit={handleEdit}
-            onDuplicate={handleDuplicate}
-            onDelete={handleDelete}
-          />
-        ))}
-      </div>
+      {filteredBanks.length === 0 ? (
+        <div className="mt-8 rounded-2xl border bg-white p-10 text-center">
+          <h3 className="text-lg font-semibold text-gray-800">
+            No Question Banks Found
+          </h3>
+
+          <p className="mt-2 text-sm text-gray-500">
+            {search
+              ? "Try a different search term."
+              : "Create your first Question Bank for this assessment."}
+          </p>
+
+          {!search && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingBank(null);
+                setOpenCreate(true);
+              }}
+              className="mt-5 rounded-xl bg-[#00629B] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#005080]"
+            >
+              Create Question Bank
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {filteredBanks.map((bank) => (
+            <QuestionBankCard
+              key={bank.id}
+              bank={bank}
+              onOpen={setSelectedBank}
+              onEdit={handleEdit}
+              onDuplicate={handleDuplicate}
+              onDelete={handleDelete}
+            />
+          ))}
+        </div>
+      )}
 
       {selectedBank && (
-
-<QuestionBankDetails
-
-    bank={selectedBank}
-
-    onBack={() => setSelectedBank(null)}
-
-/>
-
-)}
-
-   <ImportQuestionsModal
-
-    open={openImport}
-
-    bankId={selectedBank?.id || ""}
-
-    onClose={() => setOpenImport(false)}
-
-    onSuccess={fetchBanks}
-
-/>
+        <QuestionBankDetails
+          bank={selectedBank}
+          onBack={() => setSelectedBank(null)}
+        />
+      )}
+      <CreateQuestionBankModal
+        open={openCreate}
+        assessmentId={assessment.id}
+        bank={editingBank}
+        onClose={() => {
+          setOpenCreate(false);
+          setEditingBank(null);
+        }}
+        onSaved={fetchBanks}
+      />
     </>
   );
 }

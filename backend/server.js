@@ -43,6 +43,7 @@ const activityRoutes = require("./routes/activityRoutes");
 /* ===============================*/
 const assessmentRoutes = require("./routes/assessmentRoutes");
 const questionBankRoutes = require("./routes/questionBankRoutes");
+const questionRoutes = require("./routes/questionRoutes");
 const studentAssessmentRoutes = require("./routes/studentAssessmentRoutes");
 const adminDashboardRoutes = require("./routes/adminDashboardRoutes");
 const liveMonitorRoutes = require("./routes/liveMonitorRoutes");
@@ -115,6 +116,7 @@ app.use("/uploads", express.static("uploads"));
 ================================= */
 app.use("/api/assessments", assessmentRoutes);
 app.use("/api/question-banks", questionBankRoutes);
+app.use("/api/questions", questionRoutes);
 app.use("/api/student-assessments", studentAssessmentRoutes);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
 app.use("/api/admin/live-monitor", liveMonitorRoutes);

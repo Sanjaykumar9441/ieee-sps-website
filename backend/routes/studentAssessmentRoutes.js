@@ -34,4 +34,28 @@ router.post(
   verifyStudentToken,
   controller.submitAssessment,
 );
+
+/* ==========================================================
+   ANTI CHEAT
+========================================================== */
+
+router.post(
+  "/:attemptId/infractions",
+  verifyStudentToken,
+  controller.reportInfraction,
+);
+
+router.get("/:attemptId/infractions", verifyToken, controller.getInfractions);
+
+router.delete(
+  "/:attemptId/infractions",
+  verifyToken,
+  controller.resetInfractions,
+);
+
+router.get(
+  "/anti-cheat/config",
+  verifyStudentToken,
+  controller.getAntiCheatConfig,
+);
 module.exports = router;

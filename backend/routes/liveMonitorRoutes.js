@@ -6,12 +6,16 @@ const verifyToken = require("../middleware/verifyToken");
 
 const controller = require("../controllers/liveMonitorController");
 
-router.get(
-  "/:assessmentId",
+/* ============================================
+   Live Student Monitor
+============================================ */
 
-  verifyToken,
+router.get("/:assessmentId", verifyToken, controller.getLiveStudents);
 
-  controller.getLiveStudents,
-);
+/* ============================================
+   Single Student Details
+============================================ */
+
+router.get("/attempt/:attemptId", verifyToken, controller.getStudentDetails);
 
 module.exports = router;

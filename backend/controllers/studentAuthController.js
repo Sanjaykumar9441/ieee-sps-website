@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+
 const { supabase } = require("../lib/supabase");
 
 const {
@@ -7,8 +8,10 @@ const {
   canRequestOtp,
 } = require("../lib/redis");
 
+const assessmentService = require("../services/assessmentService");
 const otpQueue = require("../services/otpQueueService");
 const liveEvents = require("../services/liveEvents");
+const StudentAuth = require("../models/StudentAuth");
 
 /* ==========================================================
    SEND OTP
@@ -21,16 +24,16 @@ exports.sendOtp = async (req, res) => {
     if (!assessmentId || !email) {
       return res.status(400).json({
         success: false,
-        message: "Assessment ID and Email are required.",
+        message: "Assessment ID and email are required.",
       });
     }
 
-    // Check assessment
-    const { data: assessment, error: assessmentError } = await supabase
-      .from("assessments")
-      .select("id,title")
-      .eq("id", assessmentId)
-      .single();
+    /* --------------------------------------------
+       Assessment
+    --------------------------------------------- */
+
+    const { data: assessment, error: assessmentError } =
+      await assessmentService.getAssessment(assessmentId);
 
     if (assessmentError || !assessment) {
       return res.status(404).json({
@@ -39,22 +42,45 @@ exports.sendOtp = async (req, res) => {
       });
     }
 
-    // Check allowed student
-    const { data: student } = await supabase
-      .from("assessment_allowed_students")
-      .select("*")
-      .eq("assessment_id", assessmentId)
-      .eq("email", email)
-      .single();
+    if (!assessment.is_active) {
+      return res.status(400).json({
+        success: false,
+        message: "Assessment is not active.",
+      });
+    }
 
-    if (!student) {
+    if (assessment.status !== "PUBLISHED") {
+      return res.status(400).json({
+        success: false,
+        message: "Assessment is not published.",
+      });
+    }
+
+    /* --------------------------------------------
+       Student
+    --------------------------------------------- */
+
+    const { data: student, error: studentError } =
+      await assessmentService.getAllowedStudent(assessmentId, email);
+
+    if (studentError || !student) {
       return res.status(404).json({
         success: false,
         message: "Student is not allowed for this assessment.",
       });
     }
 
-    // Cooldown
+    if (student.status === "blocked") {
+      return res.status(403).json({
+        success: false,
+        message: "Your access has been blocked.",
+      });
+    }
+
+    /* --------------------------------------------
+       OTP Cooldown
+    --------------------------------------------- */
+
     const allowed = await canRequestOtp(assessmentId, email);
 
     if (!allowed) {
@@ -64,20 +90,32 @@ exports.sendOtp = async (req, res) => {
       });
     }
 
-    // Generate OTP
+    /* --------------------------------------------
+       Generate OTP
+    --------------------------------------------- */
+
     const otp = await createLoginOtp(assessmentId, email);
 
-    // Queue email
+    /* --------------------------------------------
+       Queue Email
+    --------------------------------------------- */
+
     await otpQueue.queueOtpEmail({
       assessmentId,
+
       email: student.email,
-      assessmentTitle: assessment?.title || "Assessment",
+
+      assessmentTitle: assessment.title,
+
       otp,
     });
 
     return res.json({
       success: true,
+
       message: "OTP sent successfully.",
+
+      expiresIn: 300,
     });
   } catch (err) {
     console.error(err);
@@ -100,9 +138,13 @@ exports.verifyOtp = async (req, res) => {
     if (!assessmentId || !email || !otp) {
       return res.status(400).json({
         success: false,
-        message: "Assessment ID, Email and OTP are required.",
+        message: "Assessment ID, email and OTP are required.",
       });
     }
+
+    /* --------------------------------------------
+       Verify OTP
+    --------------------------------------------- */
 
     const result = await verifyLoginOtp(assessmentId, email, otp);
 
@@ -113,29 +155,46 @@ exports.verifyOtp = async (req, res) => {
       });
     }
 
-    // Get student
-    const { data: student } = await supabase
-      .from("assessment_allowed_students")
-      .select("*")
-      .eq("assessment_id", assessmentId)
-      .eq("email", email)
-      .single();
+    /* --------------------------------------------
+       Get Student
+    --------------------------------------------- */
 
-    if (!student) {
+    const { data: student, error } = await assessmentService.getAllowedStudent(
+      assessmentId,
+      email,
+    );
+
+    if (error || !student) {
       return res.status(404).json({
         success: false,
         message: "Student not found.",
       });
     }
 
-    // Create JWT
+    if (student.status === "blocked") {
+      return res.status(403).json({
+        success: false,
+        message: "Your access has been blocked.",
+      });
+    }
+
+    /* --------------------------------------------
+       JWT
+    --------------------------------------------- */
+
     const token = jwt.sign(
       {
         id: student.id,
+
         assessmentId,
+
         email: student.email,
+
         rollNo: student.roll_no,
+
         name: student.name,
+
+        role: "student",
       },
       process.env.JWT_SECRET,
       {
@@ -143,25 +202,46 @@ exports.verifyOtp = async (req, res) => {
       },
     );
 
-    // Update login status
-    await supabase
+    /* --------------------------------------------
+       Update Login Status
+    --------------------------------------------- */
+
+    const { error: updateError } = await supabase
       .from("assessment_allowed_students")
       .update({
         has_logged_in: true,
-        first_login_at: new Date(),
+
+        first_login_at: new Date().toISOString(),
       })
       .eq("id", student.id);
 
+    if (updateError) throw updateError;
+
+    /* --------------------------------------------
+       Live Dashboard
+    --------------------------------------------- */
+
     liveEvents.emitStudentLoggedIn(assessmentId);
+    liveEvents.emitStudentStatusChanged(assessmentId);
+    liveEvents.emitDashboardRefresh(assessmentId);
+
+    /* --------------------------------------------
+       Success
+    --------------------------------------------- */
 
     return res.json({
       success: true,
+
       token,
+
       student: {
         id: student.id,
+
         name: student.name,
-        rollNo: student.roll_no,
+
         email: student.email,
+
+        rollNo: student.roll_no,
       },
     });
   } catch (err) {
@@ -173,6 +253,10 @@ exports.verifyOtp = async (req, res) => {
     });
   }
 };
+
+/* ==========================================================
+   SEND BULK OTP
+========================================================== */
 
 exports.sendBulkOtp = async (req, res) => {
   try {
@@ -189,25 +273,33 @@ exports.sendBulkOtp = async (req, res) => {
       });
     }
 
+    const { data: assessment, error: assessmentError } =
+      await assessmentService.getAssessment(assessmentId);
+
+    if (assessmentError || !assessment) {
+      return res.status(404).json({
+        success: false,
+        message: "Assessment not found.",
+      });
+    }
+
     let processed = 0;
     let failed = 0;
 
-    // Assessment title for email
-    const { data: assessment } = await supabase
-      .from("assessments")
-      .select("title")
-      .eq("id", assessmentId)
-      .single();
-
     for (const studentId of studentIds) {
       try {
-        const { data: student } = await supabase
+        const { data: student, error } = await supabase
           .from("assessment_allowed_students")
           .select("*")
           .eq("id", studentId)
           .single();
 
-        if (!student) {
+        if (error || !student) {
+          failed++;
+          continue;
+        }
+
+        if (student.status === "blocked") {
           failed++;
           continue;
         }
@@ -216,8 +308,11 @@ exports.sendBulkOtp = async (req, res) => {
 
         await otpQueue.queueOtpEmail({
           assessmentId,
+
           email: student.email,
-          assessmentTitle: assessment?.title || "Assessment",
+
+          assessmentTitle: assessment.title,
+
           otp,
         });
 
@@ -226,7 +321,7 @@ exports.sendBulkOtp = async (req, res) => {
           .update({
             otp_sent: true,
           })
-          .eq("id", studentId);
+          .eq("id", student.id);
 
         processed++;
       } catch (err) {
@@ -236,22 +331,30 @@ exports.sendBulkOtp = async (req, res) => {
     }
 
     liveEvents.emitStudentStatusChanged(assessmentId);
+    liveEvents.emitDashboardRefresh(assessmentId);
 
     return res.json({
       success: true,
+
       processed,
+
       failed,
-      message: "OTP sent successfully.",
+
+      message: "Bulk OTP process completed.",
     });
   } catch (err) {
     console.error(err);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
   }
 };
+
+/* ==========================================================
+   BLOCK STUDENTS
+========================================================== */
 
 exports.blockStudents = async (req, res) => {
   try {
@@ -279,11 +382,15 @@ exports.blockStudents = async (req, res) => {
     if (error) throw error;
 
     liveEvents.emitStudentStatusChanged(assessmentId);
+    liveEvents.emitDashboardRefresh(assessmentId);
 
     return res.json({
       success: true,
+
       processed: studentIds.length,
+
       failed: 0,
+
       message: "Students blocked successfully.",
     });
   } catch (err) {
@@ -295,6 +402,10 @@ exports.blockStudents = async (req, res) => {
     });
   }
 };
+
+/* ==========================================================
+   UNBLOCK STUDENTS
+========================================================== */
 
 exports.unblockStudents = async (req, res) => {
   try {
@@ -322,11 +433,15 @@ exports.unblockStudents = async (req, res) => {
     if (error) throw error;
 
     liveEvents.emitStudentStatusChanged(assessmentId);
+    liveEvents.emitDashboardRefresh(assessmentId);
 
     return res.json({
       success: true,
+
       processed: studentIds.length,
+
       failed: 0,
+
       message: "Students unblocked successfully.",
     });
   } catch (err) {
@@ -338,6 +453,10 @@ exports.unblockStudents = async (req, res) => {
     });
   }
 };
+
+/* ==========================================================
+   DELETE STUDENTS
+========================================================== */
 
 exports.deleteStudents = async (req, res) => {
   try {
@@ -363,16 +482,133 @@ exports.deleteStudents = async (req, res) => {
     if (error) throw error;
 
     liveEvents.emitStudentStatusChanged(assessmentId);
+    liveEvents.emitDashboardRefresh(assessmentId);
 
     return res.json({
       success: true,
+
       processed: studentIds.length,
+
       failed: 0,
+
       message: "Students deleted successfully.",
     });
   } catch (err) {
     console.error(err);
 
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+/* ==========================================================
+   ALLOWED STUDENTS
+========================================================== */
+
+exports.getAllowedStudents = async (req, res) => {
+  try {
+    const { assessmentId } = req.params;
+
+    if (!assessmentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Assessment ID is required.",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("assessment_allowed_students")
+      .select(
+        `
+        *,
+        assessment_attempts (
+  id,
+  status
+)
+      `,
+      )
+      .eq("assessment_id", assessmentId)
+      .order("name");
+
+    if (error) throw error;
+
+    const students = (data || []).map((student) => {
+      const attempt = student.assessment_attempts?.[0] || null;
+
+      return {
+        ...student,
+        logged_in: student.has_logged_in,
+        blocked: student.status === "blocked",
+        attempt_started: !!attempt,
+        submitted: attempt?.status === "SUBMITTED",
+      };
+    });
+
+    return res.json({
+      success: true,
+      students,
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.getStudentDetails = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    if (!studentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Student ID is required.",
+      });
+    }
+
+    const { data, error } = await StudentAuth.getStudentDetails(studentId);
+
+    if (error) throw error;
+
+    const attempt = data.assessment_attempts?.[0] || null;
+
+    return res.json({
+      success: true,
+
+      student: {
+        ...data,
+        status: data.status,
+      },
+
+      attempt: attempt
+        ? {
+            id: attempt.id,
+            status: attempt.status,
+            startedAt: attempt.started_at,
+            submittedAt: attempt.submitted_at,
+            score: Number(attempt.score || 0),
+            answeredQuestions: Number(attempt.answered_questions || 0),
+            resumedCount: Number(attempt.resumed_count || 0),
+          }
+        : null,
+
+      statistics: {
+        questionsAnswered: attempt?.answered_questions ?? 0,
+        score: attempt?.score ?? 0,
+      },
+
+      timeline: {
+        loggedInAt: data.first_login_at,
+        assessmentStartedAt: attempt?.started_at,
+        submittedAt: attempt?.submitted_at,
+      },
+    });
+  } catch (err) {
     return res.status(500).json({
       success: false,
       message: err.message,

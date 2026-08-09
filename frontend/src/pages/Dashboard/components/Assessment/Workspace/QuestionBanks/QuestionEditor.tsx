@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Eye, CheckCircle, Save, Upload } from "lucide-react";
-import axios from "axios";
 import toast from "react-hot-toast";
-
-const API = import.meta.env.VITE_API_URL;
+import {
+  createQuestion,
+  updateQuestion,
+} from "../../../Assessment/assessmentApi";
 
 interface Props {
   bankId: string;
@@ -14,6 +15,7 @@ interface Props {
 
 interface Question {
   id?: string;
+  bank_id?: string;
 
   question_text: string;
 
@@ -22,28 +24,25 @@ interface Question {
   difficulty: "Easy" | "Medium" | "Hard";
 
   marks: number;
-
   negative_marks: number;
 
   explanation: string;
 
-  image_url: string;
-
-  tags: string[];
-
-  /* MCQ */
+  question_image_id: string | null;
 
   options: string[];
 
-  correct_answer: number[];
+  correct_answers: number[];
 
-  /* Subjective */
+  estimated_seconds: number;
 
-  answer_key: string;
+  tags: string[];
 
-  minimum_words: number;
+  language: string;
 
-  maximum_words: number;
+  version: number;
+
+  is_active: boolean;
 }
 
 export default function QuestionEditor({
@@ -66,15 +65,21 @@ export default function QuestionEditor({
     marks: 1,
     negative_marks: 0,
     explanation: "",
-    image_url: "",
-    tags: [],
+
+    question_image_id: null,
 
     options: ["", "", "", ""],
-    correct_answer: [],
+    correct_answers: [],
 
-    answer_key: "",
-    minimum_words: 0,
-    maximum_words: 0,
+    estimated_seconds: 60,
+
+    tags: [],
+
+    language: "en",
+
+    version: 1,
+
+    is_active: true,
   });
 
   useEffect(() => {
@@ -84,34 +89,44 @@ export default function QuestionEditor({
   }, [initialQuestion]);
 
   const handleSave = async () => {
+    const errors = handleValidate();
+
+    if (errors.length) {
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const token = localStorage.getItem("token");
+      const payload = {
+        ...question,
+
+        options:
+          question.question_type === "SUBJECTIVE"
+            ? []
+            : question.options.map((option) => option.trim()).filter(Boolean),
+
+        correct_answers:
+          question.question_type === "SUBJECTIVE"
+            ? []
+            : question.correct_answers,
+      };
 
       if (question.id) {
-        await axios.put(`${API}/api/questions/${question.id}`, question, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        await updateQuestion(question.id, payload);
       } else {
-        await axios.post(
-          `${API}/api/question-banks/${bankId}/questions`,
-          question,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
+        await createQuestion({
+          ...payload,
+          bank_id: bankId,
+        });
       }
 
-      toast.success("Question Saved");
+      toast.success("Question saved");
 
       onSaved();
     } catch (err) {
       console.error(err);
+
       toast.error("Unable to save question");
     } finally {
       setLoading(false);
@@ -121,26 +136,61 @@ export default function QuestionEditor({
   const handleValidate = () => {
     const errors: string[] = [];
 
-    // Question text
     if (!question.question_text.trim()) {
       errors.push("Question text is required.");
     }
 
-    // MCQ / Multiple Correct
-    if (
-      (question.question_type === "MCQ" ||
-        question.question_type === "MULTIPLE_CORRECT") &&
-      question.correct_answer.length === 0
-    ) {
-      errors.push("Select at least one correct answer.");
+    if (question.marks <= 0) {
+      errors.push("Marks must be greater than 0.");
     }
 
-    // Subjective
+    if (question.negative_marks < 0) {
+      errors.push("Negative marks cannot be negative.");
+    }
+
+    if (question.estimated_seconds <= 0) {
+      errors.push("Estimated time must be greater than 0 seconds.");
+    }
+
     if (
-      question.question_type === "SUBJECTIVE" &&
-      !question.answer_key.trim()
+      question.question_type === "MCQ" ||
+      question.question_type === "MULTIPLE_CORRECT"
     ) {
-      errors.push("Answer key is required.");
+      const validOptions = question.options.filter(
+        (option) => option.trim().length > 0,
+      );
+
+      if (validOptions.length < 2) {
+        errors.push("At least two options are required.");
+      }
+
+      if (question.correct_answers.length === 0) {
+        errors.push("Select at least one correct answer.");
+      }
+
+      for (const answer of question.correct_answers) {
+        if (
+          answer < 0 ||
+          answer >= question.options.length ||
+          !question.options[answer]?.trim()
+        ) {
+          errors.push("A selected correct answer is invalid.");
+          break;
+        }
+      }
+    }
+
+    if (question.question_type === "TRUE_FALSE") {
+      if (
+        question.correct_answers.length !== 1 ||
+        ![0, 1].includes(question.correct_answers[0])
+      ) {
+        errors.push("Select True or False as the correct answer.");
+      }
+    }
+
+    if (question.question_type === "SUBJECTIVE") {
+      // No predefined correct answer required.
     }
 
     setValidation(errors);
@@ -148,6 +198,8 @@ export default function QuestionEditor({
     if (errors.length === 0) {
       toast.success("No validation errors.");
     }
+
+    return errors;
   };
 
   return (
@@ -168,7 +220,15 @@ export default function QuestionEditor({
         </div>
 
         <div className="flex gap-3">
-          <button type="button">
+          <button
+            type="button"
+            onClick={() => {
+              document
+                .getElementById("student-preview")
+                ?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="flex items-center gap-2 rounded-xl border px-5 py-3"
+          >
             <Eye size={18} />
             Preview
           </button>
@@ -200,16 +260,26 @@ export default function QuestionEditor({
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           <select
             value={question.question_type}
-            onChange={(e) =>
+            onChange={(e) => {
+              const questionType = e.target.value as Question["question_type"];
+
               setQuestion({
                 ...question,
-                question_type: e.target.value as Question["question_type"],
-              })
-            }
+                question_type: questionType,
+                options:
+                  questionType === "SUBJECTIVE"
+                    ? []
+                    : question.options.length >= 2
+                      ? question.options
+                      : ["", "", "", ""],
+                correct_answers: [],
+              });
+            }}
+            className="rounded-xl border p-3"
           >
             <option value="MCQ">MCQ</option>
             <option value="MULTIPLE_CORRECT">Multiple Correct</option>
-            <option value="TRUE_FALSE">True False</option>
+            <option value="TRUE_FALSE">True / False</option>
             <option value="SUBJECTIVE">Subjective</option>
           </select>
 
@@ -247,6 +317,20 @@ export default function QuestionEditor({
                 negative_marks: Number(e.target.value),
               })
             }
+          />
+
+          <input
+            type="number"
+            min={1}
+            value={question.estimated_seconds}
+            onChange={(e) =>
+              setQuestion({
+                ...question,
+                estimated_seconds: Number(e.target.value),
+              })
+            }
+            placeholder="Estimated Seconds"
+            className="rounded-xl border p-3"
           />
         </div>
       </div>
@@ -289,17 +373,17 @@ export default function QuestionEditor({
                   type={question.question_type === "MCQ" ? "radio" : "checkbox"}
                   checked={
                     question.question_type === "MCQ"
-                      ? question.correct_answer[0] === index
-                      : question.correct_answer.includes(index)
+                      ? question.correct_answers[0] === index
+                      : question.correct_answers.includes(index)
                   }
                   onChange={() => {
                     if (question.question_type === "MCQ") {
                       setQuestion({
                         ...question,
-                        correct_answer: [index],
+                        correct_answers: [index],
                       });
                     } else {
-                      let answers = [...question.correct_answer];
+                      let answers = [...question.correct_answers];
 
                       if (answers.includes(index)) {
                         answers = answers.filter((i) => i !== index);
@@ -309,7 +393,7 @@ export default function QuestionEditor({
 
                       setQuestion({
                         ...question,
-                        correct_answer: answers,
+                        correct_answers: answers,
                       });
                     }
                   }}
@@ -354,11 +438,11 @@ export default function QuestionEditor({
             <label className="flex items-center gap-3">
               <input
                 type="radio"
-                checked={question.correct_answer[0] === 0}
+                checked={question.correct_answers[0] === 0}
                 onChange={() =>
                   setQuestion({
                     ...question,
-                    correct_answer: [0],
+                    correct_answers: [0],
                   })
                 }
               />
@@ -368,11 +452,11 @@ export default function QuestionEditor({
             <label className="flex items-center gap-3">
               <input
                 type="radio"
-                checked={question.correct_answer[0] === 1}
+                checked={question.correct_answers[0] === 1}
                 onChange={() =>
                   setQuestion({
                     ...question,
-                    correct_answer: [1],
+                    correct_answers: [1],
                   })
                 }
               />
@@ -384,51 +468,19 @@ export default function QuestionEditor({
         {/* SUBJECTIVE */}
 
         {question.question_type === "SUBJECTIVE" && (
-          <div className="mt-6 grid gap-5">
-            <textarea
-              rows={5}
-              value={question.answer_key}
-              onChange={(e) =>
-                setQuestion({
-                  ...question,
-                  answer_key: e.target.value,
-                })
-              }
-              placeholder="Answer Key"
-              className="rounded-xl border p-4"
-            />
+          <div className="mt-6">
+            <div className="rounded-xl bg-gray-50 p-5">
+              <p className="font-medium text-gray-700">Subjective Question</p>
 
-            <div className="grid grid-cols-2 gap-5">
-              <input
-                type="number"
-                placeholder="Minimum Words"
-                value={question.minimum_words}
-                onChange={(e) =>
-                  setQuestion({
-                    ...question,
-                    minimum_words: Number(e.target.value),
-                  })
-                }
-                className="rounded-xl border p-3"
-              />
-
-              <input
-                type="number"
-                placeholder="Maximum Words"
-                value={question.maximum_words}
-                onChange={(e) =>
-                  setQuestion({
-                    ...question,
-                    maximum_words: Number(e.target.value),
-                  })
-                }
-                className="rounded-xl border p-3"
-              />
+              <p className="mt-1 text-sm text-gray-500">
+                Students will enter their answer manually. No predefined correct
+                answer is required.
+              </p>
             </div>
           </div>
         )}
       </div>
-      Step 1 — Explanation Section Place this below Answer Configuration.
+      {/* Explanation Section */}
       <div className="bg-white rounded-2xl border p-6 mt-8">
         <h2 className="text-xl font-semibold">Explanation</h2>
 
@@ -489,13 +541,13 @@ export default function QuestionEditor({
           />
         </div>
 
-        {question.image_url && (
+        {/*{question.image_url && (
           <img
             src={question.image_url}
             alt="Question"
             className="mt-5 max-h-72 rounded-xl border object-contain"
           />
-        )}
+        )}*/}
       </div>
       <div className="bg-white rounded-2xl border p-6 mt-8">
         <h2 className="text-xl font-semibold">Validation</h2>
@@ -512,7 +564,10 @@ export default function QuestionEditor({
           )}
         </div>
       </div>
-      <div className="bg-white rounded-2xl border p-6 mt-8">
+      <div
+        id="student-preview"
+        className="bg-white rounded-2xl border p-6 mt-8"
+      >
         <h2 className="text-xl font-semibold">Student Preview</h2>
 
         <div className="mt-6">
@@ -520,15 +575,33 @@ export default function QuestionEditor({
             {question.question_text || "Question Preview"}
           </h3>
 
-          <div className="space-y-3 mt-6">
-            {question.options.map((option, index) => (
-              <label key={index} className="flex gap-3">
-                <input type="radio" disabled />
+          <div className="mt-6 space-y-3">
+  {question.question_type === "SUBJECTIVE" ? (
+    <textarea
+      disabled
+      rows={5}
+      placeholder="Student answer..."
+      className="w-full rounded-xl border p-4"
+    />
+  ) : (
+    question.options.map((option, index) => (
+      <label key={index} className="flex items-center gap-3">
+        <input
+          type={
+            question.question_type === "MULTIPLE_CORRECT"
+              ? "checkbox"
+              : "radio"
+          }
+          disabled
+        />
 
-                {option || `Option ${String.fromCharCode(65 + index)}`}
-              </label>
-            ))}
-          </div>
+        <span>
+          {option || `Option ${String.fromCharCode(65 + index)}`}
+        </span>
+      </label>
+    ))
+  )}
+</div>
         </div>
       </div>
     </>

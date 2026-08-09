@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
 import {
   FileText,
@@ -24,6 +25,10 @@ interface PreviewQuestion {
   question_type: string;
   difficulty: string;
   marks: number;
+  negative_marks?: number;
+  options?: string[];
+  correct_answers?: string[];
+  explanation?: string;
 }
 
 type ImportStep = "upload" | "preview" | "validation" | "summary";
@@ -48,6 +53,8 @@ export default function ImportQuestionsModal({
 
   const [summary, setSummary] = useState<any>(null);
 
+  const [duplicateChecked, setDuplicateChecked] = useState(false);
+
   const handleUpload = async () => {
     if (!file) {
       toast.error("Choose a file");
@@ -57,32 +64,83 @@ export default function ImportQuestionsModal({
     try {
       setUploading(true);
 
-      const token = localStorage.getItem("token");
+      const buffer = await file.arrayBuffer();
 
-      const formData = new FormData();
+      const workbook = XLSX.read(buffer, {
+        type: "array",
+      });
 
-      formData.append("file", file);
+      const sheetName = workbook.SheetNames[0];
 
-      const { data } = await axios.post(
-        `${API}/api/question-banks/${bankId}/import`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        },
-      );
+      if (!sheetName) {
+        throw new Error("No worksheet found.");
+      }
 
-      setPreview(data.questions || []);
+      const worksheet = workbook.Sheets[sheetName];
+
+      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, {
+        defval: "",
+      });
+
+      if (!rows.length) {
+        throw new Error("The uploaded file is empty.");
+      }
+
+      const questions: PreviewQuestion[] = rows.map((row) => {
+        const options = [
+          row["Option A"],
+          row["Option B"],
+          row["Option C"],
+          row["Option D"],
+        ]
+          .map((value) => String(value || "").trim())
+          .filter(Boolean);
+
+        const correctAnswer = String(row["Correct Answer"] || "").trim();
+
+        return {
+          question_text: String(row["Question"] || "").trim(),
+
+          question_type: String(row["Question Type"] || "MCQ")
+            .trim()
+            .toUpperCase(),
+
+          difficulty: String(row["Difficulty"] || "MEDIUM")
+            .trim()
+            .toUpperCase(),
+
+          marks: Number(row["Marks"] || 1),
+
+          negative_marks: Number(row["Negative Marks"] || 0),
+
+          options,
+
+          correct_answers: correctAnswer
+            ? correctAnswer
+                .split(",")
+                .map((answer: string) => answer.trim())
+                .filter(Boolean)
+            : [],
+
+          explanation: String(row["Explanation"] || "").trim() || undefined,
+        };
+      });
+
+      if (!questions.length) {
+        throw new Error("No questions found in the file.");
+      }
+
+      setPreview(questions);
 
       setStep("preview");
 
-      toast.success("Upload successful");
+      toast.success(`${questions.length} questions loaded`);
     } catch (err) {
-      console.error(err);
+      console.error("Question file parsing error:", err);
 
-      toast.error("Import failed");
+      toast.error(
+        err instanceof Error ? err.message : "Unable to read question file",
+      );
     } finally {
       setUploading(false);
     }
@@ -94,7 +152,9 @@ export default function ImportQuestionsModal({
 
       const { data } = await axios.post(
         `${API}/api/question-banks/${bankId}/validate`,
-        {},
+        {
+          questions: preview,
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -120,7 +180,9 @@ export default function ImportQuestionsModal({
 
       const { data } = await axios.post(
         `${API}/api/question-banks/${bankId}/duplicates`,
-        {},
+        {
+          questions: preview,
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -129,6 +191,7 @@ export default function ImportQuestionsModal({
       );
 
       setDuplicates(data.duplicates || []);
+      setDuplicateChecked(true);
 
       toast.success("Duplicate check completed");
     } catch (err) {
@@ -144,7 +207,9 @@ export default function ImportQuestionsModal({
 
       const { data } = await axios.post(
         `${API}/api/question-banks/${bankId}/final-import`,
-        {},
+        {
+          questions: preview,
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -159,7 +224,6 @@ export default function ImportQuestionsModal({
       toast.success("Questions imported");
 
       onSuccess();
-      handleClose();
     } catch (err) {
       console.error(err);
 
@@ -175,6 +239,7 @@ export default function ImportQuestionsModal({
     setValidation([]);
     setDuplicates([]);
     setSummary(null);
+    setDuplicateChecked(false);
 
     onClose();
   };
@@ -224,9 +289,13 @@ export default function ImportQuestionsModal({
               <div className="rounded-2xl border-2 border-dashed p-16 text-center">
                 <FileText size={60} className="mx-auto text-[#00629B]" />
 
-                <h2 className="mt-6 text-2xl font-bold">Drag CSV Here</h2>
+                <h2 className="mt-6 text-2xl font-bold">
+                  Select Questions File
+                </h2>
 
-                <p className="mt-2 text-gray-500">or choose a file below</p>
+                <p className="mt-2 text-gray-500">
+                  Upload a CSV or Excel file containing your questions.
+                </p>
 
                 <input
                   type="file"
@@ -246,13 +315,16 @@ export default function ImportQuestionsModal({
                 <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
                     "Question",
+                    "Question Type",
                     "Option A",
                     "Option B",
                     "Option C",
                     "Option D",
                     "Correct Answer",
+                    "Explanation",
                     "Difficulty",
                     "Marks",
+                    "Negative Marks",
                   ].map((column) => (
                     <div
                       key={column}
@@ -277,7 +349,7 @@ export default function ImportQuestionsModal({
                   disabled={uploading}
                   className="rounded-xl bg-[#00629B] px-6 py-3 text-white"
                 >
-                  {uploading ? "Uploading..." : "Upload CSV"}
+                  {uploading ? "Uploading..." : "Upload Questions"}
                 </button>
               </div>
             </div>
@@ -387,37 +459,56 @@ export default function ImportQuestionsModal({
               </div>
             </div>
           )}
-          {duplicates.length > 0 && step === "validation" && (
+          {step === "validation" && (
             <div className="mt-10">
-              <h2 className="text-xl font-bold">Duplicate Detection</h2>
+              {duplicates.length > 0 && (
+                <>
+                  <h2 className="text-xl font-bold">Duplicate Detection</h2>
 
-              <div className="mt-5 space-y-4">
-                {duplicates.map((item, index) => (
-                  <div
-                    key={index}
-                    className="rounded-xl border border-red-200 bg-red-50 p-5"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Copy className="text-red-600" size={22} />
+                  <div className="mt-5 space-y-4">
+                    {duplicates.map((item, index) => (
+                      <div
+                        key={index}
+                        className="rounded-xl border border-red-200 bg-red-50 p-5"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Copy className="text-red-600" size={22} />
 
-                      <div>
-                        <p className="font-semibold">{item.question}</p>
+                          <div>
+                            <p className="font-semibold">{item.question}</p>
 
-                        <p className="text-sm text-gray-600">
-                          Similar to: {item.match}
-                        </p>
+                            <p className="text-sm text-gray-600">
+                              Similar to: {item.match}
+                            </p>
 
-                        <p className="mt-1 text-red-600 text-sm">
-                          Similarity: {item.similarity}%
-                        </p>
+                            <p className="mt-1 text-sm text-red-600">
+                              Similarity: {item.similarity}%
+                            </p>
+                          </div>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {duplicateChecked && duplicates.length === 0 && (
+                <div className="rounded-xl border border-green-200 bg-green-50 p-5 text-green-700">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle size={22} />
+                    <div>
+                      <p className="font-semibold">No duplicates detected.</p>
+                      <p className="text-sm">
+                        The questions are ready to be imported.
+                      </p>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
 
               <div className="mt-8 flex justify-end">
                 <button
+                  type="button"
                   onClick={handleImport}
                   className="rounded-xl bg-green-600 px-6 py-3 text-white"
                 >

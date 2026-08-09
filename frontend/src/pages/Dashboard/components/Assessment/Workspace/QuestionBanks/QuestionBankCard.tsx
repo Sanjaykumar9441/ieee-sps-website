@@ -1,7 +1,5 @@
 import {
   BookOpen,
-  Circle,
-  Calendar,
   Eye,
   Edit,
   Copy,
@@ -51,56 +49,45 @@ export default function QuestionBankCard({
 
           <BookOpen size={28} className="text-[#00629B]" />
         </div>
-        <div className="grid grid-cols-2 gap-4 mt-6">
-          <div>
-            <p className="text-gray-500 text-sm">Total Questions</p>
+        <div className="mt-6 grid grid-cols-2 gap-4">
+  <div>
+    <p className="text-sm text-gray-500">Total Questions</p>
 
-            <h3 className="text-2xl font-bold">{bank.total_questions}</h3>
-          </div>
+    <h3 className="text-2xl font-bold">
+      {bank.total_questions}
+    </h3>
+  </div>
 
-          <div>
-            <p className="text-gray-500 text-sm">Created</p>
+  <div>
+    <p className="text-sm text-gray-500">Questions to Pick</p>
 
-            <div className="flex items-center gap-2 mt-1">
-              <Calendar size={16} />
-
-              <span className="text-sm">
-                {new Date(bank.created_at).toLocaleDateString()}
-              </span>
-            </div>
-          </div>
-        </div>
+    <h3 className="text-2xl font-bold text-[#00629B]">
+      {bank.questions_to_pick ?? 0}
+    </h3>
+  </div>
+</div>
         <div className="mt-6 space-y-3">
-          <div className="flex justify-between">
-            <div className="flex items-center gap-2">
-              <Circle size={10} className="fill-green-500 text-green-500" />
+  <div className="flex justify-between">
+    <span className="text-gray-500">Difficulty</span>
+    <span className="font-semibold">
+      {bank.difficulty || "Not specified"}
+    </span>
+  </div>
 
-              <span>Easy</span>
-            </div>
+  <div className="flex justify-between">
+    <span className="text-gray-500">Estimated Time</span>
+    <span className="font-semibold">
+      {bank.estimated_minutes ?? 0} mins
+    </span>
+  </div>
 
-            <span>{bank.easy_questions}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <div className="flex items-center gap-2">
-              <Circle size={10} className="fill-yellow-500 text-yellow-500" />
-
-              <span>Medium</span>
-            </div>
-
-            <span>{bank.medium_questions}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <div className="flex items-center gap-2">
-              <Circle size={10} className="fill-red-500 text-red-500" />
-
-              <span>Hard</span>
-            </div>
-
-            <span>{bank.hard_questions}</span>
-          </div>
-        </div>
+  <div className="flex justify-between">
+    <span className="text-gray-500">Questions to Pick</span>
+    <span className="font-semibold">
+      {bank.questions_to_pick ?? bank.total_questions}
+    </span>
+  </div>
+</div>
         <div className="grid grid-cols-2 gap-3 mt-8">
           <button
             onClick={() => onOpen(bank)}
