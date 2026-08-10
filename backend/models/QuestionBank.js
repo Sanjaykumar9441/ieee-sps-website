@@ -48,6 +48,37 @@ class QuestionBank {
   static async create(data) {
     const { assessment_id, questions_to_pick, ...bankData } = data;
 
+    if (!assessment_id) {
+      return {
+        error: {
+          message: "Assessment ID is required.",
+        },
+      };
+    }
+
+    // Get subject from the assessment
+    const { data: assessment, error: assessmentError } = await supabase
+      .from("assessments")
+      .select("subject_id")
+      .eq("id", assessment_id)
+      .single();
+
+    if (assessmentError) {
+      return { error: assessmentError };
+    }
+
+    if (!assessment?.subject_id) {
+      return {
+        error: {
+          message: "This assessment does not have a subject assigned.",
+        },
+      };
+    }
+
+    // Question bank uses the assessment's subject
+    bankData.subject_id = assessment.subject_id;
+
+    // Supabase enum requires uppercase values
     if (bankData.difficulty) {
       bankData.difficulty = bankData.difficulty.toUpperCase();
     }
