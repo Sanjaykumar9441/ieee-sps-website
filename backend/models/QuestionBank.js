@@ -49,7 +49,7 @@ class QuestionBank {
     const { assessment_id, questions_to_pick, ...bankData } = data;
 
     if (bankData.difficulty) {
-      bankData.difficulty = bankData.difficulty.toLowerCase();
+      bankData.difficulty = bankData.difficulty.toUpperCase();
     }
 
     const { data: bank, error } = await supabase
@@ -79,7 +79,7 @@ class QuestionBank {
     const { questions_to_pick, assessment_id, ...bankData } = data;
 
     if (bankData.difficulty) {
-      bankData.difficulty = bankData.difficulty.toLowerCase();
+      bankData.difficulty = bankData.difficulty.toUpperCase();
     }
 
     const { data: bank, error } = await supabase
