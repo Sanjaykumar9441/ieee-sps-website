@@ -42,6 +42,7 @@ const activityRoutes = require("./routes/activityRoutes");
 
 /* ===============================*/
 const assessmentRoutes = require("./routes/assessmentRoutes");
+const assessmentSettingsRoutes = require("./routes/assessmentSettingsRoutes");
 const questionBankRoutes = require("./routes/questionBankRoutes");
 const questionRoutes = require("./routes/questionRoutes");
 const studentAssessmentRoutes = require("./routes/studentAssessmentRoutes");
@@ -115,6 +116,7 @@ app.use("/uploads", express.static("uploads"));
    🧠 Assessment Routes
 ================================= */
 app.use("/api/assessments", assessmentRoutes);
+app.use("/api/assessment-settings", assessmentSettingsRoutes);
 app.use("/api/question-banks", questionBankRoutes);
 app.use("/api/questions", questionRoutes);
 app.use("/api/student-assessments", studentAssessmentRoutes);
@@ -214,9 +216,7 @@ const io = new Server(server, {
 initSocket(io);
 
 io.on("connection", (socket) => {
-
-  socket.on("disconnect", () => {
-  });
+  socket.on("disconnect", () => {});
 });
 
 server.listen(PORT, "0.0.0.0", () => {

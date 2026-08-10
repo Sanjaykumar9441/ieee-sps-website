@@ -17,46 +17,60 @@ exports.getLeaderboard = async (req, res) => {
       });
     }
 
+    // ---------------------------------------------------------
+    // Assessment configuration
+    // ---------------------------------------------------------
+
     const { data: assessment, error: assessmentError } = await supabase
-  .from("assessments")
-  .select(
-    "total_questions, marks_per_question, pass_percentage, passing_score",
-  )
-  .eq("id", assessmentId)
-  .single();
+      .from("assessments")
+      .select(
+        "total_questions, marks_per_question, pass_percentage, passing_score",
+      )
+      .eq("id", assessmentId)
+      .single();
 
-if (assessmentError || !assessment) {
-  return res.status(404).json({
-    success: false,
-    message: "Assessment not found.",
-  });
-}
+    if (assessmentError || !assessment) {
+      return res.status(404).json({
+        success: false,
+        message: "Assessment not found.",
+      });
+    }
 
-const { data, error } = await supabase
-  .from("assessment_attempts")
-  .select(
-    `
-    id,
-    student_id,
-    score,
-    correct,
-    wrong,
-    unanswered,
-    percentage,
-    submitted_at,
-    started_at,
-    assessment_allowed_students(
-      name,
-      roll_no,
-      department,
-      section
-    )
-  `,
-  )
-  .eq("assessment_id", assessmentId)
-  .eq("status", "SUBMITTED");
+    // ---------------------------------------------------------
+    // Submitted attempts
+    // ---------------------------------------------------------
 
-    if (error) throw error;
+    const { data, error } = await supabase
+      .from("assessment_attempts")
+      .select(
+        `
+        id,
+        student_id,
+        score,
+        correct,
+        wrong,
+        unanswered,
+        percentage,
+        submitted_at,
+        started_at,
+        assessment_allowed_students(
+          name,
+          roll_no,
+          email,
+          branch
+        )
+        `,
+      )
+      .eq("assessment_id", assessmentId)
+      .eq("status", "SUBMITTED");
+
+    if (error) {
+      throw error;
+    }
+
+    // ---------------------------------------------------------
+    // Build leaderboard
+    // ---------------------------------------------------------
 
     const leaderboard = (data || [])
       .map((student) => {
@@ -74,15 +88,15 @@ const { data, error } = await supabase
             : 0;
 
         const maximumMarks =
-  Number(assessment.total_questions || 0) *
-  Number(assessment.marks_per_question || 0);
+          Number(assessment.total_questions || 0) *
+          Number(assessment.marks_per_question || 0);
 
-const scorePercentage =
-  maximumMarks > 0
-    ? Number(
-        ((Number(student.score || 0) / maximumMarks) * 100).toFixed(2),
-      )
-    : 0;
+        const scorePercentage =
+          maximumMarks > 0
+            ? Number(
+                ((Number(student.score || 0) / maximumMarks) * 100).toFixed(2),
+              )
+            : 0;
 
         return {
           attemptId: student.id,
@@ -93,9 +107,9 @@ const scorePercentage =
 
           rollNo: student.assessment_allowed_students?.roll_no,
 
-          department: student.assessment_allowed_students?.department,
+          email: student.assessment_allowed_students?.email,
 
-          section: student.assessment_allowed_students?.section,
+          branch: student.assessment_allowed_students?.branch,
 
           status: "SUBMITTED",
 
@@ -118,23 +132,18 @@ const scorePercentage =
           startedAt: student.started_at,
         };
       })
-      .sort((a, b) => {
-        /*
-        ----------------------------------------------------
-        1. Higher score first
-        ----------------------------------------------------
-        */
 
+      // -------------------------------------------------------
+      // Ranking
+      // -------------------------------------------------------
+
+      .sort((a, b) => {
+        // 1. Higher score first
         if (b.score !== a.score) {
           return b.score - a.score;
         }
 
-        /*
-        ----------------------------------------------------
-        2. Earlier submission first
-        ----------------------------------------------------
-        */
-
+        // 2. Earlier submission first
         const aTime = a.submittedAt
           ? new Date(a.submittedAt).getTime()
           : Number.MAX_SAFE_INTEGER;
@@ -147,25 +156,18 @@ const scorePercentage =
           return aTime - bTime;
         }
 
-        /*
-        ----------------------------------------------------
-        3. Roll number as final tie-breaker
-        ----------------------------------------------------
-        */
-
+        // 3. Roll number
         return (a.rollNo || "").localeCompare(b.rollNo || "");
       })
+
       .map((student, index) => ({
         ...student,
-
         rank: index + 1,
       }));
 
     return res.json({
       success: true,
-
       totalStudents: leaderboard.length,
-
       leaderboard,
     });
   } catch (err) {
@@ -173,7 +175,6 @@ const scorePercentage =
 
     return res.status(500).json({
       success: false,
-
       message: err.message,
     });
   }
