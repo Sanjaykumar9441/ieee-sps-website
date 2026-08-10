@@ -178,7 +178,7 @@ export const getDashboardAnalytics = async (
   assessmentId: string,
   department = "all",
 ) => {
-  const { data } = await api.get(`/dashboard-analytics/${assessmentId}`, {
+  const { data } = await api.get(`/admin/dashboard-analytics/${assessmentId}`, {
     params: {
       department,
     },
