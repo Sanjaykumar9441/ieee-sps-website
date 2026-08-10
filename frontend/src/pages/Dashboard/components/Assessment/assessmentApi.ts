@@ -247,26 +247,26 @@ export const getStudentDetails = async (studentId: string) => {
 };
 
 export const getLiveStudents = async (assessmentId: string) => {
-  const { data } = await api.get(`/live-monitor/${assessmentId}`);
+  const { data } = await api.get(`/admin/live-monitor/${assessmentId}`);
 
   return data.students;
 };
 
 export const getLiveStudentDetails = async (attemptId: string) => {
-  const { data } = await api.get(`/live-monitor/attempt/${attemptId}`);
+  const { data } = await api.get(`/admin/live-monitor/attempt/${attemptId}`);
 
   return data;
 };
 
 export const forceSubmitAttempt = async (attemptId: string) => {
-  const { data } = await api.post(`/admin-force-submit/student/${attemptId}`);
+  const { data } = await api.post(`/admin/force-submit/student/${attemptId}`);
 
   return data;
 };
 
 export const disqualifyAttempt = async (attemptId: string, reason: string) => {
   const { data } = await api.post(
-    `/admin-force-submit/student/${attemptId}/disqualify`,
+    `/admin/force-submit/student/${attemptId}/disqualify`,
     {
       reason,
     },
@@ -276,7 +276,7 @@ export const disqualifyAttempt = async (attemptId: string, reason: string) => {
 };
 
 export const getLeaderboard = async (assessmentId: string) => {
-  const { data } = await api.get(`/leaderboard/${assessmentId}`);
+  const { data } = await api.get(`/admin/leaderboard/${assessmentId}`);
 
   return data.leaderboard;
 };
