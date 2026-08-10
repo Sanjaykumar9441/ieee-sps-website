@@ -62,6 +62,10 @@ exports.getDashboardAnalytics = async (req, res) => {
       filteredAllowedStudents.map((student) => student.id),
     );
 
+    const allowedStudentMap = new Map(
+      filteredAllowedStudents.map((student) => [student.id, student]),
+    );
+
     const participants = filteredAllowedStudents.length;
 
     const loggedIn = filteredAllowedStudents.filter(
@@ -72,23 +76,12 @@ exports.getDashboardAnalytics = async (req, res) => {
        ATTEMPTS
     ======================================================== */
 
-    const { data: attempts, error: attemptsError } = await supabase
+    const { data: attempts, error: attemptError } = await supabase
       .from("assessment_attempts")
-      .select(
-        `
-        *,
-        assessment_allowed_students(
-          id,
-          name,
-          roll_no,
-          email,
-          branch,
-        )
-      `,
-      )
+      .select("*")
       .eq("assessment_id", assessmentId);
 
-    if (attemptsError) throw attemptsError;
+    if (attemptError) throw attemptError;
 
     let filteredAttempts = (attempts || []).filter((attempt) =>
       allowedStudentIds.has(attempt.student_id),
@@ -234,7 +227,7 @@ Students whose attempt is currently IN_PROGRESS.
     const departmentMap = {};
 
     for (const attempt of submittedAttempts) {
-      const student = attempt.assessment_allowed_students;
+      const student = allowedStudentMap.get(attempt.student_id);
 
       const branch = student?.branch || "Unknown";
 
@@ -280,7 +273,7 @@ Students whose attempt is currently IN_PROGRESS.
     ======================================================== */
 
     const performerData = submittedAttempts.map((attempt) => {
-      const student = attempt.assessment_allowed_students;
+      const student = allowedStudentMap.get(attempt.student_id);
 
       let timeTaken = 0;
 
@@ -358,32 +351,37 @@ Students whose attempt is currently IN_PROGRESS.
        QUESTION ANALYSIS
     ======================================================== */
 
-    const { data: attemptQuestions, error: questionsError } = await supabase
-      .from("assessment_attempt_questions")
-      .select(
-        `
-      id,
-      attempt_id,
-      question_id,
-      question_order,
-      correct_answers,
-      marks,
-      negative_marks,
-      questions(
-        question_text,
-        difficulty
-      ),
-      assessment_answers(
-        selected_answers
-      )
-    `,
-      )
-      .in(
-        "attempt_id",
-        submittedAttempts.map((attempt) => attempt.id),
-      );
+    let attemptQuestions = [];
 
-    if (questionsError) throw questionsError;
+    const submittedAttemptIds = submittedAttempts.map((attempt) => attempt.id);
+
+    if (submittedAttemptIds.length > 0) {
+      const { data, error: questionsError } = await supabase
+        .from("assessment_attempt_questions")
+        .select(
+          `
+        id,
+        attempt_id,
+        question_id,
+        question_order,
+        correct_answers,
+        marks,
+        negative_marks,
+        questions(
+          question_text,
+          difficulty
+        ),
+        assessment_answers(
+          selected_answers
+        )
+      `,
+        )
+        .in("attempt_id", submittedAttemptIds);
+
+      if (questionsError) throw questionsError;
+
+      attemptQuestions = data || [];
+    }
 
     const questionMap = {};
 
@@ -527,20 +525,24 @@ Students whose attempt is currently IN_PROGRESS.
       database field, so don't invent one.
     */
 
-    const { data: forceSubmitActivities, error: forceSubmitError } =
-      await supabase
+    let forceSubmitActivities = [];
+
+    const filteredAttemptIds = filteredAttempts.map((attempt) => attempt.id);
+
+    if (filteredAttemptIds.length > 0) {
+      const { data, error: forceSubmitError } = await supabase
         .from("assessment_activity")
         .select("attempt_id")
         .eq("activity_type", "FORCE_SUBMIT")
-        .in(
-          "attempt_id",
-          filteredAttempts.map((attempt) => attempt.id),
-        );
+        .in("attempt_id", filteredAttemptIds);
 
-    if (forceSubmitError) throw forceSubmitError;
+      if (forceSubmitError) throw forceSubmitError;
+
+      forceSubmitActivities = data || [];
+    }
 
     const forceSubmitted = new Set(
-      (forceSubmitActivities || []).map((activity) => activity.attempt_id),
+      forceSubmitActivities.map((activity) => activity.attempt_id),
     ).size;
 
     /* ========================================================
