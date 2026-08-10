@@ -28,7 +28,7 @@ export default function CreateQuestionBankModal({
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [difficulty, setDifficulty] = useState("Medium");
+  const [difficulty, setDifficulty] = useState("easy");
   const [estimatedMinutes, setEstimatedMinutes] = useState(30);
   const [questionsToPick, setQuestionsToPick] = useState(10);
 
@@ -40,13 +40,13 @@ export default function CreateQuestionBankModal({
     if (bank) {
       setName(bank.name || "");
       setDescription(bank.description || "");
-      setDifficulty(bank.difficulty || "Medium");
+      setDifficulty((bank.difficulty || "easy").toLowerCase());
       setEstimatedMinutes(bank.estimated_minutes ?? 30);
       setQuestionsToPick(bank.questions_to_pick ?? 10);
     } else {
       setName("");
       setDescription("");
-      setDifficulty("Medium");
+      setDifficulty("easy");
       setEstimatedMinutes(30);
       setQuestionsToPick(10);
     }
@@ -180,9 +180,9 @@ export default function CreateQuestionBankModal({
               onChange={(e) => setDifficulty(e.target.value)}
               className="w-full rounded-xl border px-4 py-3 outline-none transition focus:border-[#00629B]"
             >
-              <option value="Easy">Easy</option>
-              <option value="Medium">Medium</option>
-              <option value="Hard">Hard</option>
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
             </select>
           </div>
 

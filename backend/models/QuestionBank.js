@@ -48,6 +48,10 @@ class QuestionBank {
   static async create(data) {
     const { assessment_id, questions_to_pick, ...bankData } = data;
 
+    if (bankData.difficulty) {
+      bankData.difficulty = bankData.difficulty.toLowerCase();
+    }
+
     const { data: bank, error } = await supabase
       .from(TABLE)
       .insert(bankData)
@@ -73,6 +77,10 @@ class QuestionBank {
 
   static async update(id, data) {
     const { questions_to_pick, assessment_id, ...bankData } = data;
+
+    if (bankData.difficulty) {
+      bankData.difficulty = bankData.difficulty.toLowerCase();
+    }
 
     const { data: bank, error } = await supabase
       .from(TABLE)
