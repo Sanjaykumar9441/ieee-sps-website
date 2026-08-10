@@ -115,9 +115,56 @@ exports.create = async (req, res) => {
   try {
     const body = req.body;
 
-    const { data, error } = await QuestionBank.create(body);
+    console.log("CREATE QUESTION BANK BODY:", body);
 
-    if (error) throw error;
+    if (!body.assessment_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Assessment ID is required.",
+      });
+    }
+
+    if (!body.name?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Question bank name is required.",
+      });
+    }
+
+    if (
+      body.questions_to_pick === undefined ||
+      Number(body.questions_to_pick) < 1
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Questions to pick must be at least 1.",
+      });
+    }
+
+    const payload = {
+      assessment_id: body.assessment_id,
+      name: body.name.trim(),
+      description: body.description || null,
+      difficulty: body.difficulty || "Medium",
+      estimated_minutes: Number(body.estimated_minutes || 30),
+      questions_to_pick: Number(body.questions_to_pick),
+    };
+
+    console.log("QUESTION BANK PAYLOAD:", payload);
+
+    const { data, error } = await QuestionBank.create(payload);
+
+    if (error) {
+      console.error("QUESTION BANK SUPABASE ERROR:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+        code: error.code || null,
+        details: error.details || null,
+        hint: error.hint || null,
+      });
+    }
 
     liveEvents.emitQuestionBankCreated(body.assessment_id, data);
 
@@ -127,6 +174,8 @@ exports.create = async (req, res) => {
       questionBank: data,
     });
   } catch (err) {
+    console.error("CREATE QUESTION BANK ERROR:", err);
+
     return res.status(500).json({
       success: false,
       message: err.message,

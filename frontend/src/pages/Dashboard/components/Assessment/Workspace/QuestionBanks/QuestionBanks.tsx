@@ -11,7 +11,7 @@ import { Assessment } from "../../../Assessment/AssessmentCard";
 import {
   getQuestionBanks,
   deleteQuestionBank,
-  duplicateQuestionBank
+  duplicateQuestionBank,
 } from "../../../Assessment/assessmentApi";
 
 export interface QuestionBank {
@@ -68,18 +68,18 @@ export default function QuestionBanks({ assessment }: Props) {
   };
 
   const handleDuplicate = async (id: string) => {
-  try {
-    await duplicateQuestionBank(id);
+    try {
+      await duplicateQuestionBank(id);
 
-    toast.success("Question Bank duplicated");
+      toast.success("Question Bank duplicated");
 
-    fetchBanks();
-  } catch (err) {
-    console.error(err);
+      fetchBanks();
+    } catch (err) {
+      console.error(err);
 
-    toast.error("Duplicate failed");
-  }
-};
+      toast.error("Duplicate failed");
+    }
+  };
 
   const handleDelete = async (id: string) => {
     try {
