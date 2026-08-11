@@ -912,20 +912,15 @@ exports.importStudents = async (req, res) => {
 
       batchEmails.add(email);
       batchRollNumbers.add(rollNo.toLowerCase());
-
       validStudents.push({
         assessment_id: assessmentId,
         name,
         roll_no: rollNo,
         email,
-        department: department || null,
-        year: year ? parsedYear : null,
-        section: section || null,
-
+        branch: department || null,
         status: "allowed",
         has_logged_in: false,
         first_login_at: null,
-        otp_sent: false,
       });
     });
 
