@@ -32,12 +32,62 @@ class Assessment {
     return query;
   }
 
+  static async getSubjectById(subjectId) {
+    return supabase
+      .from("subjects")
+      .select("id, name, category_id")
+      .eq("id", subjectId)
+      .eq("is_active", true)
+      .single();
+  }
+
   static async getById(id) {
     return supabase.from(TABLE).select("*").eq("id", id).single();
   }
 
   static async create(data) {
-    return supabase.from(TABLE).insert(data).select().single();
+    const payload = {
+      title: data.title,
+      slug: data.slug,
+      description: data.description,
+      instructions: data.instructions,
+      banner_image: data.banner_image,
+
+      category_id: data.category_id,
+      subject_id: data.subject_id,
+
+      start_time: data.start_time,
+      end_time: data.end_time,
+
+      duration_minutes: data.duration_minutes,
+      total_questions: data.total_questions,
+      marks_per_question: data.marks_per_question,
+      negative_marks: data.negative_marks,
+
+      shuffle_questions: data.shuffle_questions,
+      shuffle_options: data.shuffle_options,
+      random_questions: data.random_questions,
+
+      allow_resume: data.allow_resume,
+      auto_submit: data.auto_submit,
+
+      show_leaderboard: data.show_leaderboard,
+      anti_cheat_enabled: data.anti_cheat_enabled,
+      socket_monitoring: data.socket_monitoring,
+
+      pass_percentage: data.pass_percentage,
+      passing_score: data.passing_score,
+
+      status: data.status || "DRAFT",
+      is_active: data.is_active ?? false,
+
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    console.log("ASSESSMENT INSERT PAYLOAD:", payload);
+
+    return supabase.from(TABLE).insert(payload).select().single();
   }
 
   static async update(id, data) {

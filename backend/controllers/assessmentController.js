@@ -91,17 +91,115 @@ exports.createAssessment = async (req, res) => {
   try {
     const body = { ...req.body };
 
+    console.log("========== CREATE ASSESSMENT ==========");
+    console.log("REQUEST BODY:", body);
+    console.log("CATEGORY ID:", body.category_id);
+    console.log("SUBJECT ID:", body.subject_id);
+
+    // --------------------------------------------------
+    // Required validation
+    // --------------------------------------------------
+
+    if (!body.title?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Assessment title is required.",
+      });
+    }
+
+    if (!body.category_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Assessment category is required.",
+      });
+    }
+
+    if (!body.subject_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Assessment subject is required.",
+      });
+    }
+
+    // --------------------------------------------------
+    // Verify subject belongs to selected category
+    // --------------------------------------------------
+
+    const { data: subject, error: subjectError } =
+      await Assessment.getSubjectById(body.subject_id);
+
+    if (subjectError) {
+      console.error("SUBJECT LOOKUP ERROR:", subjectError);
+
+      return res.status(500).json({
+        success: false,
+        message: subjectError.message,
+      });
+    }
+
+    if (!subject) {
+      return res.status(400).json({
+        success: false,
+        message: "Selected subject does not exist.",
+      });
+    }
+
+    if (subject.category_id !== body.category_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Selected subject does not belong to the selected category.",
+      });
+    }
+
+    // --------------------------------------------------
+    // Calculate passing score
+    // --------------------------------------------------
+
     if (body.passing_score == null && body.pass_percentage != null) {
       body.passing_score =
-        (body.total_questions *
-          body.marks_per_question *
-          body.pass_percentage) /
+        (Number(body.total_questions) *
+          Number(body.marks_per_question) *
+          Number(body.pass_percentage)) /
         100;
     }
 
+    // --------------------------------------------------
+    // Explicitly normalize IDs
+    // --------------------------------------------------
+
+    body.category_id = String(body.category_id).trim();
+    body.subject_id = String(body.subject_id).trim();
+
+    console.log("FINAL ASSESSMENT PAYLOAD:", body);
+
+    // --------------------------------------------------
+    // Create assessment
+    // --------------------------------------------------
+
     const { data, error } = await Assessment.create(body);
 
-    if (error) throw error;
+    if (error) {
+      console.error("ASSESSMENT SUPABASE ERROR:", error);
+      throw error;
+    }
+
+    console.log("CREATED ASSESSMENT:", data);
+
+    // --------------------------------------------------
+    // Safety check
+    // --------------------------------------------------
+
+    if (!data?.subject_id) {
+      console.error(
+        "CRITICAL: Assessment was created without subject_id:",
+        data,
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Assessment was created, but subject_id was not saved.",
+      });
+    }
 
     return res.status(201).json({
       success: true,
@@ -109,6 +207,8 @@ exports.createAssessment = async (req, res) => {
       assessment: data,
     });
   } catch (err) {
+    console.error("CREATE ASSESSMENT ERROR:", err);
+
     return res.status(500).json({
       success: false,
       message: err.message,
