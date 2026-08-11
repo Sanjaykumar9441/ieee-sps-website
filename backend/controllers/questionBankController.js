@@ -157,9 +157,11 @@ exports.create = async (req, res) => {
     if (error) {
       console.error("QUESTION BANK SUPABASE ERROR:", error);
 
-      return res.status(500).json({
+      const statusCode = error.code === "23505" ? 409 : 500;
+
+      return res.status(statusCode).json({
         success: false,
-        message: error.message,
+        message: error.message || "Unable to create Question Bank",
         code: error.code || null,
         details: error.details || null,
         hint: error.hint || null,
@@ -514,7 +516,7 @@ exports.finalImport = async (req, res) => {
       total_questions: count || 0,
     });
 
-   const { data: bank } = await QuestionBank.get(bankId);
+    const { data: bank } = await QuestionBank.get(bankId);
 
     if (bank?.assessment_id) {
       liveEvents.emitQuestionBankUpdated(bank.assessment_id, bank);

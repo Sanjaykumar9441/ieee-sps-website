@@ -56,7 +56,17 @@ class QuestionBank {
       };
     }
 
-    // Get subject from the assessment
+    if (!bankData.name?.trim()) {
+      return {
+        error: {
+          message: "Question bank name is required.",
+        },
+      };
+    }
+
+    // ---------------------------------------------------------
+    // 1. Get subject from assessment
+    // ---------------------------------------------------------
     const { data: assessment, error: assessmentError } = await supabase
       .from("assessments")
       .select("subject_id")
@@ -75,35 +85,166 @@ class QuestionBank {
       };
     }
 
-    // Question bank uses the assessment's subject
     bankData.subject_id = assessment.subject_id;
+    bankData.name = bankData.name.trim();
 
     // Supabase enum requires uppercase values
     if (bankData.difficulty) {
       bankData.difficulty = bankData.difficulty.toUpperCase();
     }
 
-    const { data: bank, error } = await supabase
+    // ---------------------------------------------------------
+    // 2. Check whether this reusable bank already exists
+    // ---------------------------------------------------------
+    const { data: existingBank, error: existingBankError } = await supabase
+      .from(TABLE)
+      .select("*")
+      .eq("subject_id", bankData.subject_id)
+      .eq("name", bankData.name)
+      .maybeSingle();
+
+    if (existingBankError) {
+      return { error: existingBankError };
+    }
+
+    // ---------------------------------------------------------
+    // 3. Existing bank found
+    // ---------------------------------------------------------
+    if (existingBank) {
+      console.log(
+        "QUESTION BANK ALREADY EXISTS:",
+        existingBank.id,
+        existingBank.name,
+      );
+
+      // Reactivate if it was previously disabled
+      if (existingBank.is_active === false) {
+        const { data: activatedBank, error: activateError } = await supabase
+          .from(TABLE)
+          .update({
+            is_active: true,
+          })
+          .eq("id", existingBank.id)
+          .select()
+          .single();
+
+        if (activateError) {
+          return { error: activateError };
+        }
+
+        existingBank.is_active = activatedBank.is_active;
+      }
+
+      // -------------------------------------------------------
+      // 4. Check whether this bank is already mapped
+      //    to this assessment
+      // -------------------------------------------------------
+      const { data: existingMapping, error: mappingCheckError } = await supabase
+        .from(MAPPING_TABLE)
+        .select("assessment_id, question_bank_id, questions_to_pick")
+        .eq("assessment_id", assessment_id)
+        .eq("question_bank_id", existingBank.id)
+        .maybeSingle();
+
+      if (mappingCheckError) {
+        return { error: mappingCheckError };
+      }
+
+      // -------------------------------------------------------
+      // 5. Mapping already exists
+      // -------------------------------------------------------
+      if (existingMapping) {
+        const { data: updatedMapping, error: updateMappingError } =
+          await supabase
+            .from(MAPPING_TABLE)
+            .update({
+              questions_to_pick: Number(questions_to_pick),
+            })
+            .eq("assessment_id", assessment_id)
+            .eq("question_bank_id", existingBank.id)
+            .select()
+            .single();
+
+        if (updateMappingError) {
+          return { error: updateMappingError };
+        }
+
+        return {
+          data: {
+            ...existingBank,
+            questions_to_pick: updatedMapping.questions_to_pick,
+            reused: true,
+          },
+        };
+      }
+
+      // -------------------------------------------------------
+      // 6. Existing reusable bank, but new assessment
+      //    Create only the mapping
+      // -------------------------------------------------------
+      const { data: newMapping, error: newMappingError } = await supabase
+        .from(MAPPING_TABLE)
+        .insert({
+          assessment_id,
+          question_bank_id: existingBank.id,
+          questions_to_pick: Number(questions_to_pick),
+        })
+        .select()
+        .single();
+
+      if (newMappingError) {
+        return { error: newMappingError };
+      }
+
+      return {
+        data: {
+          ...existingBank,
+          questions_to_pick: newMapping.questions_to_pick,
+          reused: true,
+        },
+      };
+    }
+
+    // ---------------------------------------------------------
+    // 7. No existing bank → create a NEW reusable bank
+    // ---------------------------------------------------------
+    const { data: bank, error: bankError } = await supabase
       .from(TABLE)
       .insert(bankData)
       .select()
       .single();
 
-    if (error) return { error };
+    if (bankError) {
+      return { error: bankError };
+    }
 
-    const { error: mappingError } = await supabase.from(MAPPING_TABLE).insert({
-      assessment_id,
-      question_bank_id: bank.id,
-      questions_to_pick,
-    });
+    // ---------------------------------------------------------
+    // 8. Map the new bank to this assessment
+    // ---------------------------------------------------------
+    const { data: newMapping, error: mappingError } = await supabase
+      .from(MAPPING_TABLE)
+      .insert({
+        assessment_id,
+        question_bank_id: bank.id,
+        questions_to_pick: Number(questions_to_pick),
+      })
+      .select()
+      .single();
 
+    // Rollback bank if mapping fails
     if (mappingError) {
       await supabase.from(TABLE).delete().eq("id", bank.id);
 
       return { error: mappingError };
     }
 
-    return { data: bank };
+    return {
+      data: {
+        ...bank,
+        questions_to_pick: newMapping.questions_to_pick,
+        reused: false,
+      },
+    };
   }
 
   static async update(id, data) {
