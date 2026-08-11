@@ -514,7 +514,7 @@ exports.finalImport = async (req, res) => {
       total_questions: count || 0,
     });
 
-    const { data: bank } = await QuestionBank.getById(bankId);
+   const { data: bank } = await QuestionBank.get(bankId);
 
     if (bank?.assessment_id) {
       liveEvents.emitQuestionBankUpdated(bank.assessment_id, bank);

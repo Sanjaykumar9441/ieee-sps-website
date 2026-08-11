@@ -127,6 +127,48 @@ export const getQuestions = async (questionBankId: string) => {
   return data.questions;
 };
 
+export const importQuestions = async (bankId: string, questions: any[]) => {
+  const { data } = await api.post(`/questions/bank/${bankId}/import`, {
+    questions,
+  });
+
+  return data;
+};
+
+export const checkQuestionDuplicates = async (
+  bankId: string,
+  questions: any[],
+) => {
+  const { data } = await api.post(
+    `/questions/bank/${bankId}/check-duplicates`,
+    { questions },
+  );
+
+  return data;
+};
+
+export const validateImportedQuestions = async (
+  bankId: string,
+  questions: any[],
+) => {
+  const { data } = await api.post(`/questions/bank/${bankId}/validate`, {
+    questions,
+  });
+
+  return data;
+};
+
+export const finalImportQuestions = async (
+  bankId: string,
+  questions: any[],
+) => {
+  const { data } = await api.post(`/questions/bank/${bankId}/final-import`, {
+    questions,
+  });
+
+  return data;
+};
+
 export const getQuestion = async (id: string) => {
   const { data } = await api.get(`/questions/${id}`);
 

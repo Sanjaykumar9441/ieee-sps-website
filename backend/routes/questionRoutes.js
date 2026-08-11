@@ -3,25 +3,41 @@ const router = express.Router();
 
 const questionController = require("../controllers/questionController");
 
-// List all questions in a Question Bank
+// ============================================================
+// LIST / SEARCH
+// ============================================================
+
 router.get("/bank/:questionBankId", questionController.list);
 
-// Search questions
 router.get("/bank/:questionBankId/search", questionController.search);
 
-// Get one question
+// ============================================================
+// IMPORT
+// ============================================================
+
+router.post("/bank/:bankId/import", questionController.importQuestions);
+
+router.post(
+  "/bank/:bankId/check-duplicates",
+  questionController.checkDuplicates,
+);
+
+router.post("/bank/:bankId/validate", questionController.validateQuestions);
+
+router.post("/bank/:bankId/final-import", questionController.finalImport);
+
+// ============================================================
+// SINGLE QUESTION
+// ============================================================
+
 router.get("/:id", questionController.get);
 
-// Create question
 router.post("/", questionController.create);
 
-// Update question
 router.put("/:id", questionController.update);
 
-// Delete question
 router.delete("/:id", questionController.delete);
 
-// Duplicate question
 router.post("/:id/duplicate", questionController.duplicate);
 
 module.exports = router;
