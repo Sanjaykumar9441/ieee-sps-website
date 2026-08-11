@@ -9,7 +9,8 @@ export const departments = [
   "Civil Engineering",
   "Agricultural Engineering",
   "Mining",
-  "petroleum"
+  "Petroleum",
+  "Other Department"
 ];
 
 export const years = [

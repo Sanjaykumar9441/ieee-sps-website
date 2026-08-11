@@ -1,5 +1,4 @@
 import { useState } from "react";
-import axios from "axios";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
 import {
@@ -10,8 +9,11 @@ import {
   Download,
   X,
 } from "lucide-react";
-
-const API = import.meta.env.VITE_API_URL;
+import {
+  validateImportedQuestions,
+  checkQuestionDuplicates,
+  finalImportQuestions,
+} from "../../../Assessment/assessmentApi";
 
 interface Props {
   open: boolean;
@@ -148,47 +150,21 @@ export default function ImportQuestionsModal({
 
   const handleValidate = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const data = await validateImportedQuestions(bankId, preview);
 
-      const { data } = await axios.post(
-        `${API}/api/question-banks/${bankId}/validate`,
-        {
-          questions: preview,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      setValidation(data.results || []);
-
+      setValidation(data.results || data.errors || []);
       setStep("validation");
 
       toast.success("Validation completed");
     } catch (err) {
       console.error(err);
-
       toast.error("Validation failed");
     }
   };
 
   const handleDuplicateCheck = async () => {
     try {
-      const token = localStorage.getItem("token");
-
-      const { data } = await axios.post(
-        `${API}/api/question-banks/${bankId}/duplicates`,
-        {
-          questions: preview,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const data = await checkQuestionDuplicates(bankId, preview);
 
       setDuplicates(data.duplicates || []);
       setDuplicateChecked(true);
@@ -196,29 +172,15 @@ export default function ImportQuestionsModal({
       toast.success("Duplicate check completed");
     } catch (err) {
       console.error(err);
-
       toast.error("Unable to detect duplicates");
     }
   };
 
   const handleImport = async () => {
     try {
-      const token = localStorage.getItem("token");
-
-      const { data } = await axios.post(
-        `${API}/api/question-banks/${bankId}/final-import`,
-        {
-          questions: preview,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const data = await finalImportQuestions(bankId, preview);
 
       setSummary(data);
-
       setStep("summary");
 
       toast.success("Questions imported");
@@ -226,7 +188,6 @@ export default function ImportQuestionsModal({
       onSuccess();
     } catch (err) {
       console.error(err);
-
       toast.error("Import failed");
     }
   };

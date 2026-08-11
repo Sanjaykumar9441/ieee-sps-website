@@ -56,7 +56,19 @@ exports.get = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { data, error } = await Question.create(req.body);
+    const payload = {
+      ...req.body,
+
+      difficulty: String(req.body.difficulty || "MEDIUM")
+        .trim()
+        .toUpperCase(),
+
+      question_type: String(req.body.question_type || "MCQ")
+        .trim()
+        .toUpperCase(),
+    };
+
+    const { data, error } = await Question.create(payload);
 
     if (error) throw error;
 
@@ -84,7 +96,19 @@ exports.update = async (req, res) => {
       });
     }
 
-    const { data, error } = await Question.update(id, req.body);
+    const payload = {
+      ...req.body,
+
+      ...(req.body.difficulty !== undefined && {
+        difficulty: String(req.body.difficulty).trim().toUpperCase(),
+      }),
+
+      ...(req.body.question_type !== undefined && {
+        question_type: String(req.body.question_type).trim().toUpperCase(),
+      }),
+    };
+
+    const { data, error } = await Question.update(id, payload);
 
     if (error) throw error;
 
@@ -304,7 +328,11 @@ exports.validateQuestions = async (req, res) => {
         errors.push(`Row ${row}: Invalid question type.`);
       }
 
-      if (!["Easy", "Medium", "Hard"].includes(question.difficulty)) {
+      const difficulty = String(question.difficulty || "")
+        .trim()
+        .toUpperCase();
+
+      if (!["EASY", "MEDIUM", "HARD"].includes(difficulty)) {
         errors.push(`Row ${row}: Difficulty must be Easy, Medium or Hard.`);
       }
 
@@ -383,16 +411,31 @@ exports.finalImport = async (req, res) => {
 
     const rows = questions.map((question) => ({
       ...question,
+
       bank_id: bankId,
+
+      difficulty: String(question.difficulty || "MEDIUM")
+        .trim()
+        .toUpperCase(),
+
+      question_type: String(question.question_type || "MCQ")
+        .trim()
+        .toUpperCase(),
+
       options:
         question.question_type === "SUBJECTIVE" ? [] : question.options || [],
+
       correct_answers:
         question.question_type === "SUBJECTIVE"
           ? []
           : question.correct_answers || [],
+
       tags: question.tags || [],
+
       language: question.language || "en",
+
       version: question.version || 1,
+
       is_active: true,
     }));
 
