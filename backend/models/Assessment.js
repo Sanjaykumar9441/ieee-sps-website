@@ -11,11 +11,7 @@ class Assessment {
   }
 
   static async getById(id) {
-    return supabase
-      .from(TABLE)
-      .select("*")
-      .eq("id", id)
-      .single();
+    return supabase.from(TABLE).select("*").eq("id", id).single();
   }
 
   // ✅ ADD THIS
@@ -30,30 +26,48 @@ class Assessment {
   static async create(data) {
     console.log(
       "🔥 Assessment.create() CALLED:",
-      JSON.stringify(data, null, 2)
+      JSON.stringify(data, null, 2),
     );
 
-    return supabase
-      .from(TABLE)
-      .insert(data)
-      .select()
-      .single();
+    return supabase.from(TABLE).insert(data).select().single();
   }
 
   static async update(id, data) {
+    return supabase.from(TABLE).update(data).eq("id", id).select().single();
+  }
+
+  static async delete(id) {
+    return supabase.from(TABLE).delete().eq("id", id);
+  }
+
+  static async publish(id) {
+    console.log("📢 Assessment.publish() CALLED:", id);
+
     return supabase
       .from(TABLE)
-      .update(data)
+      .update({
+        status: "PUBLISHED",
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", id)
       .select()
       .single();
   }
 
-  static async delete(id) {
+  static async unpublish(id) {
+    console.log("📢 Assessment.unpublish() CALLED:", id);
+
     return supabase
       .from(TABLE)
-      .delete()
-      .eq("id", id);
+      .update({
+        status: "DRAFT",
+        is_active: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
   }
 }
 
