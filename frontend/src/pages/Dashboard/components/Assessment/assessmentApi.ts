@@ -330,3 +330,45 @@ export const getLeaderboard = async (assessmentId: string) => {
 
   return data.leaderboard;
 };
+
+export const addStudent = async (payload: {
+  assessmentId: string;
+  name: string;
+  rollNo: string;
+  email: string;
+  branch?: string;
+}) => {
+  const { data } = await api.post("/student-auth/add", payload);
+  return data;
+};
+
+export const importStudents = async (
+  assessmentId: string,
+  students: Array<{
+    name: string;
+    roll_no: string;
+    email: string;
+    branch?: string;
+  }>,
+  fileName?: string,
+) => {
+  const { data } = await api.post("/student-auth/import", {
+    assessmentId,
+    students,
+    fileName,
+  });
+
+  return data;
+};
+
+export const addAllowedStudent = async (payload: {
+  assessmentId: string;
+  name: string;
+  rollNo: string;
+  email: string;
+  branch?: string | null;
+}) => {
+  const { data } = await api.post("/student-auth/add", payload);
+
+  return data;
+};

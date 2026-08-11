@@ -3,6 +3,8 @@ import toast from "react-hot-toast";
 import { socket } from "../../../../../lib/socket";
 import { Assessment } from "../../Assessment/AssessmentCard";
 import StudentDetailsDrawer from "./StudentDetailsDrawer";
+import AddStudentModal from "./AddStudentModal";
+import ImportStudentsModal from "./ImportStudentsModal";
 import {
   getAllowedStudents,
   sendBulkOtp,
@@ -13,27 +15,24 @@ import {
 
 export interface AllowedStudent {
   id: string;
-
-  roll_no: string;
+  assessment_id: string;
 
   name: string;
-
+  roll_no: string;
   email: string;
+  branch: string | null;
 
-  department: string;
+  has_logged_in: boolean;
+  first_login_at: string | null;
 
-  year: number;
-
-  section: string;
-
+  created_at: string;
   status: "allowed" | "blocked";
 
   otp_sent: boolean;
 
+  // Computed by backend
   logged_in: boolean;
-
   attempt_started: boolean;
-
   submitted: boolean;
 }
 
@@ -48,12 +47,6 @@ export default function Students({ assessment }: Props) {
 
   const [search, setSearch] = useState("");
 
-  const [department, setDepartment] = useState("all");
-
-  const [year, setYear] = useState("all");
-
-  const [section, setSection] = useState("all");
-
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
 
   const [processing, setProcessing] = useState(false);
@@ -64,51 +57,54 @@ export default function Students({ assessment }: Props) {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  const [addStudentOpen, setAddStudentOpen] = useState(false);
+  const [importStudentsOpen, setImportStudentsOpen] = useState(false);
+
   const fetchStudents = useCallback(async () => {
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const students = await getAllowedStudents(assessment.id);
+      const students = await getAllowedStudents(assessment.id);
 
-    setStudents(students || []);
-  } catch (err) {
-    console.error(err);
+      setStudents(students || []);
+    } catch (err) {
+      console.error(err);
 
-    toast.error("Unable to load students");
-  } finally {
-    setLoading(false);
-  }
-}, [assessment.id]);
+      toast.error("Unable to load students");
+    } finally {
+      setLoading(false);
+    }
+  }, [assessment.id]);
 
   useEffect(() => {
-  void fetchStudents();
-
-  socket.emit("joinAssessmentRoom", assessment.id);
-
-  const refresh = () => {
     void fetchStudents();
-  };
 
-  socket.on("studentStatusChanged", refresh);
-  socket.on("studentLoggedIn", refresh);
-  socket.on("studentSubmitted", refresh);
-  socket.on("dashboardRefresh", refresh);
-  socket.on("studentBlocked", refresh);
-  socket.on("studentUnblocked", refresh);
-  socket.on("studentDeleted", refresh);
+    socket.emit("joinAssessmentRoom", assessment.id);
 
-  return () => {
-    socket.off("studentStatusChanged", refresh);
-    socket.off("studentLoggedIn", refresh);
-    socket.off("studentSubmitted", refresh);
-    socket.off("dashboardRefresh", refresh);
-    socket.off("studentBlocked", refresh);
-    socket.off("studentUnblocked", refresh);
-    socket.off("studentDeleted", refresh);
+    const refresh = () => {
+      void fetchStudents();
+    };
 
-    socket.emit("leaveAssessmentRoom", assessment.id);
-  };
-}, [assessment.id, fetchStudents]);
+    socket.on("studentStatusChanged", refresh);
+    socket.on("studentLoggedIn", refresh);
+    socket.on("studentSubmitted", refresh);
+    socket.on("dashboardRefresh", refresh);
+    socket.on("studentBlocked", refresh);
+    socket.on("studentUnblocked", refresh);
+    socket.on("studentDeleted", refresh);
+
+    return () => {
+      socket.off("studentStatusChanged", refresh);
+      socket.off("studentLoggedIn", refresh);
+      socket.off("studentSubmitted", refresh);
+      socket.off("dashboardRefresh", refresh);
+      socket.off("studentBlocked", refresh);
+      socket.off("studentUnblocked", refresh);
+      socket.off("studentDeleted", refresh);
+
+      socket.emit("leaveAssessmentRoom", assessment.id);
+    };
+  }, [assessment.id, fetchStudents]);
 
   const stats = useMemo(() => {
     const started = students.filter((s) => s.attempt_started).length;
@@ -129,19 +125,14 @@ export default function Students({ assessment }: Props) {
   }, [students]);
 
   const filteredStudents = students.filter((student) => {
-    const matchesSearch =
-      student.name.toLowerCase().includes(search.toLowerCase()) ||
-      student.roll_no.toLowerCase().includes(search.toLowerCase()) ||
-      student.email.toLowerCase().includes(search.toLowerCase());
+    const query = search.toLowerCase().trim();
 
-    const matchesDepartment =
-      department === "all" || student.department === department;
-
-    const matchesYear = year === "all" || String(student.year) === year;
-
-    const matchesSection = section === "all" || student.section === section;
-
-    return matchesSearch && matchesDepartment && matchesYear && matchesSection;
+    return (
+      student.name.toLowerCase().includes(query) ||
+      student.roll_no.toLowerCase().includes(query) ||
+      student.email.toLowerCase().includes(query) ||
+      (student.branch || "").toLowerCase().includes(query)
+    );
   });
 
   const handleSendOtp = async () => {
@@ -269,15 +260,92 @@ export default function Students({ assessment }: Props) {
           </p>
         </div>
 
-        <div className="flex gap-3">
-          <button className="rounded-xl border px-5 py-3">Import CSV</button>
+      <div className="flex gap-3">
+  {/* Import CSV */}
+  <button
+    type="button"
+    onClick={() => setImportStudentsOpen(true)}
+    className="rounded-xl border px-5 py-3 transition hover:bg-gray-50"
+  >
+    Import CSV
+  </button>
 
-          <button className="rounded-xl border px-5 py-3">Export</button>
+  {/* Export */}
+  <button
+    type="button"
+    onClick={() => {
+      if (students.length === 0) {
+        toast.error("No students to export.");
+        return;
+      }
 
-          <button className="rounded-xl bg-[#00629B] px-5 py-3 text-white">
-            + Add Student
-          </button>
-        </div>
+      const headers = [
+        "Roll No",
+        "Name",
+        "Email",
+        "Branch",
+        "Status",
+        "OTP",
+        "Logged In",
+        "Attempt",
+        "Submitted",
+      ];
+
+      const rows = students.map((student) => [
+        student.roll_no,
+        student.name,
+        student.email,
+        student.branch || "",
+        student.status,
+        student.otp_sent ? "Sent" : "Not Sent",
+        student.logged_in ? "Logged In" : "Not Logged In",
+        student.attempt_started ? "Started" : "Not Started",
+        student.submitted ? "Submitted" : "Not Submitted",
+      ]);
+
+      const csv = [headers, ...rows]
+        .map((row) =>
+          row
+            .map(
+              (value) =>
+                `"${String(value ?? "").replace(/"/g, '""')}"`
+            )
+            .join(",")
+        )
+        .join("\n");
+
+      const blob = new Blob([csv], {
+        type: "text/csv;charset=utf-8;",
+      });
+
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${assessment.title || "assessment"}-students.csv`;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(url);
+
+      toast.success("Students exported successfully.");
+    }}
+    className="rounded-xl border px-5 py-3 transition hover:bg-gray-50"
+  >
+    Export
+  </button>
+
+  {/* Add Student */}
+  <button
+    type="button"
+    onClick={() => setAddStudentOpen(true)}
+    className="rounded-xl bg-[#00629B] px-5 py-3 text-white transition hover:bg-[#005080]"
+  >
+    + Add Student
+  </button>
+</div>
       </div>
       <div className="grid grid-cols-2 gap-5 md:grid-cols-3 xl:grid-cols-6">
         <div className="rounded-xl border p-5">
@@ -327,50 +395,13 @@ export default function Students({ assessment }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-1">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search Student..."
+          placeholder="Search by name, roll number, email or branch..."
           className="rounded-xl border p-3"
         />
-
-        <select
-          value={department}
-          onChange={(e) => setDepartment(e.target.value)}
-          className="rounded-xl border p-3"
-        >
-          <option value="all">All Departments</option>
-          <option value="ECE">ECE</option>
-          <option value="CSE">CSE</option>
-          <option value="IT">IT</option>
-          <option value="EEE">EEE</option>
-          <option value="MECH">MECH</option>
-          <option value="CIVIL">CIVIL</option>
-        </select>
-
-        <select
-          value={year}
-          onChange={(e) => setYear(e.target.value)}
-          className="rounded-xl border p-3"
-        >
-          <option value="all">All Years</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-        </select>
-
-        <select
-          value={section}
-          onChange={(e) => setSection(e.target.value)}
-          className="rounded-xl border p-3"
-        >
-          <option value="all">All Sections</option>
-          <option value="A">A</option>
-          <option value="B">B</option>
-          <option value="C">C</option>
-        </select>
       </div>
 
       {selectedStudents.length > 0 && (
@@ -442,12 +473,15 @@ export default function Students({ assessment }: Props) {
                         ]),
                       ]);
                     } else {
-  setSelectedStudents((prev) =>
-    prev.filter(
-      (id) => !filteredStudents.some((student) => student.id === id),
-    ),
-  );
-}
+                      setSelectedStudents((prev) =>
+                        prev.filter(
+                          (id) =>
+                            !filteredStudents.some(
+                              (student) => student.id === id,
+                            ),
+                        ),
+                      );
+                    }
                   }}
                 />
               </th>
@@ -456,11 +490,8 @@ export default function Students({ assessment }: Props) {
 
               <th className="p-4 text-left">Name</th>
 
-              <th className="p-4 text-left">Department</th>
-
-              <th className="p-4 text-left">Year</th>
-
-              <th className="p-4 text-left">Section</th>
+              <th className="p-4 text-left">Email</th>
+              <th className="p-4 text-left">Branch</th>
 
               <th className="p-4 text-left">Status</th>
 
@@ -501,11 +532,8 @@ export default function Students({ assessment }: Props) {
 
                 <td className="p-4">{student.name}</td>
 
-                <td className="p-4">{student.department}</td>
-
-                <td className="p-4">{student.year}</td>
-
-                <td className="p-4">{student.section}</td>
+                <td className="p-4">{student.email}</td>
+                <td className="p-4">{student.branch || "-"}</td>
 
                 <td className="p-4">
                   <span
@@ -669,10 +697,23 @@ export default function Students({ assessment }: Props) {
         assessmentId={assessment.id}
         onClose={() => {
           setDrawerOpen(false);
-
           setSelectedStudent(null);
         }}
         onRefresh={fetchStudents}
+      />
+
+      <AddStudentModal
+  open={addStudentOpen}
+  assessmentId={assessment.id}
+  onClose={() => setAddStudentOpen(false)}
+  onSuccess={fetchStudents}
+/>
+
+      <ImportStudentsModal
+        open={importStudentsOpen}
+        assessmentId={assessment.id}
+        onClose={() => setImportStudentsOpen(false)}
+        onSuccess={fetchStudents}
       />
     </div>
   );

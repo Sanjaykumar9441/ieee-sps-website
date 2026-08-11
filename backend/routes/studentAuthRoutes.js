@@ -29,6 +29,10 @@ router.post("/verify-otp", controller.verifyOtp);
    ADMIN ACTIONS
 =========================== */
 
+router.post("/add", verifyToken, controller.addAllowedStudent);
+
+router.post("/import", verifyToken, controller.importStudents);
+
 router.post("/send-bulk-otp", verifyToken, controller.sendBulkOtp);
 
 router.post("/block", verifyToken, controller.blockStudents);

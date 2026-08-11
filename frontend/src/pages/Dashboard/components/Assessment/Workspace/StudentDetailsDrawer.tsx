@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import toast from "react-hot-toast";
 import { X, Mail, User, GraduationCap, Clock } from "lucide-react";
 
 import { socket } from "../../../../../lib/socket";
 import { AllowedStudent } from "./Students";
-
-const API = import.meta.env.VITE_API_URL;
+import {
+  getStudentDetails,
+  sendBulkOtp,
+  blockStudents,
+  unblockStudents,
+  deleteStudents,
+} from "../../Assessment/assessmentApi";
 
 interface Props {
   open: boolean;
@@ -65,20 +69,12 @@ export default function StudentDetailsDrawer({
     try {
       setLoading(true);
 
-      const token = localStorage.getItem("token");
-
-      const { data } = await axios.get(
-        `${API}/api/student-auth/details/${student.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const data = await getStudentDetails(student.id);
 
       setDetails(data);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to fetch student details:", err);
+      toast.error("Unable to load student details.");
     } finally {
       setLoading(false);
     }
@@ -175,25 +171,25 @@ export default function StudentDetailsDrawer({
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-500">Department</p>
+                  <p className="text-sm text-gray-500">Branch</p>
 
                   <div className="mt-2 flex items-center gap-2">
                     <GraduationCap size={18} className="text-[#00629B]" />
 
-                    <span>{details?.student?.department}</span>
+                    <span>{details?.student?.branch || "Not Provided"}</span>
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-500">Year</p>
+                  <p className="text-sm text-gray-500">First Login</p>
 
-                  <p className="mt-2">{details?.student?.year}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-500">Section</p>
-
-                  <p className="mt-2">{details?.student?.section}</p>
+                  <p className="mt-2">
+                    {details?.student?.first_login_at
+                      ? new Date(
+                          details.student.first_login_at,
+                        ).toLocaleString()
+                      : "Not Logged In"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -419,32 +415,15 @@ export default function StudentDetailsDrawer({
 
                   try {
                     setProcessing(true);
-                    const token = localStorage.getItem("token");
 
-                    const { data } = await axios.post(
-                      `${API}/api/student-auth/send-bulk-otp`,
+                    const data = await sendBulkOtp(assessmentId, [student.id]);
 
-                      {
-                        assessmentId,
-
-                        studentIds: [student.id],
-                      },
-
-                      {
-                        headers: {
-                          Authorization: `Bearer ${token}`,
-                        },
-                      },
-                    );
-
-                    toast.success(data.message);
+                    toast.success(data.message || "OTP sent successfully.");
 
                     await onRefresh();
-
                     await fetchDetails();
                   } catch (err) {
                     console.error(err);
-
                     toast.error("Unable to send OTP.");
                   } finally {
                     setProcessing(false);
@@ -463,33 +442,30 @@ export default function StudentDetailsDrawer({
 
                   try {
                     setProcessing(true);
-                    const token = localStorage.getItem("token");
 
-                    const { data } = await axios.post(
-                      `${API}/api/student-auth/block`,
+                    const action =
+                      student.status === "blocked"
+                        ? unblockStudents
+                        : blockStudents;
 
-                      {
-                        assessmentId,
+                    const data = await action(assessmentId, [student.id]);
 
-                        studentIds: [student.id],
-                      },
-
-                      {
-                        headers: {
-                          Authorization: `Bearer ${token}`,
-                        },
-                      },
+                    toast.success(
+                      data.message ||
+                        (student.status === "blocked"
+                          ? "Student unblocked."
+                          : "Student blocked."),
                     );
 
-                    toast.success(data.message);
-
                     await onRefresh();
-
                     await fetchDetails();
                   } catch (err) {
                     console.error(err);
-
-                    toast.error("Unable to block student.");
+                    toast.error(
+                      student.status === "blocked"
+                        ? "Unable to unblock student."
+                        : "Unable to block student.",
+                    );
                   } finally {
                     setProcessing(false);
                   }
@@ -511,32 +487,17 @@ export default function StudentDetailsDrawer({
 
                   try {
                     setProcessing(true);
-                    const token = localStorage.getItem("token");
 
-                    const { data } = await axios.post(
-                      `${API}/api/student-auth/delete`,
+                    const data = await deleteStudents(assessmentId, [
+                      student.id,
+                    ]);
 
-                      {
-                        assessmentId,
-
-                        studentIds: [student.id],
-                      },
-
-                      {
-                        headers: {
-                          Authorization: `Bearer ${token}`,
-                        },
-                      },
-                    );
-
-                    toast.success(data.message);
+                    toast.success(data.message || "Student deleted.");
 
                     await onRefresh();
-
                     onClose();
                   } catch (err) {
                     console.error(err);
-
                     toast.error("Unable to delete student.");
                   } finally {
                     setProcessing(false);
