@@ -13,6 +13,7 @@ import {
   deleteAssessment,
   duplicateAssessment,
   publishAssessment,
+  unpublishAssessment,
   archiveAssessment,
 } from "./assessmentApi";
 
@@ -106,6 +107,19 @@ export default function AssessmentDashboardTab() {
     }
   };
 
+  const handleUnpublish = async (assessmentId: string) => {
+  try {
+    await unpublishAssessment(assessmentId);
+
+    toast.success("Assessment unpublished");
+
+    await fetchAssessments();
+  } catch (error) {
+    console.error("Unpublish assessment error:", error);
+    toast.error("Failed to unpublish assessment");
+  }
+};
+
   const handleArchive = async (id: string) => {
     try {
       await archiveAssessment(id);
@@ -180,6 +194,7 @@ export default function AssessmentDashboardTab() {
                 onEdit={() => {}}
                 onDuplicate={handleDuplicate}
                 onPublish={handlePublish}
+                onUnpublish={handleUnpublish}
                 onArchive={handleArchive}
                 onDelete={handleDelete}
               />

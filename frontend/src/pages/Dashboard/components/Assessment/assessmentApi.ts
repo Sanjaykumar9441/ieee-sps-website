@@ -74,6 +74,11 @@ export const publishAssessment = async (assessmentId: string) => {
   return data;
 };
 
+export const unpublishAssessment = async (assessmentId: string) => {
+  const { data } = await api.patch(`/assessments/${assessmentId}/unpublish`);
+  return data;
+};
+
 export const activateAssessment = async (assessmentId: string) => {
   const { data } = await api.patch(`/assessments/${assessmentId}/activate`);
 

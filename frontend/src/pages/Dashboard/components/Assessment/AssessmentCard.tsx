@@ -42,6 +42,8 @@ interface Props {
 
   onPublish: (id: string) => void;
 
+  onUnpublish: (id: string) => void;
+
   onArchive: (id: string) => void;
 
   onDelete: (id: string) => void;
@@ -57,6 +59,8 @@ export default function AssessmentCard({
   onDuplicate,
 
   onPublish,
+
+  onUnpublish,
 
   onArchive,
 
@@ -171,13 +175,23 @@ export default function AssessmentCard({
             Duplicate
           </button>
 
-          <button
-            onClick={() => onPublish(assessment.id)}
-            className="rounded-xl border py-2 flex items-center justify-center gap-2"
-          >
-            <Rocket size={18} />
-            Publish
-          </button>
+          {assessment.is_published ? (
+            <button
+              onClick={() => onUnpublish(assessment.id)}
+              className="rounded-xl border border-orange-300 text-orange-600 py-2 flex items-center justify-center gap-2 hover:bg-orange-50"
+            >
+              <Rocket size={18} />
+              Unpublish
+            </button>
+          ) : (
+            <button
+              onClick={() => onPublish(assessment.id)}
+              className="rounded-xl border py-2 flex items-center justify-center gap-2 hover:bg-gray-50"
+            >
+              <Rocket size={18} />
+              Publish
+            </button>
+          )}
 
           <button
             onClick={() => onArchive(assessment.id)}
