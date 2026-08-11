@@ -9,7 +9,11 @@ import {
   Trophy,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { createAssessment, getAssessmentCategories } from "./assessmentApi";
+import {
+  createAssessment,
+  getAssessmentCategories,
+  getAssessmentSubjects,
+} from "./assessmentApi";
 
 interface CreateAssessmentModalProps {
   open: boolean;
@@ -122,31 +126,59 @@ export default function CreateAssessmentModal({
   const [categories, setCategories] = useState<AssessmentCategory[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
 
+  interface AssessmentSubject {
+    id: string;
+    name: string;
+    category_id: string;
+  }
+
+  const [subjects, setSubjects] = useState<AssessmentSubject[]>([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
+
   useEffect(() => {
     if (!open) {
       setForm(initialForm);
       setSlugTouched(false);
       setSaving(false);
+      setSubjects([]);
       return;
     }
 
-    const loadCategories = async () => {
+    const loadData = async () => {
       try {
         setCategoriesLoading(true);
 
-        const data = await getAssessmentCategories();
+        const categoriesData = await getAssessmentCategories();
 
-        setCategories(data);
+        setCategories(categoriesData || []);
       } catch (error) {
         console.error("Failed to load assessment categories:", error);
+
         toast.error("Unable to load categories.");
+
         setCategories([]);
       } finally {
         setCategoriesLoading(false);
       }
+
+      try {
+        setSubjectsLoading(true);
+
+        const subjectsData = await getAssessmentSubjects();
+
+        setSubjects(subjectsData || []);
+      } catch (error) {
+        console.error("Failed to load assessment subjects:", error);
+
+        toast.error("Unable to load subjects.");
+
+        setSubjects([]);
+      } finally {
+        setSubjectsLoading(false);
+      }
     };
 
-    loadCategories();
+    loadData();
   }, [open]);
 
   if (!open) return null;
@@ -179,6 +211,16 @@ export default function CreateAssessmentModal({
 
     if (!form.slug.trim()) {
       toast.error("Assessment slug is required.");
+      return;
+    }
+
+    if (!form.category_id) {
+      toast.error("Please select a category.");
+      return;
+    }
+
+    if (!form.subject_id) {
+      toast.error("Please select a subject.");
       return;
     }
 
@@ -372,17 +414,21 @@ export default function CreateAssessmentModal({
                   </p>
                 </Field>
 
-                <Field label="Category">
+                <Field label="Category" required>
                   <select
                     value={form.category_id}
-                    onChange={(e) => updateField("category_id", e.target.value)}
+                    onChange={(e) => {
+                      updateField("category_id", e.target.value);
+                      updateField("subject_id", "");
+                    }}
                     className="input"
                     disabled={categoriesLoading}
+                    required
                   >
                     <option value="">
                       {categoriesLoading
                         ? "Loading categories..."
-                        : "No Category"}
+                        : "Select Category"}
                     </option>
 
                     {categories.map((category) => (
@@ -391,6 +437,40 @@ export default function CreateAssessmentModal({
                       </option>
                     ))}
                   </select>
+
+                  <Field label="Subject" required>
+                    <select
+                      value={form.subject_id}
+                      onChange={(e) =>
+                        updateField("subject_id", e.target.value)
+                      }
+                      className="input"
+                      disabled={subjectsLoading || !form.category_id}
+                      required
+                    >
+                      <option value="">
+                        {!form.category_id
+                          ? "Select Category First"
+                          : subjectsLoading
+                            ? "Loading subjects..."
+                            : "Select Subject"}
+                      </option>
+
+                      {subjects
+                        .filter(
+                          (subject) => subject.category_id === form.category_id,
+                        )
+                        .map((subject) => (
+                          <option key={subject.id} value={subject.id}>
+                            {subject.name}
+                          </option>
+                        ))}
+                    </select>
+
+                    <p className="mt-1 text-xs text-gray-400">
+                      Select the subject for this assessment.
+                    </p>
+                  </Field>
 
                   <p className="mt-1 text-xs text-gray-400">
                     Select a category for this assessment.

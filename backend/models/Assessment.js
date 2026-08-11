@@ -14,7 +14,22 @@ class Assessment {
     return supabase
       .from("assessment_categories")
       .select("id, name")
+      .eq("is_active", true)
       .order("name", { ascending: true });
+  }
+
+  static async getSubjects(categoryId = null) {
+    let query = supabase
+      .from("subjects")
+      .select("id, name, category_id")
+      .eq("is_active", true)
+      .order("name", { ascending: true });
+
+    if (categoryId) {
+      query = query.eq("category_id", categoryId);
+    }
+
+    return query;
   }
 
   static async getById(id) {

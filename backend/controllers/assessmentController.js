@@ -38,6 +38,28 @@ exports.getCategories = async (req, res) => {
   }
 };
 
+exports.getSubjects = async (req, res) => {
+  try {
+    const { category_id } = req.query;
+
+    const { data, error } = await Assessment.getSubjects(category_id || null);
+
+    if (error) throw error;
+
+    return res.json({
+      success: true,
+      subjects: data || [],
+    });
+  } catch (err) {
+    console.error("Get assessment subjects error:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
 exports.getAssessment = async (req, res) => {
   try {
     const { id } = req.params;

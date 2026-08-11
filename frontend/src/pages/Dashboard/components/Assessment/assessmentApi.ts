@@ -30,6 +30,14 @@ export const getAssessmentCategories = async () => {
   return data.categories || [];
 };
 
+export const getAssessmentSubjects = async (categoryId?: string) => {
+  const { data } = await api.get("/assessments/subjects", {
+    params: categoryId ? { category_id: categoryId } : {},
+  });
+
+  return data.subjects || [];
+};
+
 export const getAssessment = async (assessmentId: string) => {
   const { data } = await api.get(`/assessments/${assessmentId}`);
 

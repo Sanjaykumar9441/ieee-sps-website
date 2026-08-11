@@ -1,13 +1,13 @@
 import { motion } from "framer-motion";
-import { ArrowRight, Clock, Users } from "lucide-react";
 import { registrationEvents } from "./registrationEvents";
-import { ArrowLeft, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { eventThemes } from "./registration/eventTheme";
 import { EventType } from "./registration/types";
+import RegistrationClosed from "./RegistrationClosed";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { socket } from "@/lib/socket";
+import { ArrowRight, ArrowLeft, Clock, Users, BookOpen } from "lucide-react";
 
 interface RegistrationSettings {
   enabled: boolean;
@@ -26,68 +26,38 @@ export default function EventSelector({ onSelect }: EventSelectorProps) {
   const navigate = useNavigate();
   const [settings, setSettings] = useState<RegistrationSettings | null>(null);
   const fetchSettings = async () => {
-  try {
-    const res = await axios.get(
-      `${import.meta.env.VITE_API_URL}/api/space-day/settings/public`
-    );
-
-    setSettings(res.data.settings);
-  } catch (err) {
-    console.error(err);
-  }
-};
-            useEffect(() => {
-  fetchSettings();
-
-  socket.on(
-    "registrationSettingsUpdated",
-    (updatedSettings: RegistrationSettings) => {
-      console.log(
-        "⚡ Registration settings updated"
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/space-day/settings/public`,
       );
 
-      setSettings(updatedSettings);
+      setSettings(res.data.settings);
+    } catch (err) {
+      console.error(err);
     }
-  );
-
-  return () => {
-    socket.off("registrationSettingsUpdated");
   };
-}, []);
-if (!settings) return null;
+  useEffect(() => {
+    fetchSettings();
 
-if (!settings.enabled) {
-  return (
-    <section className="min-h-screen flex items-center justify-center bg-[#fbfaf6] px-6">
-      <div className="max-w-2xl text-center">
+    socket.on(
+      "registrationSettingsUpdated",
+      (updatedSettings: RegistrationSettings) => {
+        console.log("⚡ Registration settings updated");
 
-        <h1 className="text-5xl font-bold text-slate-900">
-          🚀 National Space Day 2026
-        </h1>
+        setSettings(updatedSettings);
+      },
+    );
 
-        <p className="mt-8 text-2xl font-semibold text-red-600">
-          Registrations Closed
-        </p>
+    return () => {
+      socket.off("registrationSettingsUpdated");
+    };
+  }, []);
+  if (!settings) return null;
 
-        <p className="mt-6 text-slate-600 leading-8">
-          Registrations for National Space Day have been closed.
+  if (!settings.enabled) {
+    return <RegistrationClosed />;
+  }
 
-          Thank you for your interest.
-
-          We look forward to seeing you at future IEEE SPS events.
-        </p>
-
-        <button
-          onClick={() => navigate("/space-day")}
-          className="mt-10 rounded-xl bg-[#00629B] px-8 py-4 text-white font-semibold hover:bg-[#004d78]"
-        >
-          Back to Space Day
-        </button>
-
-      </div>
-    </section>
-  );
-}
   return (
     <section className="py-24">
       <div className="max-w-7xl mx-auto px-6">
@@ -173,10 +143,10 @@ if (!settings.enabled) {
                 </p>
 
                 {!settings.events[event.id] && (
-  <div className="mt-4 inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-sm font-semibold text-red-700">
-    🔴 Registrations Closed
-  </div>
-)}
+                  <div className="mt-4 inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-sm font-semibold text-red-700">
+                    🔴 Registrations Closed
+                  </div>
+                )}
 
                 {/* Description */}
 
@@ -232,12 +202,12 @@ if (!settings.enabled) {
                 {/* Button */}
 
                 <button
-  disabled={!settings.events[event.id]}
-  onClick={() => {
-    if (!settings.events[event.id]) return;
+                  disabled={!settings.events[event.id]}
+                  onClick={() => {
+                    if (!settings.events[event.id]) return;
 
-    onSelect(event.id);
-  }}
+                    onSelect(event.id);
+                  }}
                   className={`
   mt-10
   flex
@@ -260,11 +230,11 @@ if (!settings.enabled) {
 `}
                 >
                   {settings.events[event.id]
-  ? "Register Now"
-  : "Registrations Closed"}
+                    ? "Register Now"
+                    : "Registrations Closed"}
                   {settings.events[event.id] && (
-  <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-)}
+                    <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+                  )}
                 </button>
               </motion.div>
             );
