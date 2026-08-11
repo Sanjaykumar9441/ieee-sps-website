@@ -93,12 +93,6 @@ exports.createAssessment = async (req, res) => {
 
     console.log("========== CREATE ASSESSMENT ==========");
     console.log("REQUEST BODY:", body);
-    console.log("CATEGORY ID:", body.category_id);
-    console.log("SUBJECT ID:", body.subject_id);
-
-    // --------------------------------------------------
-    // Required validation
-    // --------------------------------------------------
 
     if (!body.title?.trim()) {
       return res.status(400).json({
@@ -121,20 +115,12 @@ exports.createAssessment = async (req, res) => {
       });
     }
 
-    // --------------------------------------------------
-    // Verify subject belongs to selected category
-    // --------------------------------------------------
-
     const { data: subject, error: subjectError } =
       await Assessment.getSubjectById(body.subject_id);
 
     if (subjectError) {
       console.error("SUBJECT LOOKUP ERROR:", subjectError);
-
-      return res.status(500).json({
-        success: false,
-        message: subjectError.message,
-      });
+      throw subjectError;
     }
 
     if (!subject) {
@@ -151,10 +137,6 @@ exports.createAssessment = async (req, res) => {
       });
     }
 
-    // --------------------------------------------------
-    // Calculate passing score
-    // --------------------------------------------------
-
     if (body.passing_score == null && body.pass_percentage != null) {
       body.passing_score =
         (Number(body.total_questions) *
@@ -163,18 +145,10 @@ exports.createAssessment = async (req, res) => {
         100;
     }
 
-    // --------------------------------------------------
-    // Explicitly normalize IDs
-    // --------------------------------------------------
-
     body.category_id = String(body.category_id).trim();
     body.subject_id = String(body.subject_id).trim();
 
     console.log("FINAL ASSESSMENT PAYLOAD:", body);
-
-    // --------------------------------------------------
-    // Create assessment
-    // --------------------------------------------------
 
     const { data, error } = await Assessment.create(body);
 
@@ -184,22 +158,6 @@ exports.createAssessment = async (req, res) => {
     }
 
     console.log("CREATED ASSESSMENT:", data);
-
-    // --------------------------------------------------
-    // Safety check
-    // --------------------------------------------------
-
-    if (!data?.subject_id) {
-      console.error(
-        "CRITICAL: Assessment was created without subject_id:",
-        data,
-      );
-
-      return res.status(500).json({
-        success: false,
-        message: "Assessment was created, but subject_id was not saved.",
-      });
-    }
 
     return res.status(201).json({
       success: true,
