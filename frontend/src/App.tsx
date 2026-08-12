@@ -24,8 +24,8 @@ import ScrollToTop from "./components/ScrollToTop";
 import SpaceDayRegistration from "./pages/SpaceDayRegistration";
 import RegistrationSuccess from "./pages/RegistrationSuccess";
 import SpaceDayRegistrationStatus from "./pages/SpaceDayRegistrationStatus";
-import StudentExamPortal from "../../frontend/src/pages/Student/components/StudentExamPortal";
-import StudentExamResult from "../../frontend/src/pages/Student/components/StudentExamResult";
+import StudentExamPortal from "./pages/Student/components/StudentExamPortal";
+import StudentExamResult from "./pages/Student/components/StudentExamResult";
 
 function StudentExamRoute() {
   const { assessmentId } = useParams();
