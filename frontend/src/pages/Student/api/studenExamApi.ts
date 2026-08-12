@@ -96,7 +96,7 @@ export const startAssessment = async (
   assessmentId: string,
 ): Promise<StartAssessmentResponse> => {
   const { data } = await axios.post(
-    `${API}/api/student-assessment/${assessmentId}/start`,
+    `${API}/api/student-assessments/${assessmentId}/start`,
     {},
     getAuthConfig(),
   );
@@ -127,7 +127,7 @@ export const getQuestion = async (
   remainingSeconds: number;
 }> => {
   const { data } = await axios.get(
-    `${API}/api/student-assessment/${attemptId}/question/${questionNumber}`,
+    `${API}/api/student-assessments/${attemptId}/question/${questionNumber}`,
     getSessionConfig(attemptId),
   );
 
@@ -260,7 +260,7 @@ export const submitAssessment = async (attemptId: string) => {
 
 export const assessmentHeartbeat = async (attemptId: string) => {
   const { data } = await axios.post(
-    `${API}/api/student-assessment/${attemptId}/heartbeat`,
+    `${API}/api/student-assessments/${attemptId}/heartbeat`,
     {},
     getSessionConfig(attemptId),
   );
