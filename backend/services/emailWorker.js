@@ -16,7 +16,7 @@ async function processEmailQueue() {
     const { data: emails, error } = await supabase
       .from("email_queue")
       .select("*")
-      .eq("status", "PENDING")
+      .eq("status", "pending")
       .order("created_at", { ascending: true })
       .limit(PROCESS_LIMIT);
 
@@ -48,7 +48,7 @@ async function processEmailQueue() {
         await supabase
           .from("email_queue")
           .update({
-            status: "SENT",
+            status: "sent",
             sent_at: new Date().toISOString(),
             last_error: null,
           })
@@ -64,7 +64,7 @@ async function processEmailQueue() {
           .from("email_queue")
           .update({
             retry_count: retry,
-            status: retry >= MAX_RETRIES ? "FAILED" : "PENDING",
+            status: retry >= MAX_RETRIES ? "failed" : "pending",
             last_error: err?.message || "Unknown email error",
           })
           .eq("id", email.id);
