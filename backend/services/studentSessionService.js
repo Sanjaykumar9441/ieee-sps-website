@@ -1,25 +1,58 @@
 const {
   acquireAttemptLock,
   releaseAttemptLock,
-  redis,
+  verifyAttemptSession,
+  refreshAttemptLock,
 } = require("../lib/redis");
 
-/* ============================================================
-   LOCK STUDENT
-============================================================ */
-
-exports.lockStudent = async (assessmentId, studentId, durationSeconds) => {
-  const locked = await acquireAttemptLock(
+exports.lockStudent = async (
+  assessmentId,
+  studentId,
+  sessionId,
+  durationSeconds,
+) => {
+  return await acquireAttemptLock(
     assessmentId,
     studentId,
+    sessionId,
     durationSeconds,
   );
+};
 
-  if (!locked) {
-    throw new Error("Student already has an active assessment session.");
-  }
+exports.unlockStudent = async (
+  assessmentId,
+  studentId,
+) => {
+  return await releaseAttemptLock(
+    assessmentId,
+    studentId,
+  );
+};
 
-  return true;
+exports.verifySession = async (
+  assessmentId,
+  studentId,
+  sessionId,
+) => {
+  return await verifyAttemptSession(
+    assessmentId,
+    studentId,
+    sessionId,
+  );
+};
+
+exports.refreshSession = async (
+  assessmentId,
+  studentId,
+  sessionId,
+  durationSeconds,
+) => {
+  return await refreshAttemptLock(
+    assessmentId,
+    studentId,
+    sessionId,
+    durationSeconds,
+  );
 };
 
 /* ============================================================

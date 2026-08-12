@@ -1,4 +1,9 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useParams,
+} from "react-router-dom";
 
 import Home from "./pages/Home";
 import AdminLogin from "./pages/AdminLogin";
@@ -19,6 +24,24 @@ import ScrollToTop from "./components/ScrollToTop";
 import SpaceDayRegistration from "./pages/SpaceDayRegistration";
 import RegistrationSuccess from "./pages/RegistrationSuccess";
 import SpaceDayRegistrationStatus from "./pages/SpaceDayRegistrationStatus";
+import StudentExamPortal from "../../frontend/src/pages/Student/components/StudentExamPortal";
+import StudentExamResult from "../../frontend/src/pages/Student/components/StudentExamResult";
+
+function StudentExamRoute() {
+  const { assessmentId } = useParams();
+
+  if (!assessmentId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-slate-500">Assessment ID is missing.</p>
+      </div>
+    );
+  }
+
+  return (
+    <StudentExamPortal assessmentId={assessmentId} onStartExam={() => {}} />
+  );
+}
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -34,12 +57,9 @@ function App() {
   return (
     <Router>
       <ScrollToTop />
-      <AnimatePresence>
-        {loading && <LoadingScreen />}
-      </AnimatePresence>
+      <AnimatePresence>{loading && <LoadingScreen />}</AnimatePresence>
 
       <div className="relative min-h-screen bg-white text-slate-900">
-
         {/* Main Content */}
         <div className="relative z-10">
           <Routes>
@@ -55,12 +75,29 @@ function App() {
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/join-sps" element={<JoinSPS />} />
             <Route path="/space-day" element={<SpaceDay />} />
-            <Route path="/space-day/register" element={<SpaceDayRegistration />} />
-            <Route path="/space-day/registration-success" element={<RegistrationSuccess />} />
-            <Route path="/space-day/status/:registrationId" element={<SpaceDayRegistrationStatus />} />
+            <Route
+              path="/space-day/register"
+              element={<SpaceDayRegistration />}
+            />
+            <Route
+              path="/space-day/registration-success"
+              element={<RegistrationSuccess />}
+            />
+            <Route
+              path="/space-day/status/:registrationId"
+              element={<SpaceDayRegistrationStatus />}
+            />
+            <Route
+              path="/student/exam/:assessmentId"
+              element={<StudentExamRoute />}
+            />
+
+            <Route
+              path="/student/exam/:attemptId/result"
+              element={<StudentExamResult />}
+            />
           </Routes>
         </div>
-
       </div>
     </Router>
   );

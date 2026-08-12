@@ -28,12 +28,51 @@ const redis = Redis.fromEnv(); // reads the two vars above automatically
  * Returns true if the lock was acquired (i.e. no other active session),
  * false if the student already has an active session elsewhere.
  */
-async function acquireAttemptLock(assessmentId, studentId, durationSeconds) {
+async function acquireAttemptLock(
+  assessmentId,
+  studentId,
+  sessionId,
+  durationSeconds,
+) {
   const key = `assessment:lock:${assessmentId}:${studentId}`;
-  // NX = only set if not already set; EX = auto-expire so a crashed session
-  // doesn't lock a student out forever.
-  const result = await redis.set(key, "1", { nx: true, ex: durationSeconds });
+
+  const result = await redis.set(key, sessionId, {
+    nx: true,
+    ex: durationSeconds,
+  });
+
   return result === "OK";
+}
+
+async function verifyAttemptSession(assessmentId, studentId, sessionId) {
+  if (!sessionId) {
+    return false;
+  }
+
+  const key = `assessment:lock:${assessmentId}:${studentId}`;
+
+  const storedSessionId = await redis.get(key);
+
+  return String(storedSessionId) === String(sessionId);
+}
+
+async function refreshAttemptLock(
+  assessmentId,
+  studentId,
+  sessionId,
+  durationSeconds,
+) {
+  const key = `assessment:lock:${assessmentId}:${studentId}`;
+
+  const storedSessionId = await redis.get(key);
+
+  if (!storedSessionId || String(storedSessionId) !== String(sessionId)) {
+    return false;
+  }
+
+  await redis.expire(key, durationSeconds);
+
+  return true;
 }
 
 async function releaseAttemptLock(assessmentId, studentId) {
@@ -154,14 +193,20 @@ async function canRequestOtp(assessmentId, email) {
 
 module.exports = {
   redis,
+
   acquireAttemptLock,
   releaseAttemptLock,
+  verifyAttemptSession,
+  refreshAttemptLock,
+
   setAttemptStartTime,
   getSecondsRemaining,
   incrementInfractionCount,
+
   createLoginOtp,
   verifyLoginOtp,
   canRequestOtp,
+
   saveCurrentQuestion,
   getCurrentQuestion,
 };

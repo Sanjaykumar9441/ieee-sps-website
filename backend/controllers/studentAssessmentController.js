@@ -6,6 +6,7 @@ const { setAttemptStartTime, getSecondsRemaining } = require("../lib/redis");
 const { supabase } = require("../lib/supabase");
 const liveEvents = require("../services/liveEvents");
 const antiCheat = require("../services/antiCheatService");
+const crypto = require("crypto");
 
 function calculateAllowedDurationSeconds(assessment, startTime = new Date()) {
   const configuredDurationSeconds = Number(assessment.duration_minutes) * 60;
@@ -116,6 +117,8 @@ exports.checkAssessment = async (req, res) => {
 
 exports.startAssessment = async (req, res) => {
   try {
+    const sessionId = crypto.randomUUID();
+
     const { assessmentId } = req.params;
 
     const student = req.student;
@@ -214,7 +217,74 @@ exports.startAssessment = async (req, res) => {
     --------------------------------
     */
 
-    await session.lockStudent(assessment.id, student.id, actualDurationSeconds);
+    const sessionId = crypto.randomUUID();
+
+    const lockAcquired = await session.lockStudent(
+      assessment.id,
+      student.id,
+      sessionId,
+      actualDurationSeconds,
+    );
+    let lockAcquired = false;
+    let sessionId = null;
+
+    try {
+      sessionId = crypto.randomUUID();
+
+      lockAcquired = await session.lockStudent(
+        assessment.id,
+        student.id,
+        sessionId,
+        actualDurationSeconds,
+      );
+
+      if (!lockAcquired) {
+        return res.status(409).json({
+          success: false,
+          code: "ASSESSMENT_SESSION_ACTIVE",
+          message: "This assessment is already active in another session.",
+        });
+      }
+
+      const frozenQuestions = await engine.generateAttempt(assessment);
+
+      const attempt = await engine.createAttempt(
+        assessment,
+        student,
+        frozenQuestions,
+      );
+
+      await setAttemptStartTime(attempt.id, actualDurationSeconds);
+
+      const firstQuestion = await engine.getQuestion(attempt.id, 1);
+
+      return res.json({
+        success: true,
+
+        attemptId: attempt.id,
+
+        sessionId,
+
+        remainingSeconds: actualDurationSeconds,
+
+        totalQuestions: frozenQuestions.length,
+
+        currentQuestion: 1,
+
+        question: firstQuestion,
+      });
+    } catch (err) {
+      if (lockAcquired) {
+        await session.unlockStudent(assessment.id, student.id);
+      }
+
+      console.error(err);
+
+      return res.status(500).json({
+        success: false,
+        message: err.message,
+      });
+    }
 
     /*
     --------------------------------
@@ -252,10 +322,12 @@ exports.startAssessment = async (req, res) => {
 
     const firstQuestion = await engine.getQuestion(attempt.id, 1);
 
-    res.json({
+    return res.json({
       success: true,
 
       attemptId: attempt.id,
+
+      sessionId,
 
       remainingSeconds: actualDurationSeconds,
 
@@ -952,6 +1024,116 @@ exports.getAntiCheatConfig = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+/* ============================================================
+   ASSESSMENT SESSION HEARTBEAT
+============================================================ */
+
+exports.heartbeat = async (req, res) => {
+  try {
+    const { attemptId } = req.params;
+
+    const attempt =
+      req.assessmentAttempt || (await engine.getAttempt(attemptId));
+
+    if (!attempt) {
+      return res.status(404).json({
+        success: false,
+        code: "ATTEMPT_NOT_FOUND",
+        message: "Assessment attempt not found.",
+      });
+    }
+
+    /*
+     * Get assessment duration.
+     */
+    const { data: assessment, error } = await assessmentService.getAssessment(
+      attempt.assessment_id,
+    );
+
+    if (error || !assessment) {
+      return res.status(404).json({
+        success: false,
+        message: "Assessment not found.",
+      });
+    }
+
+    /*
+     * Calculate the authoritative duration
+     * for this particular attempt.
+     */
+    const allowedDurationSeconds = getAttemptAllowedDurationSeconds(
+      assessment,
+      attempt,
+    );
+
+    /*
+     * Get authoritative Redis timer.
+     */
+    const remainingSeconds = await getSecondsRemaining(
+      attemptId,
+      allowedDurationSeconds,
+    );
+
+    /*
+     * If time has expired, do NOT refresh
+     * the session.
+     */
+    if (
+      remainingSeconds <= 0 &&
+      attempt.status !== "SUBMITTED" &&
+      attempt.status !== "DISQUALIFIED"
+    ) {
+      const result = await scoring.calculateScore(attemptId);
+
+      const updatedAttempt = await engine.finishAttempt(attemptId, result);
+
+      await session.unlockStudent(
+        updatedAttempt.assessment_id,
+        updatedAttempt.student_id,
+      );
+
+      return res.json({
+        success: false,
+        expired: true,
+        message: "Assessment time completed.",
+      });
+    }
+
+    /*
+     * Refresh Redis session TTL.
+     */
+    const refreshed = await session.refreshSession(
+      attempt.assessment_id,
+      attempt.student_id,
+      req.assessmentSessionId,
+      Math.max(remainingSeconds, 1),
+    );
+
+    if (!refreshed) {
+      return res.status(409).json({
+        success: false,
+        code: "SESSION_NOT_OWNER",
+        message: "This assessment session is no longer active.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      remainingSeconds,
+      status: attempt.status,
+      currentQuestion: attempt.current_question,
+      answeredQuestions: attempt.answered_questions,
+    });
+  } catch (err) {
+    console.error("ASSESSMENT HEARTBEAT ERROR:", err);
 
     return res.status(500).json({
       success: false,

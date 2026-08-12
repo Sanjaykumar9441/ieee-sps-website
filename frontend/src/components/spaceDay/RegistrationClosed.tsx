@@ -32,7 +32,7 @@ export default function RegistrationClosed() {
             Due to bank server issues, payments are currently failing.
             <br />
             <br />
-            Registrations will reopen on <strong>12‑08‑2026 at 6:00 AM</strong>.
+            Registrations will reopen on <strong>12‑08‑2026 at 10:00 AM</strong>.
             <br />
             <br />
             Thank you for your patience and overwhelming response.

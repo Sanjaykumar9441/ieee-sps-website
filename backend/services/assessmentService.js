@@ -18,7 +18,7 @@ exports.getAssessment = async (assessmentId) => {
 
 exports.getAllowedStudent = async (assessmentId, email) => {
   return await supabase
-    .from("allowed_students")
+    .from("assessment_allowed_students")
     .select("*")
     .eq("assessment_id", assessmentId)
     .eq("email", email)

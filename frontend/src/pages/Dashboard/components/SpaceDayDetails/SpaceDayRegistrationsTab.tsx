@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";  
+import { useEffect, useState, useMemo } from "react";  
 import axios from "axios";  
 import SpaceDayRegistrationDetailsModal from "./SpaceDayRegistrationDetailsModal";  
 import { eventThemes } from "@/components/spaceDay/registration/eventTheme";  
@@ -24,9 +24,94 @@ import {
   User,  
   Users,  
   Trash2,  
+  DollarSign,  
+  TrendingUp,  
+  Home,  
+  UserCheck,  
 } from "lucide-react";  
+import {  
+  PieChart,  
+  Pie,  
+  Cell,  
+  Tooltip,  
+  Legend,  
+  ResponsiveContainer,  
+} from "recharts";  
 import { socket } from "@/lib/socket";  
-import ToggleSwitch from "../../../../common/ToggleSwitch";  
+import ToggleSwitch from "../../../../common/ToggleSwitch";
+
+/* ── ANALYTICS CONSTANTS ── */  
+const STATUS_COLORS = ["#eab308", "#22c55e", "#DC3D3D"];  
+const EVENT_COLORS = ["#3b82f6", "#a855f7", "#f97316"];
+
+const StatCard = ({ label, value, color, icon: Icon }: any) => {  
+  const colorMap: Record<  
+    string,  
+    { border: string; text: string; glow: string; bg: string }  
+  > = {  
+    emerald: {  
+      border: "rgba(34,197,94,0.25)",  
+      text: "#22c55e",  
+      glow: "rgba(34,197,94,0.08)",  
+      bg: "rgba(34,197,94,0.06)",  
+    },  
+    blue: {  
+      border: "rgba(59,130,246,0.25)",  
+      text: "#60a5fa",  
+      glow: "rgba(59,130,246,0.08)",  
+      bg: "rgba(59,130,246,0.06)",  
+    },  
+    purple: {  
+      border: "rgba(168,85,247,0.25)",  
+      text: "#c084fc",  
+      glow: "rgba(168,85,247,0.08)",  
+      bg: "rgba(168,85,247,0.06)",  
+    },  
+    orange: {  
+      border: "rgba(249,115,22,0.25)",  
+      text: "#fb923c",  
+      glow: "rgba(249,115,22,0.08)",  
+      bg: "rgba(249,115,22,0.06)",  
+    },  
+    cyan: {  
+      border: "rgba(6,182,212,0.25)",  
+      text: "#22d3ee",  
+      glow: "rgba(6,182,212,0.08)",  
+      bg: "rgba(6,182,212,0.06)",  
+    },  
+  };  
+  const c = colorMap[color] || colorMap.blue;  
+  return (  
+    <div  
+      className="p-4 rounded-xl relative overflow-hidden"  
+      style={{  
+        backgroundColor: "#FFFFFF",  
+        border: `1px solid ${c.border}`,  
+        background: `linear-gradient(135deg, #FFFFFF, ${c.bg})`,  
+      }}  
+    >  
+      <div className="flex items-start justify-between">  
+        <div>  
+          <p  
+            className="text-xs font-medium uppercase tracking-wider mb-2"  
+            style={{ color: "#8A8578" }}  
+          >  
+            {label}  
+          </p>  
+          <p className="text-2xl font-bold" style={{ color: c.text }}>  
+            {value}  
+          </p>  
+        </div>  
+        {Icon && (  
+          <div className="p-2 rounded-lg" style={{ backgroundColor: c.glow }}>  
+            <Icon size={16} style={{ color: c.text }} />  
+          </div>  
+        )}  
+      </div>  
+    </div>  
+  );  
+};
+  
 export default function SpaceDayRegistrationsTab() {  
   const [registrations, setRegistrations] = useState<SpaceDayRegistration[]>(  
     [],  
@@ -65,6 +150,76 @@ export default function SpaceDayRegistrationsTab() {
       .filter((r: any) => r.paymentStatus === "Verified")  
       .reduce((sum: number, r: any) => sum + r.totalFee, 0),  
   };
+
+  /* ── ANALYTICS: revenue by event ── */  
+  const verifiedRegistrations = registrations.filter(  
+    (r) => r.paymentStatus === "Verified",  
+  );  
+  const quizRevenue = verifiedRegistrations  
+    .filter((r) => r.eventType === "astroquiz")  
+    .reduce((sum, r: any) => sum + r.totalFee, 0);  
+  const designRevenue = verifiedRegistrations  
+    .filter((r) => r.eventType === "astrodesign")  
+    .reduce((sum, r: any) => sum + r.totalFee, 0);  
+  const modelerRevenue = verifiedRegistrations  
+    .filter((r) => r.eventType === "astromodeler")  
+    .reduce((sum, r: any) => sum + r.totalFee, 0);
+
+  /* ── ANALYTICS: participation ── */  
+  const individualCount = registrations.filter(  
+    (r) => r.registrationType === "individual",  
+  ).length;  
+  const teamCount = registrations.filter(  
+    (r) => r.registrationType === "team",  
+  ).length;  
+  const totalParticipants = registrations.reduce(  
+    (sum, r) => sum + (r.members?.length || 0),  
+    0,  
+  );  
+  const accommodationCount = registrations.filter(  
+    (r: any) => !!r.accommodation,  
+  ).length;
+
+  /* ── ANALYTICS: chart data ── */  
+  const statusData = [  
+    { name: "Pending", value: stats.pending },  
+    { name: "Verified", value: stats.verified },  
+    { name: "Rejected", value: stats.rejected },  
+  ];  
+  const eventData = [  
+    {  
+      name: "Astro Quiz",  
+      value: registrations.filter((r) => r.eventType === "astroquiz").length,  
+    },  
+    {  
+      name: "AI Astro Design",  
+      value: registrations.filter((r) => r.eventType === "astrodesign")  
+        .length,  
+    },  
+    {  
+      name: "Astro Modeler",  
+      value: registrations.filter((r) => r.eventType === "astromodeler")  
+        .length,  
+    },  
+  ];
+
+  const collegeAnalytics = useMemo(() => {  
+    const collegeCounts: Record<string, number> = {};  
+    registrations.forEach((reg) => {  
+      reg.members?.forEach((member: Member) => {  
+        const college =  
+          member.college === "Other"  
+            ? member.otherCollege || "Other"  
+            : member.college || "Unknown";  
+        collegeCounts[college] = (collegeCounts[college] || 0) + 1;  
+      });  
+    });  
+    return Object.entries(collegeCounts)  
+      .map(([name, value]) => ({ name, value }))  
+      .sort((a, b) => b.value - a.value);  
+  }, [registrations]);
+
+  const maxCollegeCount = collegeAnalytics[0]?.value || 1;
 
   useEffect(() => {  
     fetchRegistrations();  
@@ -362,7 +517,201 @@ export default function SpaceDayRegistrationsTab() {
             ₹{stats.revenue}  
           </h2>  
         </div>  
-      </div>  
+      </div>
+
+      {/* SECONDARY ANALYTICS CARDS */}  
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">  
+        <StatCard  
+          label="Astro Quiz Revenue"  
+          value={`₹${quizRevenue}`}  
+          color="blue"  
+          icon={DollarSign}  
+        />  
+        <StatCard  
+          label="Astro Design Revenue"  
+          value={`₹${designRevenue}`}  
+          color="purple"  
+          icon={DollarSign}  
+        />  
+        <StatCard  
+          label="Astro Modeler Revenue"  
+          value={`₹${modelerRevenue}`}  
+          color="orange"  
+          icon={DollarSign}  
+        />  
+        <StatCard  
+          label="Total Participants"  
+          value={totalParticipants}  
+          color="cyan"  
+          icon={Users}  
+        />  
+        <StatCard  
+          label="Individual Entries"  
+          value={individualCount}  
+          color="blue"  
+          icon={User}  
+        />  
+        <StatCard  
+          label="Team Entries"  
+          value={teamCount}  
+          color="purple"  
+          icon={UserCheck}  
+        />  
+        <StatCard  
+          label="Accommodation Required"  
+          value={accommodationCount}  
+          color="orange"  
+          icon={Home}  
+        />  
+        <StatCard  
+          label="Verification Rate"  
+          value={`${stats.total > 0 ? Math.round((stats.verified / stats.total) * 100) : 0}%`}  
+          color="emerald"  
+          icon={TrendingUp}  
+        />  
+      </div>
+
+      {/* CHARTS */}  
+      <div className="grid md:grid-cols-3 gap-4">  
+        <div  
+          className="p-5 rounded-2xl border border-[#EBE8E2] bg-white"  
+          style={{  
+            boxShadow:  
+              "0 1px 2px rgba(28,27,34,0.04), 0 8px 24px rgba(28,27,34,0.04)",  
+          }}  
+        >  
+          <h3  
+            className="text-sm font-semibold mb-4 uppercase tracking-wider"  
+            style={{ color: "#8A8578" }}  
+          >  
+            Registration Status  
+          </h3>  
+          <ResponsiveContainer width="100%" height={220}>  
+            <PieChart>  
+              <Pie  
+                data={statusData}  
+                dataKey="value"  
+                nameKey="name"  
+                outerRadius={80}  
+                label  
+              >  
+                {statusData.map((_, index) => (  
+                  <Cell  
+                    key={index}  
+                    fill={STATUS_COLORS[index % STATUS_COLORS.length]}  
+                  />  
+                ))}  
+              </Pie>  
+              <Tooltip  
+                contentStyle={{  
+                  backgroundColor: "#FFFFFF",  
+                  border: "1px solid #EBE8E2",  
+                  borderRadius: "8px",  
+                  color: "#1C1B22",  
+                }}  
+              />  
+              <Legend />  
+            </PieChart>  
+          </ResponsiveContainer>  
+        </div>
+
+        <div  
+          className="p-5 rounded-2xl border border-[#EBE8E2] bg-white"  
+          style={{  
+            boxShadow:  
+              "0 1px 2px rgba(28,27,34,0.04), 0 8px 24px rgba(28,27,34,0.04)",  
+          }}  
+        >  
+          <h3  
+            className="text-sm font-semibold mb-4 uppercase tracking-wider"  
+            style={{ color: "#8A8578" }}  
+          >  
+            Event Type  
+          </h3>  
+          <ResponsiveContainer width="100%" height={220}>  
+            <PieChart>  
+              <Pie  
+                data={eventData}  
+                dataKey="value"  
+                nameKey="name"  
+                outerRadius={80}  
+                label  
+              >  
+                {eventData.map((_, index) => (  
+                  <Cell  
+                    key={index}  
+                    fill={EVENT_COLORS[index % EVENT_COLORS.length]}  
+                  />  
+                ))}  
+              </Pie>  
+              <Tooltip  
+                contentStyle={{  
+                  backgroundColor: "#FFFFFF",  
+                  border: "1px solid #EBE8E2",  
+                  borderRadius: "8px",  
+                  color: "#1C1B22",  
+                }}  
+              />  
+              <Legend />  
+            </PieChart>  
+          </ResponsiveContainer>  
+        </div>
+
+        <div  
+          className="p-5 rounded-2xl border border-[#EBE8E2] bg-white"  
+          style={{  
+            boxShadow:  
+              "0 1px 2px rgba(28,27,34,0.04), 0 8px 24px rgba(28,27,34,0.04)",  
+          }}  
+        >  
+          <h3  
+            className="text-sm font-semibold mb-4 uppercase tracking-wider"  
+            style={{ color: "#8A8578" }}  
+          >  
+            🏫 Top Colleges  
+          </h3>  
+          <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">  
+            {collegeAnalytics.length === 0 ? (  
+              <p className="text-xs" style={{ color: "#B5B1A8" }}>  
+                No data yet.  
+              </p>  
+            ) : (  
+              collegeAnalytics.map((college, index) => (  
+                <div key={index}>  
+                  <div className="flex justify-between items-center mb-1">  
+                    <span  
+                      className="text-xs font-medium truncate pr-2"  
+                      style={{ color: "#8A8578" }}  
+                    >  
+                      {index + 1}. {college.name}  
+                    </span>  
+                    <span  
+                      className="text-xs font-semibold shrink-0"  
+                      style={{ color: "#7C6FEF" }}  
+                    >  
+                      {college.value}  
+                    </span>  
+                  </div>  
+                  <div  
+                    className="h-1 rounded-full"  
+                    style={{ backgroundColor: "#EBE8E2" }}  
+                  >  
+                    <div  
+                      className="h-1 rounded-full"  
+                      style={{  
+                        width: `${(college.value / maxCollegeCount) * 100}%`,  
+                        background:  
+                          "linear-gradient(to right, #8B7FF5, #6C5FE0)",  
+                      }}  
+                    />  
+                  </div>  
+                </div>  
+              ))  
+            )}  
+          </div>  
+        </div>  
+      </div>
+
       {settings && (  
         <div className="rounded-2xl border border-[#EBE8E2] bg-white overflow-hidden" style={{ boxShadow: "0 1px 2px rgba(28,27,34,0.04), 0 8px 24px rgba(28,27,34,0.04)" }}>  
           <div className="border-b border-[#EBE8E2] px-6 py-5">  
@@ -385,8 +734,8 @@ export default function SpaceDayRegistrationsTab() {
 
               <div className="shrink-0">  
                 <ToggleSwitch  
-                  enabled={settings.enabled}  
-                  onChange={() => updateMaster(!settings.enabled)}  
+                  enabled={settings!.enabled}  
+                  onChange={() => updateMaster(!settings!.enabled)}  
                 />  
               </div>  
             </div>
@@ -402,9 +751,9 @@ export default function SpaceDayRegistrationsTab() {
 
               <div className="shrink-0">  
                 <ToggleSwitch  
-                  enabled={settings.events.astroquiz}  
+                  enabled={settings!.events.astroquiz}  
                   onChange={() =>  
-                    updateEvent("astroquiz", !settings.events.astroquiz)  
+                    updateEvent("astroquiz", !settings!.events.astroquiz)  
                   }  
                 />  
               </div>  
@@ -418,9 +767,9 @@ export default function SpaceDayRegistrationsTab() {
               </div>  
               <div className="shrink-0">  
                 <ToggleSwitch  
-                  enabled={settings.events.astrodesign}  
+                  enabled={settings!.events.astrodesign}  
                   onChange={() =>  
-                    updateEvent("astrodesign", !settings.events.astrodesign)  
+                    updateEvent("astrodesign", !settings!.events.astrodesign)  
                   }  
                 />  
               </div>  
@@ -435,9 +784,9 @@ export default function SpaceDayRegistrationsTab() {
 
               <div className="shrink-0">  
                 <ToggleSwitch  
-                  enabled={settings.events.astromodeler}  
+                  enabled={settings!.events.astromodeler}  
                   onChange={() =>  
-                    updateEvent("astromodeler", !settings.events.astromodeler)  
+                    updateEvent("astromodeler", !settings!.events.astromodeler)  
                   }  
                 />  
               </div>  
