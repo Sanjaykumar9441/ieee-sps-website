@@ -54,44 +54,6 @@ exports.checkAssessment = async (req, res) => {
       });
     }
 
-    const now = new Date();
-
-    const startTime = new Date(assessment.start_time);
-    const endTime = new Date(assessment.end_time);
-
-    if (now < startTime) {
-      return res.status(403).json({
-        success: false,
-        code: "ASSESSMENT_NOT_STARTED",
-        message: "Assessment has not started yet.",
-        startTime: assessment.start_time,
-        serverTime: now.toISOString(),
-      });
-    }
-
-    if (now >= endTime) {
-      return res.status(403).json({
-        success: false,
-        code: "ASSESSMENT_CLOSED",
-        message: "Assessment has already ended.",
-        endTime: assessment.end_time,
-        serverTime: now.toISOString(),
-      });
-    }
-
-    const actualDurationSeconds = calculateAllowedDurationSeconds(
-      assessment,
-      now,
-    );
-
-    if (actualDurationSeconds <= 0) {
-      return res.status(403).json({
-        success: false,
-        code: "ASSESSMENT_CLOSED",
-        message: "Assessment has already ended.",
-      });
-    }
-
     if (!assessment.is_active) {
       return res.status(400).json({
         success: false,
@@ -99,12 +61,30 @@ exports.checkAssessment = async (req, res) => {
       });
     }
 
-    res.json({
+    const now = new Date();
+    const startTime = new Date(assessment.start_time);
+    const endTime = new Date(assessment.end_time);
+
+    let examStatus = "NOT_STARTED";
+
+    if (now >= startTime && now < endTime) {
+      examStatus = "LIVE";
+    } else if (now >= endTime) {
+      examStatus = "CLOSED";
+    }
+
+    return res.json({
       success: true,
       assessment,
+      examStatus,
+      serverTime: now.toISOString(),
+      startTime: assessment.start_time,
+      endTime: assessment.end_time,
     });
   } catch (err) {
-    res.status(500).json({
+    console.error("CHECK ASSESSMENT ERROR:", err);
+
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
@@ -180,10 +160,7 @@ exports.startAssessment = async (req, res) => {
     // Already Submitted?
     // --------------------------------
     const { data: submittedAttempt } =
-      await assessmentService.getSubmittedAttempt(
-        assessment.id,
-        student.id,
-      );
+      await assessmentService.getSubmittedAttempt(assessment.id, student.id);
 
     if (submittedAttempt) {
       return res.status(400).json({
@@ -195,11 +172,10 @@ exports.startAssessment = async (req, res) => {
     // --------------------------------
     // Running Attempt?
     // --------------------------------
-    const { data: runningAttempt } =
-      await assessmentService.hasRunningAttempt(
-        assessment.id,
-        student.id,
-      );
+    const { data: runningAttempt } = await assessmentService.hasRunningAttempt(
+      assessment.id,
+      student.id,
+    );
 
     if (runningAttempt) {
       return res.status(409).json({
@@ -222,16 +198,14 @@ exports.startAssessment = async (req, res) => {
       return res.status(409).json({
         success: false,
         code: "ASSESSMENT_SESSION_ACTIVE",
-        message:
-          "This assessment is already active in another session.",
+        message: "This assessment is already active in another session.",
       });
     }
 
     // --------------------------------
     // Generate Paper
     // --------------------------------
-    const frozenQuestions =
-      await engine.generateAttempt(assessment);
+    const frozenQuestions = await engine.generateAttempt(assessment);
 
     // --------------------------------
     // Create Attempt
@@ -245,16 +219,12 @@ exports.startAssessment = async (req, res) => {
     // --------------------------------
     // Redis Timer
     // --------------------------------
-    await setAttemptStartTime(
-      attempt.id,
-      actualDurationSeconds,
-    );
+    await setAttemptStartTime(attempt.id, actualDurationSeconds);
 
     // --------------------------------
     // First Question
     // --------------------------------
-    const firstQuestion =
-      await engine.getQuestion(attempt.id, 1);
+    const firstQuestion = await engine.getQuestion(attempt.id, 1);
 
     return res.json({
       success: true,
@@ -268,22 +238,13 @@ exports.startAssessment = async (req, res) => {
   } catch (err) {
     if (lockAcquired) {
       try {
-        await session.unlockStudent(
-          req.params.assessmentId,
-          req.student.id,
-        );
+        await session.unlockStudent(req.params.assessmentId, req.student.id);
       } catch (unlockError) {
-        console.error(
-          "FAILED TO RELEASE ASSESSMENT LOCK:",
-          unlockError,
-        );
+        console.error("FAILED TO RELEASE ASSESSMENT LOCK:", unlockError);
       }
     }
 
-    console.error(
-      "START ASSESSMENT ERROR:",
-      err,
-    );
+    console.error("START ASSESSMENT ERROR:", err);
 
     return res.status(500).json({
       success: false,
@@ -300,10 +261,7 @@ exports.saveAnswer = async (req, res) => {
   try {
     const { attemptId } = req.params;
 
-    const {
-      attemptQuestionId,
-      selectedAnswers,
-    } = req.body;
+    const { attemptQuestionId, selectedAnswers } = req.body;
 
     if (!attemptQuestionId) {
       return res.status(400).json({
@@ -318,27 +276,20 @@ exports.saveAnswer = async (req, res) => {
       selectedAnswers,
     );
 
-    const attempt =
-      await engine.getAttempt(attemptId);
+    const attempt = await engine.getAttempt(attemptId);
 
-    liveEvents.emitAnswerSaved(
-      attempt.assessment_id,
-      {
-        attemptId,
-        attemptQuestionId,
-        selectedAnswers,
-      },
-    );
+    liveEvents.emitAnswerSaved(attempt.assessment_id, {
+      attemptId,
+      attemptQuestionId,
+      selectedAnswers,
+    });
 
-    liveEvents.emitProgress(
-      attempt.assessment_id,
-      {
-        attemptId,
-        studentId: attempt.student_id,
-        currentQuestion: attempt.current_question,
-        answeredQuestions: attempt.answered_questions,
-      },
-    );
+    liveEvents.emitProgress(attempt.assessment_id, {
+      attemptId,
+      studentId: attempt.student_id,
+      currentQuestion: attempt.current_question,
+      answeredQuestions: attempt.answered_questions,
+    });
 
     return res.json({
       success: true,
@@ -360,41 +311,27 @@ exports.saveAnswer = async (req, res) => {
 
 exports.getQuestion = async (req, res) => {
   try {
-    const {
-      attemptId,
-      number,
-    } = req.params;
+    const { attemptId, number } = req.params;
 
-    const question =
-      await engine.getQuestion(
-        attemptId,
-        Number(number),
-      );
+    const question = await engine.getQuestion(attemptId, Number(number));
 
-    const attempt =
-      await engine.getAttempt(attemptId);
+    const attempt = await engine.getAttempt(attemptId);
 
-    const { data: assessment } =
-      await assessmentService.getAssessment(
-        attempt.assessment_id,
-      );
-
-    const allowedDurationSeconds =
-      getAttemptAllowedDurationSeconds(
-        assessment,
-        attempt,
-      );
-
-    const remainingSeconds =
-      await getSecondsRemaining(
-        attemptId,
-        allowedDurationSeconds,
-      );
-
-    await engine.updateCurrentQuestion(
-      attemptId,
-      Number(number),
+    const { data: assessment } = await assessmentService.getAssessment(
+      attempt.assessment_id,
     );
+
+    const allowedDurationSeconds = getAttemptAllowedDurationSeconds(
+      assessment,
+      attempt,
+    );
+
+    const remainingSeconds = await getSecondsRemaining(
+      attemptId,
+      allowedDurationSeconds,
+    );
+
+    await engine.updateCurrentQuestion(attemptId, Number(number));
 
     return res.json({
       success: true,
@@ -417,10 +354,7 @@ exports.getQuestion = async (req, res) => {
 
 exports.getPalette = async (req, res) => {
   try {
-    const palette =
-      await engine.getPalette(
-        req.params.attemptId,
-      );
+    const palette = await engine.getPalette(req.params.attemptId);
 
     return res.json({
       success: true,
@@ -444,8 +378,7 @@ exports.getStatus = async (req, res) => {
   try {
     const { attemptId } = req.params;
 
-    const attempt =
-      await engine.getAttempt(attemptId);
+    const attempt = await engine.getAttempt(attemptId);
 
     if (!attempt) {
       return res.status(404).json({
@@ -454,32 +387,26 @@ exports.getStatus = async (req, res) => {
       });
     }
 
-    const { data: assessment } =
-      await assessmentService.getAssessment(
-        attempt.assessment_id,
-      );
-
-    const allowedDurationSeconds =
-      getAttemptAllowedDurationSeconds(
-        assessment,
-        attempt,
-      );
-
-    const remainingSeconds =
-      await getSecondsRemaining(
-        attemptId,
-        allowedDurationSeconds,
-      );
-
-    liveEvents.emitTimer(
+    const { data: assessment } = await assessmentService.getAssessment(
       attempt.assessment_id,
-      {
-        attemptId,
-        remainingSeconds,
-      },
     );
 
-        /*
+    const allowedDurationSeconds = getAttemptAllowedDurationSeconds(
+      assessment,
+      attempt,
+    );
+
+    const remainingSeconds = await getSecondsRemaining(
+      attemptId,
+      allowedDurationSeconds,
+    );
+
+    liveEvents.emitTimer(attempt.assessment_id, {
+      attemptId,
+      remainingSeconds,
+    });
+
+    /*
     ------------------------------------
     AUTO SUBMIT
     ------------------------------------
@@ -490,16 +417,9 @@ exports.getStatus = async (req, res) => {
       attempt.status !== "SUBMITTED" &&
       attempt.status !== "DISQUALIFIED"
     ) {
-      const result =
-        await scoring.calculateScore(
-          attemptId,
-        );
+      const result = await scoring.calculateScore(attemptId);
 
-      const updatedAttempt =
-        await engine.finishAttempt(
-          attemptId,
-          result,
-        );
+      const updatedAttempt = await engine.finishAttempt(attemptId, result);
 
       await session.unlockStudent(
         updatedAttempt.assessment_id,
@@ -512,11 +432,10 @@ exports.getStatus = async (req, res) => {
       ----------------------------------------------------
       */
 
-      const { data: leaderboard } =
-        await supabase
-          .from("assessment_attempts")
-          .select(
-            `
+      const { data: leaderboard } = await supabase
+        .from("assessment_attempts")
+        .select(
+          `
             id,
             student_id,
             score,
@@ -533,129 +452,75 @@ exports.getStatus = async (req, res) => {
               section
             )
           `,
-          )
-          .eq(
-            "assessment_id",
-            updatedAttempt.assessment_id,
-          )
-          .eq(
-            "status",
-            "SUBMITTED",
+        )
+        .eq("assessment_id", updatedAttempt.assessment_id)
+        .eq("status", "SUBMITTED");
+
+      const sortedLeaderboard = (leaderboard || [])
+        .sort((a, b) => {
+          if (Number(b.score) !== Number(a.score)) {
+            return Number(b.score) - Number(a.score);
+          }
+
+          const aTime = a.submitted_at
+            ? new Date(a.submitted_at).getTime()
+            : Number.MAX_SAFE_INTEGER;
+
+          const bTime = b.submitted_at
+            ? new Date(b.submitted_at).getTime()
+            : Number.MAX_SAFE_INTEGER;
+
+          if (aTime !== bTime) {
+            return aTime - bTime;
+          }
+
+          return (a.assessment_allowed_students?.roll_no || "").localeCompare(
+            b.assessment_allowed_students?.roll_no || "",
           );
+        })
+        .map((student, index) => ({
+          rank: index + 1,
 
-      const sortedLeaderboard =
-        (leaderboard || [])
-          .sort((a, b) => {
-            if (
-              Number(b.score) !==
-              Number(a.score)
-            ) {
-              return (
-                Number(b.score) -
-                Number(a.score)
-              );
-            }
+          attemptId: student.id,
 
-            const aTime = a.submitted_at
-              ? new Date(
-                  a.submitted_at,
-                ).getTime()
-              : Number.MAX_SAFE_INTEGER;
+          studentId: student.student_id,
 
-            const bTime = b.submitted_at
-              ? new Date(
-                  b.submitted_at,
-                ).getTime()
-              : Number.MAX_SAFE_INTEGER;
+          name: student.assessment_allowed_students?.name,
 
-            if (aTime !== bTime) {
-              return aTime - bTime;
-            }
+          rollNo: student.assessment_allowed_students?.roll_no,
 
-            return (
-              a
-                .assessment_allowed_students
-                ?.roll_no || ""
-            ).localeCompare(
-              b
-                .assessment_allowed_students
-                ?.roll_no || "",
-            );
-          })
-          .map((student, index) => ({
-            rank: index + 1,
+          department: student.assessment_allowed_students?.department,
 
-            attemptId: student.id,
+          section: student.assessment_allowed_students?.section,
 
-            studentId:
-              student.student_id,
+          status: "SUBMITTED",
 
-            name:
-              student
-                .assessment_allowed_students
-                ?.name,
+          score: Number(student.score || 0),
 
-            rollNo:
-              student
-                .assessment_allowed_students
-                ?.roll_no,
+          correct: Number(student.correct || 0),
 
-            department:
-              student
-                .assessment_allowed_students
-                ?.department,
+          wrong: Number(student.wrong || 0),
 
-            section:
-              student
-                .assessment_allowed_students
-                ?.section,
+          unanswered: Number(student.unanswered || 0),
 
-            status: "SUBMITTED",
+          percentage: Number(student.percentage || 0),
 
-            score: Number(
-              student.score || 0,
-            ),
+          timeTaken:
+            student.submitted_at && student.started_at
+              ? Math.max(
+                  0,
+                  Math.floor(
+                    (new Date(student.submitted_at).getTime() -
+                      new Date(student.started_at).getTime()) /
+                      1000,
+                  ),
+                )
+              : 0,
 
-            correct: Number(
-              student.correct || 0,
-            ),
+          submittedAt: student.submitted_at,
 
-            wrong: Number(
-              student.wrong || 0,
-            ),
-
-            unanswered: Number(
-              student.unanswered || 0,
-            ),
-
-            percentage: Number(
-              student.percentage || 0,
-            ),
-
-            timeTaken:
-              student.submitted_at &&
-              student.started_at
-                ? Math.max(
-                    0,
-                    Math.floor(
-                      (
-                        new Date(
-                          student.submitted_at,
-                        ).getTime() -
-                        new Date(
-                          student.started_at,
-                        ).getTime()
-                      ) / 1000,
-                    ),
-                  )
-                : 0,
-
-            submittedAt:
-              student.submitted_at,
-
-            startedAt:
-              student.started_at,
-          }));
+          startedAt: student.started_at,
+        }));
 
       liveEvents.emitLeaderboard(
         updatedAttempt.assessment_id,
@@ -668,57 +533,35 @@ exports.getStatus = async (req, res) => {
       ----------------------------------------------------
       */
 
-      const {
-        count: registeredStudents,
-      } = await supabase
-        .from(
-          "assessment_allowed_students",
-        )
+      const { count: registeredStudents } = await supabase
+        .from("assessment_allowed_students")
         .select("*", {
           count: "exact",
           head: true,
         })
-        .eq(
-          "assessment_id",
-          updatedAttempt.assessment_id,
-        );
+        .eq("assessment_id", updatedAttempt.assessment_id);
 
-      const { data: attempts } =
-        await supabase
-          .from("assessment_attempts")
-          .select("*")
-          .eq(
-            "assessment_id",
-            updatedAttempt.assessment_id,
-          );
+      const { data: attempts } = await supabase
+        .from("assessment_attempts")
+        .select("*")
+        .eq("assessment_id", updatedAttempt.assessment_id);
 
       const dashboard = {
-        registeredStudents:
-          registeredStudents || 0,
+        registeredStudents: registeredStudents || 0,
 
-        startedStudents:
-          (attempts || []).length,
+        startedStudents: (attempts || []).length,
 
-        submittedStudents:
-          (attempts || []).filter(
-            (a) =>
-              a.status ===
-              "SUBMITTED",
-          ).length,
+        submittedStudents: (attempts || []).filter(
+          (a) => a.status === "SUBMITTED",
+        ).length,
 
-        inProgressStudents:
-          (attempts || []).filter(
-            (a) =>
-              a.status ===
-              "IN_PROGRESS",
-          ).length,
+        inProgressStudents: (attempts || []).filter(
+          (a) => a.status === "IN_PROGRESS",
+        ).length,
 
-        disqualifiedStudents:
-          (attempts || []).filter(
-            (a) =>
-              a.status ===
-              "DISQUALIFIED",
-          ).length,
+        disqualifiedStudents: (attempts || []).filter(
+          (a) => a.status === "DISQUALIFIED",
+        ).length,
       };
 
       liveEvents.emitDashboardAnalytics(
@@ -726,39 +569,26 @@ exports.getStatus = async (req, res) => {
         dashboard,
       );
 
-      liveEvents.emitSubmitted(
-        updatedAttempt.assessment_id,
-        updatedAttempt,
-      );
+      liveEvents.emitSubmitted(updatedAttempt.assessment_id, updatedAttempt);
 
-      liveEvents.emitStudentSubmitted(
-        updatedAttempt.assessment_id,
-      );
+      liveEvents.emitStudentSubmitted(updatedAttempt.assessment_id);
 
       return res.json({
         success: false,
         expired: true,
-        message:
-          "Assessment time completed.",
+        message: "Assessment time completed.",
       });
     }
 
-    const palette =
-      await engine.getPalette(
-        attemptId,
-      );
+    const palette = await engine.getPalette(attemptId);
 
-    const answered =
-      palette.filter(
-        (q) => q.answered,
-      ).length;
+    const answered = palette.filter((q) => q.answered).length;
 
     return res.json({
       success: true,
       remainingSeconds,
       answered,
-      totalQuestions:
-        palette.length,
+      totalQuestions: palette.length,
       palette,
     });
   } catch (err) {
@@ -775,35 +605,23 @@ exports.getStatus = async (req, res) => {
    SUBMIT ASSESSMENT
 ============================================================ */
 
-exports.submitAssessment = async (
-  req,
-  res,
-) => {
+exports.submitAssessment = async (req, res) => {
   try {
-    const { attemptId } =
-      req.params;
+    const { attemptId } = req.params;
 
-    const attempt =
-      await engine.getAttempt(
-        attemptId,
-      );
+    const attempt = await engine.getAttempt(attemptId);
 
     if (!attempt) {
       return res.status(404).json({
         success: false,
-        message:
-          "Attempt not found.",
+        message: "Attempt not found.",
       });
     }
 
-    if (
-      attempt.status ===
-      "SUBMITTED"
-    ) {
+    if (attempt.status === "SUBMITTED") {
       return res.status(400).json({
         success: false,
-        message:
-          "Assessment already submitted.",
+        message: "Assessment already submitted.",
       });
     }
 
@@ -813,10 +631,7 @@ exports.submitAssessment = async (
     ------------------------------------
     */
 
-    const result =
-      await scoring.calculateScore(
-        attemptId,
-      );
+    const result = await scoring.calculateScore(attemptId);
 
     /*
     ------------------------------------
@@ -824,11 +639,7 @@ exports.submitAssessment = async (
     ------------------------------------
     */
 
-    const updatedAttempt =
-      await engine.finishAttempt(
-        attemptId,
-        result,
-      );
+    const updatedAttempt = await engine.finishAttempt(attemptId, result);
 
     /*
     ------------------------------------
@@ -847,11 +658,10 @@ exports.submitAssessment = async (
     ------------------------------------
     */
 
-    const { data: leaderboard } =
-      await supabase
-        .from("assessment_attempts")
-        .select(
-          `
+    const { data: leaderboard } = await supabase
+      .from("assessment_attempts")
+      .select(
+        `
           id,
           student_id,
           score,
@@ -868,134 +678,77 @@ exports.submitAssessment = async (
             section
           )
         `,
-        )
-        .eq(
-          "assessment_id",
-          updatedAttempt.assessment_id,
-        )
-        .eq(
-          "status",
-          "SUBMITTED",
+      )
+      .eq("assessment_id", updatedAttempt.assessment_id)
+      .eq("status", "SUBMITTED");
+
+    const sortedLeaderboard = (leaderboard || [])
+      .sort((a, b) => {
+        if (Number(b.score) !== Number(a.score)) {
+          return Number(b.score) - Number(a.score);
+        }
+
+        const aTime = a.submitted_at
+          ? new Date(a.submitted_at).getTime()
+          : Number.MAX_SAFE_INTEGER;
+
+        const bTime = b.submitted_at
+          ? new Date(b.submitted_at).getTime()
+          : Number.MAX_SAFE_INTEGER;
+
+        if (aTime !== bTime) {
+          return aTime - bTime;
+        }
+
+        return (a.assessment_allowed_students?.roll_no || "").localeCompare(
+          b.assessment_allowed_students?.roll_no || "",
         );
+      })
+      .map((student, index) => ({
+        rank: index + 1,
 
-    const sortedLeaderboard =
-      (leaderboard || [])
-        .sort((a, b) => {
-          if (
-            Number(b.score) !==
-            Number(a.score)
-          ) {
-            return (
-              Number(b.score) -
-              Number(a.score)
-            );
-          }
+        attemptId: student.id,
 
-          const aTime = a.submitted_at
-            ? new Date(
-                a.submitted_at,
-              ).getTime()
-            : Number.MAX_SAFE_INTEGER;
+        studentId: student.student_id,
 
-          const bTime = b.submitted_at
-            ? new Date(
-                b.submitted_at,
-              ).getTime()
-            : Number.MAX_SAFE_INTEGER;
+        name: student.assessment_allowed_students?.name,
 
-          if (aTime !== bTime) {
-            return aTime - bTime;
-          }
+        rollNo: student.assessment_allowed_students?.roll_no,
 
-          return (
-            a
-              .assessment_allowed_students
-              ?.roll_no || ""
-          ).localeCompare(
-            b
-              .assessment_allowed_students
-              ?.roll_no || "",
-          );
-        })
-        .map((student, index) => ({
-          rank: index + 1,
+        department: student.assessment_allowed_students?.department,
 
-          attemptId: student.id,
+        section: student.assessment_allowed_students?.section,
 
-          studentId:
-            student.student_id,
+        status: "SUBMITTED",
 
-          name:
-            student
-              .assessment_allowed_students
-              ?.name,
+        score: Number(student.score || 0),
 
-          rollNo:
-            student
-              .assessment_allowed_students
-              ?.roll_no,
+        correct: Number(student.correct || 0),
 
-          department:
-            student
-              .assessment_allowed_students
-              ?.department,
+        wrong: Number(student.wrong || 0),
 
-          section:
-            student
-              .assessment_allowed_students
-              ?.section,
+        unanswered: Number(student.unanswered || 0),
 
-          status: "SUBMITTED",
+        percentage: Number(student.percentage || 0),
 
-          score: Number(
-            student.score || 0,
-          ),
+        timeTaken:
+          student.submitted_at && student.started_at
+            ? Math.max(
+                0,
+                Math.floor(
+                  (new Date(student.submitted_at).getTime() -
+                    new Date(student.started_at).getTime()) /
+                    1000,
+                ),
+              )
+            : 0,
 
-          correct: Number(
-            student.correct || 0,
-          ),
+        submittedAt: student.submitted_at,
 
-          wrong: Number(
-            student.wrong || 0,
-          ),
+        startedAt: student.started_at,
+      }));
 
-          unanswered: Number(
-            student.unanswered || 0,
-          ),
-
-          percentage: Number(
-            student.percentage || 0,
-          ),
-
-          timeTaken:
-            student.submitted_at &&
-            student.started_at
-              ? Math.max(
-                  0,
-                  Math.floor(
-                    (
-                      new Date(
-                        student.submitted_at,
-                      ).getTime() -
-                      new Date(
-                        student.started_at,
-                      ).getTime()
-                    ) / 1000,
-                  ),
-                )
-              : 0,
-
-          submittedAt:
-            student.submitted_at,
-
-          startedAt:
-            student.started_at,
-        }));
-
-    liveEvents.emitLeaderboard(
-      updatedAttempt.assessment_id,
-      sortedLeaderboard,
-    );
+    liveEvents.emitLeaderboard(updatedAttempt.assessment_id, sortedLeaderboard);
 
     /*
     ------------------------------------
@@ -1003,72 +756,42 @@ exports.submitAssessment = async (
     ------------------------------------
     */
 
-    const {
-      count: registeredStudents,
-    } = await supabase
-      .from(
-        "assessment_allowed_students",
-      )
+    const { count: registeredStudents } = await supabase
+      .from("assessment_allowed_students")
       .select("*", {
         count: "exact",
         head: true,
       })
-      .eq(
-        "assessment_id",
-        updatedAttempt.assessment_id,
-      );
+      .eq("assessment_id", updatedAttempt.assessment_id);
 
-    const { data: attempts } =
-      await supabase
-        .from("assessment_attempts")
-        .select("*")
-        .eq(
-          "assessment_id",
-          updatedAttempt.assessment_id,
-        );
+    const { data: attempts } = await supabase
+      .from("assessment_attempts")
+      .select("*")
+      .eq("assessment_id", updatedAttempt.assessment_id);
 
     const dashboard = {
-      registeredStudents:
-        registeredStudents || 0,
+      registeredStudents: registeredStudents || 0,
 
-      startedStudents:
-        (attempts || []).length,
+      startedStudents: (attempts || []).length,
 
-      submittedStudents:
-        (attempts || []).filter(
-          (a) =>
-            a.status ===
-            "SUBMITTED",
-        ).length,
+      submittedStudents: (attempts || []).filter(
+        (a) => a.status === "SUBMITTED",
+      ).length,
 
-      inProgressStudents:
-        (attempts || []).filter(
-          (a) =>
-            a.status ===
-            "IN_PROGRESS",
-        ).length,
+      inProgressStudents: (attempts || []).filter(
+        (a) => a.status === "IN_PROGRESS",
+      ).length,
 
-      disqualifiedStudents:
-        (attempts || []).filter(
-          (a) =>
-            a.status ===
-            "DISQUALIFIED",
-        ).length,
+      disqualifiedStudents: (attempts || []).filter(
+        (a) => a.status === "DISQUALIFIED",
+      ).length,
     };
 
-    liveEvents.emitDashboardAnalytics(
-      updatedAttempt.assessment_id,
-      dashboard,
-    );
+    liveEvents.emitDashboardAnalytics(updatedAttempt.assessment_id, dashboard);
 
-    liveEvents.emitSubmitted(
-      updatedAttempt.assessment_id,
-      updatedAttempt,
-    );
+    liveEvents.emitSubmitted(updatedAttempt.assessment_id, updatedAttempt);
 
-    liveEvents.emitStudentSubmitted(
-      updatedAttempt.assessment_id,
-    );
+    liveEvents.emitStudentSubmitted(updatedAttempt.assessment_id);
 
     return res.json({
       success: true,
@@ -1081,11 +804,9 @@ exports.submitAssessment = async (
 
       unanswered: result.unanswered,
 
-      percentage:
-        result.percentage,
+      percentage: result.percentage,
 
-      submittedAt:
-        updatedAttempt.submitted_at,
+      submittedAt: updatedAttempt.submitted_at,
     });
   } catch (err) {
     console.error(err);
@@ -1101,33 +822,24 @@ exports.submitAssessment = async (
    REPORT INFRACTION
 ========================================================== */
 
-exports.reportInfraction = async (
-  req,
-  res,
-) => {
+exports.reportInfraction = async (req, res) => {
   try {
-    const { attemptId } =
-      req.params;
+    const { attemptId } = req.params;
 
-    const {
-      type,
-      metadata,
-    } = req.body;
+    const { type, metadata } = req.body;
 
     if (!type) {
       return res.status(400).json({
         success: false,
-        message:
-          "Infraction type is required.",
+        message: "Infraction type is required.",
       });
     }
 
-    const result =
-      await antiCheat.reportInfraction(
-        attemptId,
-        type,
-        metadata || {},
-      );
+    const result = await antiCheat.reportInfraction(
+      attemptId,
+      type,
+      metadata || {},
+    );
 
     return res.json({
       success: true,
@@ -1147,18 +859,11 @@ exports.reportInfraction = async (
    GET ATTEMPT INFRACTIONS
 ========================================================== */
 
-exports.getInfractions = async (
-  req,
-  res,
-) => {
+exports.getInfractions = async (req, res) => {
   try {
-    const { attemptId } =
-      req.params;
+    const { attemptId } = req.params;
 
-    const infractions =
-      await antiCheat.getAttemptInfractions(
-        attemptId,
-      );
+    const infractions = await antiCheat.getAttemptInfractions(attemptId);
 
     return res.json({
       success: true,
@@ -1178,22 +883,15 @@ exports.getInfractions = async (
    RESET INFRACTIONS
 ========================================================== */
 
-exports.resetInfractions = async (
-  req,
-  res,
-) => {
+exports.resetInfractions = async (req, res) => {
   try {
-    const { attemptId } =
-      req.params;
+    const { attemptId } = req.params;
 
-    await antiCheat.resetInfractions(
-      attemptId,
-    );
+    await antiCheat.resetInfractions(attemptId);
 
     return res.json({
       success: true,
-      message:
-        "Infractions reset successfully.",
+      message: "Infractions reset successfully.",
     });
   } catch (err) {
     console.error(err);
@@ -1209,48 +907,38 @@ exports.resetInfractions = async (
    ANTI CHEAT CONFIG
 ========================================================== */
 
-exports.getAntiCheatConfig =
-  async (req, res) => {
-    try {
-      return res.json({
-        success: true,
-        config:
-          antiCheat.getConfiguration(),
-      });
-    } catch (err) {
-      console.error(err);
+exports.getAntiCheatConfig = async (req, res) => {
+  try {
+    return res.json({
+      success: true,
+      config: antiCheat.getConfiguration(),
+    });
+  } catch (err) {
+    console.error(err);
 
-      return res.status(500).json({
-        success: false,
-        message: err.message,
-      });
-    }
-  };
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
 
 /* ============================================================
    ASSESSMENT SESSION HEARTBEAT
 ============================================================ */
 
-exports.heartbeat = async (
-  req,
-  res,
-) => {
+exports.heartbeat = async (req, res) => {
   try {
-    const { attemptId } =
-      req.params;
+    const { attemptId } = req.params;
 
     const attempt =
-      req.assessmentAttempt ||
-      (await engine.getAttempt(
-        attemptId,
-      ));
+      req.assessmentAttempt || (await engine.getAttempt(attemptId));
 
     if (!attempt) {
       return res.status(404).json({
         success: false,
         code: "ATTEMPT_NOT_FOUND",
-        message:
-          "Assessment attempt not found.",
+        message: "Assessment attempt not found.",
       });
     }
 
@@ -1258,19 +946,14 @@ exports.heartbeat = async (
      * Get assessment duration.
      */
 
-    const {
-      data: assessment,
-      error,
-    } =
-      await assessmentService.getAssessment(
-        attempt.assessment_id,
-      );
+    const { data: assessment, error } = await assessmentService.getAssessment(
+      attempt.assessment_id,
+    );
 
     if (error || !assessment) {
       return res.status(404).json({
         success: false,
-        message:
-          "Assessment not found.",
+        message: "Assessment not found.",
       });
     }
 
@@ -1279,21 +962,19 @@ exports.heartbeat = async (
      * for this particular attempt.
      */
 
-    const allowedDurationSeconds =
-      getAttemptAllowedDurationSeconds(
-        assessment,
-        attempt,
-      );
+    const allowedDurationSeconds = getAttemptAllowedDurationSeconds(
+      assessment,
+      attempt,
+    );
 
     /*
      * Get authoritative Redis timer.
      */
 
-    const remainingSeconds =
-      await getSecondsRemaining(
-        attemptId,
-        allowedDurationSeconds,
-      );
+    const remainingSeconds = await getSecondsRemaining(
+      attemptId,
+      allowedDurationSeconds,
+    );
 
     /*
      * If time has expired, do NOT refresh
@@ -1305,16 +986,9 @@ exports.heartbeat = async (
       attempt.status !== "SUBMITTED" &&
       attempt.status !== "DISQUALIFIED"
     ) {
-      const result =
-        await scoring.calculateScore(
-          attemptId,
-        );
+      const result = await scoring.calculateScore(attemptId);
 
-      const updatedAttempt =
-        await engine.finishAttempt(
-          attemptId,
-          result,
-        );
+      const updatedAttempt = await engine.finishAttempt(attemptId, result);
 
       await session.unlockStudent(
         updatedAttempt.assessment_id,
@@ -1324,8 +998,7 @@ exports.heartbeat = async (
       return res.json({
         success: false,
         expired: true,
-        message:
-          "Assessment time completed.",
+        message: "Assessment time completed.",
       });
     }
 
@@ -1333,23 +1006,18 @@ exports.heartbeat = async (
      * Refresh Redis session TTL.
      */
 
-    const refreshed =
-      await session.refreshSession(
-        attempt.assessment_id,
-        attempt.student_id,
-        req.assessmentSessionId,
-        Math.max(
-          remainingSeconds,
-          1,
-        ),
-      );
+    const refreshed = await session.refreshSession(
+      attempt.assessment_id,
+      attempt.student_id,
+      req.assessmentSessionId,
+      Math.max(remainingSeconds, 1),
+    );
 
     if (!refreshed) {
       return res.status(409).json({
         success: false,
         code: "SESSION_NOT_OWNER",
-        message:
-          "This assessment session is no longer active.",
+        message: "This assessment session is no longer active.",
       });
     }
 
@@ -1357,16 +1025,11 @@ exports.heartbeat = async (
       success: true,
       remainingSeconds,
       status: attempt.status,
-      currentQuestion:
-        attempt.current_question,
-      answeredQuestions:
-        attempt.answered_questions,
+      currentQuestion: attempt.current_question,
+      answeredQuestions: attempt.answered_questions,
     });
   } catch (err) {
-    console.error(
-      "ASSESSMENT HEARTBEAT ERROR:",
-      err,
-    );
+    console.error("ASSESSMENT HEARTBEAT ERROR:", err);
 
     return res.status(500).json({
       success: false,
