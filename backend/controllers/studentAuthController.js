@@ -142,6 +142,10 @@ exports.sendOtp = async (req, res) => {
    VERIFY OTP
 ========================================================== */
 
+/* ==========================================================
+   VERIFY OTP
+========================================================== */
+
 exports.verifyOtp = async (req, res) => {
   try {
     const { assessmentId, email, otp } = req.body;
@@ -157,7 +161,11 @@ exports.verifyOtp = async (req, res) => {
        Verify OTP
     --------------------------------------------- */
 
-    const result = await verifyLoginOtp(assessmentId, email, otp);
+    const result = await verifyLoginOtp(
+      assessmentId,
+      email,
+      otp,
+    );
 
     if (!result.valid) {
       return res.status(400).json({
@@ -170,10 +178,11 @@ exports.verifyOtp = async (req, res) => {
        Get Student
     --------------------------------------------- */
 
-    const { data: student, error } = await assessmentService.getAllowedStudent(
-      assessmentId,
-      email,
-    );
+    const { data: student, error } =
+      await assessmentService.getAllowedStudent(
+        assessmentId,
+        email,
+      );
 
     if (error || !student) {
       return res.status(404).json({
@@ -190,68 +199,45 @@ exports.verifyOtp = async (req, res) => {
     }
 
     /* --------------------------------------------
+       Update Login Status
+    --------------------------------------------- */
+
+    const { data: updatedStudent, error: updateError } =
+      await supabase
+        .from("assessment_allowed_students")
+        .update({
+          has_logged_in: true,
+          first_login_at:
+            student.first_login_at ||
+            new Date().toISOString(),
+        })
+        .eq("id", student.id)
+        .select()
+        .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    /* --------------------------------------------
        JWT
     --------------------------------------------- */
 
     const token = jwt.sign(
-  {
-    id: updatedStudent.id,
-    assessmentId,
-    email: updatedStudent.email,
-    rollNo: updatedStudent.roll_no,
-    name: updatedStudent.name,
-    role: "student",
-  },
-  process.env.JWT_SECRET,
-  {
-    expiresIn: "8h",
-  },
-);
+      {
+        id: student.id,
+        assessmentId,
+        email: student.email,
+        rollNo: student.roll_no,
+        name: student.name,
+        role: "student",
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "8h",
+      },
+    );
 
-    /* --------------------------------------------
-   Update Login Status
---------------------------------------------- */
-
-const loginTime =
-  student.first_login_at ||
-  new Date().toISOString();
-
-const { error: updateError } = await supabase
-  .from("assessment_allowed_students")
-  .update({
-    has_logged_in: true,
-    first_login_at: loginTime,
-  })
-  .eq("id", student.id);
-
-if (updateError) {
-  console.error(
-    "[STUDENT AUTH] Failed to update login status:",
-    updateError
-  );
-
-  throw updateError;
-}
-
-/* --------------------------------------------
-   Fetch Updated Student
---------------------------------------------- */
-
-const {
-  data: updatedStudent,
-  error: updatedStudentError,
-} = await supabase
-  .from("assessment_allowed_students")
-  .select("*")
-  .eq("id", student.id)
-  .single();
-
-if (updatedStudentError || !updatedStudent) {
-  throw (
-    updatedStudentError ||
-    new Error("Unable to fetch updated student.")
-  );
-}
     /* --------------------------------------------
        Live Dashboard
     --------------------------------------------- */
@@ -263,20 +249,20 @@ if (updatedStudentError || !updatedStudent) {
     /* --------------------------------------------
        Success
     --------------------------------------------- */
-return res.json({
-  success: true,
 
-  token,
+    return res.json({
+      success: true,
+      token,
 
-  student: {
-    id: updatedStudent.id,
-    name: updatedStudent.name,
-    email: updatedStudent.email,
-    rollNo: updatedStudent.roll_no,
-  },
-});
+      student: {
+        id: updatedStudent.id,
+        name: updatedStudent.name,
+        email: updatedStudent.email,
+        rollNo: updatedStudent.roll_no,
+      },
+    });
   } catch (err) {
-    console.error(err);
+    console.error("VERIFY OTP ERROR:", err);
 
     return res.status(500).json({
       success: false,
