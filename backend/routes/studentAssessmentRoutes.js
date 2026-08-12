@@ -12,7 +12,10 @@ PUBLIC / PRE-LOGIN
 ============================================================
 */
 
-router.get("/:assessmentId", controller.checkAssessment);
+router.get(
+  "/:assessmentId/check",
+  controller.checkAssessment
+);
 
 /*
 ============================================================
