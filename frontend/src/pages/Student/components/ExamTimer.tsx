@@ -6,30 +6,42 @@ interface Props {
   onExpire: () => void;
 }
 
-export default function ExamTimer({ seconds, onExpire }: Props) {
+export default function ExamTimer({
+  seconds,
+  onExpire,
+}: Props) {
   useEffect(() => {
     if (seconds <= 0) {
       onExpire();
     }
   }, [seconds, onExpire]);
 
-  const hours = Math.floor(seconds / 3600);
+  const safeSeconds = Math.max(0, seconds);
 
-  const minutes = Math.floor((seconds % 3600) / 60);
+  const hours = Math.floor(safeSeconds / 3600);
 
-  const secs = seconds % 60;
+  const minutes = Math.floor(
+    (safeSeconds % 3600) / 60,
+  );
+
+  const secs = safeSeconds % 60;
 
   const formatted =
     hours > 0
-      ? `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+      ? `${String(hours).padStart(2, "0")}:${String(
+          minutes,
+        ).padStart(2, "0")}:${String(secs).padStart(
           2,
           "0",
-        )}:${String(secs).padStart(2, "0")}`
-      : `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+        )}`
+      : `${String(minutes).padStart(
+          2,
+          "0",
+        )}:${String(secs).padStart(2, "0")}`;
 
-  const danger = seconds <= 60;
+  const danger = safeSeconds <= 60;
 
-  const warning = seconds <= 300;
+  const warning = safeSeconds <= 300;
 
   return (
     <div

@@ -141,66 +141,8 @@ export default function StudentExam({
   }, [loadPalette]);
 
   /* ============================================================
-     TIMER
-  ============================================================ */
-
-  useEffect(() => {
-    const sync = async () => {
-      try {
-        const status = await getAssessmentStatus(attemptId);
-
-        if (status.expired || status.remainingSeconds <= 0) {
-          onSubmitted();
-          return;
-        }
-
-        setRemainingSeconds(status.remainingSeconds);
-
-        if (status.palette) {
-          setPalette(status.palette);
-        }
-      } catch (error) {
-        console.error("Status sync error:", error);
-      }
-    };
-
-    const interval = window.setInterval(sync, 15000);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [attemptId, onSubmitted]);
-
-  /* ============================================================
      SERVER STATUS SYNC
   ============================================================ */
-
-  useEffect(() => {
-    const sync = async () => {
-      try {
-        const status = await getAssessmentStatus(attemptId);
-
-        if (status.expired || status.remainingSeconds <= 0) {
-          onSubmitted();
-          return;
-        }
-
-        setRemainingSeconds(status.remainingSeconds);
-
-        if (status.palette) {
-          setPalette(status.palette);
-        }
-      } catch (error) {
-        console.error("Status sync error:", error);
-      }
-    };
-
-    const interval = window.setInterval(sync, 15000);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [attemptId, onSubmitted]);
 
   const syncServerState = async () => {
     try {
@@ -244,15 +186,158 @@ export default function StudentExam({
      EXPIRE
   ============================================================ */
 
-  const handleExpire = useCallback(() => {
-    if (remainingSeconds > 0) {
+const autoSubmittingRef = useRef(false);
+
+const handleExpire = useCallback(async () => {
+  /*
+   * Prevent multiple submit requests.
+   *
+   * ExamTimer can call onExpire more than once
+   * because the timer remains at 0 for a short time.
+   */
+  if (autoSubmittingRef.current) {
+    return;
+  }
+
+  if (remainingSeconds > 0) {
+    return;
+  }
+
+  autoSubmittingRef.current = true;
+
+  try {
+    toast("Time is over. Submitting your assessment...", {
+      icon: "⏰",
+    });
+
+    /*
+     * Save the currently selected answer first.
+     */
+    try {
+      await saveAnswer(
+        attemptId,
+        question.id,
+        selectedAnswers,
+      );
+    } catch (saveError) {
+      /*
+       * Do not block submission if the final answer
+       * could not be saved.
+       *
+       * The backend timer still determines the
+       * official attempt state.
+       */
+      console.warn(
+        "[EXAM] Final answer could not be saved:",
+        saveError,
+      );
+    }
+
+    /*
+     * Submit the attempt on the backend.
+     */
+    const result = await submitAssessment(attemptId);
+
+    console.log(
+      "[EXAM] Auto-submit response:",
+      result,
+    );
+
+    /*
+     * The backend may return:
+     *
+     * success: true
+     *
+     * OR
+     *
+     * expired: true
+     *
+     * if the server already expired the attempt.
+     */
+    if (
+      result?.success === true ||
+      result?.expired === true ||
+      result?.status === "SUBMITTED" ||
+      result?.status === "EXPIRED"
+    ) {
+      onSubmitted();
       return;
     }
 
-    toast.error("Time is over. Your assessment is being submitted.");
+    /*
+     * If the backend does not explicitly return success,
+     * check the current server status.
+     */
+    const status = await getAssessmentStatus(attemptId);
 
-    onSubmitted();
-  }, [remainingSeconds, onSubmitted]);
+    if (
+      status?.status === "SUBMITTED" ||
+      status?.status === "EXPIRED" ||
+      status?.status === "DISQUALIFIED" ||
+      status?.expired === true ||
+      status?.remainingSeconds <= 0
+    ) {
+      onSubmitted();
+      return;
+    }
+
+    /*
+     * Submission genuinely failed.
+     */
+    autoSubmittingRef.current = false;
+
+    toast.error(
+      status?.message ||
+        result?.message ||
+        "Unable to submit the assessment.",
+    );
+  } catch (error: any) {
+    console.error(
+      "[EXAM] Automatic submission failed:",
+      error,
+    );
+
+    /*
+     * Check server once more.
+     *
+     * The backend may have submitted the attempt even
+     * if the frontend request received an error.
+     */
+    try {
+      const status = await getAssessmentStatus(attemptId);
+
+      if (
+        status?.status === "SUBMITTED" ||
+        status?.status === "EXPIRED" ||
+        status?.status === "DISQUALIFIED" ||
+        status?.expired === true ||
+        status?.remainingSeconds <= 0
+      ) {
+        onSubmitted();
+        return;
+      }
+    } catch (statusError) {
+      console.error(
+        "[EXAM] Unable to verify final attempt status:",
+        statusError,
+      );
+    }
+
+    autoSubmittingRef.current = false;
+
+    toast.error(
+      error?.response?.data?.message ||
+        error?.message ||
+        "Automatic submission failed. Please wait.",
+    );
+  }
+}, [
+  attemptId,
+  remainingSeconds,
+  question.id,
+  selectedAnswers,
+  onSubmitted,
+]);
 
   /* ============================================================
      LOAD QUESTION

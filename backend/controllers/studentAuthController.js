@@ -110,6 +110,17 @@ exports.sendOtp = async (req, res) => {
       otp,
     });
 
+    const { error: otpSentUpdateError } = await supabase
+      .from("assessment_allowed_students")
+      .update({
+        otp_sent: true,
+      })
+      .eq("id", student.id);
+
+    if (otpSentUpdateError) {
+      console.error("[OTP] Failed to update otp_sent:", otpSentUpdateError);
+    }
+
     return res.json({
       success: true,
 
@@ -183,40 +194,64 @@ exports.verifyOtp = async (req, res) => {
     --------------------------------------------- */
 
     const token = jwt.sign(
-      {
-        id: student.id,
-
-        assessmentId,
-
-        email: student.email,
-
-        rollNo: student.roll_no,
-
-        name: student.name,
-
-        role: "student",
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "8h",
-      },
-    );
+  {
+    id: updatedStudent.id,
+    assessmentId,
+    email: updatedStudent.email,
+    rollNo: updatedStudent.roll_no,
+    name: updatedStudent.name,
+    role: "student",
+  },
+  process.env.JWT_SECRET,
+  {
+    expiresIn: "8h",
+  },
+);
 
     /* --------------------------------------------
-       Update Login Status
-    --------------------------------------------- */
+   Update Login Status
+--------------------------------------------- */
 
-    const { error: updateError } = await supabase
-      .from("assessment_allowed_students")
-      .update({
-        has_logged_in: true,
+const loginTime =
+  student.first_login_at ||
+  new Date().toISOString();
 
-        first_login_at: new Date().toISOString(),
-      })
-      .eq("id", student.id);
+const { error: updateError } = await supabase
+  .from("assessment_allowed_students")
+  .update({
+    has_logged_in: true,
+    first_login_at: loginTime,
+  })
+  .eq("id", student.id);
 
-    if (updateError) throw updateError;
+if (updateError) {
+  console.error(
+    "[STUDENT AUTH] Failed to update login status:",
+    updateError
+  );
 
+  throw updateError;
+}
+
+/* --------------------------------------------
+   Fetch Updated Student
+--------------------------------------------- */
+
+const {
+  data: updatedStudent,
+  error: updatedStudentError,
+} = await supabase
+  .from("assessment_allowed_students")
+  .select("*")
+  .eq("id", student.id)
+  .single();
+
+if (updatedStudentError || !updatedStudent) {
+  throw (
+    updatedStudentError ||
+    new Error("Unable to fetch updated student.")
+  );
+}
     /* --------------------------------------------
        Live Dashboard
     --------------------------------------------- */
@@ -228,22 +263,18 @@ exports.verifyOtp = async (req, res) => {
     /* --------------------------------------------
        Success
     --------------------------------------------- */
+return res.json({
+  success: true,
 
-    return res.json({
-      success: true,
+  token,
 
-      token,
-
-      student: {
-        id: student.id,
-
-        name: student.name,
-
-        email: student.email,
-
-        rollNo: student.roll_no,
-      },
-    });
+  student: {
+    id: updatedStudent.id,
+    name: updatedStudent.name,
+    email: updatedStudent.email,
+    rollNo: updatedStudent.roll_no,
+  },
+});
   } catch (err) {
     console.error(err);
 

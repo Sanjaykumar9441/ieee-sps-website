@@ -37,9 +37,8 @@ export default function ExamHeader({
 
           <span className="max-w-[180px] truncate">{studentName}</span>
         </div>
-
-        <ExamTimer seconds={remainingSeconds} onExpire={onExpire} />
       </div>
+      <ExamTimer seconds={remainingSeconds} onExpire={onExpire} />
     </header>
   );
 }

@@ -53,14 +53,16 @@ export const checkAssessment = async (
    SEND OTP
 ============================================================ */
 
-export const sendOtp = async (assessmentId: string, email: string) => {
+export const sendOtp = async (
+  assessmentId: string,
+  email: string,
+) => {
   const { data } = await axios.post(
     `${API}/api/student-auth/send-otp`,
     {
       assessmentId,
       email,
     },
-    getAuthConfig(),
   );
 
   return data;
@@ -82,7 +84,6 @@ export const verifyOtp = async (
       email,
       otp,
     },
-    getAuthConfig(),
   );
 
   return data;

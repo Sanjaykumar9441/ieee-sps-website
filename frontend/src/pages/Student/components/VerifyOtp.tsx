@@ -1,7 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-
 import { ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-react";
-
 import toast from "react-hot-toast";
 
 import { sendOtp, verifyOtp } from "../api/studenExamApi";
@@ -52,7 +50,6 @@ export default function VerifyOtp({
 
   const handleOtpChange = (value: string) => {
     const clean = value.replace(/\D/g, "").slice(0, 6);
-
     setOtp(clean);
   };
 
@@ -67,16 +64,93 @@ export default function VerifyOtp({
     try {
       setLoading(true);
 
-      await verifyOtp(assessmentId, email, otp);
+      /*
+       * IMPORTANT:
+       * verifyOtp() returns:
+       *
+       * {
+       *   success: true,
+       *   token: "...",
+       *   student: {...}
+       * }
+       *
+       * We MUST store the token because the Start Exam
+       * API requires authenticated student access.
+       */
+      const result = await verifyOtp(
+        assessmentId,
+        email,
+        otp,
+      );
+
+      console.log("[STUDENT AUTH] OTP verification response:", result);
+
+      if (!result?.success) {
+        throw new Error(
+          result?.message || "OTP verification failed.",
+        );
+      }
+
+      if (!result.token) {
+        console.error(
+          "[STUDENT AUTH] No token returned from verify OTP.",
+          result,
+        );
+
+        throw new Error(
+          "Student authentication token was not received.",
+        );
+      }
+
+      /*
+       * Store the JWT used by studenExamApi.ts
+       */
+      localStorage.setItem(
+        "studentToken",
+        result.token,
+      );
+
+      /*
+       * Also store student information.
+       * StudentExamPortal reads this later.
+       */
+      if (result.student) {
+        localStorage.setItem(
+          "student",
+          JSON.stringify(result.student),
+        );
+      }
+
+      /*
+       * Useful for debugging / identifying the current assessment.
+       */
+      localStorage.setItem(
+        "studentAssessmentId",
+        assessmentId,
+      );
+
+      console.log(
+        "[STUDENT AUTH] Student token stored successfully.",
+      );
+
+      console.log(
+        "[STUDENT AUTH] Student:",
+        result.student,
+      );
 
       toast.success("Verification successful.");
 
       onVerified();
     } catch (err: any) {
-      console.error(err);
+      console.error(
+        "[STUDENT AUTH] OTP verification failed:",
+        err,
+      );
 
       const message =
-        err?.response?.data?.message || err?.message || "Invalid OTP.";
+        err?.response?.data?.message ||
+        err?.message ||
+        "Invalid OTP.";
 
       toast.error(message);
     } finally {
@@ -92,17 +166,25 @@ export default function VerifyOtp({
     try {
       setResending(true);
 
-      await sendOtp(assessmentId, email);
+      await sendOtp(
+        assessmentId,
+        email,
+      );
 
       setOtp("");
       setSeconds(300);
 
       toast.success("A new OTP has been sent.");
     } catch (err: any) {
-      console.error(err);
+      console.error(
+        "[STUDENT AUTH] Resend OTP failed:",
+        err,
+      );
 
       toast.error(
-        err?.response?.data?.message || err?.message || "Unable to resend OTP.",
+        err?.response?.data?.message ||
+          err?.message ||
+          "Unable to resend OTP.",
       );
     } finally {
       setResending(false);
@@ -113,6 +195,7 @@ export default function VerifyOtp({
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="bg-white border border-slate-200 rounded-3xl shadow-xl p-8">
+
           <button
             type="button"
             onClick={onBack}
@@ -134,9 +217,14 @@ export default function VerifyOtp({
             We sent a 6-digit verification code to
           </p>
 
-          <p className="font-semibold text-slate-800 mt-1 break-all">{email}</p>
+          <p className="font-semibold text-slate-800 mt-1 break-all">
+            {email}
+          </p>
 
-          <form onSubmit={handleSubmit} className="mt-7">
+          <form
+            onSubmit={handleSubmit}
+            className="mt-7"
+          >
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Enter OTP
             </label>
@@ -144,7 +232,9 @@ export default function VerifyOtp({
             <input
               ref={inputRef}
               value={otp}
-              onChange={(e) => handleOtpChange(e.target.value)}
+              onChange={(e) =>
+                handleOtpChange(e.target.value)
+              }
               inputMode="numeric"
               autoComplete="one-time-code"
               maxLength={6}
@@ -153,7 +243,9 @@ export default function VerifyOtp({
             />
 
             <div className="flex items-center justify-between mt-4 text-sm">
-              <span className="text-slate-500">OTP expires in</span>
+              <span className="text-slate-500">
+                OTP expires in
+              </span>
 
               <span
                 className={
@@ -168,12 +260,18 @@ export default function VerifyOtp({
 
             <button
               type="submit"
-              disabled={loading || otp.length !== 6}
+              disabled={
+                loading ||
+                otp.length !== 6
+              }
               className="mt-6 w-full h-13 rounded-xl bg-[#00629B] text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-60 transition"
             >
               {loading ? (
                 <>
-                  <Loader2 size={18} className="animate-spin" />
+                  <Loader2
+                    size={18}
+                    className="animate-spin"
+                  />
                   Verifying...
                 </>
               ) : (
@@ -188,17 +286,23 @@ export default function VerifyOtp({
           <div className="text-center mt-6">
             <button
               type="button"
-              disabled={resending || seconds > 270}
+              disabled={
+                resending ||
+                seconds > 270
+              }
               onClick={handleResend}
               className="text-sm font-medium text-[#00629B] disabled:text-slate-400 disabled:cursor-not-allowed"
             >
               {resending
                 ? "Sending..."
                 : seconds > 270
-                  ? `Resend OTP in ${seconds - 270}s`
+                  ? `Resend OTP in ${
+                      seconds - 270
+                    }s`
                   : "Resend OTP"}
             </button>
           </div>
+
         </div>
       </div>
     </div>
