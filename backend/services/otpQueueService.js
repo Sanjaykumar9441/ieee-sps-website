@@ -46,7 +46,7 @@ exports.queueOtpEmail = async ({
         otp,
       },
 
-      status: "PENDING",
+      status: "pending",
 
       retry_count: 0,
 
