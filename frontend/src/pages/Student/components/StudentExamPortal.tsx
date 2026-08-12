@@ -96,7 +96,6 @@ export default function StudentExamPortal({
         }
 
         setStep("login");
-        setStep("login");
       } catch (err: any) {
         console.error(err);
 
@@ -194,7 +193,7 @@ export default function StudentExamPortal({
 
           localStorage.removeItem(`studentCurrentQuestion:${attemptId}`);
 
-          window.location.href = `/student/exam/${attemptId}/result`;
+          window.location.href = "/student/exam/completed";
         }}
       />
     );

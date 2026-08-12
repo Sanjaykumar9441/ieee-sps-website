@@ -25,17 +25,17 @@ export default function RegistrationClosed() {
           </h1>
 
           <p className="mt-8 text-3xl font-bold text-red-600">
-            Registrations Temporarily Closed
+            Registrations Closed
           </p>
 
           <p className="mt-8 text-lg leading-8 text-slate-600">
-            Due to bank server issues, payments are currently failing.
+            Registrations for National Space Day have been closed.
+
             <br />
             <br />
-            Registrations will reopen on <strong>12‑08‑2026 at 10:00 AM</strong>.
-            <br />
-            <br />
-            Thank you for your patience and overwhelming response.
+
+            Thank you for your overwhelming response.
+
             We look forward to seeing you at future IEEE SPS events.
           </p>
 
@@ -44,6 +44,7 @@ export default function RegistrationClosed() {
             className="mt-12 inline-flex items-center gap-2 rounded-xl bg-[#00629B] px-8 py-4 font-semibold text-white transition hover:bg-[#004b78]"
           >
             <ArrowLeft size={18} />
+
             Back to Space Day
           </button>
 

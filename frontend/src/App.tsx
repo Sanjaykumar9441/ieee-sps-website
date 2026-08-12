@@ -25,7 +25,7 @@ import SpaceDayRegistration from "./pages/SpaceDayRegistration";
 import RegistrationSuccess from "./pages/RegistrationSuccess";
 import SpaceDayRegistrationStatus from "./pages/SpaceDayRegistrationStatus";
 import StudentExamPortal from "./pages/Student/components/StudentExamPortal";
-import StudentExamResult from "./pages/Student/components/StudentExamResult";
+import StudentExamCompleted from "./pages/Student/components/StudentExamCompleted";
 
 function StudentExamRoute() {
   const { assessmentId } = useParams();
@@ -91,10 +91,9 @@ function App() {
               path="/student/exam/:assessmentId"
               element={<StudentExamRoute />}
             />
-
             <Route
-              path="/student/exam/:attemptId/result"
-              element={<StudentExamResult />}
+              path="/student/exam/completed"
+              element={<StudentExamCompleted />}
             />
           </Routes>
         </div>
