@@ -1,83 +1,182 @@
 /**
- * OTP email sender.
- *
- * You already have an emails/ folder in your existing backend — if it
- * exports a reusable transporter or send() function, replace the body of
- * sendOtpEmail below with a call to that instead of creating a second
- * nodemailer transporter. This file is written standalone so it works
- * either way.
- *
- * Required env vars if using this standalone version:
- *   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+ * Brevo Transactional Email Sender
  */
 
-const nodemailer = require("nodemailer");
+const { BrevoClient } = require("@getbrevo/brevo");
 
-let transporter = null;
-function getTransporter() {
-  if (transporter) return transporter;
-  transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: Number(process.env.SMTP_PORT) === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+let brevoClient = null;
+
+function getBrevoClient() {
+  if (brevoClient) {
+    return brevoClient;
+  }
+
+  if (!process.env.BREVO_API_KEY) {
+    throw new Error("BREVO_API_KEY is not configured");
+  }
+
+  brevoClient = new BrevoClient({
+    apiKey: process.env.BREVO_API_KEY,
   });
-  return transporter;
+
+  return brevoClient;
 }
 
 async function sendOtpEmail(toEmail, assessmentTitle, otpCode) {
-  const t = getTransporter();
-  await t.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to: toEmail,
-    subject: `Your OTP for ${assessmentTitle}`,
-    text: `Your login code is ${otpCode}. It expires in 5 minutes. Do not share this code with anyone.`,
-    html: `
-<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #ddd;border-radius:10px;overflow:hidden">
+  const client = getBrevoClient();
 
-  <div style="background:#003366;color:#fff;padding:18px;text-align:center">
-    <h2 style="margin:0;">IEEE SPS Student Branch Chapter</h2>
-    <p style="margin:5px 0 0;">Aditya University</p>
-  </div>
+  const senderEmail = process.env.BREVO_SENDER_EMAIL;
+  const senderName =
+    process.env.BREVO_SENDER_NAME || "IEEE SPS Student Branch Chapter";
 
-  <div style="padding:30px">
+  if (!senderEmail) {
+    throw new Error("BREVO_SENDER_EMAIL is not configured");
+  }
 
-    <h3>Hello,</h3>
+  const subject = `Your OTP for ${assessmentTitle}`;
 
-    <p>Your OTP for <strong>${assessmentTitle}</strong> is</p>
+  const textContent = `
+Your login code for ${assessmentTitle} is ${otpCode}.
 
-    <div style="
-      font-size:34px;
-      font-weight:bold;
-      letter-spacing:8px;
-      text-align:center;
-      color:#003366;
-      margin:30px 0;
-    ">
-      ${otpCode}
-    </div>
+This OTP is valid for 5 minutes.
 
-    <p>This OTP is valid for <strong>5 minutes</strong>.</p>
+Please do not share this OTP with anyone.
 
-    <p>Please do not share this OTP with anyone.</p>
+IEEE SPS Student Branch Chapter
+Aditya University
+  `.trim();
 
-  </div>
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${subject}</title>
+</head>
+
+<body style="
+  margin:0;
+  padding:0;
+  background:#f4f7fa;
+  font-family:Arial,Helvetica,sans-serif;
+">
 
   <div style="
-      background:#f5f5f5;
-      padding:12px;
-      text-align:center;
-      font-size:12px;
-      color:#666;
+    max-width:600px;
+    margin:40px auto;
+    background:#ffffff;
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    overflow:hidden;
   ">
 
+    <div style="
+      background:#003366;
+      color:#ffffff;
+      padding:24px;
+      text-align:center;
+    ">
+      <h2 style="margin:0;">
+        IEEE SPS Student Branch Chapter
+      </h2>
+
+      <p style="
+        margin:8px 0 0;
+        opacity:0.9;
+      ">
+        Aditya University
+      </p>
+    </div>
+
+    <div style="padding:32px;">
+
+      <h3 style="
+        margin-top:0;
+        color:#1e293b;
+      ">
+        Student Examination Portal
+      </h3>
+
+      <p style="color:#475569;">
+        Your verification code for
+        <strong>${assessmentTitle}</strong>
+        is:
+      </p>
+
+      <div style="
+        margin:30px 0;
+        padding:20px;
+        background:#f1f5f9;
+        border-radius:10px;
+        text-align:center;
+      ">
+
+        <span style="
+          font-size:36px;
+          font-weight:bold;
+          letter-spacing:8px;
+          color:#003366;
+        ">
+          ${otpCode}
+        </span>
+
+      </div>
+
+      <p style="color:#475569;">
+        This OTP is valid for
+        <strong>5 minutes</strong>.
+      </p>
+
+      <p style="color:#64748b;">
+        Please do not share this OTP with anyone.
+      </p>
+
+    </div>
+
+    <div style="
+      background:#f8fafc;
+      padding:16px;
+      text-align:center;
+      font-size:12px;
+      color:#64748b;
+    ">
       IEEE SPS Assessment Platform
+    </div>
 
   </div>
 
-</div>
-`,
+</body>
+</html>
+  `.trim();
+
+  const response = await client.transactionalEmails.sendTransacEmail({
+    sender: {
+      email: senderEmail,
+      name: senderName,
+    },
+
+    to: [
+      {
+        email: toEmail,
+      },
+    ],
+
+    subject,
+
+    textContent,
+
+    htmlContent,
   });
+
+  console.log(
+    `[BREVO] OTP email sent to ${toEmail}`,
+    response?.messageId || "",
+  );
+
+  return response;
 }
 
-module.exports = { sendOtpEmail };
+module.exports = {
+  sendOtpEmail,
+};
