@@ -2,32 +2,18 @@
  * Brevo Transactional Email Sender
  */
 
-const { BrevoClient } = require("@getbrevo/brevo");
-
-let brevoClient = null;
-
-function getBrevoClient() {
-  if (brevoClient) {
-    return brevoClient;
-  }
-
-  if (!process.env.BREVO_API_KEY) {
-    throw new Error("BREVO_API_KEY is not configured");
-  }
-
-  brevoClient = new BrevoClient({
-    apiKey: process.env.BREVO_API_KEY,
-  });
-
-  return brevoClient;
-}
+const axios = require("axios");
 
 async function sendOtpEmail(toEmail, assessmentTitle, otpCode) {
-  const client = getBrevoClient();
-
+  const apiKey = process.env.BREVO_API_KEY;
   const senderEmail = process.env.BREVO_SENDER_EMAIL;
   const senderName =
-    process.env.BREVO_SENDER_NAME || "IEEE SPS Student Branch Chapter";
+    process.env.BREVO_SENDER_NAME ||
+    "IEEE SPS Student Branch Chapter";
+
+  if (!apiKey) {
+    throw new Error("BREVO_API_KEY is not configured");
+  }
 
   if (!senderEmail) {
     throw new Error("BREVO_SENDER_EMAIL is not configured");
@@ -44,14 +30,14 @@ Please do not share this OTP with anyone.
 
 IEEE SPS Student Branch Chapter
 Aditya University
-  `.trim();
+`.trim();
 
   const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${subject}</title>
 </head>
 
@@ -81,20 +67,14 @@ Aditya University
         IEEE SPS Student Branch Chapter
       </h2>
 
-      <p style="
-        margin:8px 0 0;
-        opacity:0.9;
-      ">
+      <p style="margin:8px 0 0;">
         Aditya University
       </p>
     </div>
 
     <div style="padding:32px;">
 
-      <h3 style="
-        margin-top:0;
-        color:#1e293b;
-      ">
+      <h3 style="color:#1e293b;">
         Student Examination Portal
       </h3>
 
@@ -124,8 +104,7 @@ Aditya University
       </div>
 
       <p style="color:#475569;">
-        This OTP is valid for
-        <strong>5 minutes</strong>.
+        This OTP is valid for <strong>5 minutes</strong>.
       </p>
 
       <p style="color:#64748b;">
@@ -148,33 +127,60 @@ Aditya University
 
 </body>
 </html>
-  `.trim();
+`.trim();
 
-  const response = await client.transactionalEmails.sendTransacEmail({
-    sender: {
-      email: senderEmail,
-      name: senderName,
-    },
-
-    to: [
+  try {
+    const response = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
       {
-        email: toEmail,
+        sender: {
+          email: senderEmail,
+          name: senderName,
+        },
+
+        to: [
+          {
+            email: toEmail,
+          },
+        ],
+
+        subject,
+
+        textContent,
+
+        htmlContent,
       },
-    ],
+      {
+        headers: {
+          accept: "application/json",
+          "api-key": apiKey,
+          "content-type": "application/json",
+        },
 
-    subject,
+        timeout: 15000,
+      },
+    );
 
-    textContent,
+    console.log(
+      `[BREVO] OTP email sent to ${toEmail}`,
+      response.data?.messageId || "",
+    );
 
-    htmlContent,
-  });
+    return response.data;
+  } catch (error) {
+    const brevoError =
+      error?.response?.data?.message ||
+      error?.response?.data?.code ||
+      error?.message ||
+      "Brevo email sending failed";
 
-  console.log(
-    `[BREVO] OTP email sent to ${toEmail}`,
-    response?.messageId || "",
-  );
+    console.error(
+      `[BREVO] Failed to send OTP to ${toEmail}:`,
+      brevoError,
+    );
 
-  return response;
+    throw new Error(brevoError);
+  }
 }
 
 module.exports = {
