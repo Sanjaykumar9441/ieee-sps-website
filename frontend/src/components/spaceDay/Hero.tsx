@@ -1,9 +1,17 @@
-import { motion } from "framer-motion";
-import { CalendarDays, MapPin, ArrowRight, ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  CalendarDays,
+  MapPin,
+  ArrowRight,
+  ChevronDown,
+  X,
+  ExternalLink,
+} from "lucide-react";
 
 import useCountdown from "../../hooks/useCountdown";
 import { eventData } from "./eventData";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 function SpaceIllustration() {
   const stars = [
@@ -162,6 +170,14 @@ function SpaceIllustration() {
 
 export default function Hero() {
   const navigate = useNavigate();
+
+ const [showRound1, setShowRound1] = useState(true);
+const [showRound2, setShowRound2] = useState(true);
+const [showAstroDesign, setShowAstroDesign] = useState(true);
+
+  // Replace these with your actual quiz URLs
+  const quizRound1Url = "YOUR_ROUND_1_URL";
+  const quizRound2Url = "YOUR_ROUND_2_URL";
   const { days, hours, minutes, seconds } = useCountdown(eventData.date);
 
   const countdown = [
@@ -182,6 +198,209 @@ export default function Hero() {
       id="home"
       className="relative overflow-hidden min-h-screen flex items-start md:items-center bg-[#F8FAFC]"
     >
+      {/* ============================================================
+    EVENT POPUPS
+============================================================ */}
+
+<div className="fixed right-4 bottom-4 z-[100] flex w-[calc(100%-2rem)] max-w-[390px] flex-col gap-3 sm:right-6 sm:bottom-6">
+
+  {/* ============================================================
+      QUIZ ROUND 1
+  ============================================================ */}
+  <AnimatePresence>
+    {showRound1 && (
+      <motion.div
+        initial={{ opacity: 0, x: 60, scale: 0.96 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        exit={{ opacity: 0, x: 60, scale: 0.96 }}
+        transition={{ duration: 0.3 }}
+        className="group relative overflow-hidden rounded-2xl border border-blue-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.12)]"
+      >
+        {/* Accent */}
+        <div className="h-1 bg-gradient-to-r from-[#00629B] to-blue-500" />
+
+        <div className="p-4 sm:p-5">
+
+          {/* Close */}
+          <button
+            onClick={() => setShowRound1(false)}
+            aria-label="Close Quiz Round 1"
+            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-700"
+          >
+            <X size={17} />
+          </button>
+
+          {/* Badge */}
+          <div className="flex items-center gap-2 pr-8">
+            <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#00629B]">
+              Quiz Round 1
+            </span>
+
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+            <span className="text-[11px] font-medium text-slate-400">
+              Beginner
+            </span>
+          </div>
+
+          {/* Content */}
+          <h3 className="mt-3 text-lg font-bold text-slate-900">
+            AstroQuiz – Round 1
+          </h3>
+
+          <p className="mt-1.5 text-sm leading-5 text-slate-500">
+            Test your knowledge of space, astronomy and the Solar System.
+          </p>
+
+          {/* Button */}
+          <button
+            onClick={() => {
+              window.open(
+                quizRound1Url,
+                "_blank",
+                "noopener,noreferrer"
+              );
+            }}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#00629B] px-4 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:bg-[#004E7C] hover:shadow-lg"
+          >
+            Open Quiz Round 1
+            <ExternalLink size={15} />
+          </button>
+        </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+
+
+  {/* ============================================================
+      QUIZ ROUND 2
+  ============================================================ */}
+  <AnimatePresence>
+    {showRound2 && (
+      <motion.div
+        initial={{ opacity: 0, x: 60, scale: 0.96 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        exit={{ opacity: 0, x: 60, scale: 0.96 }}
+        transition={{ duration: 0.3, delay: 0.05 }}
+        className="group relative overflow-hidden rounded-2xl border border-purple-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.12)]"
+      >
+        {/* Accent */}
+        <div className="h-1 bg-gradient-to-r from-purple-600 to-fuchsia-500" />
+
+        <div className="p-4 sm:p-5">
+
+          {/* Close */}
+          <button
+            onClick={() => setShowRound2(false)}
+            aria-label="Close Quiz Round 2"
+            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-700"
+          >
+            <X size={17} />
+          </button>
+
+          {/* Badge */}
+          <div className="flex items-center gap-2 pr-8">
+            <span className="inline-flex items-center rounded-full bg-purple-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-purple-700">
+              Quiz Round 2
+            </span>
+
+            <span className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+
+            <span className="text-[11px] font-medium text-slate-400">
+              Advanced
+            </span>
+          </div>
+
+          {/* Content */}
+          <h3 className="mt-3 text-lg font-bold text-slate-900">
+            AstroQuiz – Round 2
+          </h3>
+
+          <p className="mt-1.5 text-sm leading-5 text-slate-500">
+            Ready for the next challenge? Test your advanced space knowledge.
+          </p>
+
+          {/* Button */}
+          <button
+            onClick={() => {
+              window.open(
+                quizRound2Url,
+                "_blank",
+                "noopener,noreferrer"
+              );
+            }}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:bg-purple-700 hover:shadow-lg"
+          >
+            Open Quiz Round 2
+            <ExternalLink size={15} />
+          </button>
+        </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+
+
+  {/* ============================================================
+      ASTRO DESIGN
+  ============================================================ */}
+  <AnimatePresence>
+    {showAstroDesign && (
+      <motion.div
+        initial={{ opacity: 0, x: 60, scale: 0.96 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        exit={{ opacity: 0, x: 60, scale: 0.96 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        className="group relative overflow-hidden rounded-2xl border border-emerald-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.12)]"
+      >
+        {/* Accent */}
+        <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
+
+        <div className="p-4 sm:p-5">
+
+          {/* Close */}
+          <button
+            onClick={() => setShowAstroDesign(false)}
+            aria-label="Close Astro Design"
+            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-700"
+          >
+            <X size={17} />
+          </button>
+
+          {/* Badge */}
+          <div className="flex items-center gap-2 pr-8">
+            <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-700">
+              Design Challenge
+            </span>
+
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+
+            <span className="text-[11px] font-medium text-slate-400">
+              Creative
+            </span>
+          </div>
+
+          {/* Content */}
+          <h3 className="mt-3 text-lg font-bold text-slate-900">
+            Astro Design
+          </h3>
+
+          <p className="mt-1.5 text-sm leading-5 text-slate-500">
+            Explore space-themed design challenges and showcase your creativity.
+          </p>
+
+          {/* Button */}
+          <button
+            onClick={() => navigate("/space-day/astro-design")}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:bg-emerald-700 hover:shadow-lg"
+          >
+            Open Astro Design
+            <ArrowRight size={16} />
+          </button>
+        </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+
+</div>
       {/* Background Blur */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-blue-200/30 blur-3xl" />
       <div className="absolute bottom-0 left-0 w-[350px] h-[350px] rounded-full bg-sky-100/40 blur-3xl" />
@@ -205,7 +424,8 @@ export default function Hero() {
         >
           <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0"></span>
           <span className="text-xs sm:text-sm font-semibold text-blue-700 tracking-wide uppercase">
-            IEEE SPS Student Branch Chapter - Electronics and Communication Engineering
+            IEEE SPS Student Branch Chapter - Electronics and Communication
+            Engineering
           </span>
         </motion.div>
 
