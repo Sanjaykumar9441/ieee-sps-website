@@ -10,24 +10,19 @@ const {
    PRIVATE HELPERS
 ============================================================ */
 
-/**
- * Returns all question banks linked to an assessment.
- */
 async function getAssessmentBanks(assessmentId) {
   const { data, error } = await supabase
     .from("assessment_question_banks")
-    .select(
-      `
-        question_bank_id,
-        questions_to_pick,
-        question_banks(
-          id,
-          name,
-          difficulty,
-          is_active
-        )
-      `,
-    )
+    .select(`
+      question_bank_id,
+      questions_to_pick,
+      question_banks(
+        id,
+        name,
+        difficulty,
+        is_active
+      )
+    `)
     .eq("assessment_id", assessmentId);
 
   if (error) throw error;
@@ -35,13 +30,23 @@ async function getAssessmentBanks(assessmentId) {
   return data || [];
 }
 
-/**
- * Returns all active questions for one bank.
- */
 async function getBankQuestions(bankId) {
   const { data, error } = await supabase
     .from("questions")
-    .select("*")
+    .select(`
+      id,
+      bank_id,
+      question_text,
+      question_type,
+      question_image_id,
+      explanation,
+      options,
+      correct_answers,
+      difficulty,
+      marks,
+      negative_marks,
+      estimated_seconds
+    `)
     .eq("bank_id", bankId)
     .eq("is_active", true);
 
@@ -50,20 +55,19 @@ async function getBankQuestions(bankId) {
   return data || [];
 }
 
-/**
- * Builds one combined question paper from all linked banks.
- */
 async function buildQuestionPaper(assessmentId) {
   const mappings = await getAssessmentBanks(assessmentId);
 
   let paper = [];
 
   for (const mapping of mappings) {
-    const bankQuestions = await getBankQuestions(mapping.question_bank_id);
+    const bankQuestions = await getBankQuestions(
+      mapping.question_bank_id,
+    );
 
     const picked = selectRandomQuestions(
       bankQuestions,
-      mapping.questions_to_pick,
+      Number(mapping.questions_to_pick),
     );
 
     paper.push(...picked);
@@ -72,76 +76,126 @@ async function buildQuestionPaper(assessmentId) {
   return shuffle(paper);
 }
 
-/**
- * Converts DB row into randomizer format.
- */
+/* ============================================================
+   NORMALIZE QUESTION
+============================================================ */
+
 function normalizeQuestion(question) {
   return {
-    ...question,
+    id: question.id,
+    bank_id: question.bank_id,
 
-    options: question.options,
+    question_text: question.question_text,
+    question_type: question.question_type,
 
-    correct_answers: question.correct_answers,
+    question_image_id: question.question_image_id ?? null,
+
+    explanation: question.explanation ?? "",
+
+    options: question.options || [],
+
+    correct_answers: question.correct_answers || [],
+
+    difficulty: question.difficulty,
+
+    marks: Number(question.marks || 1),
+
+    negative_marks: Number(question.negative_marks || 0),
+
+    estimated_seconds: Number(
+      question.estimated_seconds || 60,
+    ),
   };
 }
 
 /* ============================================================
-   GENERATE ATTEMPT QUESTIONS
+   GENERATE ATTEMPT
 ============================================================ */
 
 exports.generateAttempt = async (assessment) => {
   const paper = await buildQuestionPaper(assessment.id);
 
+  if (!paper.length) {
+    throw new Error(
+      "No active questions are available for this assessment.",
+    );
+  }
+
   const normalized = paper.map(normalizeQuestion);
 
-  /*
-      Randomize question order
-      Randomize options
-      Freeze correct answers
-  */
-
-  return buildAttemptQuestions(null, normalized, normalized.length);
+  return buildAttemptQuestions(
+    null,
+    normalized,
+    normalized.length,
+  );
 };
 
 /* ============================================================
    CREATE ATTEMPT
 ============================================================ */
 
-exports.createAttempt = async (assessment, student, questions) => {
+exports.createAttempt = async (
+  assessment,
+  student,
+  questions,
+) => {
   if (!assessment.duration_minutes) {
     throw new Error("Assessment duration missing.");
   }
-  const durationSeconds = assessment.duration_minutes * 60;
 
-  const expiresAt = new Date(Date.now() + durationSeconds * 1000).toISOString();
+  if (!Array.isArray(questions) || questions.length === 0) {
+    throw new Error("No questions generated for this attempt.");
+  }
+
+  const durationSeconds =
+    Number(assessment.duration_minutes) * 60;
+
+  const startedAt = new Date();
+
+  const expiresAt = new Date(
+    startedAt.getTime() + durationSeconds * 1000,
+  );
 
   const { data, error } = await supabase
     .from("assessment_attempts")
     .insert({
       assessment_id: assessment.id,
-
       student_id: student.id,
 
-      started_at: new Date().toISOString(),
-
-      expires_at: expiresAt,
+      started_at: startedAt.toISOString(),
+      expires_at: expiresAt.toISOString(),
 
       resumed_count: 0,
-
       current_question: 1,
-
       answered_questions: 0,
 
       score: 0,
+      correct: 0,
+      wrong: 0,
+      unanswered: 0,
+      percentage: 0,
 
       status: "IN_PROGRESS",
     })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("CREATE ATTEMPT ERROR:", error);
+    throw error;
+  }
 
-  await exports.storeQuestions(data.id, questions);
+  try {
+    await exports.storeQuestions(data.id, questions);
+  } catch (error) {
+    // Do not leave a broken IN_PROGRESS attempt
+    await supabase
+      .from("assessment_attempts")
+      .delete()
+      .eq("id", data.id);
+
+    throw error;
+  }
 
   return data;
 };
@@ -150,16 +204,31 @@ exports.createAttempt = async (assessment, student, questions) => {
    STORE ATTEMPT QUESTIONS
 ============================================================ */
 
-exports.storeQuestions = async (attemptId, questions) => {
-  questions.forEach((question) => {
-    question.attempt_id = attemptId;
-  });
+exports.storeQuestions = async (
+  attemptId,
+  questions,
+) => {
+  if (!Array.isArray(questions) || questions.length === 0) {
+    throw new Error("No attempt questions to store.");
+  }
+
+  const rows = questions.map((question) => ({
+    ...question,
+    attempt_id: attemptId,
+  }));
 
   const { error } = await supabase
     .from("assessment_attempt_questions")
-    .insert(questions);
+    .insert(rows);
 
-  if (error) throw error;
+  if (error) {
+    console.error(
+      "STORE ATTEMPT QUESTIONS ERROR:",
+      error,
+    );
+
+    throw error;
+  }
 
   return true;
 };
@@ -168,13 +237,23 @@ exports.storeQuestions = async (attemptId, questions) => {
    GET QUESTION
 ============================================================ */
 
-exports.getQuestion = async (attemptId, questionNumber) => {
+exports.getQuestion = async (
+  attemptId,
+  questionNumber,
+) => {
   const { data, error } = await supabase
     .from("assessment_attempt_questions")
-    .select(
-      `
-      *,
-      questions(
+    .select(`
+      id,
+      attempt_id,
+      question_id,
+      question_order,
+      shuffled_options,
+      correct_answers,
+      marks,
+      negative_marks,
+
+      questions!inner(
         id,
         question_text,
         question_type,
@@ -184,62 +263,73 @@ exports.getQuestion = async (attemptId, questionNumber) => {
         difficulty,
         estimated_seconds
       ),
+
       assessment_answers(
         id,
         selected_answers,
         answered_at
       )
-      `,
-    )
+    `)
     .eq("attempt_id", attemptId)
-    .eq("question_order", questionNumber)
+    .eq("question_order", Number(questionNumber))
     .single();
 
-  if (error) throw error;
-
-  if (!data) {
-    throw new Error("Question not found.");
+  if (error) {
+    console.error("GET QUESTION DB ERROR:", error);
+    throw error;
   }
 
-  if (!data.questions) {
+  if (!data) {
+    throw new Error(
+      `Question ${questionNumber} not found.`,
+    );
+  }
+
+  const source = data.questions;
+
+  if (!source) {
     throw new Error(
       `Question ${data.question_id} could not be loaded.`,
     );
   }
 
-  // ------------------------------------------------------------
-  // Return ONE consistent object to the frontend
-  // ------------------------------------------------------------
+  /*
+   * IMPORTANT:
+   * Always return the exact object expected by the frontend.
+   */
 
   return {
     id: data.id,
+    attempt_question_id: data.id,
 
     question_id: data.question_id,
-
     question_order: data.question_order,
 
-    question_text: data.questions.question_text,
+    question_text: source.question_text,
+    question_type: source.question_type,
 
-    question_type: data.questions.question_type,
+    question_image_id:
+      source.question_image_id ?? null,
 
-    question_image_id: data.questions.question_image_id,
+    explanation: source.explanation ?? "",
 
-    explanation: data.questions.explanation,
-
-    difficulty: data.questions.difficulty,
-
-    estimated_seconds: data.questions.estimated_seconds,
-
-    // IMPORTANT:
-    // Use the frozen/shuffled options from the attempt,
-    // NOT the original question options.
     options: data.shuffled_options || {},
 
-    marks: data.marks,
+    difficulty: source.difficulty,
 
-    negative_marks: data.negative_marks,
+    estimated_seconds:
+      source.estimated_seconds ?? 60,
 
-    assessment_answers: data.assessment_answers || [],
+    marks: Number(data.marks ?? source.marks ?? 1),
+
+    negative_marks: Number(
+      data.negative_marks ??
+        source.negative_marks ??
+        0,
+    ),
+
+    assessment_answers:
+      data.assessment_answers || [],
   };
 };
 
@@ -247,15 +337,25 @@ exports.getQuestion = async (attemptId, questionNumber) => {
    SAVE ANSWER
 ============================================================ */
 
-exports.saveAnswer = async (attemptId, attemptQuestionId, selectedAnswers) => {
+exports.saveAnswer = async (
+  attemptId,
+  attemptQuestionId,
+  selectedAnswers,
+) => {
+  if (!attemptQuestionId) {
+    throw new Error("Attempt question ID is required.");
+  }
+
+  const answers = Array.isArray(selectedAnswers)
+    ? selectedAnswers
+    : [];
+
   const { data, error } = await supabase
     .from("assessment_answers")
     .upsert(
       {
         attempt_question_id: attemptQuestionId,
-
-        selected_answers: selectedAnswers,
-
+        selected_answers: answers,
         answered_at: new Date().toISOString(),
       },
       {
@@ -267,32 +367,31 @@ exports.saveAnswer = async (attemptId, attemptQuestionId, selectedAnswers) => {
 
   if (error) throw error;
 
-  /*
-      Update current answered count
-  */
-
-  const { count, error: countError } = await supabase
-    .from("assessment_attempt_questions")
-    .select(
-      `
-      id,
-      assessment_answers!inner(id)
-    `,
-      {
-        count: "exact",
-        head: true,
-      },
-    )
-    .eq("attempt_id", attemptId);
+  const { count, error: countError } =
+    await supabase
+      .from("assessment_attempt_questions")
+      .select(
+        `
+        id,
+        assessment_answers!inner(id)
+        `,
+        {
+          count: "exact",
+          head: true,
+        },
+      )
+      .eq("attempt_id", attemptId);
 
   if (countError) throw countError;
 
-  await supabase
+  const { error: updateError } = await supabase
     .from("assessment_attempts")
     .update({
       answered_questions: count ?? 0,
     })
     .eq("id", attemptId);
+
+  if (updateError) throw updateError;
 
   return data;
 };
@@ -304,32 +403,36 @@ exports.saveAnswer = async (attemptId, attemptQuestionId, selectedAnswers) => {
 exports.getPalette = async (attemptId) => {
   const { data, error } = await supabase
     .from("assessment_attempt_questions")
-    .select(
-      `
+    .select(`
+      id,
+      question_order,
+
+      assessment_answers(
         id,
-        question_order,
-        assessment_answers(
-          id,
-          selected_answers
-        ),
-        assessment_question_flags(
-          marked_for_review
-        )
-      `,
-    )
+        selected_answers
+      ),
+
+      assessment_question_flags(
+        marked_for_review
+      )
+    `)
     .eq("attempt_id", attemptId)
     .order("question_order");
 
   if (error) throw error;
 
-  return data.map((q) => ({
+  return (data || []).map((q) => ({
     id: q.id,
 
     questionOrder: q.question_order,
 
-    answered: q.assessment_answers?.length > 0,
+    answered:
+      Array.isArray(q.assessment_answers) &&
+      q.assessment_answers.length > 0,
 
-    markedForReview: q.assessment_question_flags?.marked_for_review ?? false,
+    markedForReview:
+      q.assessment_question_flags?.marked_for_review ??
+      false,
   }));
 };
 
@@ -337,7 +440,11 @@ exports.getPalette = async (attemptId) => {
    FINISH ATTEMPT
 ============================================================ */
 
-exports.finishAttempt = async (attemptId, result, status = "SUBMITTED") => {
+exports.finishAttempt = async (
+  attemptId,
+  result,
+  status = "SUBMITTED",
+) => {
   const now = new Date().toISOString();
 
   const { data, error } = await supabase
@@ -345,18 +452,13 @@ exports.finishAttempt = async (attemptId, result, status = "SUBMITTED") => {
     .update({
       status,
 
-      score: Number(result.score || 0),
-
-      correct: Number(result.correct || 0),
-
-      wrong: Number(result.wrong || 0),
-
-      unanswered: Number(result.unanswered || 0),
-
-      percentage: Number(result.percentage || 0),
+      score: Number(result?.score || 0),
+      correct: Number(result?.correct || 0),
+      wrong: Number(result?.wrong || 0),
+      unanswered: Number(result?.unanswered || 0),
+      percentage: Number(result?.percentage || 0),
 
       submitted_at: now,
-
       completed_at: now,
     })
     .eq("id", attemptId)
@@ -379,7 +481,13 @@ exports.getAttempt = async (attemptId) => {
     .eq("id", attemptId)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === "PGRST116") {
+      return null;
+    }
+
+    throw error;
+  }
 
   return data;
 };
@@ -388,11 +496,14 @@ exports.getAttempt = async (attemptId) => {
    UPDATE CURRENT QUESTION
 ============================================================ */
 
-exports.updateCurrentQuestion = async (attemptId, questionNumber) => {
+exports.updateCurrentQuestion = async (
+  attemptId,
+  questionNumber,
+) => {
   const { error } = await supabase
     .from("assessment_attempts")
     .update({
-      current_question: questionNumber,
+      current_question: Number(questionNumber),
     })
     .eq("id", attemptId);
 
@@ -408,10 +519,15 @@ exports.updateCurrentQuestion = async (attemptId, questionNumber) => {
 exports.incrementResumeCount = async (attemptId) => {
   const attempt = await exports.getAttempt(attemptId);
 
+  if (!attempt) {
+    throw new Error("Attempt not found.");
+  }
+
   const { error } = await supabase
     .from("assessment_attempts")
     .update({
-      resumed_count: (attempt.resumed_count || 0) + 1,
+      resumed_count:
+        Number(attempt.resumed_count || 0) + 1,
     })
     .eq("id", attemptId);
 
@@ -424,17 +540,21 @@ exports.incrementResumeCount = async (attemptId) => {
    MARK QUESTION
 ============================================================ */
 
-exports.markQuestion = async (attemptQuestionId, marked) => {
-  const { error } = await supabase.from("assessment_question_flags").upsert(
-    {
-      attempt_question_id: attemptQuestionId,
-
-      marked_for_review: marked,
-    },
-    {
-      onConflict: "attempt_question_id",
-    },
-  );
+exports.markQuestion = async (
+  attemptQuestionId,
+  marked,
+) => {
+  const { error } = await supabase
+    .from("assessment_question_flags")
+    .upsert(
+      {
+        attempt_question_id: attemptQuestionId,
+        marked_for_review: marked,
+      },
+      {
+        onConflict: "attempt_question_id",
+      },
+    );
 
   if (error) throw error;
 
@@ -445,7 +565,9 @@ exports.markQuestion = async (attemptQuestionId, marked) => {
    UNMARK QUESTION
 ============================================================ */
 
-exports.unmarkQuestion = async (attemptQuestionId) => {
+exports.unmarkQuestion = async (
+  attemptQuestionId,
+) => {
   const { error } = await supabase
     .from("assessment_question_flags")
     .delete()
