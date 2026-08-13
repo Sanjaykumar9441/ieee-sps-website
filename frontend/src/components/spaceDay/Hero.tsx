@@ -176,7 +176,7 @@ const [showRound2, setShowRound2] = useState(true);
 const [showAstroDesign, setShowAstroDesign] = useState(true);
 
   // Replace these with your actual quiz URLs
-  const quizRound1Url = "https://ieeespsaditya.vercel.app/student/exam/83be200d-9cdd-4dbe-a79c-3b048fb44feb";
+  const quizRound1Url = "https://ieeespsaditya.vercel.app/student/exam/800f2021-acd4-477e-8443-f030f4db033d";
   const quizRound2Url = "YOUR_ROUND_2_URL";
   const { days, hours, minutes, seconds } = useCountdown(eventData.date);
 
