@@ -13,8 +13,11 @@ export default function QuestionCard({
   selectedAnswers,
   onChange,
 }: Props) {
+  // Backend returns these fields directly.
   const type = question.question_type;
 
+  // Backend returns shuffled options as an object:
+  // { A: "Option 1", B: "Option 2", ... }
   const options = question.options || {};
 
   const optionEntries = Object.entries(options);
@@ -38,7 +41,8 @@ export default function QuestionCard({
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
       <div className="p-6 lg:p-8">
-        {/* HEADER */}
+
+        {/* Header */}
         <div className="flex items-start justify-between gap-5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-[#00629B]">
@@ -58,19 +62,19 @@ export default function QuestionCard({
           </div>
         </div>
 
-        {/* QUESTION TEXT */}
+        {/* Question */}
         <div className="mt-7 text-[17px] leading-8 font-medium text-slate-900">
           {question.question_text}
         </div>
 
-        {/* QUESTION IMAGE */}
+        {/* Image */}
         {question.question_image_id && (
           <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5 flex items-center justify-center">
             <ImageIcon size={30} className="text-slate-300" />
           </div>
         )}
 
-        {/* OPTIONS */}
+        {/* Options */}
         <div className="mt-8 space-y-3">
           {optionEntries.length === 0 ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
