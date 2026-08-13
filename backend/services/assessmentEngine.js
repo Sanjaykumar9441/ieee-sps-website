@@ -173,20 +173,26 @@ exports.getQuestion = async (attemptId, questionNumber) => {
     .from("assessment_attempt_questions")
     .select(
       `
-      *,
+      id,
+      attempt_id,
+      question_id,
+      question_order,
+      shuffled_options,
       questions(
         id,
         question_text,
         question_type,
         question_image_id,
-        explanation
+        explanation,
+        marks,
+        negative_marks
       ),
       assessment_answers(
         id,
         selected_answers,
         answered_at
       )
-    `,
+      `,
     )
     .eq("attempt_id", attemptId)
     .eq("question_order", questionNumber)
@@ -194,7 +200,29 @@ exports.getQuestion = async (attemptId, questionNumber) => {
 
   if (error) throw error;
 
-  return data;
+  if (!data) {
+    throw new Error("Question not found.");
+  }
+
+  return {
+    id: data.id,
+    attempt_id: data.attempt_id,
+    question_id: data.question_id,
+    question_order: data.question_order,
+
+    question_text: data.questions?.question_text || "",
+    question_type: data.questions?.question_type || "MCQ",
+    question_image_id: data.questions?.question_image_id || null,
+
+    // IMPORTANT:
+    // These are the randomized options frozen for this attempt.
+    options: data.shuffled_options || {},
+
+    marks: Number(data.questions?.marks || 1),
+    negative_marks: Number(data.questions?.negative_marks || 0),
+
+    assessment_answers: data.assessment_answers || [],
+  };
 };
 
 /* ============================================================
@@ -291,11 +319,7 @@ exports.getPalette = async (attemptId) => {
    FINISH ATTEMPT
 ============================================================ */
 
-exports.finishAttempt = async (
-  attemptId,
-  result,
-  status = "SUBMITTED",
-) => {
+exports.finishAttempt = async (attemptId, result, status = "SUBMITTED") => {
   const now = new Date().toISOString();
 
   const { data, error } = await supabase

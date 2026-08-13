@@ -53,17 +53,11 @@ export const checkAssessment = async (
    SEND OTP
 ============================================================ */
 
-export const sendOtp = async (
-  assessmentId: string,
-  email: string,
-) => {
-  const { data } = await axios.post(
-    `${API}/api/student-auth/send-otp`,
-    {
-      assessmentId,
-      email,
-    },
-  );
+export const sendOtp = async (assessmentId: string, email: string) => {
+  const { data } = await axios.post(`${API}/api/student-auth/send-otp`, {
+    assessmentId,
+    email,
+  });
 
   return data;
 };
@@ -77,14 +71,11 @@ export const verifyOtp = async (
   email: string,
   otp: string,
 ) => {
-  const { data } = await axios.post(
-    `${API}/api/student-auth/verify-otp`,
-    {
-      assessmentId,
-      email,
-      otp,
-    },
-  );
+  const { data } = await axios.post(`${API}/api/student-auth/verify-otp`, {
+    assessmentId,
+    email,
+    otp,
+  });
 
   return data;
 };
@@ -152,7 +143,7 @@ export const saveAnswer = async (
   selectedAnswers: string[],
 ) => {
   const { data } = await axios.post(
-    `${API}/api/student-assessments/${attemptId}/answer`,
+    `${API}/api/student-assessment/${attemptId}/save-answer`,
     {
       attemptQuestionId,
       selectedAnswers,
@@ -177,7 +168,7 @@ export const getPalette = async (
   palette: PaletteQuestion[];
 }> => {
   const { data } = await axios.get(
-    `${API}/api/student-assessments/${attemptId}/palette`,
+    `${API}/api/student-assessment/${attemptId}/palette`,
     getSessionConfig(attemptId),
   );
 
@@ -196,7 +187,7 @@ export const getPalette = async (
 
 export const getAssessmentStatus = async (attemptId: string) => {
   const { data } = await axios.get(
-    `${API}/api/student-assessments/${attemptId}/status`,
+    `${API}/api/student-assessment/${attemptId}/status`,
     getSessionConfig(attemptId),
   );
 
@@ -251,7 +242,7 @@ export const resumeAssessment = async (
 
 export const submitAssessment = async (attemptId: string) => {
   const { data } = await axios.post(
-    `${API}/api/student-assessments/${attemptId}/submit`,
+    `${API}/api/student-assessment/${attemptId}/submit`,
     {},
     getSessionConfig(attemptId),
   );
@@ -261,7 +252,7 @@ export const submitAssessment = async (attemptId: string) => {
 
 export const assessmentHeartbeat = async (attemptId: string) => {
   const { data } = await axios.post(
-    `${API}/api/student-assessments/${attemptId}/heartbeat`,
+    `${API}/api/student-assessment/${attemptId}/heartbeat`,
     {},
     getSessionConfig(attemptId),
   );
