@@ -173,19 +173,16 @@ exports.getQuestion = async (attemptId, questionNumber) => {
     .from("assessment_attempt_questions")
     .select(
       `
-      id,
-      attempt_id,
-      question_id,
-      question_order,
-      shuffled_options,
+      *,
       questions(
         id,
         question_text,
         question_type,
         question_image_id,
         explanation,
-        marks,
-        negative_marks
+        options,
+        difficulty,
+        estimated_seconds
       ),
       assessment_answers(
         id,
@@ -204,22 +201,43 @@ exports.getQuestion = async (attemptId, questionNumber) => {
     throw new Error("Question not found.");
   }
 
+  if (!data.questions) {
+    throw new Error(
+      `Question ${data.question_id} could not be loaded.`,
+    );
+  }
+
+  // ------------------------------------------------------------
+  // Return ONE consistent object to the frontend
+  // ------------------------------------------------------------
+
   return {
     id: data.id,
-    attempt_id: data.attempt_id,
+
     question_id: data.question_id,
+
     question_order: data.question_order,
 
-    question_text: data.questions?.question_text || "",
-    question_type: data.questions?.question_type || "MCQ",
-    question_image_id: data.questions?.question_image_id || null,
+    question_text: data.questions.question_text,
+
+    question_type: data.questions.question_type,
+
+    question_image_id: data.questions.question_image_id,
+
+    explanation: data.questions.explanation,
+
+    difficulty: data.questions.difficulty,
+
+    estimated_seconds: data.questions.estimated_seconds,
 
     // IMPORTANT:
-    // These are the randomized options frozen for this attempt.
+    // Use the frozen/shuffled options from the attempt,
+    // NOT the original question options.
     options: data.shuffled_options || {},
 
-    marks: Number(data.questions?.marks || 1),
-    negative_marks: Number(data.questions?.negative_marks || 0),
+    marks: data.marks,
+
+    negative_marks: data.negative_marks,
 
     assessment_answers: data.assessment_answers || [],
   };
