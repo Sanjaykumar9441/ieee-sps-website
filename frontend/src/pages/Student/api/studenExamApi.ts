@@ -1,7 +1,6 @@
 import axios from "axios";
 
 import type {
-  AssessmentResponse,
   AttemptQuestion,
   PaletteQuestion,
   StartAssessmentResponse,
@@ -40,7 +39,7 @@ const getSessionConfig = (attemptId: string) => {
 
 export const checkAssessment = async (
   assessmentId: string,
-): Promise<AssessmentResponse> => {
+) => {
   const { data } = await axios.get(
     `${API}/api/student-assessments/${assessmentId}/check`,
     getAuthConfig(),
@@ -143,7 +142,7 @@ export const saveAnswer = async (
   selectedAnswers: string[],
 ) => {
   const { data } = await axios.post(
-    `${API}/api/student-assessment/${attemptId}/save-answer`,
+    `${API}/api/student-assessments/${attemptId}/save-answer`,
     {
       attemptQuestionId,
       selectedAnswers,
@@ -168,7 +167,7 @@ export const getPalette = async (
   palette: PaletteQuestion[];
 }> => {
   const { data } = await axios.get(
-    `${API}/api/student-assessment/${attemptId}/palette`,
+    `${API}/api/student-assessments/${attemptId}/palette`,
     getSessionConfig(attemptId),
   );
 
@@ -187,7 +186,7 @@ export const getPalette = async (
 
 export const getAssessmentStatus = async (attemptId: string) => {
   const { data } = await axios.get(
-    `${API}/api/student-assessment/${attemptId}/status`,
+    `${API}/api/student-assessments/${attemptId}/status`,
     getSessionConfig(attemptId),
   );
 
@@ -242,7 +241,7 @@ export const resumeAssessment = async (
 
 export const submitAssessment = async (attemptId: string) => {
   const { data } = await axios.post(
-    `${API}/api/student-assessment/${attemptId}/submit`,
+    `${API}/api/student-assessments/${attemptId}/submit`,
     {},
     getSessionConfig(attemptId),
   );
@@ -252,7 +251,7 @@ export const submitAssessment = async (attemptId: string) => {
 
 export const assessmentHeartbeat = async (attemptId: string) => {
   const { data } = await axios.post(
-    `${API}/api/student-assessment/${attemptId}/heartbeat`,
+    `${API}/api/student-assessments/${attemptId}/heartbeat`,
     {},
     getSessionConfig(attemptId),
   );
