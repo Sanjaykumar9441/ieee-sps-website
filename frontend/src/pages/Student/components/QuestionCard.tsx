@@ -1,5 +1,4 @@
 import { Check, Image as ImageIcon } from "lucide-react";
-
 import type { AttemptQuestion } from "../types";
 
 interface Props {
@@ -19,9 +18,9 @@ export default function QuestionCard({
   onChange,
 }: Props) {
   /*
-   * ------------------------------------------------------------
+   * ============================================================
    * SAFETY
-   * ------------------------------------------------------------
+   * ============================================================
    */
 
   if (!question) {
@@ -41,25 +40,14 @@ export default function QuestionCard({
   }
 
   /*
-   * ------------------------------------------------------------
+   * ============================================================
    * SUPPORT BOTH:
    *
    * 1. Direct backend object
-   *    {
-   *      question_type,
-   *      question_text,
-   *      options
-   *    }
    *
    * 2. Nested backend object
-   *    {
-   *      question: {
-   *        question_type,
-   *        question_text,
-   *        options
-   *      }
-   *    }
-   * ------------------------------------------------------------
+   *
+   * ============================================================
    */
 
   const rawQuestion = question as any;
@@ -71,21 +59,23 @@ export default function QuestionCard({
       : rawQuestion;
 
   /*
-   * ------------------------------------------------------------
+   * ============================================================
    * QUESTION TYPE
-   * ------------------------------------------------------------
+   * ============================================================
    */
 
   const type =
     data.question_type ??
+    data.questionType ??
     data.type ??
     rawQuestion.question_type ??
+    rawQuestion.questionType ??
     "";
 
   /*
-   * ------------------------------------------------------------
+   * ============================================================
    * QUESTION TEXT
-   * ------------------------------------------------------------
+   * ============================================================
    */
 
   const questionText =
@@ -93,23 +83,26 @@ export default function QuestionCard({
     data.questionText ??
     data.text ??
     rawQuestion.question_text ??
+    rawQuestion.questionText ??
     "";
 
   /*
-   * ------------------------------------------------------------
+   * ============================================================
    * QUESTION ORDER
-   * ------------------------------------------------------------
+   * ============================================================
    */
 
   const questionOrder =
     rawQuestion.question_order ??
+    rawQuestion.questionOrder ??
     data.question_order ??
+    data.questionOrder ??
     "";
 
   /*
-   * ------------------------------------------------------------
+   * ============================================================
    * MARKS
-   * ------------------------------------------------------------
+   * ============================================================
    */
 
   const marks = Number(
@@ -119,39 +112,33 @@ export default function QuestionCard({
   );
 
   /*
-   * ------------------------------------------------------------
+   * ============================================================
    * MULTIPLE CORRECT
-   * ------------------------------------------------------------
+   * ============================================================
    */
 
+  const normalizedType = String(type).toUpperCase();
+
   const multiple =
-    type === "MULTIPLE_CORRECT" ||
-    type === "MULTIPLE_CHOICE_MULTIPLE" ||
-    type === "MULTIPLE";
+    normalizedType === "MULTIPLE_CORRECT" ||
+    normalizedType === "MULTIPLE_CHOICE_MULTIPLE" ||
+    normalizedType === "MULTIPLE";
 
   /*
-   * ------------------------------------------------------------
+   * ============================================================
    * NORMALIZE OPTIONS
    *
-   * Supported:
+   * IMPORTANT:
    *
-   * {
-   *   A: "Option 1",
-   *   B: "Option 2"
-   * }
+   * Your database/CSV format uses:
    *
-   * [
-   *   { key: "A", text: "Option 1" },
-   *   { key: "B", text: "Option 2" }
-   * ]
+   * option_a
+   * option_b
+   * option_c
+   * option_d
    *
-   * [
-   *   "Option 1",
-   *   "Option 2"
-   * ]
-   *
-   * JSON string
-   * ------------------------------------------------------------
+   * So we explicitly support those fields.
+   * ============================================================
    */
 
   let rawOptions =
@@ -160,65 +147,91 @@ export default function QuestionCard({
     data.answer_options ??
     rawQuestion.options ??
     rawQuestion.question_options ??
-    {};
+    null;
 
   /*
-   * If options are JSONB returned as a string
+   * If options are JSON string
    */
   if (typeof rawOptions === "string") {
     try {
       rawOptions = JSON.parse(rawOptions);
-    } catch {
+    } catch (error) {
       console.error(
         "[QUESTION CARD] Unable to parse options:",
         rawOptions,
+        error,
       );
 
-      rawOptions = {};
+      rawOptions = null;
     }
   }
 
   const optionEntries: NormalizedOption[] = [];
 
   /*
-   * Object:
+   * ============================================================
+   * CASE 1:
    *
-   * {
+   * options = {
    *   A: "...",
-   *   B: "..."
+   *   B: "...",
+   *   C: "...",
+   *   D: "..."
    * }
+   * ============================================================
    */
+
   if (
     rawOptions &&
     typeof rawOptions === "object" &&
     !Array.isArray(rawOptions)
   ) {
     Object.entries(rawOptions).forEach(([key, value]) => {
-      if (value === null || value === undefined) {
+      if (
+        value === null ||
+        value === undefined ||
+        String(value).trim() === ""
+      ) {
         return;
       }
 
       optionEntries.push({
-        key,
+        key: String(key).toUpperCase(),
         text: String(value),
       });
     });
   }
 
   /*
-   * Array:
+   * ============================================================
+   * CASE 2:
    *
-   * [
-   *   { key: "A", text: "..." }
+   * options = [
+   *   { key: "A", text: "..." },
+   *   { key: "B", text: "..." }
    * ]
+   *
+   * OR
+   *
+   * options = [
+   *   "Option A",
+   *   "Option B"
+   * ]
+   * ============================================================
    */
+
   if (Array.isArray(rawOptions)) {
     rawOptions.forEach((option: any, index: number) => {
-      if (option === null || option === undefined) {
+      if (
+        option === null ||
+        option === undefined
+      ) {
         return;
       }
 
       if (typeof option === "string") {
+        if (option.trim() === "") return;
+
         optionEntries.push({
           key: String.fromCharCode(65 + index),
           text: option,
@@ -240,17 +253,175 @@ export default function QuestionCard({
         option.content ??
         "";
 
+      if (String(text).trim() === "") return;
+
       optionEntries.push({
-        key: String(key),
+        key: String(key).toUpperCase(),
         text: String(text),
       });
     });
   }
 
   /*
-   * ------------------------------------------------------------
+   * ============================================================
+   * CASE 3:
+   *
+   * YOUR DATABASE FORMAT
+   *
+   * option_a
+   * option_b
+   * option_c
+   * option_d
+   *
+   * ============================================================
+   *
+   * This is the important fix.
+   */
+
+  if (optionEntries.length === 0) {
+    const databaseOptions = [
+      {
+        key: "A",
+        text:
+          data.option_a ??
+          data.optionA ??
+          rawQuestion.option_a ??
+          rawQuestion.optionA,
+      },
+      {
+        key: "B",
+        text:
+          data.option_b ??
+          data.optionB ??
+          rawQuestion.option_b ??
+          rawQuestion.optionB,
+      },
+      {
+        key: "C",
+        text:
+          data.option_c ??
+          data.optionC ??
+          rawQuestion.option_c ??
+          rawQuestion.optionC,
+      },
+      {
+        key: "D",
+        text:
+          data.option_d ??
+          data.optionD ??
+          rawQuestion.option_d ??
+          rawQuestion.optionD,
+      },
+    ];
+
+    databaseOptions.forEach(({ key, text }) => {
+      if (
+        text !== null &&
+        text !== undefined &&
+        String(text).trim() !== ""
+      ) {
+        optionEntries.push({
+          key,
+          text: String(text),
+        });
+      }
+    });
+  }
+
+  /*
+   * ============================================================
+   * CASE 4:
+   *
+   * Some APIs may return:
+   *
+   * {
+   *   options: {
+   *     option_a: "...",
+   *     option_b: "..."
+   *   }
+   * }
+   *
+   * ============================================================
+   */
+
+  if (
+    optionEntries.length === 0 &&
+    rawOptions &&
+    typeof rawOptions === "object" &&
+    !Array.isArray(rawOptions)
+  ) {
+    const objectOptions = [
+      {
+        key: "A",
+        text:
+          rawOptions.option_a ??
+          rawOptions.optionA,
+      },
+      {
+        key: "B",
+        text:
+          rawOptions.option_b ??
+          rawOptions.optionB,
+      },
+      {
+        key: "C",
+        text:
+          rawOptions.option_c ??
+          rawOptions.optionC,
+      },
+      {
+        key: "D",
+        text:
+          rawOptions.option_d ??
+          rawOptions.optionD,
+      },
+    ];
+
+    objectOptions.forEach(({ key, text }) => {
+      if (
+        text !== null &&
+        text !== undefined &&
+        String(text).trim() !== ""
+      ) {
+        optionEntries.push({
+          key,
+          text: String(text),
+        });
+      }
+    });
+  }
+
+  /*
+   * ============================================================
+   * SORT OPTIONS
+   *
+   * Always show:
+   *
+   * A
+   * B
+   * C
+   * D
+   *
+   * ============================================================
+   */
+
+  const optionOrder: Record<string, number> = {
+    A: 0,
+    B: 1,
+    C: 2,
+    D: 3,
+  };
+
+  optionEntries.sort(
+    (a, b) =>
+      (optionOrder[a.key] ?? 99) -
+      (optionOrder[b.key] ?? 99),
+  );
+
+  /*
+   * ============================================================
    * DEBUG
-   * ------------------------------------------------------------
+   * ============================================================
    */
 
   console.log("[QUESTION CARD]", {
@@ -260,12 +431,18 @@ export default function QuestionCard({
     questionText,
     rawOptions,
     optionEntries,
+    databaseOptions: {
+      option_a: data.option_a,
+      option_b: data.option_b,
+      option_c: data.option_c,
+      option_d: data.option_d,
+    },
   });
 
   /*
-   * ------------------------------------------------------------
+   * ============================================================
    * SELECT OPTION
-   * ------------------------------------------------------------
+   * ============================================================
    */
 
   const toggleOption = (key: string) => {
@@ -290,9 +467,9 @@ export default function QuestionCard({
   };
 
   /*
-   * ------------------------------------------------------------
+   * ============================================================
    * RENDER
-   * ------------------------------------------------------------
+   * ============================================================
    */
 
   return (
@@ -301,7 +478,6 @@ export default function QuestionCard({
 
         {/* HEADER */}
         <div className="flex items-start justify-between gap-5">
-
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-[#00629B]">
               Question {questionOrder}
@@ -317,7 +493,6 @@ export default function QuestionCard({
           <div className="shrink-0 px-3 py-1.5 rounded-lg bg-slate-50 text-xs font-semibold text-slate-600">
             {marks} {marks === 1 ? "Mark" : "Marks"}
           </div>
-
         </div>
 
         {/* QUESTION */}
@@ -342,10 +517,8 @@ export default function QuestionCard({
 
         {/* OPTIONS */}
         <div className="mt-8 space-y-3">
-
           {optionEntries.length === 0 ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-
               <p className="text-sm font-semibold text-amber-800">
                 No options available for this question.
               </p>
@@ -357,11 +530,9 @@ export default function QuestionCard({
               <p className="mt-1 text-xs text-amber-700">
                 Check the browser console for the question response.
               </p>
-
             </div>
           ) : (
             optionEntries.map(({ key, text }) => {
-
               const selected =
                 selectedAnswers.includes(key);
 
@@ -378,7 +549,6 @@ export default function QuestionCard({
                       : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                   }`}
                 >
-
                   {/* OPTION LETTER */}
                   <span
                     className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-sm font-bold border ${
@@ -398,12 +568,10 @@ export default function QuestionCard({
                   <span className="pt-1 text-sm leading-6 text-slate-700">
                     {text}
                   </span>
-
                 </button>
               );
             })
           )}
-
         </div>
 
       </div>
