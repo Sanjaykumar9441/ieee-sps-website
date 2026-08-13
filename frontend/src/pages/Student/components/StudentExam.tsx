@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-
-import { AlertTriangle, Flag, Maximize, Send, ShieldCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  Flag,
+  Maximize,
+  Send,
+  ShieldCheck,
+} from "lucide-react";
 
 import toast from "react-hot-toast";
 
@@ -11,9 +16,14 @@ import {
   saveAnswer,
   submitAssessment,
 } from "../api/studenExamApi";
+
 import useAntiCheat from "../api/useAntiCheat";
 import useExamSocket from "../api/useExamSocket";
-import type { AttemptQuestion, PaletteQuestion } from "../types";
+
+import type {
+  AttemptQuestion,
+  PaletteQuestion,
+} from "../types";
 
 import ExamHeader from "../components/ExamHeader";
 import QuestionCard from "../components/QuestionCard";
@@ -42,6 +52,10 @@ export default function StudentExam({
   remainingSeconds: initialSeconds,
   onSubmitted,
 }: Props) {
+  /* ============================================================
+     ANTI-CHEAT
+  ============================================================ */
+
   const {
     infractionCount,
     maxInfractions,
@@ -54,13 +68,24 @@ export default function StudentExam({
     enabled: true,
   });
 
-  const { connected, reconnecting, reconnectCount } = useExamSocket({
+  /* ============================================================
+     SOCKET
+  ============================================================ */
+
+  const {
+    connected,
+    reconnecting,
+    reconnectCount,
+  } = useExamSocket({
     attemptId,
     assessmentId,
     enabled: true,
 
     onResync: (data) => {
-      console.log("[EXAM] Reconnected and synchronized:", data);
+      console.log(
+        "[EXAM] Reconnected and synchronized:",
+        data
+      );
 
       if (!data?.success) {
         return;
@@ -92,35 +117,46 @@ export default function StudentExam({
     },
   });
 
-  const [question, setQuestion] = useState<AttemptQuestion>(firstQuestion);
+  /* ============================================================
+     STATE
+  ============================================================ */
 
-  const [currentQuestion, setCurrentQuestion] = useState(
-    firstQuestion.question_order,
-  );
+  const [question, setQuestion] =
+    useState<AttemptQuestion | null>(
+      firstQuestion ?? null
+    );
 
-  const [remainingSeconds, setRemainingSeconds] = useState(initialSeconds);
+  const [currentQuestion, setCurrentQuestion] =
+    useState(firstQuestion.question_order);
+
+  const [remainingSeconds, setRemainingSeconds] =
+    useState(initialSeconds);
 
   const [isFullscreen, setIsFullscreen] = useState(
-    Boolean(document.fullscreenElement),
+    Boolean(document.fullscreenElement)
   );
 
-  const [palette, setPalette] = useState<PaletteQuestion[]>([]);
+  const [palette, setPalette] =
+    useState<PaletteQuestion[]>([]);
 
-  const [selectedAnswers, setSelectedAnswers] = useState<string[]>(
-    firstQuestion.assessment_answers?.[0]?.selected_answers || [],
-  );
+  const [selectedAnswers, setSelectedAnswers] =
+    useState<string[]>(
+      firstQuestion.assessment_answers?.[0]
+        ?.selected_answers || []
+    );
 
   const [saving, setSaving] = useState(false);
 
-  const [loadingQuestion, setLoadingQuestion] = useState(false);
+  const [loadingQuestion, setLoadingQuestion] =
+    useState(false);
 
   const [submitOpen, setSubmitOpen] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
 
-  const [violations, setViolations] = useState(0);
-
-  const previousVisibility = useRef(document.visibilityState);
+  const previousVisibility = useRef(
+    document.visibilityState
+  );
 
   /* ============================================================
      PALETTE
@@ -132,28 +168,36 @@ export default function StudentExam({
 
       setPalette(result.palette);
     } catch (error) {
-      console.error("Palette error:", error);
+      console.error(
+        "[EXAM] Palette error:",
+        error
+      );
     }
   }, [attemptId]);
 
   useEffect(() => {
-    loadPalette();
+    void loadPalette();
   }, [loadPalette]);
 
   /* ============================================================
      SERVER STATUS SYNC
   ============================================================ */
 
-  const syncServerState = async () => {
+  const syncServerState = useCallback(async () => {
     try {
-      const data = await getAssessmentStatus(attemptId);
+      const data =
+        await getAssessmentStatus(attemptId);
 
       if (!data?.success) {
         return;
       }
 
-      if (typeof data.remainingSeconds === "number") {
-        setRemainingSeconds(data.remainingSeconds);
+      if (
+        typeof data.remainingSeconds === "number"
+      ) {
+        setRemainingSeconds(
+          data.remainingSeconds
+        );
       }
 
       if (
@@ -161,14 +205,20 @@ export default function StudentExam({
         data.status === "DISQUALIFIED" ||
         data.status === "EXPIRED"
       ) {
-        console.warn("[EXAM] Server says attempt is finished:", data.status);
+        console.warn(
+          "[EXAM] Server says attempt is finished:",
+          data.status
+        );
 
         onSubmitted();
       }
     } catch (error) {
-      console.error("[EXAM] Failed to synchronize:", error);
+      console.error(
+        "[EXAM] Failed to synchronize:",
+        error
+      );
     }
-  };
+  }, [attemptId, onSubmitted]);
 
   useEffect(() => {
     void syncServerState();
@@ -180,131 +230,103 @@ export default function StudentExam({
     return () => {
       window.clearInterval(interval);
     };
-  }, [attemptId, onSubmitted]);
+  }, [syncServerState]);
 
   /* ============================================================
-     EXPIRE
+     EXPIRE / AUTO SUBMIT
   ============================================================ */
 
-const autoSubmittingRef = useRef(false);
+  const autoSubmittingRef =
+    useRef(false);
 
-const handleExpire = useCallback(async () => {
-  /*
-   * Prevent multiple submit requests.
-   *
-   * ExamTimer can call onExpire more than once
-   * because the timer remains at 0 for a short time.
-   */
-  if (autoSubmittingRef.current) {
-    return;
-  }
-
-  if (remainingSeconds > 0) {
-    return;
-  }
-
-  autoSubmittingRef.current = true;
-
-  try {
-    toast("Time is over. Submitting your assessment...", {
-      icon: "⏰",
-    });
-
+  const handleExpire = useCallback(async () => {
     /*
-     * Save the currently selected answer first.
+     * Prevent multiple submit requests.
+     *
+     * ExamTimer can call onExpire more than once
+     * because the timer remains at 0 for a short time.
      */
+    if (autoSubmittingRef.current) {
+      return;
+    }
+
+    if (remainingSeconds > 0) {
+      return;
+    }
+
+    autoSubmittingRef.current = true;
+
     try {
-      await saveAnswer(
-        attemptId,
-        question.id,
-        selectedAnswers,
+      toast(
+        "Time is over. Submitting your assessment...",
+        {
+          icon: "⏰",
+        }
       );
-    } catch (saveError) {
+
       /*
-       * Do not block submission if the final answer
-       * could not be saved.
-       *
-       * The backend timer still determines the
-       * official attempt state.
+       * Save the currently selected answer first.
        */
-      console.warn(
-        "[EXAM] Final answer could not be saved:",
-        saveError,
+      if (question) {
+        try {
+          await saveAnswer(
+            attemptId,
+            question.id,
+            selectedAnswers
+          );
+        } catch (saveError) {
+          /*
+           * Do not block submission if the final answer
+           * could not be saved.
+           *
+           * The backend timer still determines the
+           * official attempt state.
+           */
+          console.warn(
+            "[EXAM] Final answer could not be saved:",
+            saveError
+          );
+        }
+      }
+
+      /*
+       * Submit the attempt on the backend.
+       */
+      const result =
+        await submitAssessment(attemptId);
+
+      console.log(
+        "[EXAM] Auto-submit response:",
+        result
       );
-    }
 
-    /*
-     * Submit the attempt on the backend.
-     */
-    const result = await submitAssessment(attemptId);
+      /*
+       * The backend may return:
+       *
+       * success: true
+       *
+       * OR
+       *
+       * expired: true
+       *
+       * if the server already expired the attempt.
+       */
+      if (
+        result?.success === true ||
+        result?.expired === true ||
+        result?.status === "SUBMITTED" ||
+        result?.status === "EXPIRED"
+      ) {
+        onSubmitted();
+        return;
+      }
 
-    console.log(
-      "[EXAM] Auto-submit response:",
-      result,
-    );
-
-    /*
-     * The backend may return:
-     *
-     * success: true
-     *
-     * OR
-     *
-     * expired: true
-     *
-     * if the server already expired the attempt.
-     */
-    if (
-      result?.success === true ||
-      result?.expired === true ||
-      result?.status === "SUBMITTED" ||
-      result?.status === "EXPIRED"
-    ) {
-      onSubmitted();
-      return;
-    }
-
-    /*
-     * If the backend does not explicitly return success,
-     * check the current server status.
-     */
-    const status = await getAssessmentStatus(attemptId);
-
-    if (
-      status?.status === "SUBMITTED" ||
-      status?.status === "EXPIRED" ||
-      status?.status === "DISQUALIFIED" ||
-      status?.expired === true ||
-      status?.remainingSeconds <= 0
-    ) {
-      onSubmitted();
-      return;
-    }
-
-    /*
-     * Submission genuinely failed.
-     */
-    autoSubmittingRef.current = false;
-
-    toast.error(
-      status?.message ||
-        result?.message ||
-        "Unable to submit the assessment.",
-    );
-  } catch (error: any) {
-    console.error(
-      "[EXAM] Automatic submission failed:",
-      error,
-    );
-
-    /*
-     * Check server once more.
-     *
-     * The backend may have submitted the attempt even
-     * if the frontend request received an error.
-     */
-    try {
-      const status = await getAssessmentStatus(attemptId);
+      /*
+       * If the backend does not explicitly return success,
+       * check the current server status.
+       */
+      const status =
+        await getAssessmentStatus(attemptId);
 
       if (
         status?.status === "SUBMITTED" ||
@@ -316,42 +338,100 @@ const handleExpire = useCallback(async () => {
         onSubmitted();
         return;
       }
-    } catch (statusError) {
+
+      /*
+       * Submission genuinely failed.
+       */
+      autoSubmittingRef.current = false;
+
+      toast.error(
+        status?.message ||
+          result?.message ||
+          "Unable to submit the assessment."
+      );
+    } catch (error: any) {
       console.error(
-        "[EXAM] Unable to verify final attempt status:",
-        statusError,
+        "[EXAM] Automatic submission failed:",
+        error
+      );
+
+      /*
+       * Check server once more.
+       *
+       * The backend may have submitted the attempt even
+       * if the frontend request received an error.
+       */
+      try {
+        const status =
+          await getAssessmentStatus(attemptId);
+
+        if (
+          status?.status === "SUBMITTED" ||
+          status?.status === "EXPIRED" ||
+          status?.status === "DISQUALIFIED" ||
+          status?.expired === true ||
+          status?.remainingSeconds <= 0
+        ) {
+          onSubmitted();
+          return;
+        }
+      } catch (statusError) {
+        console.error(
+          "[EXAM] Unable to verify final attempt status:",
+          statusError
+        );
+      }
+
+      autoSubmittingRef.current = false;
+
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Automatic submission failed. Please wait."
       );
     }
-
-    autoSubmittingRef.current = false;
-
-    toast.error(
-      error?.response?.data?.message ||
-        error?.message ||
-        "Automatic submission failed. Please wait.",
-    );
-  }
-}, [
-  attemptId,
-  remainingSeconds,
-  question.id,
-  selectedAnswers,
-  onSubmitted,
-]);
+  }, [
+    attemptId,
+    remainingSeconds,
+    question?.id,
+    selectedAnswers,
+    onSubmitted,
+  ]);
 
   /* ============================================================
      LOAD QUESTION
   ============================================================ */
 
-  const loadQuestion = async (number: number) => {
-    if (number < 1 || number > totalQuestions || loadingQuestion) {
+  const loadQuestion = async (
+    number: number
+  ) => {
+    if (
+      number < 1 ||
+      number > totalQuestions ||
+      loadingQuestion
+    ) {
       return;
     }
 
     try {
       setLoadingQuestion(true);
 
-      const result = await getQuestion(attemptId, number);
+      const result =
+        await getQuestion(
+          attemptId,
+          number
+        );
+
+      console.log(
+        "[EXAM] Question response:",
+        result
+      );
+
+      if (!result?.question) {
+        throw new Error(
+          "Question data is missing from server response."
+        );
+      }
 
       setQuestion(result.question);
 
@@ -359,18 +439,27 @@ const handleExpire = useCallback(async () => {
 
       localStorage.setItem(
         `studentCurrentQuestion:${attemptId}`,
-        String(number),
+        String(number)
       );
 
-      setRemainingSeconds(result.remainingSeconds);
+      setRemainingSeconds(
+        result.remainingSeconds
+      );
 
       setSelectedAnswers(
-        result.question.assessment_answers?.[0]?.selected_answers || [],
+        result.question.assessment_answers?.[0]
+          ?.selected_answers || []
       );
     } catch (error: any) {
-      console.error(error);
+      console.error(
+        "[EXAM] Question loading error:",
+        error
+      );
 
-      toast.error(error?.message || "Unable to load question.");
+      toast.error(
+        error?.message ||
+          "Unable to load question."
+      );
     } finally {
       setLoadingQuestion(false);
     }
@@ -381,18 +470,41 @@ const handleExpire = useCallback(async () => {
   ============================================================ */
 
   const saveCurrentAnswer = async () => {
+    /*
+     * Important:
+     * Question can temporarily be null while loading.
+     */
+    if (!question) {
+      toast.error(
+        "Question is not loaded."
+      );
+
+      return false;
+    }
+
     try {
       setSaving(true);
 
-      await saveAnswer(attemptId, question.id, selectedAnswers);
+      await saveAnswer(
+        attemptId,
+        question.id,
+        selectedAnswers
+      );
 
       await loadPalette();
 
       return true;
     } catch (error: any) {
-      console.error(error);
+      console.error(
+        "[EXAM] Save answer error:",
+        error
+      );
 
-      toast.error(error?.message || "Unable to save answer.");
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to save answer."
+      );
 
       return false;
     } finally {
@@ -405,12 +517,19 @@ const handleExpire = useCallback(async () => {
   ============================================================ */
 
   const handleNext = async () => {
-    const saved = await saveCurrentAnswer();
+    const saved =
+      await saveCurrentAnswer();
 
-    if (!saved) return;
+    if (!saved) {
+      return;
+    }
 
-    if (currentQuestion < totalQuestions) {
-      await loadQuestion(currentQuestion + 1);
+    if (
+      currentQuestion < totalQuestions
+    ) {
+      await loadQuestion(
+        currentQuestion + 1
+      );
     }
   };
 
@@ -423,7 +542,9 @@ const handleExpire = useCallback(async () => {
       return;
     }
 
-    await loadQuestion(currentQuestion - 1);
+    await loadQuestion(
+      currentQuestion - 1
+    );
   };
 
   /* ============================================================
@@ -434,21 +555,48 @@ const handleExpire = useCallback(async () => {
     try {
       setSubmitting(true);
 
-      await saveCurrentAnswer();
+      /*
+       * Save current answer before submitting.
+       */
+      const saved =
+        await saveCurrentAnswer();
 
-      const result = await submitAssessment(attemptId);
-
-      if (result.success === false && !result.expired) {
-        throw new Error(result.message || "Unable to submit assessment.");
+      if (!saved) {
+        setSubmitting(false);
+        return;
       }
 
-      toast.success("Assessment submitted successfully.");
+      const result =
+        await submitAssessment(
+          attemptId
+        );
+
+      if (
+        result.success === false &&
+        !result.expired
+      ) {
+        throw new Error(
+          result.message ||
+            "Unable to submit assessment."
+        );
+      }
+
+      toast.success(
+        "Assessment submitted successfully."
+      );
 
       onSubmitted();
     } catch (error: any) {
-      console.error(error);
+      console.error(
+        "[EXAM] Submit error:",
+        error
+      );
 
-      toast.error(error?.message || "Unable to submit assessment.");
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to submit assessment."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -464,44 +612,64 @@ const handleExpire = useCallback(async () => {
         await document.documentElement.requestFullscreen();
       }
     } catch (error) {
-      console.error("Fullscreen error:", error);
+      console.error(
+        "[EXAM] Fullscreen error:",
+        error
+      );
     }
   };
 
   /* ============================================================
-   FULLSCREEN ENFORCEMENT
-============================================================ */
+     FULLSCREEN ENFORCEMENT
+  ============================================================ */
 
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      const active = Boolean(document.fullscreenElement);
+    const handleFullscreenChange =
+      () => {
+        const active =
+          Boolean(
+            document.fullscreenElement
+          );
 
-      setIsFullscreen(active);
+        setIsFullscreen(active);
 
-      if (!active) {
-        void reportInfraction("FULLSCREEN_EXIT");
+        if (!active) {
+          void reportInfraction(
+            "FULLSCREEN_EXIT"
+          );
 
-        toast.error("Fullscreen mode is required during the examination.");
+          toast.error(
+            "Fullscreen mode is required during the examination."
+          );
 
-        window.setTimeout(() => {
-          if (!document.fullscreenElement) {
-            void enterFullscreen();
-          }
-        }, 500);
-      }
-    };
+          window.setTimeout(() => {
+            if (
+              !document.fullscreenElement
+            ) {
+              void enterFullscreen();
+            }
+          }, 500);
+        }
+      };
 
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener(
+      "fullscreenchange",
+      handleFullscreenChange
+    );
 
     return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener(
+        "fullscreenchange",
+        handleFullscreenChange
+      );
     };
   }, [reportInfraction]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void enterFullscreen();
-    }, 300);
+    const timer =
+      window.setTimeout(() => {
+        void enterFullscreen();
+      }, 300);
 
     return () => {
       window.clearTimeout(timer);
@@ -513,64 +681,108 @@ const handleExpire = useCallback(async () => {
   ============================================================ */
 
   useEffect(() => {
-    const handleVisibility = () => {
-      const current = document.visibilityState;
+    const handleVisibility =
+      () => {
+        const current =
+          document.visibilityState;
 
-      if (previousVisibility.current === "visible" && current === "hidden") {
-        setViolations((value) => value + 1);
+        if (
+          previousVisibility.current ===
+            "visible" &&
+          current === "hidden"
+        ) {
+          void reportInfraction(
+            "TAB_SWITCH"
+          );
 
-        toast.error("Leaving the examination window is not allowed.");
-      }
+          toast.error(
+            "Leaving the examination window is not allowed."
+          );
+        }
 
-      previousVisibility.current = current;
-    };
+        previousVisibility.current =
+          current;
+      };
 
-    document.addEventListener("visibilitychange", handleVisibility);
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibility
+    );
 
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibility
+      );
     };
-  }, []);
+  }, [reportInfraction]);
 
   /* ============================================================
-   ANTI-CHEAT — COPY / PASTE / KEYBOARD / CONTEXT MENU
-============================================================ */
+     ANTI-CHEAT — COPY / PASTE / KEYBOARD / CONTEXT MENU
+  ============================================================ */
 
   useEffect(() => {
-    const handleCopy = (event: ClipboardEvent) => {
+    const handleCopy = (
+      event: ClipboardEvent
+    ) => {
       event.preventDefault();
 
-      void reportInfraction("COPY_ATTEMPT");
+      void reportInfraction(
+        "COPY_ATTEMPT"
+      );
 
-      toast.error("Copying is not allowed during the examination.");
+      toast.error(
+        "Copying is not allowed during the examination."
+      );
     };
 
-    const handlePaste = (event: ClipboardEvent) => {
+    const handlePaste = (
+      event: ClipboardEvent
+    ) => {
       event.preventDefault();
 
-      void reportInfraction("PASTE_ATTEMPT");
+      void reportInfraction(
+        "PASTE_ATTEMPT"
+      );
 
-      toast.error("Pasting is not allowed during the examination.");
+      toast.error(
+        "Pasting is not allowed during the examination."
+      );
     };
 
-    const handleCut = (event: ClipboardEvent) => {
+    const handleCut = (
+      event: ClipboardEvent
+    ) => {
       event.preventDefault();
 
-      void reportInfraction("CUT_ATTEMPT");
+      void reportInfraction(
+        "CUT_ATTEMPT"
+      );
 
-      toast.error("Cutting is not allowed during the examination.");
+      toast.error(
+        "Cutting is not allowed during the examination."
+      );
     };
 
-    const handleContextMenu = (event: MouseEvent) => {
+    const handleContextMenu = (
+      event: MouseEvent
+    ) => {
       event.preventDefault();
 
-      void reportInfraction("CONTEXT_MENU");
+      void reportInfraction(
+        "CONTEXT_MENU"
+      );
 
-      toast.error("Right-click is disabled during the examination.");
+      toast.error(
+        "Right-click is disabled during the examination."
+      );
     };
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const key = event.key.toLowerCase();
+    const handleKeyDown = (
+      event: KeyboardEvent
+    ) => {
+      const key =
+        event.key.toLowerCase();
 
       const blocked =
         (event.ctrlKey && key === "c") ||
@@ -582,7 +794,9 @@ const handleExpire = useCallback(async () => {
         (event.ctrlKey && key === "u") ||
         (event.ctrlKey &&
           event.shiftKey &&
-          (key === "i" || key === "j" || key === "c")) ||
+          (key === "i" ||
+            key === "j" ||
+            key === "c")) ||
         event.key === "F12";
 
       if (!blocked) {
@@ -592,31 +806,83 @@ const handleExpire = useCallback(async () => {
       event.preventDefault();
       event.stopPropagation();
 
-      void reportInfraction("KEYBOARD_SHORTCUT");
+      void reportInfraction(
+        "KEYBOARD_SHORTCUT"
+      );
 
-      toast.error("This keyboard shortcut is disabled during the examination.");
+      toast.error(
+        "This keyboard shortcut is disabled during the examination."
+      );
     };
 
-    document.addEventListener("copy", handleCopy);
-    document.addEventListener("paste", handlePaste);
-    document.addEventListener("cut", handleCut);
-    document.addEventListener("contextmenu", handleContextMenu);
-    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener(
+      "copy",
+      handleCopy
+    );
+
+    document.addEventListener(
+      "paste",
+      handlePaste
+    );
+
+    document.addEventListener(
+      "cut",
+      handleCut
+    );
+
+    document.addEventListener(
+      "contextmenu",
+      handleContextMenu
+    );
+
+    document.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
 
     return () => {
-      document.removeEventListener("copy", handleCopy);
-      document.removeEventListener("paste", handlePaste);
-      document.removeEventListener("cut", handleCut);
-      document.removeEventListener("contextmenu", handleContextMenu);
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener(
+        "copy",
+        handleCopy
+      );
+
+      document.removeEventListener(
+        "paste",
+        handlePaste
+      );
+
+      document.removeEventListener(
+        "cut",
+        handleCut
+      );
+
+      document.removeEventListener(
+        "contextmenu",
+        handleContextMenu
+      );
+
+      document.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
     };
   }, [reportInfraction]);
 
+  /* ============================================================
+     RENDER
+  ============================================================ */
+
   return (
     <div className="fixed inset-0 bg-slate-50 flex flex-col overflow-hidden">
+
+      {/* ========================================================
+          CONNECTION LOST
+      ======================================================== */}
+
       {!connected && reconnecting && (
         <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-2xl">
+
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-amber-200 border-t-amber-600" />
             </div>
@@ -626,8 +892,9 @@ const handleExpire = useCallback(async () => {
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Your connection to the examination server was interrupted. Please
-              wait while we reconnect you.
+              Your connection to the examination
+              server was interrupted. Please wait
+              while we reconnect you.
             </p>
 
             <p className="mt-4 text-sm font-semibold text-amber-600">
@@ -636,6 +903,11 @@ const handleExpire = useCallback(async () => {
           </div>
         </div>
       )}
+
+      {/* ========================================================
+          HEADER
+      ======================================================== */}
+
       <ExamHeader
         assessmentTitle={assessmentTitle}
         studentName={studentName}
@@ -643,210 +915,373 @@ const handleExpire = useCallback(async () => {
         onExpire={handleExpire}
       />
 
+      {/* ========================================================
+          MAIN CONTENT
+      ======================================================== */}
+
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto">
           <div className="max-w-[1500px] mx-auto p-4 lg:p-6">
+
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_330px] gap-6">
-              {/* =================================================
+
+              {/* ==================================================
                   MAIN EXAM
-              ================================================= */}
+              ================================================== */}
 
               <main className="min-w-0">
+
                 <div className="flex items-center justify-between mb-4">
+
                   <div>
                     <p className="text-sm font-semibold text-slate-500">
                       Question{" "}
-                      <span className="text-slate-900">{currentQuestion}</span>{" "}
+                      <span className="text-slate-900">
+                        {currentQuestion}
+                      </span>{" "}
                       of{" "}
-                      <span className="text-slate-900">{totalQuestions}</span>
+                      <span className="text-slate-900">
+                        {totalQuestions}
+                      </span>
                     </p>
                   </div>
 
-                  {warning && (
-                    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
-                      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-                        <div className="mb-4">
-                          <h2
-                            className={`text-xl font-bold ${
-                              disqualified ? "text-red-600" : "text-amber-600"
-                            }`}
-                          >
-                            {disqualified
-                              ? "Assessment Disqualified"
-                              : "Anti-Cheat Warning"}
-                          </h2>
-
-                          <p className="mt-2 text-sm text-gray-600">
-                            {warning}
-                          </p>
-                        </div>
-
-                        <div className="mb-5 rounded-xl bg-gray-100 p-4">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">
-                              Violations
-                            </span>
-
-                            <span className="font-bold">
-                              {infractionCount} / {maxInfractions}
-                            </span>
-                          </div>
-                        </div>
-
-                        {!disqualified && (
-                          <button
-                            type="button"
-                            onClick={dismissWarning}
-                            className="w-full rounded-xl bg-[#00629B] px-4 py-3 font-semibold text-white"
-                          >
-                            I Understand
-                          </button>
-                        )}
-
-                        {disqualified && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              window.location.href = "/student";
-                            }}
-                            className="w-full rounded-xl bg-red-600 px-4 py-3 font-semibold text-white"
-                          >
-                            Exit Assessment
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
                   <div className="flex items-center gap-2">
-                    {violations > 0 && (
+
+                    {/* =================================================
+                        INFRACTION COUNT
+                    ================================================= */}
+
+                    {infractionCount > 0 && (
                       <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs font-semibold">
+
                         <AlertTriangle size={14} />
-                        {violations} violation
-                        {violations !== 1 ? "s" : ""}
+
+                        {infractionCount} violation
+                        {infractionCount !== 1
+                          ? "s"
+                          : ""}
+
                       </div>
                     )}
 
+                    {/* =================================================
+                        FULLSCREEN BUTTON
+                    ================================================= */}
+
                     <button
                       type="button"
-                      onClick={enterFullscreen}
+                      onClick={
+                        enterFullscreen
+                      }
                       className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50"
                     >
                       <Maximize size={14} />
 
-                      {isFullscreen ? "Fullscreen Active" : "Enter Fullscreen"}
+                      {isFullscreen
+                        ? "Fullscreen Active"
+                        : "Enter Fullscreen"}
                     </button>
+
                   </div>
                 </div>
 
+                {/* =================================================
+                    ANTI-CHEAT WARNING
+                ================================================= */}
+
+                {warning && (
+                  <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
+
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+
+                      <div className="mb-4">
+
+                        <h2
+                          className={`text-xl font-bold ${
+                            disqualified
+                              ? "text-red-600"
+                              : "text-amber-600"
+                          }`}
+                        >
+                          {disqualified
+                            ? "Assessment Disqualified"
+                            : "Anti-Cheat Warning"}
+                        </h2>
+
+                        <p className="mt-2 text-sm text-gray-600">
+                          {warning}
+                        </p>
+
+                      </div>
+
+                      <div className="mb-5 rounded-xl bg-gray-100 p-4">
+
+                        <div className="flex items-center justify-between">
+
+                          <span className="text-sm text-gray-600">
+                            Violations
+                          </span>
+
+                          <span className="font-bold">
+                            {infractionCount} /{" "}
+                            {maxInfractions}
+                          </span>
+
+                        </div>
+
+                      </div>
+
+                      {!disqualified && (
+                        <button
+                          type="button"
+                          onClick={
+                            dismissWarning
+                          }
+                          className="w-full rounded-xl bg-[#00629B] px-4 py-3 font-semibold text-white"
+                        >
+                          I Understand
+                        </button>
+                      )}
+
+                      {disqualified && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            window.location.href =
+                              "/student";
+                          }}
+                          className="w-full rounded-xl bg-red-600 px-4 py-3 font-semibold text-white"
+                        >
+                          Exit Assessment
+                        </button>
+                      )}
+
+                    </div>
+                  </div>
+                )}
+
+                {/* =================================================
+                    QUESTION
+                ================================================= */}
+
                 {loadingQuestion ? (
                   <div className="bg-white rounded-2xl border border-slate-200 p-16 flex items-center justify-center">
+
                     <div className="text-center">
+
                       <div className="w-8 h-8 border-3 border-slate-200 border-t-[#00629B] rounded-full animate-spin mx-auto" />
 
                       <p className="text-sm text-slate-400 mt-4">
                         Loading question...
                       </p>
+
                     </div>
+
                   </div>
-                ) : (
+                ) : question ? (
                   <QuestionCard
                     question={question}
-                    selectedAnswers={selectedAnswers}
-                    onChange={setSelectedAnswers}
+                    selectedAnswers={
+                      selectedAnswers
+                    }
+                    onChange={
+                      setSelectedAnswers
+                    }
                   />
+                ) : (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-16 flex items-center justify-center">
+
+                    <div className="text-center">
+
+                      <AlertTriangle
+                        className="mx-auto text-amber-500"
+                        size={32}
+                      />
+
+                      <p className="text-sm text-slate-500 mt-4">
+                        Question could not be loaded.
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          loadQuestion(
+                            currentQuestion
+                          )
+                        }
+                        className="mt-4 rounded-xl bg-[#00629B] px-5 py-2 text-sm font-semibold text-white"
+                      >
+                        Retry
+                      </button>
+
+                    </div>
+
+                  </div>
                 )}
 
+                {/* =================================================
+                    NAVIGATION
+                ================================================= */}
+
                 <div className="mt-5">
+
                   <ExamNavigation
-                    currentQuestion={currentQuestion}
-                    totalQuestions={totalQuestions}
+                    currentQuestion={
+                      currentQuestion
+                    }
+                    totalQuestions={
+                      totalQuestions
+                    }
                     saving={saving}
-                    onPrevious={handlePrevious}
+                    onPrevious={
+                      handlePrevious
+                    }
                     onNext={handleNext}
-                    onSaveAndNext={handleNext}
+                    onSaveAndNext={
+                      handleNext
+                    }
                   />
+
                 </div>
+
               </main>
 
-              {/* =================================================
+              {/* ==================================================
                   SIDEBAR
-              ================================================= */}
+              ================================================== */}
 
               <aside className="space-y-5">
+
+                {/* =================================================
+                    EXAM STATUS
+                ================================================= */}
+
                 <div className="bg-white rounded-2xl border border-slate-200 p-5">
+
                   <div className="flex items-center gap-3">
+
                     <div className="w-10 h-10 rounded-xl bg-[#00629B]/10 text-[#00629B] flex items-center justify-center">
                       <ShieldCheck size={20} />
                     </div>
 
                     <div>
+
                       <div className="flex items-center gap-2">
+
                         <p className="font-semibold text-slate-900">
                           Examination Active
                         </p>
 
                         <span
                           className={`h-2 w-2 rounded-full ${
-                            connected ? "bg-green-500" : "bg-red-500"
+                            connected
+                              ? "bg-green-500"
+                              : "bg-red-500"
                           }`}
                         />
+
                       </div>
 
                       <p className="text-xs text-slate-400 mt-0.5">
+
                         {connected
                           ? reconnectCount > 0
                             ? `Connection restored • ${reconnectCount} reconnect${
-                                reconnectCount !== 1 ? "s" : ""
+                                reconnectCount !== 1
+                                  ? "s"
+                                  : ""
                               }`
                             : "Live connection active"
                           : reconnecting
-                            ? "Reconnecting..."
-                            : "Connection lost"}
+                          ? "Reconnecting..."
+                          : "Connection lost"}
+
                       </p>
+
                     </div>
+
                   </div>
+
                 </div>
+
+                {/* =================================================
+                    QUESTION PALETTE
+                ================================================= */}
 
                 <QuestionPalette
                   palette={palette}
-                  currentQuestion={currentQuestion}
+                  currentQuestion={
+                    currentQuestion
+                  }
                   onSelect={loadQuestion}
                 />
 
+                {/* =================================================
+                    SUBMIT BUTTON
+                ================================================= */}
+
                 <button
                   type="button"
-                  onClick={() => setSubmitOpen(true)}
+                  onClick={() =>
+                    setSubmitOpen(true)
+                  }
                   className="w-full h-12 rounded-xl bg-[#00629B] text-white font-semibold flex items-center justify-center gap-2 hover:bg-[#00527f] transition"
                 >
                   <Send size={17} />
                   Submit Assessment
                 </button>
 
+                {/* =================================================
+                    INFORMATION
+                ================================================= */}
+
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+
                   <div className="flex gap-3">
-                    <Flag size={17} className="text-amber-600 shrink-0" />
+
+                    <Flag
+                      size={17}
+                      className="text-amber-600 shrink-0"
+                    />
 
                     <p className="text-xs leading-5 text-amber-800">
-                      Make sure you have answered all required questions before
+                      Make sure you have answered
+                      all required questions before
                       submitting.
                     </p>
+
                   </div>
+
                 </div>
+
               </aside>
+
             </div>
+
           </div>
         </div>
       </div>
 
+      {/* ========================================================
+          SUBMIT MODAL
+      ======================================================== */}
+
       <SubmitExamModal
         open={submitOpen}
-        answered={palette.filter((item) => item.answered).length}
+        answered={
+          palette.filter(
+            (item) => item.answered
+          ).length
+        }
         total={totalQuestions}
         submitting={submitting}
-        onClose={() => setSubmitOpen(false)}
+        onClose={() =>
+          setSubmitOpen(false)
+        }
         onConfirm={handleSubmit}
       />
+
     </div>
   );
 }
