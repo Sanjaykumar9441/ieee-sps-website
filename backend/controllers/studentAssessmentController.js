@@ -259,16 +259,28 @@ exports.startAssessment = async (req, res) => {
 
 exports.saveAnswer = async (req, res) => {
   try {
+    console.log("\n========== CONTROLLER SAVE ANSWER ==========");
+
     const { attemptId } = req.params;
+
+    console.log("PARAM attemptId:", attemptId);
 
     const { attemptQuestionId, selectedAnswers } = req.body;
 
+    console.log("BODY:", req.body);
+    console.log("attemptQuestionId:", attemptQuestionId);
+    console.log("selectedAnswers:", selectedAnswers);
+
     if (!attemptQuestionId) {
+      console.error("❌ attemptQuestionId missing");
+
       return res.status(400).json({
         success: false,
         message: "Attempt question ID is required.",
       });
     }
+
+    console.log("➡️ Calling engine.saveAnswer()...");
 
     const answer = await engine.saveAnswer(
       attemptId,
@@ -276,7 +288,18 @@ exports.saveAnswer = async (req, res) => {
       selectedAnswers,
     );
 
+    console.log("✅ engine.saveAnswer() SUCCESS");
+    console.log("Saved answer returned:", answer);
+
     const attempt = await engine.getAttempt(attemptId);
+
+    console.log("Attempt after save:", attempt);
+
+    if (!attempt) {
+      throw new Error("Attempt not found after saving answer.");
+    }
+
+    console.log("➡️ Emitting answer saved event...");
 
     liveEvents.emitAnswerSaved(attempt.assessment_id, {
       attemptId,
@@ -291,12 +314,18 @@ exports.saveAnswer = async (req, res) => {
       answeredQuestions: attempt.answered_questions,
     });
 
+    console.log("========== CONTROLLER SAVE COMPLETE ==========\n");
+
     return res.json({
       success: true,
       answer,
     });
+
   } catch (err) {
-    console.error(err);
+    console.error("\n❌ SAVE ANSWER CONTROLLER ERROR");
+    console.error("Error message:", err.message);
+    console.error("Full error:", err);
+    console.error("============================================\n");
 
     return res.status(500).json({
       success: false,

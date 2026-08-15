@@ -308,8 +308,6 @@ exports.saveAnswer = async (attemptId, attemptQuestionId, selectedAnswers) => {
   console.log("attemptId:", attemptId);
   console.log("attemptQuestionId:", attemptQuestionId);
   console.log("selectedAnswers:", selectedAnswers);
-  console.log("subjectiveAnswer:", subjectiveAnswer);
-  console.log("codingAnswer:", codingAnswer);
 
   if (!attemptQuestionId) {
     throw new Error("Attempt question ID is required.");
