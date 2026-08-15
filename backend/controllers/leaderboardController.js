@@ -109,7 +109,7 @@ exports.getLeaderboard = async (req, res) => {
 
           email: student.assessment_allowed_students?.email,
 
-          branch: student.assessment_allowed_students?.branch,
+          department: student.assessment_allowed_students?.branch,
 
           status: "SUBMITTED",
 

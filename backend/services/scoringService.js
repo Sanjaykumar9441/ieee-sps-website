@@ -33,7 +33,14 @@ exports.calculateScore = async (attemptId) => {
   for (const question of questions) {
     const answer = question.assessment_answers?.[0];
 
+    console.log("\n========== SCORING QUESTION ==========");
+    console.log("Question ID:", question.id);
+    console.log("Correct Answer:", question.correct_answers);
+    console.log("Saved Answer:", answer?.selected_answers);
+
     if (!answer) {
+      console.log("❌ UNANSWERED");
+
       unanswered++;
       continue;
     }
@@ -46,17 +53,33 @@ exports.calculateScore = async (attemptId) => {
       ? [...question.correct_answers].sort()
       : [question.correct_answers];
 
+    console.log("Normalized selected:", selected);
+    console.log("Normalized expected:", expected);
+
     const isCorrect = JSON.stringify(selected) === JSON.stringify(expected);
+
+    console.log("Is Correct:", isCorrect);
 
     if (isCorrect) {
       correct++;
 
       score += Number(question.marks || 0);
+
+      console.log("✅ CORRECT");
+      console.log("Marks:", question.marks);
     } else {
       wrong++;
 
       score -= Number(question.negative_marks || 0);
+
+      console.log("❌ WRONG");
+      console.log("Negative marks:", question.negative_marks);
     }
+
+    console.log("Running score:", score);
+    console.log("Running correct:", correct);
+    console.log("Running wrong:", wrong);
+    console.log("Running unanswered:", unanswered);
   }
 
   const totalQuestions = questions.length;
@@ -65,6 +88,16 @@ exports.calculateScore = async (attemptId) => {
     totalQuestions === 0
       ? 0
       : Number(((correct / totalQuestions) * 100).toFixed(2));
+
+  console.log("\n========== FINAL SCORE RESULT ==========");
+  console.log("Attempt ID:", attemptId);
+  console.log("Total questions:", totalQuestions);
+  console.log("Correct:", correct);
+  console.log("Wrong:", wrong);
+  console.log("Unanswered:", unanswered);
+  console.log("Score:", score);
+  console.log("Percentage:", percentage);
+  console.log("========================================\n");
 
   return {
     score,

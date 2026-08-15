@@ -320,7 +320,6 @@ exports.saveAnswer = async (req, res) => {
       success: true,
       answer,
     });
-
   } catch (err) {
     console.error("\n❌ SAVE ANSWER CONTROLLER ERROR");
     console.error("Error message:", err.message);
@@ -661,6 +660,10 @@ exports.submitAssessment = async (req, res) => {
     */
 
     const result = await scoring.calculateScore(attemptId);
+    console.log("\n========== SUBMIT SCORE RESULT ==========");
+    console.log("Attempt ID:", attemptId);
+    console.log("RESULT FROM SCORING SERVICE:", result);
+    console.log("=========================================\n");
 
     /*
     ------------------------------------
@@ -669,7 +672,15 @@ exports.submitAssessment = async (req, res) => {
     */
 
     const updatedAttempt = await engine.finishAttempt(attemptId, result);
-
+    console.log("\n========== FINISHED ATTEMPT ==========");
+    console.log("UPDATED ATTEMPT:", updatedAttempt);
+    console.log("score:", updatedAttempt.score);
+    console.log("correct:", updatedAttempt.correct);
+    console.log("wrong:", updatedAttempt.wrong);
+    console.log("unanswered:", updatedAttempt.unanswered);
+    console.log("percentage:", updatedAttempt.percentage);
+    console.log("status:", updatedAttempt.status);
+    console.log("======================================\n");
     /*
     ------------------------------------
     RELEASE REDIS LOCK
