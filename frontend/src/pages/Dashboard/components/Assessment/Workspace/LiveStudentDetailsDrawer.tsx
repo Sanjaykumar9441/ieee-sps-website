@@ -44,13 +44,27 @@ interface StudentQuestion {
   questions?: {
     question_text?: string;
   };
-  assessment_answers?: {
-    selected_answers?: string[];
-    answered_at?: string;
-  }[];
-  assessment_question_flags?: {
-    marked_for_review?: boolean;
-  }[];
+  assessment_answers?:
+    | {
+        selected_answers?: string[];
+        subjective_answer?: string | null;
+        coding_answer?: string | null;
+        answered_at?: string;
+      }
+    | {
+        selected_answers?: string[];
+        subjective_answer?: string | null;
+        coding_answer?: string | null;
+        answered_at?: string;
+      }[];
+
+  assessment_question_flags?:
+    | {
+        marked_for_review?: boolean;
+      }
+    | {
+        marked_for_review?: boolean;
+      }[];
 }
 
 interface StudentDetails {
@@ -83,21 +97,21 @@ export default function LiveStudentDetailsDrawer({
   const [details, setDetails] = useState<StudentDetails | null>(null);
 
   const fetchDetails = useCallback(async () => {
-  if (!student) return;
+    if (!student) return;
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const data = await getLiveStudentDetails(student.attemptId);
+      const data = await getLiveStudentDetails(student.attemptId);
 
-    setDetails(data);
-  } catch (err) {
-    console.error(err);
-    toast.error("Unable to load student details");
-  } finally {
-    setLoading(false);
-  }
-}, [student]);
+      setDetails(data);
+    } catch (err) {
+      console.error(err);
+      toast.error("Unable to load student details");
+    } finally {
+      setLoading(false);
+    }
+  }, [student]);
 
   const handleSendOtp = async () => {
     if (!student) return;
@@ -120,32 +134,32 @@ export default function LiveStudentDetailsDrawer({
   };
 
   const handleBlock = async () => {
-  if (!student) return;
+    if (!student) return;
 
-  try {
-    setProcessing(true);
+    try {
+      setProcessing(true);
 
-    const data =
-      details?.student.status === "blocked"
-        ? await unblockStudents(assessmentId, [student.studentId])
-        : await blockStudents(assessmentId, [student.studentId]);
+      const data =
+        details?.student.status === "blocked"
+          ? await unblockStudents(assessmentId, [student.studentId])
+          : await blockStudents(assessmentId, [student.studentId]);
 
-    toast.success(data.message || "Student status updated.");
+      toast.success(data.message || "Student status updated.");
 
-    await onRefresh();
-    await fetchDetails();
-  } catch (err) {
-    console.error(err);
+      await onRefresh();
+      await fetchDetails();
+    } catch (err) {
+      console.error(err);
 
-    toast.error(
-      details?.student.status === "blocked"
-        ? "Unable to unblock student."
-        : "Unable to block student.",
-    );
-  } finally {
-    setProcessing(false);
-  }
-};
+      toast.error(
+        details?.student.status === "blocked"
+          ? "Unable to unblock student."
+          : "Unable to block student.",
+      );
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!student) return;
@@ -540,13 +554,37 @@ export default function LiveStudentDetailsDrawer({
 
               <div className="space-y-3">
                 {(details?.questions ?? []).map((question) => {
-                  const answer = question.assessment_answers?.[0];
+                  const rawAnswer = question.assessment_answers;
 
-                  const flag = question.assessment_question_flags?.[0];
+                  const answer = Array.isArray(rawAnswer)
+                    ? rawAnswer[0]
+                    : rawAnswer;
 
-                  const answered = Boolean(answer);
+                  const rawFlag = question.assessment_question_flags;
+
+                  const flag = Array.isArray(rawFlag) ? rawFlag[0] : rawFlag;
+
+                  const answered = Boolean(
+                    answer &&
+                    ((Array.isArray(answer.selected_answers) &&
+                      answer.selected_answers.length > 0) ||
+                      answer.subjective_answer ||
+                      answer.coding_answer ||
+                      answer.answered_at),
+                  );
 
                   const markedForReview = Boolean(flag?.marked_for_review);
+
+                  // Debug AFTER answered has been calculated
+                  console.log("========== LIVE QUESTION ANSWER ==========");
+                  console.log("Question:", question.question_order);
+                  console.log(
+                    "Raw assessment_answers:",
+                    question.assessment_answers,
+                  );
+                  console.log("Normalized answer:", answer);
+                  console.log("Selected answers:", answer?.selected_answers);
+                  console.log("Answered:", answered);
 
                   return (
                     <div key={question.id} className="rounded-xl border p-4">

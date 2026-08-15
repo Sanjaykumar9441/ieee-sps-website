@@ -373,38 +373,138 @@ exports.saveAnswer = async (attemptId, attemptQuestionId, selectedAnswers) => {
 ============================================================ */
 
 exports.getPalette = async (attemptId) => {
-  const { data, error } = await supabase
-    .from("assessment_attempt_questions")
-    .select(
-      `
-      id,
-      question_order,
+  try {
+    // ------------------------------------------------------------
+    // 1. Get all questions belonging to this attempt
+    // ------------------------------------------------------------
+    const { data: questions, error: questionsError } =
+      await supabase
+        .from("assessment_attempt_questions")
+        .select(`
+          id,
+          question_order,
+          assessment_question_flags(
+            marked_for_review
+          )
+        `)
+        .eq("attempt_id", attemptId)
+        .order("question_order");
 
-      assessment_answers(
-        id,
-        selected_answers
-      ),
+    if (questionsError) {
+      throw questionsError;
+    }
 
-      assessment_question_flags(
-        marked_for_review
-      )
-    `,
-    )
-    .eq("attempt_id", attemptId)
-    .order("question_order");
+    // ------------------------------------------------------------
+    // 2. Get ALL saved answers for this attempt
+    // ------------------------------------------------------------
+    const questionIds =
+      (questions || []).map((q) => q.id);
 
-  if (error) throw error;
+    let answers = [];
 
-  return (data || []).map((q) => ({
-    id: q.id,
+    if (questionIds.length > 0) {
+      const {
+        data: answerRows,
+        error: answersError,
+      } = await supabase
+        .from("assessment_answers")
+        .select(`
+          attempt_question_id,
+          selected_answers,
+          subjective_answer,
+          coding_answer,
+          answered_at
+        `)
+        .in("attempt_question_id", questionIds);
 
-    questionOrder: q.question_order,
+      if (answersError) {
+        throw answersError;
+      }
 
-    answered:
-      Array.isArray(q.assessment_answers) && q.assessment_answers.length > 0,
+      answers = answerRows || [];
+    }
 
-    markedForReview: q.assessment_question_flags?.marked_for_review ?? false,
-  }));
+    // ------------------------------------------------------------
+    // 3. Build a Set of answered question IDs
+    // ------------------------------------------------------------
+    const answeredQuestionIds = new Set(
+      answers
+        .filter((answer) => {
+          // MCQ / MSQ
+          if (
+            Array.isArray(answer.selected_answers) &&
+            answer.selected_answers.length > 0
+          ) {
+            return true;
+          }
+
+          // Subjective
+          if (
+            typeof answer.subjective_answer === "string" &&
+            answer.subjective_answer.trim().length > 0
+          ) {
+            return true;
+          }
+
+          // Coding
+          if (
+            typeof answer.coding_answer === "string" &&
+            answer.coding_answer.trim().length > 0
+          ) {
+            return true;
+          }
+
+          return false;
+        })
+        .map((answer) => answer.attempt_question_id)
+    );
+
+    // ------------------------------------------------------------
+    // 4. Build palette
+    // ------------------------------------------------------------
+    const palette = (questions || []).map((q) => ({
+      id: q.id,
+
+      questionOrder: q.question_order,
+
+      answered: answeredQuestionIds.has(q.id),
+
+      markedForReview:
+        q.assessment_question_flags?.marked_for_review ?? false,
+    }));
+
+    console.log(
+      "========== PALETTE RESULT =========="
+    );
+
+    console.log(
+      palette.map((q) => ({
+        question: q.questionOrder,
+        id: q.id,
+        answered: q.answered,
+        markedForReview: q.markedForReview,
+      }))
+    );
+
+    console.log(
+      "Answered count:",
+      palette.filter((q) => q.answered).length
+    );
+
+    console.log(
+      "Total questions:",
+      palette.length
+    );
+
+    return palette;
+  } catch (error) {
+    console.error(
+      "[EXAM] getPalette error:",
+      error
+    );
+
+    throw error;
+  }
 };
 
 /* ============================================================
