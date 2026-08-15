@@ -409,39 +409,104 @@ exports.finalImport = async (req, res) => {
       });
     }
 
-    const rows = questions.map((question) => ({
-      ...question,
+    const rows = questions.map((question) => {
+      let normalizedOptions = {};
 
-      bank_id: bankId,
+      /*
+       * MCQ / MULTIPLE_CORRECT
+       *
+       * Frontend sends:
+       *
+       * [
+       *   "Option A",
+       *   "Option B",
+       *   "Option C",
+       *   "Option D"
+       * ]
+       *
+       * Database stores:
+       *
+       * {
+       *   A: "Option A",
+       *   B: "Option B",
+       *   C: "Option C",
+       *   D: "Option D"
+       * }
+       */
+      if (
+        question.question_type !== "SUBJECTIVE" &&
+        Array.isArray(question.options)
+      ) {
+        const optionKeys = ["A", "B", "C", "D", "E"];
 
-      difficulty: String(question.difficulty || "MEDIUM")
-        .trim()
-        .toUpperCase(),
+        question.options.forEach((option, index) => {
+          if (
+            option !== null &&
+            option !== undefined &&
+            String(option).trim() !== ""
+          ) {
+            normalizedOptions[optionKeys[index]] =
+              String(option).trim();
+          }
+        });
+      }
 
-      question_type: String(question.question_type || "MCQ")
-        .trim()
-        .toUpperCase(),
+      /*
+       * If options are already supplied as an object,
+       * preserve them.
+       */
+      if (
+        question.question_type !== "SUBJECTIVE" &&
+        question.options &&
+        !Array.isArray(question.options) &&
+        typeof question.options === "object"
+      ) {
+        normalizedOptions = question.options;
+      }
 
-      options:
-        question.question_type === "SUBJECTIVE" ? [] : question.options || [],
+      return {
+        ...question,
 
-      correct_answers:
-        question.question_type === "SUBJECTIVE"
-          ? []
-          : question.correct_answers || [],
+        bank_id: bankId,
 
-      tags: question.tags || [],
+        difficulty: String(
+          question.difficulty || "MEDIUM"
+        )
+          .trim()
+          .toUpperCase(),
 
-      language: question.language || "en",
+        question_type: String(
+          question.question_type || "MCQ"
+        )
+          .trim()
+          .toUpperCase(),
 
-      version: question.version || 1,
+        options:
+          question.question_type === "SUBJECTIVE"
+            ? {}
+            : normalizedOptions,
 
-      is_active: true,
-    }));
+        correct_answers:
+          question.question_type === "SUBJECTIVE"
+            ? []
+            : question.correct_answers || [],
 
-    const { data, error } = await Question.bulkCreate(rows);
+        tags: question.tags || [],
 
-    if (error) throw error;
+        language: question.language || "en",
+
+        version: question.version || 1,
+
+        is_active: true,
+      };
+    });
+
+    const { data, error } =
+      await Question.bulkCreate(rows);
+
+    if (error) {
+      throw error;
+    }
 
     return res.status(201).json({
       success: true,
@@ -449,6 +514,7 @@ exports.finalImport = async (req, res) => {
       questions: data,
       importedCount: data.length,
     });
+
   } catch (err) {
     console.error("Final Import Error:", err);
 
