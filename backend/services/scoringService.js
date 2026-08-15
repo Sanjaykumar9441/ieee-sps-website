@@ -5,60 +5,189 @@ const { supabase } = require("../lib/supabase");
 ============================================================ */
 
 exports.calculateScore = async (attemptId) => {
-  const { data: questions, error } = await supabase
+  console.log("\n========================================");
+  console.log("CALCULATE SCORE START");
+  console.log("Attempt ID:", attemptId);
+  console.log("========================================\n");
+
+  // ------------------------------------------------------------
+  // 1. Get frozen attempt questions
+  // ------------------------------------------------------------
+
+  const { data: questions, error: questionsError } = await supabase
     .from("assessment_attempt_questions")
     .select(
       `
       id,
+      question_id,
+      question_order,
       correct_answers,
       marks,
-      negative_marks,
-      assessment_answers(
-        selected_answers
-      )
+      negative_marks
     `,
     )
-    .eq("attempt_id", attemptId);
+    .eq("attempt_id", attemptId)
+    .order("question_order");
 
-  if (error) throw error;
+  if (questionsError) {
+    console.error("❌ QUESTIONS FETCH ERROR:", questionsError);
+    throw questionsError;
+  }
+
+  console.log("========== ATTEMPT QUESTIONS ==========");
+
+  for (const question of questions || []) {
+    console.log({
+      id: question.id,
+      questionId: question.question_id,
+      order: question.question_order,
+      correctAnswers: question.correct_answers,
+      marks: question.marks,
+      negativeMarks: question.negative_marks,
+    });
+  }
+
+  // ------------------------------------------------------------
+  // 2. Get ALL saved answers separately
+  // ------------------------------------------------------------
+
+  const questionIds = (questions || []).map((q) => q.id);
+
+  let answers = [];
+
+  if (questionIds.length > 0) {
+    const { data: answerRows, error: answersError } = await supabase
+      .from("assessment_answers")
+      .select(
+        `
+        attempt_question_id,
+        selected_answers
+      `,
+      )
+      .in("attempt_question_id", questionIds);
+
+    if (answersError) {
+      console.error("❌ ANSWERS FETCH ERROR:", answersError);
+      throw answersError;
+    }
+
+    answers = answerRows || [];
+  }
+
+  console.log("\n========== SAVED ANSWERS ==========");
+
+  for (const answer of answers) {
+    console.log({
+      attemptQuestionId: answer.attempt_question_id,
+      selectedAnswers: answer.selected_answers,
+    });
+  }
+
+  // ------------------------------------------------------------
+  // 3. Create answer lookup
+  // ------------------------------------------------------------
+
+  const answerMap = new Map();
+
+  for (const answer of answers) {
+    answerMap.set(answer.attempt_question_id, answer.selected_answers);
+  }
+
+  // ------------------------------------------------------------
+  // 4. Calculate
+  // ------------------------------------------------------------
 
   let score = 0;
-
   let correct = 0;
-
   let wrong = 0;
-
   let unanswered = 0;
 
-  for (const question of questions) {
-    const answer = question.assessment_answers?.[0];
+  for (const question of questions || []) {
+    const selectedAnswers = answerMap.get(question.id);
 
     console.log("\n========== SCORING QUESTION ==========");
-    console.log("Question ID:", question.id);
+    console.log("Question:", question.question_order);
+    console.log("Attempt Question ID:", question.id);
     console.log("Correct Answer:", question.correct_answers);
-    console.log("Saved Answer:", answer?.selected_answers);
+    console.log("Selected Answer:", selectedAnswers);
 
-    if (!answer) {
+    // No answer
+    if (!Array.isArray(selectedAnswers) || selectedAnswers.length === 0) {
+      unanswered++;
+
       console.log("❌ UNANSWERED");
 
-      unanswered++;
       continue;
     }
 
-    const selected = Array.isArray(answer.selected_answers)
-      ? [...answer.selected_answers].sort()
-      : [answer.selected_answers];
+    // ------------------------------------------------------------
+    // Normalize answer formats
+    // Frontend saves: ['A', 'B', 'C', 'D']
+    // Database correct_answers: [0, 1, 2, 3]
+    // ------------------------------------------------------------
 
-    const expected = Array.isArray(question.correct_answers)
-      ? [...question.correct_answers].sort()
-      : [question.correct_answers];
+    const OPTION_INDEX = {
+      A: 0,
+      B: 1,
+      C: 2,
+      D: 3,
+    };
+
+    const selected = selectedAnswers
+      .map((answer) => {
+        if (typeof answer === "number") {
+          return answer;
+        }
+
+        if (typeof answer === "string") {
+          const value = answer.trim().toUpperCase();
+
+          if (OPTION_INDEX[value] !== undefined) {
+            return OPTION_INDEX[value];
+          }
+
+          // Also support numeric strings such as "0", "1", etc.
+          if (/^\d+$/.test(value)) {
+            return Number(value);
+          }
+        }
+
+        return answer;
+      })
+      .sort((a, b) => a - b);
+
+    const expected = (
+      Array.isArray(question.correct_answers)
+        ? question.correct_answers
+        : [question.correct_answers]
+    )
+      .map((answer) => {
+        if (typeof answer === "number") {
+          return answer;
+        }
+
+        if (typeof answer === "string") {
+          const value = answer.trim().toUpperCase();
+
+          if (OPTION_INDEX[value] !== undefined) {
+            return OPTION_INDEX[value];
+          }
+
+          if (/^\d+$/.test(value)) {
+            return Number(value);
+          }
+        }
+
+        return answer;
+      })
+      .sort((a, b) => a - b);
 
     console.log("Normalized selected:", selected);
     console.log("Normalized expected:", expected);
 
     const isCorrect = JSON.stringify(selected) === JSON.stringify(expected);
 
-    console.log("Is Correct:", isCorrect);
+    console.log("IS CORRECT:", isCorrect);
 
     if (isCorrect) {
       correct++;
@@ -73,43 +202,36 @@ exports.calculateScore = async (attemptId) => {
       score -= Number(question.negative_marks || 0);
 
       console.log("❌ WRONG");
-      console.log("Negative marks:", question.negative_marks);
+      console.log("Negative Marks:", question.negative_marks);
     }
 
-    console.log("Running score:", score);
-    console.log("Running correct:", correct);
-    console.log("Running wrong:", wrong);
-    console.log("Running unanswered:", unanswered);
+    console.log("Running Score:", score);
   }
 
-  const totalQuestions = questions.length;
+  // ------------------------------------------------------------
+  // 5. Percentage
+  // ------------------------------------------------------------
+
+  const totalQuestions = (questions || []).length;
 
   const percentage =
     totalQuestions === 0
       ? 0
       : Number(((correct / totalQuestions) * 100).toFixed(2));
 
-  console.log("\n========== FINAL SCORE RESULT ==========");
-  console.log("Attempt ID:", attemptId);
-  console.log("Total questions:", totalQuestions);
-  console.log("Correct:", correct);
-  console.log("Wrong:", wrong);
-  console.log("Unanswered:", unanswered);
-  console.log("Score:", score);
-  console.log("Percentage:", percentage);
-  console.log("========================================\n");
-
-  return {
+  const result = {
     score,
-
     correct,
-
     wrong,
-
     unanswered,
-
     percentage,
-
     totalQuestions,
   };
+
+  console.log("\n========================================");
+  console.log("FINAL SCORE");
+  console.log(result);
+  console.log("========================================\n");
+
+  return result;
 };
