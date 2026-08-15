@@ -575,17 +575,6 @@ export default function LiveStudentDetailsDrawer({
 
                   const markedForReview = Boolean(flag?.marked_for_review);
 
-                  // Debug AFTER answered has been calculated
-                  console.log("========== LIVE QUESTION ANSWER ==========");
-                  console.log("Question:", question.question_order);
-                  console.log(
-                    "Raw assessment_answers:",
-                    question.assessment_answers,
-                  );
-                  console.log("Normalized answer:", answer);
-                  console.log("Selected answers:", answer?.selected_answers);
-                  console.log("Answered:", answered);
-
                   return (
                     <div key={question.id} className="rounded-xl border p-4">
                       <div className="flex items-start justify-between gap-4">

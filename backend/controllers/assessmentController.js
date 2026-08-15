@@ -91,9 +91,6 @@ exports.createAssessment = async (req, res) => {
   try {
     const body = { ...req.body };
 
-    console.log("========== CREATE ASSESSMENT ==========");
-    console.log("REQUEST BODY:", body);
-
     if (!body.title?.trim()) {
       return res.status(400).json({
         success: false,
@@ -148,16 +145,12 @@ exports.createAssessment = async (req, res) => {
     body.category_id = String(body.category_id).trim();
     body.subject_id = String(body.subject_id).trim();
 
-    console.log("FINAL ASSESSMENT PAYLOAD:", body);
-
     const { data, error } = await Assessment.create(body);
 
     if (error) {
       console.error("ASSESSMENT SUPABASE ERROR:", error);
       throw error;
     }
-
-    console.log("CREATED ASSESSMENT:", data);
 
     return res.status(201).json({
       success: true,

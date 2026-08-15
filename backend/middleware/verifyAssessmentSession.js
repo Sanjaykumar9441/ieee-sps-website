@@ -7,11 +7,6 @@ module.exports = async (req, res, next) => {
 
     const sessionId = req.headers["x-assessment-session"];
 
-    console.log("========== VERIFY SESSION START ==========");
-    console.log("attemptId:", attemptId);
-    console.log("sessionId:", sessionId);
-    console.log("studentId:", req.student?.id);
-
     if (!attemptId) {
       return res.status(400).json({
         success: false,
@@ -55,19 +50,11 @@ module.exports = async (req, res, next) => {
      * still owns the Redis session lock.
      */
 
-    console.log("========== CHECKING REDIS SESSION ==========");
-    console.log("assessmentId:", attempt.assessment_id);
-    console.log("attemptStudentId:", attempt.student_id);
-    console.log("sessionId:", sessionId);
-
     const valid = await session.verifySession(
       attempt.assessment_id,
       attempt.student_id,
       sessionId,
     );
-
-    console.log("========== REDIS SESSION RESULT ==========");
-    console.log("valid:", valid);
 
     if (!valid) {
       return res.status(409).json({

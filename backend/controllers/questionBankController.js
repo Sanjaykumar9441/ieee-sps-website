@@ -115,8 +115,6 @@ exports.create = async (req, res) => {
   try {
     const body = req.body;
 
-    console.log("CREATE QUESTION BANK BODY:", body);
-
     if (!body.assessment_id) {
       return res.status(400).json({
         success: false,
@@ -149,8 +147,6 @@ exports.create = async (req, res) => {
       estimated_minutes: Number(body.estimated_minutes || 30),
       questions_to_pick: Number(body.questions_to_pick),
     };
-
-    console.log("QUESTION BANK PAYLOAD:", payload);
 
     const { data, error } = await QuestionBank.create(payload);
 

@@ -190,8 +190,6 @@ async function ensureEventSettings() {
           astromodeler: true,
         },
       });
-
-      console.log("✅ Space Day settings created");
     } else {
       console.log("ℹ️ Space Day settings already exist");
     }

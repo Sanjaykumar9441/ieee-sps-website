@@ -228,7 +228,6 @@ export default function SpaceDayRegistrationsTab() {
     const handleRegistrationUpdate = (  
       updatedRegistration: SpaceDayRegistration,  
     ) => {  
-      console.log("📡 Registration Updated:", updatedRegistration);
 
       // Update the table  
       setRegistrations((prev) =>  
@@ -248,7 +247,6 @@ export default function SpaceDayRegistrationsTab() {
     };
 
     const handleNewRegistration = (newRegistration: SpaceDayRegistration) => {  
-      console.log("🆕 New Registration:", newRegistration);
 
       setRegistrations((prev) => [newRegistration, ...prev]);  
     };
@@ -262,7 +260,6 @@ export default function SpaceDayRegistrationsTab() {
     }: {  
       registrationId: string;  
     }) => {  
-      console.log("🗑 Registration Deleted:", registrationId);
 
       setRegistrations((prev) =>  
         prev.filter(  

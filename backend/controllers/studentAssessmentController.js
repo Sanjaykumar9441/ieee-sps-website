@@ -259,17 +259,9 @@ exports.startAssessment = async (req, res) => {
 
 exports.saveAnswer = async (req, res) => {
   try {
-    console.log("\n========== CONTROLLER SAVE ANSWER ==========");
-
     const { attemptId } = req.params;
 
-    console.log("PARAM attemptId:", attemptId);
-
     const { attemptQuestionId, selectedAnswers } = req.body;
-
-    console.log("BODY:", req.body);
-    console.log("attemptQuestionId:", attemptQuestionId);
-    console.log("selectedAnswers:", selectedAnswers);
 
     if (!attemptQuestionId) {
       console.error("❌ attemptQuestionId missing");
@@ -280,26 +272,17 @@ exports.saveAnswer = async (req, res) => {
       });
     }
 
-    console.log("➡️ Calling engine.saveAnswer()...");
-
     const answer = await engine.saveAnswer(
       attemptId,
       attemptQuestionId,
       selectedAnswers,
     );
 
-    console.log("✅ engine.saveAnswer() SUCCESS");
-    console.log("Saved answer returned:", answer);
-
     const attempt = await engine.getAttempt(attemptId);
-
-    console.log("Attempt after save:", attempt);
 
     if (!attempt) {
       throw new Error("Attempt not found after saving answer.");
     }
-
-    console.log("➡️ Emitting answer saved event...");
 
     liveEvents.emitAnswerSaved(attempt.assessment_id, {
       attemptId,
@@ -313,8 +296,6 @@ exports.saveAnswer = async (req, res) => {
       currentQuestion: attempt.current_question,
       answeredQuestions: attempt.answered_questions,
     });
-
-    console.log("========== CONTROLLER SAVE COMPLETE ==========\n");
 
     return res.json({
       success: true,
@@ -660,10 +641,6 @@ exports.submitAssessment = async (req, res) => {
     */
 
     const result = await scoring.calculateScore(attemptId);
-    console.log("\n========== SUBMIT SCORE RESULT ==========");
-    console.log("Attempt ID:", attemptId);
-    console.log("RESULT FROM SCORING SERVICE:", result);
-    console.log("=========================================\n");
 
     /*
     ------------------------------------
@@ -672,15 +649,6 @@ exports.submitAssessment = async (req, res) => {
     */
 
     const updatedAttempt = await engine.finishAttempt(attemptId, result);
-    console.log("\n========== FINISHED ATTEMPT ==========");
-    console.log("UPDATED ATTEMPT:", updatedAttempt);
-    console.log("score:", updatedAttempt.score);
-    console.log("correct:", updatedAttempt.correct);
-    console.log("wrong:", updatedAttempt.wrong);
-    console.log("unanswered:", updatedAttempt.unanswered);
-    console.log("percentage:", updatedAttempt.percentage);
-    console.log("status:", updatedAttempt.status);
-    console.log("======================================\n");
     /*
     ------------------------------------
     RELEASE REDIS LOCK

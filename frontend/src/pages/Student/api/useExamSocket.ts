@@ -28,14 +28,7 @@ export default function useExamSocket({
     if (!attemptId) return;
 
     try {
-      console.log("[EXAM SOCKET] Synchronizing attempt...");
-
       const data = await getAssessmentStatus(attemptId);
-
-      console.log(
-        "[EXAM SOCKET] Attempt synchronized:",
-        data,
-      );
 
       if (!data?.success) {
         console.warn(
@@ -48,10 +41,7 @@ export default function useExamSocket({
 
       onResync?.(data);
     } catch (error) {
-      console.error(
-        "[EXAM SOCKET] Failed to synchronize attempt:",
-        error,
-      );
+      console.error("[EXAM SOCKET] Failed to synchronize attempt:", error);
     }
   };
 
@@ -61,11 +51,6 @@ export default function useExamSocket({
     }
 
     const handleConnect = async () => {
-      console.log(
-        "[EXAM SOCKET] Connected:",
-        socket.id,
-      );
-
       const wasReconnecting = reconnecting;
 
       setConnected(true);
@@ -83,19 +68,14 @@ export default function useExamSocket({
       await syncAttempt();
 
       if (wasReconnecting) {
-        setReconnectCount(
-          (value) => value + 1,
-        );
+        setReconnectCount((value) => value + 1);
 
         onReconnected?.();
       }
     };
 
     const handleDisconnect = (reason: string) => {
-      console.warn(
-        "[EXAM SOCKET] Disconnected:",
-        reason,
-      );
+      console.warn("[EXAM SOCKET] Disconnected:", reason);
 
       setConnected(false);
       setReconnecting(true);
@@ -103,32 +83,15 @@ export default function useExamSocket({
       onConnectionLost?.();
     };
 
-    const handleReconnectAttempt = (
-      attempt: number,
-    ) => {
-      console.log(
-        "[EXAM SOCKET] Reconnect attempt:",
-        attempt,
-      );
-
+    const handleReconnectAttempt = (attempt: number) => {
       setReconnecting(true);
     };
 
-    const handleReconnect = async (
-      attempt: number,
-    ) => {
-      console.log(
-        "[EXAM SOCKET] Reconnected after:",
-        attempt,
-        "attempt(s)",
-      );
-
+    const handleReconnect = async (attempt: number) => {
       setConnected(true);
       setReconnecting(false);
 
-      setReconnectCount(
-        (value) => value + 1,
-      );
+      setReconnectCount((value) => value + 1);
 
       /*
        * Critical:
@@ -139,52 +102,27 @@ export default function useExamSocket({
       onReconnected?.();
     };
 
-    const handleReconnectError = (
-      error: Error,
-    ) => {
-      console.warn(
-        "[EXAM SOCKET] Reconnect error:",
-        error.message,
-      );
+    const handleReconnectError = (error: Error) => {
+      console.warn("[EXAM SOCKET] Reconnect error:", error.message);
     };
 
     const handleReconnectFailed = () => {
-      console.error(
-        "[EXAM SOCKET] Reconnection failed.",
-      );
+      console.error("[EXAM SOCKET] Reconnection failed.");
 
       setReconnecting(false);
     };
 
-    socket.on(
-      "connect",
-      handleConnect,
-    );
+    socket.on("connect", handleConnect);
 
-    socket.on(
-      "disconnect",
-      handleDisconnect,
-    );
+    socket.on("disconnect", handleDisconnect);
 
-    socket.io.on(
-      "reconnect_attempt",
-      handleReconnectAttempt,
-    );
+    socket.io.on("reconnect_attempt", handleReconnectAttempt);
 
-    socket.io.on(
-      "reconnect",
-      handleReconnect,
-    );
+    socket.io.on("reconnect", handleReconnect);
 
-    socket.io.on(
-      "reconnect_error",
-      handleReconnectError,
-    );
+    socket.io.on("reconnect_error", handleReconnectError);
 
-    socket.io.on(
-      "reconnect_failed",
-      handleReconnectFailed,
-    );
+    socket.io.on("reconnect_failed", handleReconnectFailed);
 
     /*
      * Shared socket may already be connected.
@@ -196,35 +134,17 @@ export default function useExamSocket({
     }
 
     return () => {
-      socket.off(
-        "connect",
-        handleConnect,
-      );
+      socket.off("connect", handleConnect);
 
-      socket.off(
-        "disconnect",
-        handleDisconnect,
-      );
+      socket.off("disconnect", handleDisconnect);
 
-      socket.io.off(
-        "reconnect_attempt",
-        handleReconnectAttempt,
-      );
+      socket.io.off("reconnect_attempt", handleReconnectAttempt);
 
-      socket.io.off(
-        "reconnect",
-        handleReconnect,
-      );
+      socket.io.off("reconnect", handleReconnect);
 
-      socket.io.off(
-        "reconnect_error",
-        handleReconnectError,
-      );
+      socket.io.off("reconnect_error", handleReconnectError);
 
-      socket.io.off(
-        "reconnect_failed",
-        handleReconnectFailed,
-      );
+      socket.io.off("reconnect_failed", handleReconnectFailed);
 
       /*
        * DO NOT call socket.disconnect().
@@ -232,11 +152,7 @@ export default function useExamSocket({
        * socket.ts owns the shared connection.
        */
     };
-  }, [
-    attemptId,
-    assessmentId,
-    enabled,
-  ]);
+  }, [attemptId, assessmentId, enabled]);
 
   return {
     connected,

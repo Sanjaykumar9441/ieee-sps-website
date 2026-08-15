@@ -5,11 +5,6 @@ const { supabase } = require("../lib/supabase");
 ============================================================ */
 
 exports.calculateScore = async (attemptId) => {
-  console.log("\n========================================");
-  console.log("CALCULATE SCORE START");
-  console.log("Attempt ID:", attemptId);
-  console.log("========================================\n");
-
   // ------------------------------------------------------------
   // 1. Get frozen attempt questions
   // ------------------------------------------------------------
@@ -32,19 +27,6 @@ exports.calculateScore = async (attemptId) => {
   if (questionsError) {
     console.error("❌ QUESTIONS FETCH ERROR:", questionsError);
     throw questionsError;
-  }
-
-  console.log("========== ATTEMPT QUESTIONS ==========");
-
-  for (const question of questions || []) {
-    console.log({
-      id: question.id,
-      questionId: question.question_id,
-      order: question.question_order,
-      correctAnswers: question.correct_answers,
-      marks: question.marks,
-      negativeMarks: question.negative_marks,
-    });
   }
 
   // ------------------------------------------------------------
@@ -74,15 +56,6 @@ exports.calculateScore = async (attemptId) => {
     answers = answerRows || [];
   }
 
-  console.log("\n========== SAVED ANSWERS ==========");
-
-  for (const answer of answers) {
-    console.log({
-      attemptQuestionId: answer.attempt_question_id,
-      selectedAnswers: answer.selected_answers,
-    });
-  }
-
   // ------------------------------------------------------------
   // 3. Create answer lookup
   // ------------------------------------------------------------
@@ -105,18 +78,9 @@ exports.calculateScore = async (attemptId) => {
   for (const question of questions || []) {
     const selectedAnswers = answerMap.get(question.id);
 
-    console.log("\n========== SCORING QUESTION ==========");
-    console.log("Question:", question.question_order);
-    console.log("Attempt Question ID:", question.id);
-    console.log("Correct Answer:", question.correct_answers);
-    console.log("Selected Answer:", selectedAnswers);
-
     // No answer
     if (!Array.isArray(selectedAnswers) || selectedAnswers.length === 0) {
       unanswered++;
-
-      console.log("❌ UNANSWERED");
-
       continue;
     }
 
@@ -182,30 +146,17 @@ exports.calculateScore = async (attemptId) => {
       })
       .sort((a, b) => a - b);
 
-    console.log("Normalized selected:", selected);
-    console.log("Normalized expected:", expected);
-
     const isCorrect = JSON.stringify(selected) === JSON.stringify(expected);
-
-    console.log("IS CORRECT:", isCorrect);
 
     if (isCorrect) {
       correct++;
 
       score += Number(question.marks || 0);
-
-      console.log("✅ CORRECT");
-      console.log("Marks:", question.marks);
     } else {
       wrong++;
 
       score -= Number(question.negative_marks || 0);
-
-      console.log("❌ WRONG");
-      console.log("Negative Marks:", question.negative_marks);
     }
-
-    console.log("Running Score:", score);
   }
 
   // ------------------------------------------------------------
@@ -227,11 +178,6 @@ exports.calculateScore = async (attemptId) => {
     percentage,
     totalQuestions,
   };
-
-  console.log("\n========================================");
-  console.log("FINAL SCORE");
-  console.log(result);
-  console.log("========================================\n");
 
   return result;
 };

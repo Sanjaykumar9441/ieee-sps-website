@@ -82,10 +82,6 @@ export default function StudentExam({
     enabled: true,
 
     onResync: (data) => {
-      console.log(
-        "[EXAM] Reconnected and synchronized:",
-        data
-      );
 
       if (!data?.success) {
         return;

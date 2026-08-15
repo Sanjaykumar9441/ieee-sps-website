@@ -304,20 +304,12 @@ exports.getQuestion = async (attemptId, questionNumber) => {
 ============================================================ */
 
 exports.saveAnswer = async (attemptId, attemptQuestionId, selectedAnswers) => {
-  console.log("========== SAVE ANSWER ENGINE ==========");
-  console.log("attemptId:", attemptId);
-  console.log("attemptQuestionId:", attemptQuestionId);
-  console.log("selectedAnswers:", selectedAnswers);
 
   if (!attemptQuestionId) {
     throw new Error("Attempt question ID is required.");
   }
 
   const answers = Array.isArray(selectedAnswers) ? selectedAnswers : [];
-
-  console.log("========== ABOUT TO SAVE TO SUPABASE ==========");
-  console.log("attemptQuestionId:", attemptQuestionId);
-  console.log("answers:", answers);
 
   const { data, error } = await supabase
     .from("assessment_answers")
@@ -333,10 +325,6 @@ exports.saveAnswer = async (attemptId, attemptQuestionId, selectedAnswers) => {
     )
     .select()
     .single();
-
-  console.log("========== SUPABASE SAVE RESULT ==========");
-  console.log("data:", data);
-  console.log("error:", error);
 
   if (error) throw error;
 
@@ -472,29 +460,6 @@ exports.getPalette = async (attemptId) => {
       markedForReview:
         q.assessment_question_flags?.marked_for_review ?? false,
     }));
-
-    console.log(
-      "========== PALETTE RESULT =========="
-    );
-
-    console.log(
-      palette.map((q) => ({
-        question: q.questionOrder,
-        id: q.id,
-        answered: q.answered,
-        markedForReview: q.markedForReview,
-      }))
-    );
-
-    console.log(
-      "Answered count:",
-      palette.filter((q) => q.answered).length
-    );
-
-    console.log(
-      "Total questions:",
-      palette.length
-    );
 
     return palette;
   } catch (error) {

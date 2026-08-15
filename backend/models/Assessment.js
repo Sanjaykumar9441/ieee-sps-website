@@ -46,11 +46,6 @@ class Assessment {
   }
 
   static async create(data) {
-    console.log(
-      "🔥 Assessment.create() CALLED:",
-      JSON.stringify(data, null, 2),
-    );
-
     return supabase.from(TABLE).insert(data).select().single();
   }
 
@@ -63,8 +58,6 @@ class Assessment {
   }
 
   static async publish(id) {
-    console.log("📢 Assessment.publish() CALLED:", id);
-
     return supabase
       .from(TABLE)
       .update({
@@ -78,8 +71,6 @@ class Assessment {
   }
 
   static async unpublish(id) {
-    console.log("📢 Assessment.unpublish() CALLED:", id);
-
     return supabase
       .from(TABLE)
       .update({
