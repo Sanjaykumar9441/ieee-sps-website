@@ -52,7 +52,7 @@ function shuffleQuestionOptions(options, correctAnswers) {
   }
 
   const availableKeys = OPTION_KEYS.filter(
-    (key) => options[key] !== undefined && options[key] !== null,
+    (key) => options[key] !== undefined && options[key] !== null
   );
 
   const optionObjects = availableKeys.map((key) => ({
@@ -65,24 +65,57 @@ function shuffleQuestionOptions(options, correctAnswers) {
   const shuffledOptions = {};
   const newCorrectAnswers = [];
 
+  // Normalize database correct answers to original option keys.
+  const originalCorrectKeys = (
+    Array.isArray(correctAnswers)
+      ? correctAnswers
+      : [correctAnswers]
+  )
+    .filter((answer) => answer !== null && answer !== undefined)
+    .map((answer) => {
+      // Already stored as A/B/C/D/E
+      if (typeof answer === "string") {
+        const value = answer.trim().toUpperCase();
+
+        if (OPTION_KEYS.includes(value)) {
+          return value;
+        }
+
+        // Stored as "0", "1", "2", ...
+        if (/^\d+$/.test(value)) {
+          const index = Number(value);
+          return OPTION_KEYS[index];
+        }
+      }
+
+      // Stored as 0,1,2,3...
+      if (typeof answer === "number") {
+        return OPTION_KEYS[answer];
+      }
+
+      return null;
+    })
+    .filter(Boolean);
+
   shuffled.forEach((option, index) => {
     const newKey = OPTION_KEYS[index];
 
     shuffledOptions[newKey] = option.text;
 
-    if (
-      Array.isArray(correctAnswers)
-        ? correctAnswers.includes(option.key)
-        : option.key === correctAnswers
-    ) {
+    // If this original option was correct,
+    // save its NEW shuffled key.
+    if (originalCorrectKeys.includes(option.key)) {
       newCorrectAnswers.push(newKey);
     }
   });
 
   return {
     shuffled_options: shuffledOptions,
+
     correct_answers:
-      newCorrectAnswers.length === 1 ? newCorrectAnswers[0] : newCorrectAnswers,
+      newCorrectAnswers.length === 1
+        ? newCorrectAnswers[0]
+        : newCorrectAnswers,
   };
 }
 
