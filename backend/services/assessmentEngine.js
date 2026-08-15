@@ -13,7 +13,8 @@ const {
 async function getAssessmentBanks(assessmentId) {
   const { data, error } = await supabase
     .from("assessment_question_banks")
-    .select(`
+    .select(
+      `
       question_bank_id,
       questions_to_pick,
       question_banks(
@@ -22,7 +23,8 @@ async function getAssessmentBanks(assessmentId) {
         difficulty,
         is_active
       )
-    `)
+    `,
+    )
     .eq("assessment_id", assessmentId);
 
   if (error) throw error;
@@ -33,7 +35,8 @@ async function getAssessmentBanks(assessmentId) {
 async function getBankQuestions(bankId) {
   const { data, error } = await supabase
     .from("questions")
-    .select(`
+    .select(
+      `
       id,
       bank_id,
       question_text,
@@ -46,7 +49,8 @@ async function getBankQuestions(bankId) {
       marks,
       negative_marks,
       estimated_seconds
-    `)
+    `,
+    )
     .eq("bank_id", bankId)
     .eq("is_active", true);
 
@@ -61,9 +65,7 @@ async function buildQuestionPaper(assessmentId) {
   let paper = [];
 
   for (const mapping of mappings) {
-    const bankQuestions = await getBankQuestions(
-      mapping.question_bank_id,
-    );
+    const bankQuestions = await getBankQuestions(mapping.question_bank_id);
 
     const picked = selectRandomQuestions(
       bankQuestions,
@@ -102,9 +104,7 @@ function normalizeQuestion(question) {
 
     negative_marks: Number(question.negative_marks || 0),
 
-    estimated_seconds: Number(
-      question.estimated_seconds || 60,
-    ),
+    estimated_seconds: Number(question.estimated_seconds || 60),
   };
 }
 
@@ -116,29 +116,19 @@ exports.generateAttempt = async (assessment) => {
   const paper = await buildQuestionPaper(assessment.id);
 
   if (!paper.length) {
-    throw new Error(
-      "No active questions are available for this assessment.",
-    );
+    throw new Error("No active questions are available for this assessment.");
   }
 
   const normalized = paper.map(normalizeQuestion);
 
-  return buildAttemptQuestions(
-    null,
-    normalized,
-    normalized.length,
-  );
+  return buildAttemptQuestions(null, normalized, normalized.length);
 };
 
 /* ============================================================
    CREATE ATTEMPT
 ============================================================ */
 
-exports.createAttempt = async (
-  assessment,
-  student,
-  questions,
-) => {
+exports.createAttempt = async (assessment, student, questions) => {
   if (!assessment.duration_minutes) {
     throw new Error("Assessment duration missing.");
   }
@@ -147,14 +137,11 @@ exports.createAttempt = async (
     throw new Error("No questions generated for this attempt.");
   }
 
-  const durationSeconds =
-    Number(assessment.duration_minutes) * 60;
+  const durationSeconds = Number(assessment.duration_minutes) * 60;
 
   const startedAt = new Date();
 
-  const expiresAt = new Date(
-    startedAt.getTime() + durationSeconds * 1000,
-  );
+  const expiresAt = new Date(startedAt.getTime() + durationSeconds * 1000);
 
   const { data, error } = await supabase
     .from("assessment_attempts")
@@ -189,10 +176,7 @@ exports.createAttempt = async (
     await exports.storeQuestions(data.id, questions);
   } catch (error) {
     // Do not leave a broken IN_PROGRESS attempt
-    await supabase
-      .from("assessment_attempts")
-      .delete()
-      .eq("id", data.id);
+    await supabase.from("assessment_attempts").delete().eq("id", data.id);
 
     throw error;
   }
@@ -204,10 +188,7 @@ exports.createAttempt = async (
    STORE ATTEMPT QUESTIONS
 ============================================================ */
 
-exports.storeQuestions = async (
-  attemptId,
-  questions,
-) => {
+exports.storeQuestions = async (attemptId, questions) => {
   if (!Array.isArray(questions) || questions.length === 0) {
     throw new Error("No attempt questions to store.");
   }
@@ -222,10 +203,7 @@ exports.storeQuestions = async (
     .insert(rows);
 
   if (error) {
-    console.error(
-      "STORE ATTEMPT QUESTIONS ERROR:",
-      error,
-    );
+    console.error("STORE ATTEMPT QUESTIONS ERROR:", error);
 
     throw error;
   }
@@ -237,13 +215,11 @@ exports.storeQuestions = async (
    GET QUESTION
 ============================================================ */
 
-exports.getQuestion = async (
-  attemptId,
-  questionNumber,
-) => {
+exports.getQuestion = async (attemptId, questionNumber) => {
   const { data, error } = await supabase
     .from("assessment_attempt_questions")
-    .select(`
+    .select(
+      `
       id,
       attempt_id,
       question_id,
@@ -269,7 +245,8 @@ exports.getQuestion = async (
         selected_answers,
         answered_at
       )
-    `)
+    `,
+    )
     .eq("attempt_id", attemptId)
     .eq("question_order", Number(questionNumber))
     .single();
@@ -280,17 +257,13 @@ exports.getQuestion = async (
   }
 
   if (!data) {
-    throw new Error(
-      `Question ${questionNumber} not found.`,
-    );
+    throw new Error(`Question ${questionNumber} not found.`);
   }
 
   const source = data.questions;
 
   if (!source) {
-    throw new Error(
-      `Question ${data.question_id} could not be loaded.`,
-    );
+    throw new Error(`Question ${data.question_id} could not be loaded.`);
   }
 
   /*
@@ -308,8 +281,7 @@ exports.getQuestion = async (
     question_text: source.question_text,
     question_type: source.question_type,
 
-    question_image_id:
-      source.question_image_id ?? null,
+    question_image_id: source.question_image_id ?? null,
 
     explanation: source.explanation ?? "",
 
@@ -317,19 +289,13 @@ exports.getQuestion = async (
 
     difficulty: source.difficulty,
 
-    estimated_seconds:
-      source.estimated_seconds ?? 60,
+    estimated_seconds: source.estimated_seconds ?? 60,
 
     marks: Number(data.marks ?? source.marks ?? 1),
 
-    negative_marks: Number(
-      data.negative_marks ??
-        source.negative_marks ??
-        0,
-    ),
+    negative_marks: Number(data.negative_marks ?? source.negative_marks ?? 0),
 
-    assessment_answers:
-      data.assessment_answers || [],
+    assessment_answers: data.assessment_answers || [],
   };
 };
 
@@ -337,18 +303,23 @@ exports.getQuestion = async (
    SAVE ANSWER
 ============================================================ */
 
-exports.saveAnswer = async (
-  attemptId,
-  attemptQuestionId,
-  selectedAnswers,
-) => {
+exports.saveAnswer = async (attemptId, attemptQuestionId, selectedAnswers) => {
+  console.log("========== SAVE ANSWER ENGINE ==========");
+  console.log("attemptId:", attemptId);
+  console.log("attemptQuestionId:", attemptQuestionId);
+  console.log("selectedAnswers:", selectedAnswers);
+  console.log("subjectiveAnswer:", subjectiveAnswer);
+  console.log("codingAnswer:", codingAnswer);
+
   if (!attemptQuestionId) {
     throw new Error("Attempt question ID is required.");
   }
 
-  const answers = Array.isArray(selectedAnswers)
-    ? selectedAnswers
-    : [];
+  const answers = Array.isArray(selectedAnswers) ? selectedAnswers : [];
+
+  console.log("========== ABOUT TO SAVE TO SUPABASE ==========");
+  console.log("attemptQuestionId:", attemptQuestionId);
+  console.log("answers:", answers);
 
   const { data, error } = await supabase
     .from("assessment_answers")
@@ -365,22 +336,25 @@ exports.saveAnswer = async (
     .select()
     .single();
 
+  console.log("========== SUPABASE SAVE RESULT ==========");
+  console.log("data:", data);
+  console.log("error:", error);
+
   if (error) throw error;
 
-  const { count, error: countError } =
-    await supabase
-      .from("assessment_attempt_questions")
-      .select(
-        `
+  const { count, error: countError } = await supabase
+    .from("assessment_attempt_questions")
+    .select(
+      `
         id,
         assessment_answers!inner(id)
         `,
-        {
-          count: "exact",
-          head: true,
-        },
-      )
-      .eq("attempt_id", attemptId);
+      {
+        count: "exact",
+        head: true,
+      },
+    )
+    .eq("attempt_id", attemptId);
 
   if (countError) throw countError;
 
@@ -403,7 +377,8 @@ exports.saveAnswer = async (
 exports.getPalette = async (attemptId) => {
   const { data, error } = await supabase
     .from("assessment_attempt_questions")
-    .select(`
+    .select(
+      `
       id,
       question_order,
 
@@ -415,7 +390,8 @@ exports.getPalette = async (attemptId) => {
       assessment_question_flags(
         marked_for_review
       )
-    `)
+    `,
+    )
     .eq("attempt_id", attemptId)
     .order("question_order");
 
@@ -427,12 +403,9 @@ exports.getPalette = async (attemptId) => {
     questionOrder: q.question_order,
 
     answered:
-      Array.isArray(q.assessment_answers) &&
-      q.assessment_answers.length > 0,
+      Array.isArray(q.assessment_answers) && q.assessment_answers.length > 0,
 
-    markedForReview:
-      q.assessment_question_flags?.marked_for_review ??
-      false,
+    markedForReview: q.assessment_question_flags?.marked_for_review ?? false,
   }));
 };
 
@@ -440,11 +413,7 @@ exports.getPalette = async (attemptId) => {
    FINISH ATTEMPT
 ============================================================ */
 
-exports.finishAttempt = async (
-  attemptId,
-  result,
-  status = "SUBMITTED",
-) => {
+exports.finishAttempt = async (attemptId, result, status = "SUBMITTED") => {
   const now = new Date().toISOString();
 
   const { data, error } = await supabase
@@ -496,10 +465,7 @@ exports.getAttempt = async (attemptId) => {
    UPDATE CURRENT QUESTION
 ============================================================ */
 
-exports.updateCurrentQuestion = async (
-  attemptId,
-  questionNumber,
-) => {
+exports.updateCurrentQuestion = async (attemptId, questionNumber) => {
   const { error } = await supabase
     .from("assessment_attempts")
     .update({
@@ -526,8 +492,7 @@ exports.incrementResumeCount = async (attemptId) => {
   const { error } = await supabase
     .from("assessment_attempts")
     .update({
-      resumed_count:
-        Number(attempt.resumed_count || 0) + 1,
+      resumed_count: Number(attempt.resumed_count || 0) + 1,
     })
     .eq("id", attemptId);
 
@@ -540,21 +505,16 @@ exports.incrementResumeCount = async (attemptId) => {
    MARK QUESTION
 ============================================================ */
 
-exports.markQuestion = async (
-  attemptQuestionId,
-  marked,
-) => {
-  const { error } = await supabase
-    .from("assessment_question_flags")
-    .upsert(
-      {
-        attempt_question_id: attemptQuestionId,
-        marked_for_review: marked,
-      },
-      {
-        onConflict: "attempt_question_id",
-      },
-    );
+exports.markQuestion = async (attemptQuestionId, marked) => {
+  const { error } = await supabase.from("assessment_question_flags").upsert(
+    {
+      attempt_question_id: attemptQuestionId,
+      marked_for_review: marked,
+    },
+    {
+      onConflict: "attempt_question_id",
+    },
+  );
 
   if (error) throw error;
 
@@ -565,9 +525,7 @@ exports.markQuestion = async (
    UNMARK QUESTION
 ============================================================ */
 
-exports.unmarkQuestion = async (
-  attemptQuestionId,
-) => {
+exports.unmarkQuestion = async (attemptQuestionId) => {
   const { error } = await supabase
     .from("assessment_question_flags")
     .delete()
