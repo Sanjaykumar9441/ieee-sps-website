@@ -805,7 +805,7 @@ const Dashboard = () => {
           {!isPaused &&
             activeTab === "certificates" &&
             (permissions.certificates || isSuperAdmin) && (
-              <CertificatesTab cardStyle={cardStyle} />
+              <CertificatesTab />
             )}
 
           {!isPaused && activeTab === "admins" && isSuperAdmin && <AdminsTab />}

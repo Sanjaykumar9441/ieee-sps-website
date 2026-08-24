@@ -24,6 +24,9 @@ interface Certificate {
   college: string;
   city: string;
   eventDate: string;
+  teamName?: string;
+  place?: string;
+  event?: string;
   downloadCount?: number;
   lastDownloadedAt?: string;
 }
@@ -89,6 +92,9 @@ export default function CertificatesTab() {
         certificate.rollNo,
         certificate.certificateId,
         certificate.college,
+        certificate.teamName,
+        certificate.place,
+        certificate.event,
       ]
         .join(" ")
         .toLowerCase()
@@ -116,7 +122,12 @@ export default function CertificatesTab() {
       formData.append("file", file);
       formData.append("eventCode", eventCode.trim());
       formData.append("certificateType", certificateType);
-      formData.append("defaultEventDate", defaultEventDate);
+
+      // Participation uses the selected/default date.
+      // Team Merit has the fixed date printed on the certificate template.
+      if (certificateType === "PARTICIPATION") {
+        formData.append("defaultEventDate", defaultEventDate);
+      }
 
       const response = await axios.post(
         `${API}/api/certificates/import`,
@@ -190,16 +201,28 @@ export default function CertificatesTab() {
     try {
       setSaving(true);
 
+      const payload =
+        certificateType === "MERIT"
+          ? {
+              name: editing.name,
+              rollNo: editing.rollNo,
+              teamName: editing.teamName,
+              college: editing.college,
+              place: editing.place,
+              event: editing.event,
+            }
+          : {
+              name: editing.name,
+              rollNo: editing.rollNo,
+              branch: editing.branch,
+              college: editing.college,
+              city: editing.city,
+              eventDate: editing.eventDate,
+            };
+
       await axios.put(
         `${API}/api/certificates/admin/${editing.certificateId}`,
-        {
-          name: editing.name,
-          rollNo: editing.rollNo,
-          branch: editing.branch,
-          college: editing.college,
-          city: editing.city,
-          eventDate: editing.eventDate,
-        },
+        payload,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -276,25 +299,33 @@ export default function CertificatesTab() {
             >
               <option value="PARTICIPATION">Participation</option>
 
-              <option value="MERIT">Merit</option>
+              <option value="MERIT">Team Merit</option>
 
               <option value="VOLUNTEER">Volunteer</option>
             </select>
           </div>
 
-          {/* DATE */}
-          <div>
-            <label className="mb-2 block text-sm font-medium">
-              Default Event Date
-            </label>
+          {/* DATE — PARTICIPATION ONLY */}
+          {certificateType === "PARTICIPATION" ? (
+            <div>
+              <label className="mb-2 block text-sm font-medium">
+                Default Event Date
+              </label>
 
-            <input
-              value={defaultEventDate}
-              onChange={(e) => setDefaultEventDate(e.target.value)}
-              placeholder="13-08-2026"
-              className="w-full rounded-xl border px-4 py-3 outline-none"
-            />
-          </div>
+              <input
+                value={defaultEventDate}
+                onChange={(e) => setDefaultEventDate(e.target.value)}
+                placeholder="13-08-2026"
+                className="w-full rounded-xl border px-4 py-3 outline-none"
+              />
+            </div>
+          ) : (
+            <div className="flex items-end">
+              <div className="w-full rounded-xl border bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                Certificate date: <strong>13th August, 2026</strong>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* FILE */}
@@ -317,7 +348,9 @@ export default function CertificatesTab() {
           </div>
 
           <p className="mt-2 text-xs text-gray-500">
-            Required columns: Name, RollNo, Branch, College, City, Date
+            {certificateType === "MERIT"
+              ? "Required columns: Name, RollNo, TeamName, College, Place, Event"
+              : "Required columns: Name, RollNo, Branch, College, City, Date"}
           </p>
         </div>
 
@@ -382,7 +415,7 @@ export default function CertificatesTab() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search name, roll no or certificate ID"
+                placeholder="Search name, roll no, team, event or certificate ID"
                 className="w-full rounded-xl border py-3 pl-10 pr-4 outline-none"
               />
             </div>
@@ -403,19 +436,25 @@ export default function CertificatesTab() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="p-4 text-left">Name</th>
-
                   <th className="p-4 text-left">Roll No</th>
 
-                  <th className="p-4 text-left">Branch</th>
-
-                  <th className="p-4 text-left">College</th>
-
-                  <th className="p-4 text-left">City</th>
-
-                  <th className="p-4 text-left">Date</th>
+                  {certificateType === "MERIT" ? (
+                    <>
+                      <th className="p-4 text-left">Team</th>
+                      <th className="p-4 text-left">College</th>
+                      <th className="p-4 text-left">Place</th>
+                      <th className="p-4 text-left">Event</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="p-4 text-left">Branch</th>
+                      <th className="p-4 text-left">College</th>
+                      <th className="p-4 text-left">City</th>
+                      <th className="p-4 text-left">Date</th>
+                    </>
+                  )}
 
                   <th className="p-4 text-left">Certificate ID</th>
-
                   <th className="p-4 text-center">Actions</th>
                 </tr>
               </thead>
@@ -427,16 +466,23 @@ export default function CertificatesTab() {
                     className="border-t hover:bg-gray-50"
                   >
                     <td className="p-4 font-medium">{certificate.name}</td>
-
                     <td className="p-4">{certificate.rollNo}</td>
 
-                    <td className="p-4">{certificate.branch}</td>
-
-                    <td className="p-4">{certificate.college}</td>
-
-                    <td className="p-4">{certificate.city}</td>
-
-                    <td className="p-4">{certificate.eventDate}</td>
+                    {certificateType === "MERIT" ? (
+                      <>
+                        <td className="p-4">{certificate.teamName || "—"}</td>
+                        <td className="p-4">{certificate.college}</td>
+                        <td className="p-4">{certificate.place || "—"}</td>
+                        <td className="p-4">{certificate.event || "—"}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="p-4">{certificate.branch}</td>
+                        <td className="p-4">{certificate.college}</td>
+                        <td className="p-4">{certificate.city}</td>
+                        <td className="p-4">{certificate.eventDate}</td>
+                      </>
+                    )}
 
                     <td className="p-4">
                       <span className="rounded-lg bg-purple-50 px-3 py-1 text-sm font-medium text-purple-700">
@@ -496,10 +542,7 @@ export default function CertificatesTab() {
               <input
                 value={editing.name}
                 onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    name: e.target.value,
-                  })
+                  setEditing({ ...editing, name: e.target.value })
                 }
                 placeholder="Name"
                 className="rounded-xl border px-4 py-3"
@@ -517,53 +560,83 @@ export default function CertificatesTab() {
                 className="rounded-xl border px-4 py-3"
               />
 
-              <input
-                value={editing.branch}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    branch: e.target.value,
-                  })
-                }
-                placeholder="Branch"
-                className="rounded-xl border px-4 py-3"
-              />
+              {certificateType === "MERIT" ? (
+                <>
+                  <input
+                    value={editing.teamName || ""}
+                    onChange={(e) =>
+                      setEditing({ ...editing, teamName: e.target.value })
+                    }
+                    placeholder="Team Name"
+                    className="rounded-xl border px-4 py-3"
+                  />
 
-              <input
-                value={editing.college}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    college: e.target.value,
-                  })
-                }
-                placeholder="College"
-                className="rounded-xl border px-4 py-3"
-              />
+                  <input
+                    value={editing.college}
+                    onChange={(e) =>
+                      setEditing({ ...editing, college: e.target.value })
+                    }
+                    placeholder="College"
+                    className="rounded-xl border px-4 py-3"
+                  />
 
-              <input
-                value={editing.city}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    city: e.target.value,
-                  })
-                }
-                placeholder="City"
-                className="rounded-xl border px-4 py-3"
-              />
+                  <input
+                    value={editing.place || ""}
+                    onChange={(e) =>
+                      setEditing({ ...editing, place: e.target.value })
+                    }
+                    placeholder="Place"
+                    className="rounded-xl border px-4 py-3"
+                  />
 
-              <input
-                value={editing.eventDate}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    eventDate: e.target.value,
-                  })
-                }
-                placeholder="13-08-2026"
-                className="rounded-xl border px-4 py-3"
-              />
+                  <input
+                    value={editing.event || ""}
+                    onChange={(e) =>
+                      setEditing({ ...editing, event: e.target.value })
+                    }
+                    placeholder="Event"
+                    className="rounded-xl border px-4 py-3"
+                  />
+                </>
+              ) : (
+                <>
+                  <input
+                    value={editing.branch}
+                    onChange={(e) =>
+                      setEditing({ ...editing, branch: e.target.value })
+                    }
+                    placeholder="Branch"
+                    className="rounded-xl border px-4 py-3"
+                  />
+
+                  <input
+                    value={editing.college}
+                    onChange={(e) =>
+                      setEditing({ ...editing, college: e.target.value })
+                    }
+                    placeholder="College"
+                    className="rounded-xl border px-4 py-3"
+                  />
+
+                  <input
+                    value={editing.city}
+                    onChange={(e) =>
+                      setEditing({ ...editing, city: e.target.value })
+                    }
+                    placeholder="City"
+                    className="rounded-xl border px-4 py-3"
+                  />
+
+                  <input
+                    value={editing.eventDate}
+                    onChange={(e) =>
+                      setEditing({ ...editing, eventDate: e.target.value })
+                    }
+                    placeholder="13-08-2026"
+                    className="rounded-xl border px-4 py-3"
+                  />
+                </>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 border-t p-6">

@@ -30,6 +30,8 @@ router.get("/excel", verifyToken, async (req, res) => {
 
     const summarySheet = workbook.addWorksheet("Summary");
 
+    const transactionSheet = workbook.addWorksheet("Transaction IDs");
+
     const registrationColumns = [
       { header: "Registration ID", key: "registrationId", width: 20 },
       { header: "Team", key: "team", width: 22 },
@@ -69,6 +71,15 @@ router.get("/excel", verifyToken, async (req, res) => {
       { header: "Arrival Time", key: "arrivalTime", width: 15 },
       { header: "Departure Date", key: "departureDate", width: 15 },
       { header: "Departure Time", key: "departureTime", width: 15 },
+    ];
+
+    transactionSheet.columns = [
+      { header: "S. No", key: "sno", width: 10 },
+      { header: "Name of Team / Participant", key: "name", width: 32 },
+      { header: "Registration ID", key: "registrationId", width: 20 },
+      { header: "Amount", key: "amount", width: 15 },
+      { header: "Transaction ID", key: "transactionId", width: 28 },
+      { header: "Payment Time", key: "paymentTime", width: 25 },
     ];
 
     registrations.forEach((registration) => {
@@ -201,7 +212,52 @@ router.get("/excel", verifyToken, async (req, res) => {
       }
     });
 
-    const sheets = [quizSheet, designSheet, modelerSheet, accommodationSheet];
+    /* ------------------------------
+   TRANSACTION ID SHEET
+------------------------------ */
+
+    const transactionRegistrations = [...registrations]
+      .filter((registration) => registration.transactionId)
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+    transactionRegistrations.forEach((registration, index) => {
+      const member = registration.members[0];
+
+      const displayName =
+        registration.registrationType === "team"
+          ? registration.teamName
+          : member?.fullName;
+
+      const paymentTime = new Date(registration.createdAt).toLocaleString(
+        "en-IN",
+        {
+          dateStyle: "medium",
+          timeStyle: "short",
+        },
+      );
+
+      transactionSheet.addRow({
+        sno: index + 1,
+
+        name: displayName || "—",
+
+        registrationId: registration.registrationId,
+
+        amount: registration.totalFee,
+
+        transactionId: registration.transactionId || "—",
+
+        paymentTime,
+      });
+    });
+
+    const sheets = [
+      quizSheet,
+      designSheet,
+      modelerSheet,
+      accommodationSheet,
+      transactionSheet,
+    ];
 
     sheets.forEach((sheet) => {
       // Freeze header row
@@ -216,6 +272,8 @@ router.get("/excel", verifyToken, async (req, res) => {
 
       if (sheet === accommodationSheet) {
         sheet.autoFilter = "A1:L1";
+      } else if (sheet === transactionSheet) {
+        sheet.autoFilter = "A1:F1";
       } else {
         sheet.autoFilter = "A1:Q1";
       }
@@ -337,6 +395,13 @@ router.get("/excel", verifyToken, async (req, res) => {
           horizontal: "center",
         };
       });
+    });
+
+    ["A", "C", "D", "E", "F"].forEach((col) => {
+      transactionSheet.getColumn(col).alignment = {
+        vertical: "middle",
+        horizontal: "center",
+      };
     });
 
     summarySheet.columns = [
