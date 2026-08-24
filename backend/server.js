@@ -23,6 +23,7 @@ const telegramRoutes = require("./routes/telegramRoutes");
 const spaceDayExportRoutes = require("./routes/spaceDayExportRoutes");
 const eventSettingsRoutes = require("./routes/eventSettingsRoutes");
 const adminAccessRoutes = require("./routes/adminAccessRoutes");
+const certificateRoutes = require("./routes/certificateRoutes");
 const compression = require("compression");
 const axios = require("axios");
 const verifyToken = require("./middleware/verifyToken");
@@ -111,6 +112,7 @@ app.use("/api/admin-access", adminAccessRoutes);
 app.use("/api", galleryRoutes);
 app.use("/api/sps-applications", spsApplicationRoutes);
 app.use("/uploads", express.static("uploads"));
+app.use("/api/certificates", certificateRoutes);
 
 /* ===============================
    🧠 Assessment Routes

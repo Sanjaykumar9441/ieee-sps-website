@@ -16,6 +16,7 @@ import MembershipRegistrationsTab from "./Dashboard/components/MembershipRegistr
 import SpaceDayRegistrationsTab from "./Dashboard/components/SpaceDayDetails/SpaceDayRegistrationsTab";
 import SpaceDayAttendance from "./Dashboard/components/SpaceDayDetails/SpaceDayAttendance";
 import AssessmentDashboardTab from "./Dashboard/components/Assessment/AssessmentDashboardTab";
+import CertificatesTab from "./Dashboard/components/CertificatesTab";
 import {
   Calendar,
   Mail,
@@ -30,6 +31,7 @@ import {
   Shield,
   History,
   LayoutDashboard,
+  Award,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -466,6 +468,16 @@ const Dashboard = () => {
             ]
           : []),
 
+        ...(isSuperAdmin
+          ? [
+              {
+                id: "certificates",
+                label: "Certificates",
+                icon: Award,
+              },
+            ]
+          : []),
+
         ...(permissions.spsApplications
           ? [{ id: "spsApplications", label: "SPS Applications", icon: Users }]
           : []),
@@ -784,6 +796,18 @@ const Dashboard = () => {
               <SpaceDayAttendance />
             )}
 
+          {!isPaused &&
+            activeTab === "assessmentDashboard" &&
+            (permissions.assessmentPlatform || isSuperAdmin) && (
+              <AssessmentDashboardTab />
+            )}
+
+          {!isPaused &&
+            activeTab === "certificates" &&
+            (permissions.certificates || isSuperAdmin) && (
+              <CertificatesTab cardStyle={cardStyle} />
+            )}
+
           {!isPaused && activeTab === "admins" && isSuperAdmin && <AdminsTab />}
           {!isPaused && activeTab === "activity" && isSuperAdmin && (
             <ActivityLogsTab />
@@ -791,12 +815,6 @@ const Dashboard = () => {
           {!isPaused && activeTab === "loginHistory" && isSuperAdmin && (
             <LoginHistoryTab />
           )}
-
-          {!isPaused &&
-            activeTab === "assessmentDashboard" &&
-            (permissions.assessmentPlatform || isSuperAdmin) && (
-              <AssessmentDashboardTab />
-            )}
         </main>
       </div>
     </div>
