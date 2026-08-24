@@ -54,6 +54,24 @@ const certificateSchema = new mongoose.Schema(
       trim: true,
     },
 
+    team: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    position: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    event: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     eventDate: {
       type: String,
       required: true,
@@ -77,13 +95,13 @@ const certificateSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // A roll number can have one certificate of each type for each event.
 certificateSchema.index(
   { eventCode: 1, certificateType: 1, rollNo: 1 },
-  { unique: true }
+  { unique: true },
 );
 
 module.exports = mongoose.model("Certificate", certificateSchema);

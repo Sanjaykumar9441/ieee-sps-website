@@ -8,6 +8,9 @@ const { importRows } = require("../services/certificateImportService");
 const {
   generateParticipationCertificate,
 } = require("../services/participationCertificateService");
+const {
+  generateMeritCertificate,
+} = require("../services/meritCertificateService");
 
 async function importCertificates(req, res) {
   try {
@@ -34,14 +37,20 @@ async function importCertificates(req, res) {
       raw: true,
     });
 
-    const requiredColumns = [
-      "Name",
-      "RollNo",
-      "Branch",
-      "College",
-      "City",
-      "Date",
-    ];
+    let requiredColumns;
+
+    if (String(certificateType).toUpperCase() === "MERIT") {
+      requiredColumns = [
+        "Name",
+        "RollNo",
+        "Team",
+        "College",
+        "Position",
+        "Event",
+      ];
+    } else {
+      requiredColumns = ["Name", "RollNo", "Branch", "College", "City", "Date"];
+    }
     const headers = Object.keys(rows[0] || {});
     const missing = requiredColumns.filter(
       (column) => !headers.includes(column),
@@ -316,6 +325,10 @@ async function getCertificate(req, res) {
         rollNo: certificate.rollNo,
         branch: certificate.branch,
         college: certificate.college,
+        city: certificate.city,
+        team: certificate.team,
+        position: certificate.position,
+        event: certificate.event,
         eventDate: certificate.eventDate,
         certificateType: certificate.certificateType,
       },
@@ -372,7 +385,11 @@ async function downloadCertificate(req, res) {
 
     const output = fs.createWriteStream(tempPath);
 
-    await generateParticipationCertificate(certificate, output);
+    if (certificate.certificateType === "MERIT") {
+      await generateMeritCertificate(certificate, output);
+    } else {
+      await generateParticipationCertificate(certificate, output);
+    }
 
     certificate.downloadCount += 1;
     certificate.lastDownloadedAt = new Date();

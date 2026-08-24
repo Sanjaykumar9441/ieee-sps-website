@@ -35,14 +35,15 @@ function formatDate(value) {
 
 async function nextCertificateId(eventCode, certificateType) {
   const prefix = TYPE_PREFIX[certificateType];
-  if (!prefix) throw new Error(`Unsupported certificate type: ${certificateType}`);
+  if (!prefix)
+    throw new Error(`Unsupported certificate type: ${certificateType}`);
 
   const key = `${eventCode}:${certificateType}`;
 
   const counter = await CertificateCounter.findOneAndUpdate(
     { key },
     { $inc: { seq: 1 } },
-    { new: true, upsert: true }
+    { new: true, upsert: true },
   );
 
   return `${eventCode}-${prefix}-${String(counter.seq).padStart(6, "0")}`;
@@ -77,7 +78,7 @@ async function importRows({
     const city = normalize(row.City);
     const eventDate = formatDate(row.Date) || normalize(defaultEventDate);
 
-    if (!name || !rollNo || !eventDate) {
+    if (!name || !rollNo) {
       results.skipped += 1;
       results.errors.push({
         row: index + 2,
@@ -98,12 +99,9 @@ async function importRows({
         continue;
       }
 
-      const certificateId = await nextCertificateId(
-        normalizedEventCode,
-        type
-      );
+      const certificateId = await nextCertificateId(normalizedEventCode, type);
 
-      await Certificate.create({
+      const certificateData = {
         eventCode: normalizedEventCode,
         certificateType: type,
         certificateId,
@@ -114,7 +112,15 @@ async function importRows({
         city,
         eventDate,
         templateName,
-      });
+      };
+
+      if (type === "MERIT") {
+        certificateData.team = team;
+        certificateData.position = position;
+        certificateData.event = event;
+      }
+
+      await Certificate.create(certificateData);
 
       results.imported += 1;
     } catch (error) {
