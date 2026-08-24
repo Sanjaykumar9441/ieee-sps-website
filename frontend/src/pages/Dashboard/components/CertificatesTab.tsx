@@ -1,53 +1,122 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   Award,
-  Upload,
+  Download,
+  Edit,
   FileSpreadsheet,
-  CheckCircle,
-  AlertCircle,
+  Search,
+  Upload,
+  X,
+  Save,
 } from "lucide-react";
 
-const API = import.meta.env.VITE_API_URL;
+const API = "https://ieee-sps-website.onrender.com";
 
-interface Props {
-  cardStyle: React.CSSProperties;
+interface Certificate {
+  _id: string;
+  certificateId: string;
+  eventCode: string;
+  certificateType: string;
+  name: string;
+  rollNo: string;
+  branch: string;
+  college: string;
+  city: string;
+  eventDate: string;
+  downloadCount?: number;
+  lastDownloadedAt?: string;
 }
 
-export default function CertificatesTab({ cardStyle }: Props) {
-  const [eventCode, setEventCode] = useState("");
+export default function CertificatesTab() {
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [search, setSearch] = useState("");
   const [certificateType, setCertificateType] = useState("PARTICIPATION");
-  const [eventDate, setEventDate] = useState("13-08-2026");
+
   const [file, setFile] = useState<File | null>(null);
 
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [error, setError] = useState("");
+  const [eventCode, setEventCode] = useState("NSD2026");
+  const [defaultEventDate, setDefaultEventDate] = useState("13-08-2026");
+
+  const [importing, setImporting] = useState(false);
+
+  const [importResult, setImportResult] = useState<any>(null);
+
+  const [editing, setEditing] = useState<Certificate | null>(null);
+
+  const [saving, setSaving] = useState(false);
+
+  const token = localStorage.getItem("token");
+
+  const fetchCertificates = async () => {
+    try {
+      setLoading(true);
+
+      const response = await axios.get(`${API}/api/certificates/admin`, {
+        params: {
+          eventCode,
+          certificateType,
+          search,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setCertificates(response.data.certificates || []);
+    } catch (error) {
+      console.error("Certificate fetch error:", error);
+      alert("Unable to load certificates.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCertificates();
+  }, [eventCode, certificateType]);
+
+  const filteredCertificates = useMemo(() => {
+    const value = search.trim().toLowerCase();
+
+    if (!value) return certificates;
+
+    return certificates.filter((certificate) =>
+      [
+        certificate.name,
+        certificate.rollNo,
+        certificate.certificateId,
+        certificate.college,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(value),
+    );
+  }, [certificates, search]);
 
   const handleImport = async () => {
     if (!file) {
-      setError("Please select an Excel file.");
+      alert("Please select an Excel file.");
       return;
     }
 
     if (!eventCode.trim()) {
-      setError("Please enter an event code.");
+      alert("Event code is required.");
       return;
     }
 
     try {
-      setLoading(true);
-      setError("");
-      setResult(null);
-
-      const token = localStorage.getItem("token");
+      setImporting(true);
+      setImportResult(null);
 
       const formData = new FormData();
 
       formData.append("file", file);
-      formData.append("eventCode", eventCode.trim().toUpperCase());
+      formData.append("eventCode", eventCode.trim());
       formData.append("certificateType", certificateType);
-      formData.append("defaultEventDate", eventDate);
+      formData.append("defaultEventDate", defaultEventDate);
 
       const response = await axios.post(
         `${API}/api/certificates/import`,
@@ -55,29 +124,100 @@ export default function CertificatesTab({ cardStyle }: Props) {
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
           },
         },
       );
 
-      setResult(response.data);
+      setImportResult(response.data);
+
       setFile(null);
 
-      const input = document.getElementById(
-        "certificate-excel",
-      ) as HTMLInputElement | null;
+      await fetchCertificates();
+    } catch (error: any) {
+      console.error("Certificate import error:", error);
 
-      if (input) {
-        input.value = "";
-      }
-    } catch (err: any) {
-      console.error(err);
-
-      setError(
-        err?.response?.data?.message ||
-          "Certificate import failed. Please check the Excel file.",
-      );
+      alert(error?.response?.data?.message || "Certificate import failed.");
     } finally {
-      setLoading(false);
+      setImporting(false);
+    }
+  };
+
+  const handleDownload = async (certificate: Certificate) => {
+    try {
+      const response = await axios.get(
+        `${API}/api/certificates/download/${encodeURIComponent(
+          certificate.rollNo,
+        )}`,
+        {
+          params: {
+            eventCode: certificate.eventCode,
+            certificateType: certificate.certificateType,
+          },
+          responseType: "blob",
+        },
+      );
+
+      const blob = new Blob([response.data], {
+        type: "application/pdf",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+
+      link.href = url;
+
+      link.download = `${certificate.certificateId}.pdf`;
+
+      document.body.appendChild(link);
+
+      link.click();
+
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Certificate download error:", error);
+
+      alert("Unable to download certificate.");
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editing) return;
+
+    try {
+      setSaving(true);
+
+      await axios.put(
+        `${API}/api/certificates/admin/${editing.certificateId}`,
+        {
+          name: editing.name,
+          rollNo: editing.rollNo,
+          branch: editing.branch,
+          college: editing.college,
+          city: editing.city,
+          eventDate: editing.eventDate,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      setEditing(null);
+
+      await fetchCertificates();
+
+      alert("Certificate details updated successfully.");
+    } catch (error: any) {
+      console.error("Certificate update error:", error);
+
+      alert(error?.response?.data?.message || "Failed to update certificate.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -86,186 +226,134 @@ export default function CertificatesTab({ cardStyle }: Props) {
       {/* HEADER */}
       <div>
         <div className="flex items-center gap-3">
-          <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center"
-            style={{
-              background:
-                "linear-gradient(135deg, #7C6FEF 0%, #5E52D9 100%)",
-            }}
-          >
-            <Award className="text-white" size={22} />
-          </div>
+          <Award size={28} className="text-[#6C5FE0]" />
+
+          <h1 className="text-2xl font-bold">Certificates</h1>
+        </div>
+
+        <p className="mt-2 text-gray-500">
+          Import and manage event certificate data.
+        </p>
+      </div>
+
+      {/* IMPORT */}
+      <div className="rounded-2xl border bg-white p-6 shadow-sm">
+        <div className="mb-6 flex items-center gap-3">
+          <FileSpreadsheet className="text-[#6C5FE0]" />
 
           <div>
-            <h1 className="text-2xl font-semibold">
-              Certificate Management
-            </h1>
+            <h2 className="text-xl font-bold">Import Certificate Data</h2>
 
-            <p className="text-sm text-gray-500 mt-1">
-              Import student details and generate certificates.
+            <p className="text-sm text-gray-500">
+              Upload the Excel file containing certificate recipients.
             </p>
           </div>
         </div>
-      </div>
 
-      {/* IMPORT CARD */}
-      <div className="p-6" style={cardStyle}>
-        <div className="flex items-center gap-2 mb-5">
-          <FileSpreadsheet size={20} />
-          <h2 className="text-lg font-semibold">
-            Import Certificate Data
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid gap-5 md:grid-cols-3">
           {/* EVENT CODE */}
           <div>
-            <label className="block text-sm font-medium mb-2">
-              Event Code
-            </label>
+            <label className="mb-2 block text-sm font-medium">Event Code</label>
 
             <input
-              type="text"
               value={eventCode}
               onChange={(e) => setEventCode(e.target.value.toUpperCase())}
               placeholder="NSD2026"
-              className="w-full border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-purple-300"
+              className="w-full rounded-xl border px-4 py-3 outline-none focus:border-[#6C5FE0]"
             />
-
-            <p className="text-xs text-gray-500 mt-1">
-              Example: NSD2026
-            </p>
           </div>
 
           {/* CERTIFICATE TYPE */}
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="mb-2 block text-sm font-medium">
               Certificate Type
             </label>
 
             <select
               value={certificateType}
               onChange={(e) => setCertificateType(e.target.value)}
-              className="w-full border rounded-xl px-4 py-3 outline-none"
+              className="w-full rounded-xl border px-4 py-3 outline-none"
             >
-              <option value="PARTICIPATION">
-                Participation
-              </option>
+              <option value="PARTICIPATION">Participation</option>
 
-              <option value="MERIT">
-                Merit
-              </option>
+              <option value="MERIT">Merit</option>
 
-              <option value="VOLUNTEER">
-                Volunteer
-              </option>
+              <option value="VOLUNTEER">Volunteer</option>
             </select>
           </div>
 
           {/* DATE */}
           <div>
-            <label className="block text-sm font-medium mb-2">
-              Certificate Date
+            <label className="mb-2 block text-sm font-medium">
+              Default Event Date
             </label>
 
             <input
-              type="text"
-              value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
+              value={defaultEventDate}
+              onChange={(e) => setDefaultEventDate(e.target.value)}
               placeholder="13-08-2026"
-              className="w-full border rounded-xl px-4 py-3 outline-none"
+              className="w-full rounded-xl border px-4 py-3 outline-none"
             />
           </div>
         </div>
 
-        {/* EXCEL */}
-        <div className="mt-6">
-          <label className="block text-sm font-medium mb-2">
-            Excel File
-          </label>
+        {/* FILE */}
+        <div className="mt-5">
+          <label className="mb-2 block text-sm font-medium">Excel File</label>
 
-          <div className="border-2 border-dashed rounded-xl p-6">
+          <div className="rounded-xl border-2 border-dashed p-5">
             <input
-              id="certificate-excel"
               type="file"
               accept=".xlsx,.xls"
-              onChange={(e) =>
-                setFile(e.target.files?.[0] || null)
-              }
-              className="block w-full text-sm"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="w-full"
             />
 
             {file && (
-              <p className="text-sm text-gray-600 mt-3">
+              <p className="mt-3 text-sm text-gray-600">
                 Selected: <strong>{file.name}</strong>
               </p>
             )}
           </div>
 
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="mt-2 text-xs text-gray-500">
             Required columns: Name, RollNo, Branch, College, City, Date
           </p>
         </div>
 
-        {/* BUTTON */}
         <button
           onClick={handleImport}
-          disabled={loading}
-          className="mt-6 inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white font-medium disabled:opacity-50"
-          style={{
-            background:
-              "linear-gradient(135deg, #7C6FEF 0%, #5E52D9 100%)",
-          }}
+          disabled={importing}
+          className="mt-5 flex items-center gap-2 rounded-xl bg-[#6C5FE0] px-5 py-3 font-semibold text-white transition hover:bg-[#594BD0] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Upload size={18} />
 
-          {loading
-            ? "Importing..."
-            : "Import Certificate Data"}
+          {importing ? "Importing..." : "Import Certificate Data"}
         </button>
 
-        {/* ERROR */}
-        {error && (
-          <div className="mt-5 flex items-start gap-3 p-4 rounded-xl bg-red-50 text-red-700">
-            <AlertCircle size={20} />
+        {importResult && (
+          <div className="mt-5 rounded-xl bg-green-50 p-5 text-green-700">
+            <p className="font-semibold">
+              Certificate data imported successfully.
+            </p>
 
-            <div>
-              <p className="font-medium">Import Failed</p>
-              <p className="text-sm mt-1">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {/* SUCCESS */}
-        {result && (
-          <div className="mt-5 p-4 rounded-xl bg-green-50 text-green-700">
-            <div className="flex items-center gap-2">
-              <CheckCircle size={20} />
-
-              <p className="font-semibold">
-                Certificate data imported successfully.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 mt-4 text-sm">
+            <div className="mt-3 grid grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-gray-500">Imported</p>
-                <p className="text-xl font-semibold">
-                  {result.imported ?? 0}
+                <p className="text-xl font-bold">
+                  {importResult.imported || 0}
                 </p>
               </div>
 
               <div>
                 <p className="text-gray-500">Skipped</p>
-                <p className="text-xl font-semibold">
-                  {result.skipped ?? 0}
-                </p>
+                <p className="text-xl font-bold">{importResult.skipped || 0}</p>
               </div>
 
               <div>
                 <p className="text-gray-500">Total Rows</p>
-                <p className="text-xl font-semibold">
-                  {result.totalRows ?? 0}
+                <p className="text-xl font-bold">
+                  {importResult.totalRows || 0}
                 </p>
               </div>
             </div>
@@ -273,38 +361,232 @@ export default function CertificatesTab({ cardStyle }: Props) {
         )}
       </div>
 
-      {/* EXCEL FORMAT */}
-      <div className="p-6" style={cardStyle}>
-        <h2 className="text-lg font-semibold mb-4">
-          Excel Format
-        </h2>
+      {/* CERTIFICATE TABLE */}
+      <div className="rounded-2xl border bg-white shadow-sm">
+        <div className="border-b p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-xl font-bold">Certificate Records</h2>
+
+              <p className="text-sm text-gray-500">
+                {filteredCertificates.length} records
+              </p>
+            </div>
+
+            <div className="relative w-full lg:w-96">
+              <Search
+                size={18}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search name, roll no or certificate ID"
+                className="w-full rounded-xl border py-3 pl-10 pr-4 outline-none"
+              />
+            </div>
+          </div>
+        </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left p-3">Name</th>
-                <th className="text-left p-3">RollNo</th>
-                <th className="text-left p-3">Branch</th>
-                <th className="text-left p-3">College</th>
-                <th className="text-left p-3">City</th>
-                <th className="text-left p-3">Date</th>
-              </tr>
-            </thead>
+          {loading ? (
+            <div className="py-16 text-center text-gray-500">
+              Loading certificates...
+            </div>
+          ) : filteredCertificates.length === 0 ? (
+            <div className="py-16 text-center text-gray-500">
+              No certificate records found.
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="p-4 text-left">Name</th>
 
-            <tbody>
-              <tr>
-                <td className="p-3">Ch. Sanjay Kumar</td>
-                <td className="p-3">23A91A0001</td>
-                <td className="p-3">ECE</td>
-                <td className="p-3">Aditya University</td>
-                <td className="p-3">Surampalem</td>
-                <td className="p-3">13-08-2026</td>
-              </tr>
-            </tbody>
-          </table>
+                  <th className="p-4 text-left">Roll No</th>
+
+                  <th className="p-4 text-left">Branch</th>
+
+                  <th className="p-4 text-left">College</th>
+
+                  <th className="p-4 text-left">City</th>
+
+                  <th className="p-4 text-left">Date</th>
+
+                  <th className="p-4 text-left">Certificate ID</th>
+
+                  <th className="p-4 text-center">Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {filteredCertificates.map((certificate) => (
+                  <tr
+                    key={certificate._id}
+                    className="border-t hover:bg-gray-50"
+                  >
+                    <td className="p-4 font-medium">{certificate.name}</td>
+
+                    <td className="p-4">{certificate.rollNo}</td>
+
+                    <td className="p-4">{certificate.branch}</td>
+
+                    <td className="p-4">{certificate.college}</td>
+
+                    <td className="p-4">{certificate.city}</td>
+
+                    <td className="p-4">{certificate.eventDate}</td>
+
+                    <td className="p-4">
+                      <span className="rounded-lg bg-purple-50 px-3 py-1 text-sm font-medium text-purple-700">
+                        {certificate.certificateId}
+                      </span>
+                    </td>
+
+                    <td className="p-4">
+                      <div className="flex justify-center gap-2">
+                        <button
+                          onClick={() => setEditing(certificate)}
+                          className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-gray-50"
+                          title="Edit"
+                        >
+                          <Edit size={16} />
+                        </button>
+
+                        <button
+                          onClick={() => handleDownload(certificate)}
+                          className="rounded-lg bg-[#00629B] px-3 py-2 text-sm font-medium text-white hover:bg-[#00527F]"
+                          title="Download"
+                        >
+                          <Download size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
+
+      {/* EDIT MODAL */}
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b p-6">
+              <div>
+                <h2 className="text-xl font-bold">Edit Certificate</h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  {editing.certificateId}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setEditing(null)}
+                className="rounded-lg p-2 hover:bg-gray-100"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="grid gap-5 p-6 md:grid-cols-2">
+              <input
+                value={editing.name}
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    name: e.target.value,
+                  })
+                }
+                placeholder="Name"
+                className="rounded-xl border px-4 py-3"
+              />
+
+              <input
+                value={editing.rollNo}
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    rollNo: e.target.value.toUpperCase(),
+                  })
+                }
+                placeholder="Roll No"
+                className="rounded-xl border px-4 py-3"
+              />
+
+              <input
+                value={editing.branch}
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    branch: e.target.value,
+                  })
+                }
+                placeholder="Branch"
+                className="rounded-xl border px-4 py-3"
+              />
+
+              <input
+                value={editing.college}
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    college: e.target.value,
+                  })
+                }
+                placeholder="College"
+                className="rounded-xl border px-4 py-3"
+              />
+
+              <input
+                value={editing.city}
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    city: e.target.value,
+                  })
+                }
+                placeholder="City"
+                className="rounded-xl border px-4 py-3"
+              />
+
+              <input
+                value={editing.eventDate}
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    eventDate: e.target.value,
+                  })
+                }
+                placeholder="13-08-2026"
+                className="rounded-xl border px-4 py-3"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 border-t p-6">
+              <button
+                onClick={() => setEditing(null)}
+                className="rounded-xl border px-5 py-3 font-medium"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleSaveEdit}
+                disabled={saving}
+                className="flex items-center gap-2 rounded-xl bg-[#6C5FE0] px-5 py-3 font-semibold text-white disabled:opacity-50"
+              >
+                <Save size={17} />
+
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
