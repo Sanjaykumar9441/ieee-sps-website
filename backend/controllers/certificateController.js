@@ -34,9 +34,18 @@ async function importCertificates(req, res) {
       raw: true,
     });
 
-    const requiredColumns = ["Name", "RollNo", "Branch", "College", "City", "Date"];
+    const requiredColumns = [
+      "Name",
+      "RollNo",
+      "Branch",
+      "College",
+      "City",
+      "Date",
+    ];
     const headers = Object.keys(rows[0] || {});
-    const missing = requiredColumns.filter((column) => !headers.includes(column));
+    const missing = requiredColumns.filter(
+      (column) => !headers.includes(column),
+    );
 
     if (missing.length) {
       return res.status(400).json({
@@ -67,13 +76,217 @@ async function importCertificates(req, res) {
   }
 }
 
+// ============================================================
+// ADMIN - GET CERTIFICATE RECORDS
+// ============================================================
+
+async function getAdminCertificates(req, res) {
+  try {
+    const eventCode = String(req.query.eventCode || "")
+      .trim()
+      .toUpperCase();
+
+    const certificateType = String(req.query.certificateType || "")
+      .trim()
+      .toUpperCase();
+
+    const filter = {};
+
+    if (eventCode) {
+      filter.eventCode = eventCode;
+    }
+
+    if (certificateType) {
+      filter.certificateType = certificateType;
+    }
+
+    const certificates = await Certificate.find(filter)
+      .sort({ createdAt: 1 })
+      .lean();
+
+    return res.json({
+      success: true,
+      total: certificates.length,
+      certificates,
+    });
+  } catch (error) {
+    console.error("Get admin certificates error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load certificate records",
+      error: error.message,
+    });
+  }
+}
+
+// ============================================================
+// ADMIN - EDIT CERTIFICATE
+// ============================================================
+
+async function updateAdminCertificate(req, res) {
+  try {
+    const certificateId = String(req.params.certificateId || "").trim();
+
+    if (!certificateId) {
+      return res.status(400).json({
+        success: false,
+        message: "Certificate ID is required",
+      });
+    }
+
+    const { name, rollNo, branch, college, city, eventDate } = req.body;
+
+    if (!name || !rollNo || !eventDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, Roll No and Date are required",
+      });
+    }
+
+    const normalizedRollNo = String(rollNo).trim().toUpperCase();
+
+    // Find the existing certificate first
+    const existing = await Certificate.findOne({
+      certificateId,
+    });
+
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: "Certificate not found",
+      });
+    }
+
+    // If roll number is changed, make sure another
+    // certificate of the same type/event does not already use it.
+    const duplicate = await Certificate.findOne({
+      _id: { $ne: existing._id },
+      eventCode: existing.eventCode,
+      certificateType: existing.certificateType,
+      rollNo: normalizedRollNo,
+    });
+
+    if (duplicate) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Another certificate already exists for this roll number in this event and certificate type",
+      });
+    }
+
+    existing.name = String(name).trim();
+    existing.rollNo = normalizedRollNo;
+    existing.branch = String(branch || "").trim();
+    existing.college = String(college || "").trim();
+    existing.city = String(city || "").trim();
+    existing.eventDate = String(eventDate).trim();
+
+    // IMPORTANT:
+    // existing.certificateId is NEVER changed.
+
+    await existing.save();
+
+    return res.json({
+      success: true,
+      message: "Certificate updated successfully",
+      certificate: existing,
+    });
+  } catch (error) {
+    console.error("Update certificate error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update certificate",
+      error: error.message,
+    });
+  }
+}
+
+// ============================================================
+// ADMIN - EXPORT CERTIFICATE DATA TO EXCEL
+// ============================================================
+
+async function exportAdminCertificates(req, res) {
+  try {
+    const eventCode = String(req.query.eventCode || "")
+      .trim()
+      .toUpperCase();
+
+    const certificateType = String(req.query.certificateType || "")
+      .trim()
+      .toUpperCase();
+
+    const filter = {};
+
+    if (eventCode) {
+      filter.eventCode = eventCode;
+    }
+
+    if (certificateType) {
+      filter.certificateType = certificateType;
+    }
+
+    const certificates = await Certificate.find(filter)
+      .sort({ createdAt: 1 })
+      .lean();
+
+    const rows = certificates.map((certificate) => ({
+      Name: certificate.name,
+      RollNo: certificate.rollNo,
+      Branch: certificate.branch,
+      College: certificate.college,
+      City: certificate.city,
+      Date: certificate.eventDate,
+      CertificateId: certificate.certificateId,
+      EventCode: certificate.eventCode,
+      CertificateType: certificate.certificateType,
+    }));
+
+    const workbook = XLSX.utils.book_new();
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Certificates");
+
+    const buffer = XLSX.write(workbook, {
+      type: "buffer",
+      bookType: "xlsx",
+    });
+
+    const safeEventCode = eventCode || "ALL";
+    const safeType = certificateType || "ALL";
+
+    const fileName = `certificates_${safeEventCode}_${safeType}.xlsx`;
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+
+    return res.send(buffer);
+  } catch (error) {
+    console.error("Certificate Excel export error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to export certificate data",
+      error: error.message,
+    });
+  }
+}
+
 async function getCertificate(req, res) {
   try {
-    const rollNo = String(req.params.rollNo || "").trim().toUpperCase();
-    const eventCode = String(req.query.eventCode || "").trim().toUpperCase();
-    const certificateType = String(
-      req.query.certificateType || "PARTICIPATION"
-    )
+    const rollNo = String(req.params.rollNo || "")
+      .trim()
+      .toUpperCase();
+    const eventCode = String(req.query.eventCode || "")
+      .trim()
+      .toUpperCase();
+    const certificateType = String(req.query.certificateType || "PARTICIPATION")
       .trim()
       .toUpperCase();
 
@@ -118,11 +331,13 @@ async function getCertificate(req, res) {
 
 async function downloadCertificate(req, res) {
   try {
-    const rollNo = String(req.params.rollNo || "").trim().toUpperCase();
-    const eventCode = String(req.query.eventCode || "").trim().toUpperCase();
-    const certificateType = String(
-      req.query.certificateType || "PARTICIPATION"
-    )
+    const rollNo = String(req.params.rollNo || "")
+      .trim()
+      .toUpperCase();
+    const eventCode = String(req.query.eventCode || "")
+      .trim()
+      .toUpperCase();
+    const certificateType = String(req.query.certificateType || "PARTICIPATION")
       .trim()
       .toUpperCase();
 
@@ -147,15 +362,12 @@ async function downloadCertificate(req, res) {
     const fileName = `${certificate.certificateId}.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${fileName}"`
-    );
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
     res.setHeader("Cache-Control", "no-store");
 
     const tempPath = path.join(
       os.tmpdir(),
-      `${certificate.certificateId}-${Date.now()}.pdf`
+      `${certificate.certificateId}-${Date.now()}.pdf`,
     );
 
     const output = fs.createWriteStream(tempPath);
@@ -192,4 +404,9 @@ module.exports = {
   importCertificates,
   getCertificate,
   downloadCertificate,
+
+  // Admin
+  getAdminCertificates,
+  updateAdminCertificate,
+  exportAdminCertificates,
 };

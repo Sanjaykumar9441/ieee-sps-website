@@ -1,12 +1,13 @@
 const express = require("express");
 const multer = require("multer");
 
-const verifyToken = require("../middleware/verifyToken");
-
 const {
   importCertificates,
   getCertificate,
   downloadCertificate,
+  getAdminCertificates,
+  updateAdminCertificate,
+  exportAdminCertificates,
 } = require("../controllers/certificateController");
 
 const router = express.Router();
@@ -18,12 +19,25 @@ const upload = multer({
   },
 });
 
-router.post(
-  "/import",
-  verifyToken,
-  upload.single("file"),
-  importCertificates
-);
+// ============================================================
+// IMPORT CERTIFICATE EXCEL
+// ============================================================
+
+router.post("/import", upload.single("file"), importCertificates);
+
+// ============================================================
+// ADMIN CERTIFICATE MANAGEMENT
+// ============================================================
+
+router.get("/admin", getAdminCertificates);
+
+router.put("/admin/:certificateId", updateAdminCertificate);
+
+router.get("/admin/export", exportAdminCertificates);
+
+// ============================================================
+// PUBLIC CERTIFICATE
+// ============================================================
 
 router.get("/verify/:rollNo", getCertificate);
 
