@@ -2,6 +2,11 @@ const express = require("express");
 const multer = require("multer");
 
 const {
+  getCertificateEvents,
+  createCertificateEvent,
+} = require("../controllers/certificateEventController");
+
+const {
   importCertificates,
   getCertificate,
   downloadCertificate,
@@ -18,6 +23,13 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024,
   },
 });
+
+// ============================================================
+// ADMIN CERTIFICATE EVENTS
+// ============================================================
+
+router.get("/events", getCertificateEvents);
+router.post("/events", createCertificateEvent);
 
 // ============================================================
 // IMPORT CERTIFICATE EXCEL

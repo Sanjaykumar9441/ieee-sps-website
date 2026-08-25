@@ -36,45 +36,22 @@ const certificateSchema = new mongoose.Schema(
       index: true,
     },
 
-    branch: {
-      type: String,
-      default: "",
-      trim: true,
-    },
+    // Participation / Volunteer
+    branch: { type: String, default: "", trim: true },
+    college: { type: String, default: "", trim: true },
+    city: { type: String, default: "", trim: true },
 
-    college: {
-      type: String,
-      default: "",
-      trim: true,
-    },
+    // Team Merit
+    teamName: { type: String, default: "", trim: true },
+    place: { type: String, default: "", trim: true },
+    event: { type: String, default: "", trim: true },
 
-    city: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    team: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    position: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    event: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
+    // Kept for backward compatibility with existing records.
+    // New certificate imports do not ask for a date because the date
+    // is already printed in the selected certificate template.
     eventDate: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
     },
 
@@ -93,15 +70,12 @@ const certificateSchema = new mongoose.Schema(
       default: null,
     },
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true }
 );
 
-// A roll number can have one certificate of each type for each event.
 certificateSchema.index(
   { eventCode: 1, certificateType: 1, rollNo: 1 },
-  { unique: true },
+  { unique: true }
 );
 
 module.exports = mongoose.model("Certificate", certificateSchema);

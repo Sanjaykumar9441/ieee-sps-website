@@ -18,7 +18,10 @@ async function importCertificates(req, res) {
       return res.status(400).json({ message: "Excel file is required" });
     }
 
-    const { eventCode, certificateType, defaultEventDate } = req.body;
+    const eventCode = String(req.body.eventCode || "").trim().toUpperCase();
+    const certificateType = String(req.body.certificateType || "")
+      .trim()
+      .toUpperCase();
 
     if (!eventCode || !certificateType) {
       return res.status(400).json({
@@ -31,30 +34,23 @@ async function importCertificates(req, res) {
       cellDates: true,
     });
 
+    if (!workbook.SheetNames.length) {
+      return res.status(400).json({ message: "Excel file has no worksheet" });
+    }
+
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, {
       defval: "",
       raw: true,
     });
 
-    let requiredColumns;
+    const requiredColumns =
+      certificateType === "MERIT"
+        ? ["Name", "RollNo", "TeamName", "College", "Place", "Event"]
+        : ["Name", "RollNo", "Branch", "College", "City"];
 
-    if (String(certificateType).toUpperCase() === "MERIT") {
-      requiredColumns = [
-        "Name",
-        "RollNo",
-        "Team",
-        "College",
-        "Position",
-        "Event",
-      ];
-    } else {
-      requiredColumns = ["Name", "RollNo", "Branch", "College", "City", "Date"];
-    }
     const headers = Object.keys(rows[0] || {});
-    const missing = requiredColumns.filter(
-      (column) => !headers.includes(column),
-    );
+    const missing = requiredColumns.filter((column) => !headers.includes(column));
 
     if (missing.length) {
       return res.status(400).json({
@@ -68,7 +64,6 @@ async function importCertificates(req, res) {
       eventCode,
       certificateType,
       rows,
-      defaultEventDate,
     });
 
     return res.json({
@@ -136,39 +131,25 @@ async function getAdminCertificates(req, res) {
 async function updateAdminCertificate(req, res) {
   try {
     const certificateId = String(req.params.certificateId || "").trim();
-
     if (!certificateId) {
-      return res.status(400).json({
-        success: false,
-        message: "Certificate ID is required",
-      });
+      return res.status(400).json({ success: false, message: "Certificate ID is required" });
     }
 
-    const { name, rollNo, branch, college, city, eventDate } = req.body;
-
-    if (!name || !rollNo || !eventDate) {
-      return res.status(400).json({
-        success: false,
-        message: "Name, Roll No and Date are required",
-      });
-    }
-
-    const normalizedRollNo = String(rollNo).trim().toUpperCase();
-
-    // Find the existing certificate first
-    const existing = await Certificate.findOne({
-      certificateId,
-    });
-
+    const existing = await Certificate.findOne({ certificateId });
     if (!existing) {
-      return res.status(404).json({
+      return res.status(404).json({ success: false, message: "Certificate not found" });
+    }
+
+    const normalizedRollNo = String(req.body.rollNo || "").trim().toUpperCase();
+    const name = String(req.body.name || "").trim();
+
+    if (!name || !normalizedRollNo) {
+      return res.status(400).json({
         success: false,
-        message: "Certificate not found",
+        message: "Name and Roll No are required",
       });
     }
 
-    // If roll number is changed, make sure another
-    // certificate of the same type/event does not already use it.
     const duplicate = await Certificate.findOne({
       _id: { $ne: existing._id },
       eventCode: existing.eventCode,
@@ -179,21 +160,32 @@ async function updateAdminCertificate(req, res) {
     if (duplicate) {
       return res.status(409).json({
         success: false,
-        message:
-          "Another certificate already exists for this roll number in this event and certificate type",
+        message: "Another certificate already exists for this roll number in this event and certificate type",
       });
     }
 
-    existing.name = String(name).trim();
+    existing.name = name;
     existing.rollNo = normalizedRollNo;
-    existing.branch = String(branch || "").trim();
-    existing.college = String(college || "").trim();
-    existing.city = String(city || "").trim();
-    existing.eventDate = String(eventDate).trim();
 
-    // IMPORTANT:
-    // existing.certificateId is NEVER changed.
+    if (existing.certificateType === "MERIT") {
+      existing.teamName = String(req.body.teamName || "").trim();
+      existing.college = String(req.body.college || "").trim();
+      existing.place = String(req.body.place || "").trim();
+      existing.event = String(req.body.event || "").trim();
 
+      if (!existing.teamName || !existing.college || !existing.place || !existing.event) {
+        return res.status(400).json({
+          success: false,
+          message: "Name, Roll No, TeamName, College, Place and Event are required",
+        });
+      }
+    } else {
+      existing.branch = String(req.body.branch || "").trim();
+      existing.college = String(req.body.college || "").trim();
+      existing.city = String(req.body.city || "").trim();
+    }
+
+    // eventCode and certificateId are immutable.
     await existing.save();
 
     return res.json({
@@ -203,7 +195,6 @@ async function updateAdminCertificate(req, res) {
     });
   } catch (error) {
     console.error("Update certificate error:", error);
-
     return res.status(500).json({
       success: false,
       message: "Failed to update certificate",

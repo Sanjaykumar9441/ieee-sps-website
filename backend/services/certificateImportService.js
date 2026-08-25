@@ -3,7 +3,7 @@ const CertificateCounter = require("../models/CertificateCounter");
 
 const TYPE_PREFIX = {
   PARTICIPATION: "P",
-  MERIT: "M",
+  MERIT: "M", // Team Merit for now
   VOLUNTEER: "V",
 };
 
@@ -20,42 +20,41 @@ function formatDate(value) {
     return `${dd}-${mm}-${value.getFullYear()}`;
   }
 
-  const text = normalize(value);
-
-  // Excel may arrive as an ISO date string.
-  const parsed = new Date(text);
-  if (!Number.isNaN(parsed.getTime()) && /^\d{4}-\d{2}-\d{2}/.test(text)) {
-    const dd = String(parsed.getDate()).padStart(2, "0");
-    const mm = String(parsed.getMonth() + 1).padStart(2, "0");
-    return `${dd}-${mm}-${parsed.getFullYear()}`;
-  }
-
-  return text;
+  return normalize(value);
 }
 
 async function nextCertificateId(eventCode, certificateType) {
   const prefix = TYPE_PREFIX[certificateType];
-  if (!prefix)
-    throw new Error(`Unsupported certificate type: ${certificateType}`);
+  if (!prefix) throw new Error(`Unsupported certificate type: ${certificateType}`);
 
   const key = `${eventCode}:${certificateType}`;
 
   const counter = await CertificateCounter.findOneAndUpdate(
     { key },
     { $inc: { seq: 1 } },
-    { new: true, upsert: true },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
   );
 
   return `${eventCode}-${prefix}-${String(counter.seq).padStart(6, "0")}`;
 }
 
-async function importRows({
-  eventCode,
-  certificateType,
-  rows,
-  defaultEventDate,
-  templateName = "participation",
-}) {
+function requiredColumnsForType(type) {
+  if (type === "MERIT") {
+    return ["Name", "RollNo", "TeamName", "College", "Place", "Event"];
+  }
+
+  if (type === "PARTICIPATION") {
+    return ["Name", "RollNo", "Branch", "College", "City"];
+  }
+
+  if (type === "VOLUNTEER") {
+    return ["Name", "RollNo", "Branch", "College", "City"];
+  }
+
+  throw new Error(`Invalid certificateType: ${type}`);
+}
+
+async function importRows({ eventCode, certificateType, rows, templateName }) {
   const normalizedEventCode = normalize(eventCode).toUpperCase();
   const type = normalize(certificateType).toUpperCase();
 
@@ -73,16 +72,12 @@ async function importRows({
 
     const name = normalize(row.Name);
     const rollNo = normalize(row.RollNo).toUpperCase();
-    const branch = normalize(row.Branch);
-    const college = normalize(row.College);
-    const city = normalize(row.City);
-    const eventDate = formatDate(row.Date) || normalize(defaultEventDate);
 
     if (!name || !rollNo) {
       results.skipped += 1;
       results.errors.push({
         row: index + 2,
-        reason: "Name, RollNo and Date are required",
+        reason: "Name and RollNo are required",
       });
       continue;
     }
@@ -99,29 +94,45 @@ async function importRows({
         continue;
       }
 
-      const certificateId = await nextCertificateId(normalizedEventCode, type);
+      const certificateId = await nextCertificateId(
+        normalizedEventCode,
+        type
+      );
 
-      const certificateData = {
+      const data = {
         eventCode: normalizedEventCode,
         certificateType: type,
         certificateId,
         name,
         rollNo,
-        branch,
-        college,
-        city,
-        eventDate,
-        templateName,
+        eventDate: "", // Date is already part of the certificate template.
+        templateName: templateName || type.toLowerCase(),
       };
 
       if (type === "MERIT") {
-        certificateData.team = team;
-        certificateData.position = position;
-        certificateData.event = event;
+        data.teamName = normalize(row.TeamName);
+        data.college = normalize(row.College);
+        data.place = normalize(row.Place);
+        data.event = normalize(row.Event);
+
+        if (!data.teamName || !data.college || !data.place || !data.event) {
+          throw new Error(
+            "Name, RollNo, TeamName, College, Place and Event are required"
+          );
+        }
+      } else {
+        data.branch = normalize(row.Branch);
+        data.college = normalize(row.College);
+        data.city = normalize(row.City);
+
+        if (!data.branch || !data.college || !data.city) {
+          throw new Error(
+            "Name, RollNo, Branch, College and City are required"
+          );
+        }
       }
 
-      await Certificate.create(certificateData);
-
+      await Certificate.create(data);
       results.imported += 1;
     } catch (error) {
       results.skipped += 1;
@@ -138,4 +149,5 @@ async function importRows({
 module.exports = {
   importRows,
   formatDate,
+  requiredColumnsForType,
 };
