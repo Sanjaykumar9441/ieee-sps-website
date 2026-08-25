@@ -34,8 +34,8 @@ const ORANGE = "#E66600";
 
 const LINE_Y = {
   NAME: 248, // "Mr./Ms. ....." row — already correct in your output
-  TEAM_COLLEGE: 279, // "Team of ..... From ....." row — RECALIBRATE
-  POSITION_EVENT: 312, // "securing ..... place in the ....." row — RECALIBRATE
+  TEAM_COLLEGE: 278, // "Team of ..... From ....." row — RECALIBRATE
+  POSITION_EVENT: 311, // "securing ..... place in the ....." row — RECALIBRATE
 };
 
 const LINE_X = {
