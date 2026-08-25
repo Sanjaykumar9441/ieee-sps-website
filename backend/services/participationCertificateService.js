@@ -149,7 +149,7 @@ function generateParticipationCertificate(certificate, output) {
 
       const nameWidth = doc.widthOfString(name);
 
-      doc.text(name, (PAGE_WIDTH - nameWidth) / 2, 265 , { //240
+      doc.text(name, (PAGE_WIDTH - nameWidth) / 2, 267 , { //240
         lineBreak: false,
         width: nameWidth + 2,
       });
@@ -163,7 +163,7 @@ function generateParticipationCertificate(certificate, output) {
 
       const line = `${roll} - ${branch},        ${college} - ${city}`;
 
-      drawCenteredText(doc, line, 306, LATO_BOLD, 16, ORANGE); 
+      drawCenteredText(doc, line, 308, LATO_BOLD, 16, ORANGE); 
 
       // ========================================================
       // DATE

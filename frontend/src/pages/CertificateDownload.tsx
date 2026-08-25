@@ -11,6 +11,7 @@ import {
   Search,
   ShieldCheck,
   AlertCircle,
+  RotateCcw,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -64,12 +65,19 @@ export default function CertificateDownload() {
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Optional event preselection:
+  // ------------------------------------------------------------
+  // OPTIONAL EVENT PRESELECTION
   // /certificates?event=NSD2026
+  // ------------------------------------------------------------
+
   const queryEvent = useMemo(() => {
     const params = new URLSearchParams(location.search);
     return (params.get("event") || "").trim().toUpperCase();
   }, [location.search]);
+
+  // ------------------------------------------------------------
+  // LOAD EVENTS
+  // ------------------------------------------------------------
 
   useEffect(() => {
     const loadEvents = async () => {
@@ -80,6 +88,7 @@ export default function CertificateDownload() {
         const response = await axios.get(`${API}/api/certificates/events`);
 
         const nextEvents: CertificateEvent[] = response.data.events || [];
+
         setEvents(nextEvents);
 
         if (nextEvents.length === 0) {
@@ -98,6 +107,7 @@ export default function CertificateDownload() {
         );
       } catch (error) {
         console.error("Certificate events error:", error);
+
         setErrorMessage("Unable to load events right now. Please try again.");
       } finally {
         setLoadingEvents(false);
@@ -110,6 +120,44 @@ export default function CertificateDownload() {
   const selectedEvent = events.find(
     (event) => event.eventCode === selectedEventCode,
   );
+
+  // ------------------------------------------------------------
+  // RESET SEARCH RESULT
+  // ------------------------------------------------------------
+
+  const resetResult = () => {
+    setCertificate(null);
+    setErrorMessage("");
+  };
+
+  // ------------------------------------------------------------
+  // WHEN USER CLICKS / EDITS ROLL NUMBER
+  // RESULT DISAPPEARS AND SEARCH BUTTON COMES BACK
+  // ------------------------------------------------------------
+
+  const handleRollNumberChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    setRollNo(event.target.value);
+
+    if (certificate) {
+      setCertificate(null);
+    }
+
+    if (errorMessage) {
+      setErrorMessage("");
+    }
+  };
+
+  const handleRollNumberFocus = () => {
+    if (certificate) {
+      setCertificate(null);
+    }
+  };
+
+  // ------------------------------------------------------------
+  // FIND CERTIFICATE
+  // ------------------------------------------------------------
 
   const handleFindCertificate = async () => {
     const normalizedRollNo = rollNo.trim().toUpperCase();
@@ -141,9 +189,11 @@ export default function CertificateDownload() {
         },
       );
 
-      setCertificate(response.data.certificate || null);
+      const foundCertificate = response.data.certificate || null;
 
-      if (!response.data.certificate) {
+      setCertificate(foundCertificate);
+
+      if (!foundCertificate) {
         setErrorMessage("Certificate not found.");
       }
     } catch (error: any) {
@@ -164,29 +214,20 @@ export default function CertificateDownload() {
     }
   };
 
+  // ------------------------------------------------------------
+  // DOWNLOAD
+  // ------------------------------------------------------------
+
   const handleDownload = async () => {
-    // Prevent double-click / duplicate requests
-    if (downloading) return;
-
-    if (!certificate) {
-      setErrorMessage("Certificate details are not available.");
-      return;
-    }
-
-    if (!selectedEventCode) {
-      setErrorMessage("Event information is missing.");
-      return;
-    }
+    if (!certificate) return;
 
     try {
       setDownloading(true);
       setErrorMessage("");
 
-      const normalizedRollNo = certificate.rollNo.trim().toUpperCase();
-
       const response = await axios.get(
         `${API}/api/certificates/download/${encodeURIComponent(
-          normalizedRollNo,
+          certificate.rollNo,
         )}`,
         {
           params: {
@@ -197,58 +238,68 @@ export default function CertificateDownload() {
         },
       );
 
-      if (!response.data || response.data.size === 0) {
-        throw new Error("Empty certificate file received.");
-      }
-
       const blob = new Blob([response.data], {
         type: "application/pdf",
       });
 
       const url = window.URL.createObjectURL(blob);
-
       const link = document.createElement("a");
+
       link.href = url;
       link.download = `${certificate.certificateId}.pdf`;
 
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      link.remove();
 
-      // Give browser time to start download
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-      }, 1000);
+      window.URL.revokeObjectURL(url);
     } catch (error: any) {
       console.error("Certificate download error:", error);
 
-      setErrorMessage("Unable to download the certificate. Please try again.");
+      setErrorMessage(
+        error?.response?.data?.message ||
+          "Unable to download the certificate. Please try again.",
+      );
     } finally {
       setDownloading(false);
     }
   };
 
-  const resetResult = () => {
+  // ------------------------------------------------------------
+  // SEARCH ANOTHER CERTIFICATE
+  // ------------------------------------------------------------
+
+  const handleSearchAnother = () => {
     setCertificate(null);
     setErrorMessage("");
+
+    // Focus roll number input after returning to search mode
+    setTimeout(() => {
+      document.getElementById("roll-number")?.focus();
+    }, 100);
   };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900">
+      {/* ======================================================
+          HEADER
+      ====================================================== */}
+
       <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <button
             onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-[#00629B]"
+            className="inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-[#00629B]"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back
+            <span>Back</span>
           </button>
 
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#00629B] text-white">
               <Award className="h-5 w-5" />
             </div>
+
             <span className="text-sm font-bold tracking-wide text-slate-800">
               IEEE SPS
             </span>
@@ -256,8 +307,16 @@ export default function CertificateDownload() {
         </div>
       </div>
 
-      <main className="px-4 py-10 sm:px-6 sm:py-16">
-        <div className="mx-auto max-w-4xl">
+      {/* ======================================================
+          MAIN
+      ====================================================== */}
+
+      <main className="px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          {/* ==================================================
+              PAGE TITLE
+          ================================================== */}
+
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -277,105 +336,133 @@ export default function CertificateDownload() {
             </h1>
 
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
-              Select your event, choose the certificate type, and enter your
-              roll number to find your official certificate.
+              Find your official certificate using your event, certificate type
+              and roll number.
             </p>
           </motion.div>
 
-          <motion.section
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.08 }}
-            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
+          {/* ==================================================
+              SEARCH + RESULT
+          ================================================== */}
+
+          <div
+            className={`grid gap-6 ${
+              certificate ? "lg:grid-cols-2" : "grid-cols-1"
+            }`}
           >
-            <div className="mb-7 flex items-start gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#00629B]">
-                <Award className="h-5 w-5" />
-              </div>
+            {/* =================================================
+                SEARCH CARD
+            ================================================= */}
 
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  Find Your Certificate
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Enter the details exactly as registered for the event.
-                </p>
-              </div>
-            </div>
+            <motion.section
+              layout
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45 }}
+              className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"
+            >
+              {/* CARD HEADER */}
 
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label
-                  htmlFor="certificate-event"
-                  className="mb-2 block text-sm font-semibold text-slate-700"
-                >
-                  Event
-                </label>
-
-                <div className="relative">
-                  <select
-                    id="certificate-event"
-                    value={selectedEventCode}
-                    onChange={(event) => {
-                      setSelectedEventCode(event.target.value);
-                      resetResult();
-                    }}
-                    disabled={loadingEvents || events.length === 0}
-                    className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3 pr-10 text-sm outline-none transition focus:border-[#00629B] focus:ring-4 focus:ring-blue-50 disabled:bg-slate-50"
-                  >
-                    {loadingEvents ? (
-                      <option value="">Loading events...</option>
-                    ) : events.length === 0 ? (
-                      <option value="">No events available</option>
-                    ) : (
-                      events.map((event) => (
-                        <option key={event.eventCode} value={event.eventCode}>
-                          {event.eventName || event.eventCode}
-                        </option>
-                      ))
-                    )}
-                  </select>
-
-                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <div className="mb-7 flex items-start gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#00629B]">
+                  <Award className="h-5 w-5" />
                 </div>
 
-                {selectedEvent && (
-                  <p className="mt-2 text-xs text-slate-400">
-                    Event code: {selectedEvent.eventCode}
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Find Your Certificate
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Enter the details exactly as registered.
                   </p>
-                )}
-              </div>
-
-              <div>
-                <label
-                  htmlFor="certificate-type"
-                  className="mb-2 block text-sm font-semibold text-slate-700"
-                >
-                  Certificate Type
-                </label>
-
-                <div className="relative">
-                  <select
-                    id="certificate-type"
-                    value={certificateType}
-                    onChange={(event) => {
-                      setCertificateType(event.target.value as CertificateType);
-                      resetResult();
-                    }}
-                    className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3 pr-10 text-sm outline-none transition focus:border-[#00629B] focus:ring-4 focus:ring-blue-50"
-                  >
-                    {CERTIFICATE_TYPES.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 </div>
               </div>
 
-              <div className="md:col-span-2">
+              {/* EVENT + CERTIFICATE TYPE */}
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                {/* EVENT */}
+
+                <div>
+                  <label
+                    htmlFor="certificate-event"
+                    className="mb-2 block text-sm font-semibold text-slate-700"
+                  >
+                    Event
+                  </label>
+
+                  <div className="relative">
+                    <select
+                      id="certificate-event"
+                      value={selectedEventCode}
+                      onChange={(event) => {
+                        setSelectedEventCode(event.target.value);
+                        resetResult();
+                      }}
+                      disabled={loadingEvents || events.length === 0}
+                      className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3 pr-10 text-sm outline-none transition focus:border-[#00629B] focus:ring-4 focus:ring-blue-50 disabled:bg-slate-50"
+                    >
+                      {loadingEvents ? (
+                        <option value="">Loading events...</option>
+                      ) : events.length === 0 ? (
+                        <option value="">No events available</option>
+                      ) : (
+                        events.map((event) => (
+                          <option key={event.eventCode} value={event.eventCode}>
+                            {event.eventName || event.eventCode}
+                          </option>
+                        ))
+                      )}
+                    </select>
+
+                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  </div>
+
+                  {selectedEvent && (
+                    <p className="mt-2 text-xs text-slate-400">
+                      Event code: {selectedEvent.eventCode}
+                    </p>
+                  )}
+                </div>
+
+                {/* CERTIFICATE TYPE */}
+
+                <div>
+                  <label
+                    htmlFor="certificate-type"
+                    className="mb-2 block text-sm font-semibold text-slate-700"
+                  >
+                    Certificate Type
+                  </label>
+
+                  <div className="relative">
+                    <select
+                      id="certificate-type"
+                      value={certificateType}
+                      onChange={(event) => {
+                        setCertificateType(
+                          event.target.value as CertificateType,
+                        );
+                        resetResult();
+                      }}
+                      className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3 pr-10 text-sm outline-none transition focus:border-[#00629B] focus:ring-4 focus:ring-blue-50"
+                    >
+                      {CERTIFICATE_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  </div>
+                </div>
+              </div>
+
+              {/* ROLL NUMBER */}
+
+              <div className="mt-5">
                 <label
                   htmlFor="roll-number"
                   className="mb-2 block text-sm font-semibold text-slate-700"
@@ -385,13 +472,12 @@ export default function CertificateDownload() {
 
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
                   <input
                     id="roll-number"
                     value={rollNo}
-                    onChange={(event) => {
-                      setRollNo(event.target.value);
-                      if (errorMessage) setErrorMessage("");
-                    }}
+                    onChange={handleRollNumberChange}
+                    onFocus={handleRollNumberFocus}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
                         handleFindCertificate();
@@ -399,145 +485,239 @@ export default function CertificateDownload() {
                     }}
                     placeholder="Enter your roll number"
                     autoComplete="off"
-                    className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm uppercase outline-none transition placeholder:normal-case focus:border-[#00629B] focus:ring-4 focus:ring-blue-50"
+                    className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm uppercase outline-none transition placeholder:normal-case focus:border-[#00629B] focus:ring-4 focus:ring-blue-50"
                   />
                 </div>
-              </div>
-            </div>
 
-            {errorMessage && (
-              <div className="mt-5 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>{errorMessage}</span>
+                {certificate && (
+                  <p className="mt-2 text-xs text-slate-400">
+                    Click here to search for another certificate.
+                  </p>
+                )}
               </div>
-            )}
 
-            <button
-              type="button"
-              onClick={handleFindCertificate}
-              disabled={searching || loadingEvents || !selectedEventCode}
-              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00629B] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0C447C] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {searching ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Finding Certificate...
-                </>
-              ) : (
-                <>
-                  <Search className="h-4 w-4" />
-                  Find Certificate
-                </>
+              {/* ERROR */}
+
+              {errorMessage && (
+                <div className="mt-5 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+
+                  <span>{errorMessage}</span>
+                </div>
               )}
-            </button>
-          </motion.section>
 
-          {certificate && (
-            <motion.section
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="mt-5 rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm sm:p-8"
-            >
-              <div className="mb-6 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                  <CheckCircle2 className="h-5 w-5" />
-                </div>
+              {/* FIND BUTTON
+                  ONLY SHOW WHEN NO CERTIFICATE */}
 
-                <div>
-                  <h2 className="font-bold text-slate-900">
-                    Certificate Found
-                  </h2>
-                  <p className="text-sm text-slate-500">
-                    Please verify your details before downloading.
-                  </p>
-                </div>
-              </div>
+              {!certificate && (
+                <motion.button
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  type="button"
+                  onClick={handleFindCertificate}
+                  disabled={searching || loadingEvents || !selectedEventCode}
+                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00629B] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0C447C] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {searching ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Finding Certificate...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="h-4 w-4" />
+                      Find Certificate
+                    </>
+                  )}
+                </motion.button>
+              )}
 
-              <div className="grid overflow-hidden rounded-2xl border border-slate-200 sm:grid-cols-2">
-                <div className="border-b border-slate-100 p-4 sm:border-r">
-                  <p className="text-xs text-slate-400">Name</p>
-                  <p className="mt-1 font-semibold text-slate-800">
-                    {certificate.name}
-                  </p>
-                </div>
+              {/* SEARCH ANOTHER BUTTON */}
 
-                <div className="border-b border-slate-100 p-4">
-                  <p className="text-xs text-slate-400">Roll Number</p>
-                  <p className="mt-1 font-semibold text-slate-800">
-                    {certificate.rollNo}
-                  </p>
-                </div>
-
-                <div className="border-b border-slate-100 p-4 sm:border-r">
-                  <p className="text-xs text-slate-400">Event</p>
-                  <p className="mt-1 font-semibold text-slate-800">
-                    {selectedEvent?.eventName ||
-                      certificate.event ||
-                      selectedEventCode}
-                  </p>
-                </div>
-
-                <div className="border-b border-slate-100 p-4">
-                  <p className="text-xs text-slate-400">Certificate Type</p>
-                  <p className="mt-1 font-semibold text-slate-800">
-                    {
-                      CERTIFICATE_TYPES.find(
-                        (type) => type.value === certificate.certificateType,
-                      )?.label
-                    }
-                  </p>
-                </div>
-
-                {(certificate.branch || certificate.college) && (
-                  <div className="p-4 sm:border-r">
-                    <p className="text-xs text-slate-400">College / Branch</p>
-                    <p className="mt-1 font-semibold text-slate-800">
-                      {[certificate.college, certificate.branch]
-                        .filter(Boolean)
-                        .join(" • ")}
-                    </p>
-                  </div>
-                )}
-
-                {(certificate.team || certificate.position) && (
-                  <div className="p-4">
-                    <p className="text-xs text-slate-400">Team / Position</p>
-                    <p className="mt-1 font-semibold text-slate-800">
-                      {[certificate.team, certificate.position]
-                        .filter(Boolean)
-                        .join(" • ")}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={handleDownload}
-                disabled={downloading}
-                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {downloading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Downloading...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4" />
-                    Download Certificate
-                  </>
-                )}
-              </button>
-
-              <p className="mt-3 text-center text-xs text-slate-400">
-                Certificate ID: {certificate.certificateId}
-              </p>
+              {certificate && (
+                <button
+                  type="button"
+                  onClick={handleSearchAnother}
+                  className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Search Another Certificate
+                </button>
+              )}
             </motion.section>
-          )}
 
-          <p className="mt-8 text-center text-xs leading-5 text-slate-400">
+            {/* =================================================
+                CERTIFICATE RESULT
+            ================================================= */}
+
+            {certificate && (
+              <motion.section
+                layout
+                initial={{
+                  opacity: 0,
+                  x: 20,
+                }}
+                animate={{
+                  opacity: 1,
+                  x: 0,
+                }}
+                transition={{
+                  duration: 0.4,
+                }}
+                className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-7"
+              >
+                {/* SUCCESS HEADER */}
+
+                <div className="mb-6 flex items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                    <CheckCircle2 className="h-6 w-6" />
+                  </div>
+
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">
+                      Certificate Found
+                    </h2>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Your certificate details are ready.
+                    </p>
+                  </div>
+                </div>
+
+                {/* DETAILS */}
+
+                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                  {/* NAME */}
+
+                  <div className="border-b border-slate-100 p-4">
+                    <p className="text-xs font-medium text-slate-400">Name</p>
+
+                    <p className="mt-1 break-words text-base font-semibold text-slate-900">
+                      {certificate.name}
+                    </p>
+                  </div>
+
+                  {/* ROLL NUMBER */}
+
+                  <div className="border-b border-slate-100 p-4">
+                    <p className="text-xs font-medium text-slate-400">
+                      Roll Number
+                    </p>
+
+                    <p className="mt-1 text-base font-semibold text-slate-900">
+                      {certificate.rollNo}
+                    </p>
+                  </div>
+
+                  {/* EVENT */}
+
+                  <div className="border-b border-slate-100 p-4">
+                    <p className="text-xs font-medium text-slate-400">Event</p>
+
+                    <p className="mt-1 break-words text-base font-semibold text-slate-900">
+                      {selectedEvent?.eventName ||
+                        certificate.event ||
+                        selectedEventCode}
+                    </p>
+                  </div>
+
+                  {/* CERTIFICATE TYPE */}
+
+                  <div className="border-b border-slate-100 p-4">
+                    <p className="text-xs font-medium text-slate-400">
+                      Certificate Type
+                    </p>
+
+                    <p className="mt-1 text-base font-semibold text-slate-900">
+                      {
+                        CERTIFICATE_TYPES.find(
+                          (type) => type.value === certificate.certificateType,
+                        )?.label
+                      }
+                    </p>
+                  </div>
+
+                  {/* COLLEGE / BRANCH */}
+
+                  {(certificate.branch || certificate.college) && (
+                    <div className="border-b border-slate-100 p-4">
+                      <p className="text-xs font-medium text-slate-400">
+                        College / Branch
+                      </p>
+
+                      <p className="mt-1 break-words text-base font-semibold text-slate-900">
+                        {[certificate.college, certificate.branch]
+                          .filter(Boolean)
+                          .join(" • ")}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* TEAM / POSITION */}
+
+                  {(certificate.team || certificate.position) && (
+                    <div className="p-4">
+                      <p className="text-xs font-medium text-slate-400">
+                        Team / Position
+                      </p>
+
+                      <p className="mt-1 break-words text-base font-semibold text-slate-900">
+                        {[certificate.team, certificate.position]
+                          .filter(Boolean)
+                          .join(" • ")}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* DOWNLOAD */}
+
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  disabled={downloading}
+                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00629B] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0C447C] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {downloading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Preparing Certificate...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4" />
+                      Download Certificate
+                    </>
+                  )}
+                </button>
+
+                {/* CERTIFICATE ID */}
+
+                <div className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-center">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+                    Certificate ID
+                  </p>
+
+                  <p className="mt-1 break-all text-xs font-semibold text-slate-600">
+                    {certificate.certificateId}
+                  </p>
+                </div>
+
+                {/* NOTE */}
+
+                <p className="mt-4 text-center text-xs leading-5 text-slate-400">
+                  Please verify your name and certificate type before
+                  downloading.
+                </p>
+              </motion.section>
+            )}
+          </div>
+
+          {/* ==================================================
+              FOOTER NOTE
+          ================================================== */}
+
+          <p className="mx-auto mt-8 max-w-xl text-center text-xs leading-5 text-slate-400">
             If your certificate is not found, check the selected event,
             certificate type and roll number.
           </p>
