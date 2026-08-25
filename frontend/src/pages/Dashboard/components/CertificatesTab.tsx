@@ -36,7 +36,7 @@ interface Certificate {
   branch: string;
   college: string;
   city: string;
-  teamName?: string;
+  team?: string;
   place?: string;
   event?: string;
   eventDate?: string;
@@ -154,7 +154,7 @@ export default function CertificatesTab() {
         certificate.college,
         certificate.city,
         certificate.branch,
-        certificate.teamName,
+        certificate.team,
         certificate.place,
         certificate.event,
       ]
@@ -292,7 +292,7 @@ export default function CertificatesTab() {
           ? {
               name: editing.name,
               rollNo: editing.rollNo,
-              teamName: editing.teamName,
+              team: editing.team,
               college: editing.college,
               place: editing.place,
               event: editing.event,
@@ -324,7 +324,7 @@ export default function CertificatesTab() {
 
   const requiredColumns =
     certificateType === "MERIT"
-      ? "Name, RollNo, TeamName, College, Place, Event"
+      ? "Name, RollNo, Team, College, Place, Event"
       : "Name, RollNo, Branch, College, City";
 
   return (
@@ -558,7 +558,7 @@ export default function CertificatesTab() {
 
                       {certificateType === "MERIT" ? (
                         <>
-                          <td className="p-4">{certificate.teamName || "—"}</td>
+                          <td className="p-4">{certificate.team || "—"}</td>
                           <td className="p-4">{certificate.college || "—"}</td>
                           <td className="p-4">{certificate.place || "—"}</td>
                           <td className="p-4">{certificate.event || "—"}</td>
@@ -702,9 +702,9 @@ export default function CertificatesTab() {
                   <div>
                     <label className="mb-2 block text-sm font-medium">Team Name</label>
                     <input
-                      value={editing.teamName || ""}
+                      value={editing.team || ""}
                       onChange={(e) =>
-                        setEditing({ ...editing, teamName: e.target.value })
+                        setEditing({ ...editing, team: e.target.value })
                       }
                       className="w-full rounded-xl border px-4 py-3 outline-none"
                     />
