@@ -34,14 +34,14 @@ const ORANGE = "#E66600";
 
 const LINE_Y = {
   NAME: 248, // "Mr./Ms. ....." row — already correct in your output
-  TEAM_COLLEGE: 285, // "Team of ..... From ....." row — RECALIBRATE
-  POSITION_EVENT: 318, // "securing ..... place in the ....." row — RECALIBRATE
+  TEAM_COLLEGE: 280, // "Team of ..... From ....." row — RECALIBRATE
+  POSITION_EVENT: 314, // "securing ..... place in the ....." row — RECALIBRATE
 };
 
 const LINE_X = {
-  TEAM: { x: 135, width: 180 },
+  TEAM: { x: 132, width: 180 },
   COLLEGE: { x: 385, width: 300 },
-  POSITION: { x: 300, width: 120 },
+  POSITION: { x: 270, width: 120 },
   EVENT: { x: 440, width: 260 },
 };
 
@@ -141,22 +141,38 @@ function drawDynamicText(doc, text, x, y, width, options = {}) {
     align = "left",
   } = options;
 
-  // Hide dots behind dynamic text — padded a few pt, not a flat
-  // oversized box, so it can't cover the row above/below.
+  // Set font first so we can calculate the REAL text width
+  doc.font(font).fontSize(fontSize);
+
+  const textWidth = doc.widthOfString(text);
+
+  let textX = x;
+
+  if (align === "center") {
+    textX = x + (width - textWidth) / 2;
+  } else if (align === "right") {
+    textX = x + width - textWidth;
+  }
+
+  // Only hide the dotted line directly underneath the actual text.
+  // Do NOT cover the entire field width.
   doc
     .save()
     .fillColor("#FFFFFF")
-    .rect(x - 3, y - 2, width + 6, fontSize * 1.15)
+    .rect(textX - 2, y - 1, textWidth + 4, fontSize * 1.05)
     .fill()
     .restore();
 
-  drawText(doc, text, x, y, {
-    font,
-    fontSize,
-    color,
-    width,
-    align,
-  });
+  // Draw actual text
+  doc
+    .font(font)
+    .fontSize(fontSize)
+    .fillColor(color)
+    .text(text, textX, y, {
+      width: textWidth + 2,
+      align: "left",
+      lineBreak: false,
+    });
 }
 
 // ============================================================
