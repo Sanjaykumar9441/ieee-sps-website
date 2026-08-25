@@ -149,7 +149,7 @@ function generateParticipationCertificate(certificate, output) {
 
       const nameWidth = doc.widthOfString(name);
 
-      doc.text(name, (PAGE_WIDTH - nameWidth) / 2, 267 , { //240
+      doc.text(name, (PAGE_WIDTH - nameWidth) / 2, 268 , { //240
         lineBreak: false,
         width: nameWidth + 2,
       });
