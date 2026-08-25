@@ -258,17 +258,32 @@ async function exportAdminCertificates(req, res) {
       .sort({ createdAt: 1 })
       .lean();
 
-    const rows = certificates.map((certificate) => ({
-      Name: certificate.name,
-      RollNo: certificate.rollNo,
-      Branch: certificate.branch,
-      College: certificate.college,
-      City: certificate.city,
-      Date: certificate.eventDate,
-      CertificateId: certificate.certificateId,
-      EventCode: certificate.eventCode,
-      CertificateType: certificate.certificateType,
-    }));
+    const rows = certificates.map((certificate) => {
+      if (certificate.certificateType === "MERIT") {
+        return {
+          Name: certificate.name,
+          RollNo: certificate.rollNo,
+          Team: certificate.team,
+          College: certificate.college,
+          Position: certificate.position,
+          Event: certificate.event,
+          CertificateId: certificate.certificateId,
+          EventCode: certificate.eventCode,
+          CertificateType: certificate.certificateType,
+        };
+      }
+
+      return {
+        Name: certificate.name,
+        RollNo: certificate.rollNo,
+        Branch: certificate.branch,
+        College: certificate.college,
+        City: certificate.city,
+        CertificateId: certificate.certificateId,
+        EventCode: certificate.eventCode,
+        CertificateType: certificate.certificateType,
+      };
+    });
 
     const workbook = XLSX.utils.book_new();
 

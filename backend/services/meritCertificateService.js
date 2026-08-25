@@ -3,7 +3,7 @@ const path = require("path");
 const PDFDocument = require("pdfkit");
 
 // ============================================================
-// TEAM MERIT CERTIFICATE GENERATOR
+// MERIT CERTIFICATE GENERATOR
 // Uses the same fonts, PDF size and structure as
 // participationCertificateService.js
 // ============================================================
@@ -125,7 +125,7 @@ function drawDynamicText(doc, text, x, y, width, options = {}) {
 }
 
 // ============================================================
-// TEAM MERIT CERTIFICATE
+// MERIT CERTIFICATE
 // ============================================================
 
 function generateMeritCertificate(certificate, output) {
@@ -135,7 +135,7 @@ function generateMeritCertificate(certificate, output) {
       // CHECK REQUIRED FILES
       // --------------------------------------------------------
 
-      assertFile(TEMPLATE, "Team Merit certificate template");
+      assertFile(TEMPLATE, "Merit certificate template");
       assertFile(NAME_FONT, "Gabrielle font");
       assertFile(LATO_REGULAR, "Lato Regular font");
       assertFile(LATO_BOLD, "Lato Bold font");

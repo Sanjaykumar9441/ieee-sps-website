@@ -10,8 +10,13 @@ const certificateEventSchema = new mongoose.Schema(
       trim: true,
       uppercase: true,
     },
+    eventName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("CertificateEvent", certificateEventSchema);

@@ -16,7 +16,7 @@ const API = "https://ieee-sps-website.onrender.com";
 
 const CERTIFICATE_TYPES = [
   { value: "PARTICIPATION", label: "Participation" },
-  { value: "MERIT", label: "Team Merit" },
+  { value: "MERIT", label: "Merit" },
   { value: "VOLUNTEER", label: "Volunteer" },
 ];
 

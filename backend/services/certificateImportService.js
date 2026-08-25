@@ -3,7 +3,7 @@ const CertificateCounter = require("../models/CertificateCounter");
 
 const TYPE_PREFIX = {
   PARTICIPATION: "P",
-  MERIT: "M", // Team Merit for now
+  MERIT: "M", 
   VOLUNTEER: "V",
 };
 
