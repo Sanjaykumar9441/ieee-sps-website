@@ -1,14 +1,7 @@
 const Certificate = require("../models/Certificate");
 const CertificateEvent = require("../models/CertificateEvent");
 
-const cleanCode = (value) =>
-  String(value || "")
-    .trim()
-    .toUpperCase();
-
-// ============================================================
-// GET ALL EVENTS
-// ============================================================
+const cleanCode = (value) => String(value || "").trim().toUpperCase();
 
 exports.listEvents = async (req, res) => {
   try {
@@ -16,27 +9,12 @@ exports.listEvents = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    return res.json({
-      success: true,
-      events,
-    });
+    return res.json({ success: true, events });
   } catch (err) {
     console.error("listEvents:", err);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to load certificate events",
-      error: err.message,
-    });
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
-
-// ============================================================
-// CREATE EVENT
-// Only Event Code is required.
-// No event name.
-// No date.
-// ============================================================
 
 exports.createEvent = async (req, res) => {
   try {
@@ -49,21 +27,23 @@ exports.createEvent = async (req, res) => {
       });
     }
 
-    // Check if event already exists
-    const existingEvent = await CertificateEvent.findOne({
-      eventCode,
-    }).lean();
+    // Event name is intentionally not required in the dashboard.
+    // Keep the schema compatible by using the event code as the name.
+    const eventName = String(req.body.eventName || eventCode).trim();
 
-    if (existingEvent) {
+    const existingEvent = await CertificateEvent.findOne({ eventCode }).lean();
+    const existingCertificate = await Certificate.exists({ eventCode });
+
+    if (existingEvent || existingCertificate) {
       return res.status(409).json({
         success: false,
         message: "Event code already exists",
-        event: existingEvent,
       });
     }
 
     const event = await CertificateEvent.create({
       eventCode,
+      eventName,
     });
 
     return res.status(201).json({
@@ -72,7 +52,6 @@ exports.createEvent = async (req, res) => {
       event,
     });
   } catch (err) {
-    // MongoDB duplicate protection
     if (err.code === 11000) {
       return res.status(409).json({
         success: false,
@@ -81,22 +60,12 @@ exports.createEvent = async (req, res) => {
     }
 
     console.error("createEvent:", err);
-
     return res.status(500).json({
       success: false,
-      message: "Failed to create event",
-      error: err.message,
+      message: err.message,
     });
   }
 };
-
-// ============================================================
-// DELETE EVENT
-//
-// When an event is deleted:
-// 1. Delete the event record
-// 2. Delete ALL certificates belonging to that event
-// ============================================================
 
 exports.deleteEvent = async (req, res) => {
   try {
@@ -109,37 +78,20 @@ exports.deleteEvent = async (req, res) => {
       });
     }
 
-    // Delete all certificates belonging to this event
-    const certificateResult = await Certificate.deleteMany({
-      eventCode,
-    });
-
-    // Delete the event itself
-    const eventResult = await CertificateEvent.findOneAndDelete({
-      eventCode,
-    });
-
-    if (!eventResult) {
-      return res.status(404).json({
-        success: false,
-        message: "Event not found",
-        deletedCertificates: certificateResult.deletedCount || 0,
-      });
-    }
+    // IMPORTANT: delete certificates first, then delete the event record.
+    const result = await Certificate.deleteMany({ eventCode });
+    const event = await CertificateEvent.findOneAndDelete({ eventCode });
 
     return res.json({
       success: true,
-      message: "Event and all its certificates deleted successfully",
-      deletedCertificates: certificateResult.deletedCount || 0,
-      deletedEvent: true,
+      deletedCertificates: result.deletedCount || 0,
+      deletedEvent: Boolean(event),
     });
   } catch (err) {
     console.error("deleteEvent:", err);
-
     return res.status(500).json({
       success: false,
-      message: "Failed to delete event",
-      error: err.message,
+      message: err.message,
     });
   }
 };

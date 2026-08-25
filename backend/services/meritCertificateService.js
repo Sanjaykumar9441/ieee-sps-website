@@ -4,13 +4,10 @@ const PDFDocument = require("pdfkit");
 
 // ============================================================
 // MERIT CERTIFICATE GENERATOR
-// Uses the same fonts, PDF size and structure as
-// participationCertificateService.js
 // ============================================================
 
 const TEMPLATE = path.join(__dirname, "../certificates/templates/Merit.jpeg");
 
-// Same fonts used by Participation
 const NAME_FONT = path.join(__dirname, "../certificates/fonts/Gabrielle.ttf");
 
 const LATO_REGULAR = path.join(
@@ -23,7 +20,7 @@ const LATO_BOLD = path.join(__dirname, "../certificates/fonts/Lato-Bold.ttf");
 const PAGE_WIDTH = 842;
 const PAGE_HEIGHT = 595;
 
-const BLUE = "#07579A";
+const ORANGE = "#E66600";
 
 // ============================================================
 // FILE CHECK
@@ -82,7 +79,7 @@ function drawText(doc, text, x, y, options = {}) {
   const {
     font = LATO_BOLD,
     fontSize = 16,
-    color = BLUE,
+    color = ORANGE,
     width = 200,
     align = "left",
   } = options;
@@ -96,18 +93,18 @@ function drawText(doc, text, x, y, options = {}) {
 
 // ============================================================
 // DRAW TEXT WITH WHITE BACKGROUND
-// This hides the dotted line underneath the dynamic text.
+// Hides dotted line underneath dynamic text.
 // ============================================================
 
 function drawDynamicText(doc, text, x, y, width, options = {}) {
   const {
     font = LATO_BOLD,
     fontSize = 16,
-    color = BLUE,
+    color = ORANGE,
     align = "left",
   } = options;
 
-  // White rectangle to hide dots behind the text
+  // Hide dots behind dynamic text
   doc
     .save()
     .fillColor("#FFFFFF")
@@ -136,8 +133,11 @@ function generateMeritCertificate(certificate, output) {
       // --------------------------------------------------------
 
       assertFile(TEMPLATE, "Merit certificate template");
+
       assertFile(NAME_FONT, "Gabrielle font");
+
       assertFile(LATO_REGULAR, "Lato Regular font");
+
       assertFile(LATO_BOLD, "Lato Bold font");
 
       // --------------------------------------------------------
@@ -174,25 +174,25 @@ function generateMeritCertificate(certificate, output) {
       // --------------------------------------------------------
 
       const name = String(certificate.name || "").trim();
+
       const team = String(certificate.team || "").trim();
+
       const college = String(certificate.college || "").trim();
+
       const position = String(certificate.position || "").trim();
+
       const event = String(certificate.event || "").trim();
 
       // ========================================================
       // 1. NAME
-      //
-      // Template:
-      // "This is to certify that Mr./ Ms. ................."
       // ========================================================
 
       const nameSize = fitNameFontSize(doc, name);
 
-      doc.font(NAME_FONT).fontSize(nameSize).fillColor(BLUE);
+      doc.font(NAME_FONT).fontSize(nameSize).fillColor(ORANGE);
 
       const nameWidth = doc.widthOfString(name);
 
-      // Name line
       doc.text(name, (PAGE_WIDTH - nameWidth) / 2, 247, {
         lineBreak: false,
         width: nameWidth + 2,
@@ -200,80 +200,67 @@ function generateMeritCertificate(certificate, output) {
 
       // ========================================================
       // 2. TEAM
-      //
-      // Template:
-      // Team of ............................ From
       // ========================================================
 
       const teamFontSize = fitTextFontSize(doc, team, LATO_BOLD, 180, 16, 10);
 
-      drawDynamicText(doc, team, 125, 285, 170, {
+      drawDynamicText(doc, team, 150, 285, 180, {
         font: LATO_BOLD,
         fontSize: teamFontSize,
-        color: BLUE,
+        color: ORANGE,
         align: "center",
       });
 
       // ========================================================
       // 3. COLLEGE
-      //
-      // Template:
-      // From ................................. is awarded
       // ========================================================
 
       const collegeFontSize = fitTextFontSize(
         doc,
         college,
         LATO_BOLD,
-        390,
+        300,
         16,
         9,
       );
 
-      drawDynamicText(doc, college, 305, 285, 390, {
+      drawDynamicText(doc, college, 385, 285, 300, {
         font: LATO_BOLD,
         fontSize: collegeFontSize,
-        color: BLUE,
+        color: ORANGE,
         align: "center",
       });
 
       // ========================================================
       // 4. POSITION
-      //
-      // Template:
-      // securing ................. place
       // ========================================================
 
       const positionFontSize = fitTextFontSize(
         doc,
         position,
         LATO_BOLD,
-        170,
+        120,
         16,
         10,
       );
 
-      drawDynamicText(doc, position, 300, 320, 170, {
+      drawDynamicText(doc, position, 300, 320, 120, {
         font: LATO_BOLD,
         fontSize: positionFontSize,
-        color: BLUE,
+        color: ORANGE,
         align: "center",
       });
 
       // ========================================================
       // 5. EVENT / CATEGORY
-      //
-      // Template:
-      // place in the .............................
-      // category
       // ========================================================
 
-      const eventFontSize = fitTextFontSize(doc, event, LATO_BOLD, 350, 16, 9);
+      const eventFontSize = fitTextFontSize(doc, event, LATO_BOLD, 260, 16, 9);
 
-      drawDynamicText(doc, event, 465, 320, 330, {
+      drawDynamicText(doc, event, 440, 320, 260, {
         font: LATO_BOLD,
         fontSize: eventFontSize,
-        color: BLUE,
+        color: ORANGE,
         align: "center",
       });
 
