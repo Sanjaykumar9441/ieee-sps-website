@@ -26,7 +26,7 @@ import RegistrationSuccess from "./pages/RegistrationSuccess";
 import SpaceDayRegistrationStatus from "./pages/SpaceDayRegistrationStatus";
 import StudentExamPortal from "./pages/Student/components/StudentExamPortal";
 import StudentExamCompleted from "./pages/Student/components/StudentExamCompleted";
-import AstroDesign from "./components/spaceDay/AstroDesign";
+import CertificateDownload from "./pages/CertificateDownload";
 
 function StudentExamRoute() {
   const { assessmentId } = useParams();
@@ -96,7 +96,7 @@ function App() {
               path="/student/exam/completed"
               element={<StudentExamCompleted />}
             />
-            <Route path="/space-day/astro-design" element={<AstroDesign />} />
+            <Route path="/certificates" element={<CertificateDownload />} />
           </Routes>
         </div>
       </div>

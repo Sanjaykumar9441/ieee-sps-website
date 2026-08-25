@@ -19,7 +19,7 @@ const API = "https://ieee-sps-website.onrender.com";
 
 const CERTIFICATE_TYPES = [
   { value: "PARTICIPATION", label: "Participation" },
-  { value: "MERIT", label: "Team Merit" },
+  { value: "MERIT", label: "Merit" },
   { value: "VOLUNTEER", label: "Volunteer" },
 ];
 
@@ -417,7 +417,7 @@ export default function CertificatesTab() {
         !memberForm.position.trim() ||
         !memberForm.event.trim()
       ) {
-        alert("Team, College, Position and Event are required for Team Merit.");
+        alert("Team, College, Position and Event are required for Merit.");
         return;
       }
     } else if (!memberForm.college.trim()) {
@@ -940,7 +940,7 @@ export default function CertificatesTab() {
                     <input value={memberForm.college} onChange={(e) => updateForm("college", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-medium">City</label>
+                    <label className="mb-2 block text-sm font-medium">College City</label>
                     <input value={memberForm.city} onChange={(e) => updateForm("city", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
                 </>
