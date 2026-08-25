@@ -174,9 +174,9 @@ function generateMeritCertificate(certificate, output) {
       // --------------------------------------------------------
 
       const name = String(certificate.name || "").trim();
-      const team = String(certificate.teamName || "").trim();
+      const team = String(certificate.team || "").trim();
       const college = String(certificate.college || "").trim();
-      const position = String(certificate.place || "").trim();
+      const position = String(certificate.position || "").trim();
       const event = String(certificate.event || "").trim();
 
       // ========================================================

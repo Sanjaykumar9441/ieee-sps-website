@@ -25,14 +25,15 @@ function formatDate(value) {
 
 async function nextCertificateId(eventCode, certificateType) {
   const prefix = TYPE_PREFIX[certificateType];
-  if (!prefix) throw new Error(`Unsupported certificate type: ${certificateType}`);
+  if (!prefix)
+    throw new Error(`Unsupported certificate type: ${certificateType}`);
 
   const key = `${eventCode}:${certificateType}`;
 
   const counter = await CertificateCounter.findOneAndUpdate(
     { key },
     { $inc: { seq: 1 } },
-    { new: true, upsert: true, setDefaultsOnInsert: true }
+    { new: true, upsert: true, setDefaultsOnInsert: true },
   );
 
   return `${eventCode}-${prefix}-${String(counter.seq).padStart(6, "0")}`;
@@ -40,7 +41,7 @@ async function nextCertificateId(eventCode, certificateType) {
 
 function requiredColumnsForType(type) {
   if (type === "MERIT") {
-    return ["Name", "RollNo", "TeamName", "College", "Place", "Event"];
+    return ["Name", "RollNo", "Team", "College", "Position", "Event"];
   }
 
   if (type === "PARTICIPATION") {
@@ -94,10 +95,7 @@ async function importRows({ eventCode, certificateType, rows, templateName }) {
         continue;
       }
 
-      const certificateId = await nextCertificateId(
-        normalizedEventCode,
-        type
-      );
+      const certificateId = await nextCertificateId(normalizedEventCode, type);
 
       const data = {
         eventCode: normalizedEventCode,
@@ -110,14 +108,14 @@ async function importRows({ eventCode, certificateType, rows, templateName }) {
       };
 
       if (type === "MERIT") {
-        data.teamName = normalize(row.TeamName);
+        data.team = normalize(row.Team);
         data.college = normalize(row.College);
-        data.place = normalize(row.Place);
+        data.position = normalize(row.Position);
         data.event = normalize(row.Event);
 
-        if (!data.teamName || !data.college || !data.place || !data.event) {
+        if (!data.team || !data.college || !data.position || !data.event) {
           throw new Error(
-            "Name, RollNo, TeamName, College, Place and Event are required"
+            "Name, RollNo, Team, College, Position and Event are required",
           );
         }
       } else {
@@ -127,7 +125,7 @@ async function importRows({ eventCode, certificateType, rows, templateName }) {
 
         if (!data.branch || !data.college || !data.city) {
           throw new Error(
-            "Name, RollNo, Branch, College and City are required"
+            "Name, RollNo, Branch, College and City are required",
           );
         }
       }

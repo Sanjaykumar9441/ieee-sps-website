@@ -42,13 +42,24 @@ const certificateSchema = new mongoose.Schema(
     city: { type: String, default: "", trim: true },
 
     // Team Merit
-    teamName: { type: String, default: "", trim: true },
-    place: { type: String, default: "", trim: true },
-    event: { type: String, default: "", trim: true },
+    team: {
+      type: String,
+      default: "",
+      trim: true,
+    },
 
-    // Kept for backward compatibility with existing records.
-    // New certificate imports do not ask for a date because the date
-    // is already printed in the selected certificate template.
+    position: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    event: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     eventDate: {
       type: String,
       default: "",
@@ -70,12 +81,12 @@ const certificateSchema = new mongoose.Schema(
       default: null,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 certificateSchema.index(
   { eventCode: 1, certificateType: 1, rollNo: 1 },
-  { unique: true }
+  { unique: true },
 );
 
 module.exports = mongoose.model("Certificate", certificateSchema);
