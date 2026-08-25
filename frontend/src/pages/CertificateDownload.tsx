@@ -77,9 +77,7 @@ export default function CertificateDownload() {
         setLoadingEvents(true);
         setErrorMessage("");
 
-        const response = await axios.get(
-          `${API}/api/certificates/events`,
-        );
+        const response = await axios.get(`${API}/api/certificates/events`);
 
         const nextEvents: CertificateEvent[] = response.data.events || [];
         setEvents(nextEvents);
@@ -100,9 +98,7 @@ export default function CertificateDownload() {
         );
       } catch (error) {
         console.error("Certificate events error:", error);
-        setErrorMessage(
-          "Unable to load events right now. Please try again.",
-        );
+        setErrorMessage("Unable to load events right now. Please try again.");
       } finally {
         setLoadingEvents(false);
       }
@@ -169,45 +165,64 @@ export default function CertificateDownload() {
   };
 
   const handleDownload = async () => {
-    if (!certificate) return;
+    // Prevent double-click / duplicate requests
+    if (downloading) return;
+
+    if (!certificate) {
+      setErrorMessage("Certificate details are not available.");
+      return;
+    }
+
+    if (!selectedEventCode) {
+      setErrorMessage("Event information is missing.");
+      return;
+    }
 
     try {
       setDownloading(true);
       setErrorMessage("");
 
+      const normalizedRollNo = certificate.rollNo.trim().toUpperCase();
+
       const response = await axios.get(
         `${API}/api/certificates/download/${encodeURIComponent(
-          certificate.rollNo,
+          normalizedRollNo,
         )}`,
         {
           params: {
-            eventCode: certificate.eventCode,
+            eventCode: selectedEventCode,
             certificateType: certificate.certificateType,
           },
           responseType: "blob",
         },
       );
 
+      if (!response.data || response.data.size === 0) {
+        throw new Error("Empty certificate file received.");
+      }
+
       const blob = new Blob([response.data], {
         type: "application/pdf",
       });
 
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
 
+      const link = document.createElement("a");
       link.href = url;
       link.download = `${certificate.certificateId}.pdf`;
+
       document.body.appendChild(link);
       link.click();
-      link.remove();
+      document.body.removeChild(link);
 
-      window.URL.revokeObjectURL(url);
+      // Give browser time to start download
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 1000);
     } catch (error: any) {
       console.error("Certificate download error:", error);
-      setErrorMessage(
-        error?.response?.data?.message ||
-          "Unable to download the certificate. Please try again.",
-      );
+
+      setErrorMessage("Unable to download the certificate. Please try again.");
     } finally {
       setDownloading(false);
     }
@@ -344,9 +359,7 @@ export default function CertificateDownload() {
                     id="certificate-type"
                     value={certificateType}
                     onChange={(event) => {
-                      setCertificateType(
-                        event.target.value as CertificateType,
-                      );
+                      setCertificateType(event.target.value as CertificateType);
                       resetResult();
                     }}
                     className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3 pr-10 text-sm outline-none transition focus:border-[#00629B] focus:ring-4 focus:ring-blue-50"
@@ -459,7 +472,9 @@ export default function CertificateDownload() {
                 <div className="border-b border-slate-100 p-4 sm:border-r">
                   <p className="text-xs text-slate-400">Event</p>
                   <p className="mt-1 font-semibold text-slate-800">
-                    {selectedEvent?.eventName || certificate.event || selectedEventCode}
+                    {selectedEvent?.eventName ||
+                      certificate.event ||
+                      selectedEventCode}
                   </p>
                 </div>
 
@@ -506,7 +521,7 @@ export default function CertificateDownload() {
                 {downloading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Preparing Certificate...
+                    Downloading...
                   </>
                 ) : (
                   <>

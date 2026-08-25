@@ -3,10 +3,10 @@ import Hero from "../components/spaceDay/Hero";
 import MissionBrief from "../components/spaceDay/MissionBrief";
 //import Objectives from "../components/spaceDay/Objectives";
 //import Highlights from "../components/spaceDay/Highlights";
-import Schedule from "../components/spaceDay/Timeline";
+//import Schedule from "../components/spaceDay/Timeline";
 //import Events from "../components/spaceDay/Events";
 import HelpDesk from "../components/spaceDay/HelpDesk";
-import Guidelines from "../components/spaceDay/Guidelines";
+//import Guidelines from "../components/spaceDay/Guidelines";
 import FAQ from "@/components/spaceDay/Faq";
 import Footer from "@/components/spaceDay/Footer";
 
@@ -39,8 +39,8 @@ export default function SpaceDay() {
       {/* <Objectives /> */}
       {/* <Highlights /> */}
       {/* <Events /> */}
-      <Guidelines />
-      <Schedule />
+      {/* <Guidelines /> */}
+      {/* <Schedule / > */}
       <HelpDesk />
       <FAQ />
       <Footer />

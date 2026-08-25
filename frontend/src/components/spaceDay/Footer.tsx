@@ -80,10 +80,10 @@ export default function Footer() {
               </li>
               <li className="pt-2">
                 <button
-                  onClick={() => navigate("/space-day/register")}
+                  onClick={() => navigate("/certificates")}
                   className="rounded-xl bg-[#00629B] px-4 py-2 text-xs font-semibold text-white transition-all duration-300 hover:bg-[#004E7C] hover:shadow-md"
                 >
-                  Register
+                  Certificate Download
                 </button>
               </li>
             </ul>

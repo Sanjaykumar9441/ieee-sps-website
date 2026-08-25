@@ -9,8 +9,6 @@ import adityaLogo from "../../../src/assets/logos/aditya.png";
 const sections = [
   { id: "home", label: "Home" },
   { id: "about", label: "About" },
-  { id: "guidelines", label: "Guidelines" },
-  { id: "schedule", label: "Schedule" },
   { id: "help", label: "Help Desk" },
   { id: "faq", label: "FAQ" },
 ];
@@ -128,10 +126,10 @@ export default function Navbar() {
 
             {/* Register Button */}
             <button
-              onClick={() => navigate("/space-day/register")}
+              onClick={() => navigate("/certificates")}
               className="rounded-xl bg-[#00629B] px-4 py-2 text-xs font-semibold text-white transition-all duration-300 hover:bg-[#004E7C] hover:shadow-md"
             >
-              Register
+              Certificate Download
             </button>
           </div>
 
@@ -185,10 +183,10 @@ export default function Navbar() {
                 ))}
 
                 <button
-                  onClick={() => navigate("/space-day/register")}
+                  onClick={() => navigate("/certificates")}
                   className="w-full mt-4 rounded-xl bg-[#00629B] px-4 py-3 text-sm font-semibold text-white transition-all duration-300 hover:bg-[#004E7C]"
                 >
-                  Register
+                  Certificate Download
                 </button>
               </div>
             </motion.div>

@@ -23,6 +23,29 @@ const PAGE_HEIGHT = 595;
 const ORANGE = "#E66600";
 
 // ============================================================
+// LINE COORDINATES  ⚠️ RUN calibrate.js AND FILL THESE IN
+// ------------------------------------------------------------
+// Each *_LINE_Y is the y-coordinate (PDF points, from top) of
+// the dotted line itself — not where the text box starts.
+// Read these off calibration.pdf, not off a screenshot of a
+// rendered/zoomed PDF viewer (that scale is not 1:1 with the
+// 842x595 page the code actually draws on).
+// ============================================================
+
+const LINE_Y = {
+  NAME: 247, // "Mr./Ms. ....." row — already correct in your output
+  TEAM_COLLEGE: 300, // "Team of ..... From ....." row — RECALIBRATE
+  POSITION_EVENT: 345, // "securing ..... place in the ....." row — RECALIBRATE
+};
+
+const LINE_X = {
+  TEAM: { x: 150, width: 180 },
+  COLLEGE: { x: 385, width: 300 },
+  POSITION: { x: 300, width: 120 },
+  EVENT: { x: 440, width: 260 },
+};
+
+// ============================================================
 // FILE CHECK
 // ============================================================
 
@@ -72,6 +95,19 @@ function fitTextFontSize(
 }
 
 // ============================================================
+// SIT TEXT ON A LINE
+// PDFKit's .text(x, y) draws from the TOP of the text box, but
+// a dotted line is a baseline — text needs to rest just above
+// it, not start at it. This converts "y of the line" into the
+// correct "y to pass to .text()" for a given font size, so
+// every field lines up consistently regardless of font size.
+// ============================================================
+
+function yForLine(lineY, fontSize) {
+  return lineY - fontSize * 0.82;
+}
+
+// ============================================================
 // DRAW TEXT
 // ============================================================
 
@@ -93,7 +129,8 @@ function drawText(doc, text, x, y, options = {}) {
 
 // ============================================================
 // DRAW TEXT WITH WHITE BACKGROUND
-// Hides dotted line underneath dynamic text.
+// Hides dotted line underneath dynamic text. Sized tight to the
+// glyph box so it can never bleed into a neighboring line.
 // ============================================================
 
 function drawDynamicText(doc, text, x, y, width, options = {}) {
@@ -104,11 +141,12 @@ function drawDynamicText(doc, text, x, y, width, options = {}) {
     align = "left",
   } = options;
 
-  // Hide dots behind dynamic text
+  // Hide dots behind dynamic text — padded a few pt, not a flat
+  // oversized box, so it can't cover the row above/below.
   doc
     .save()
     .fillColor("#FFFFFF")
-    .rect(x - 3, y - 2, width + 6, fontSize + 8)
+    .rect(x - 3, y - 2, width + 6, fontSize * 1.15)
     .fill()
     .restore();
 
@@ -133,11 +171,8 @@ function generateMeritCertificate(certificate, output) {
       // --------------------------------------------------------
 
       assertFile(TEMPLATE, "Merit certificate template");
-
       assertFile(NAME_FONT, "Gabrielle font");
-
       assertFile(LATO_REGULAR, "Lato Regular font");
-
       assertFile(LATO_BOLD, "Lato Bold font");
 
       // --------------------------------------------------------
@@ -174,107 +209,146 @@ function generateMeritCertificate(certificate, output) {
       // --------------------------------------------------------
 
       const name = String(certificate.name || "").trim();
-
       const team = String(certificate.team || "").trim();
-
       const college = String(certificate.college || "").trim();
-
       const position = String(certificate.position || "").trim();
-
       const event = String(certificate.event || "").trim();
 
       // ========================================================
-      // 1. NAME
+      // 1. NAME  — row: "This is to certify that Mr./Ms. ....."
       // ========================================================
 
       const nameSize = fitNameFontSize(doc, name);
-
       doc.font(NAME_FONT).fontSize(nameSize).fillColor(ORANGE);
-
       const nameWidth = doc.widthOfString(name);
 
-      doc.text(name, (PAGE_WIDTH - nameWidth) / 2, 247, {
-        lineBreak: false,
-        width: nameWidth + 2,
-      });
+      doc.text(
+        name,
+        (PAGE_WIDTH - nameWidth) / 2,
+        yForLine(LINE_Y.NAME, nameSize),
+        {
+          lineBreak: false,
+          width: nameWidth + 2,
+        },
+      );
 
       // ========================================================
-      // 2. TEAM
+      // 2. TEAM  — row: "Team of ..... From ..... is awarded"
       // ========================================================
 
-      const teamFontSize = fitTextFontSize(doc, team, LATO_BOLD, 180, 16, 10);
+      const teamFontSize = fitTextFontSize(
+        doc,
+        team,
+        LATO_BOLD,
+        LINE_X.TEAM.width,
+        16,
+        10,
+      );
 
-      drawDynamicText(doc, team, 150, 285, 180, {
-        font: LATO_BOLD,
-        fontSize: teamFontSize,
-        color: ORANGE,
-        align: "center",
-      });
+      drawDynamicText(
+        doc,
+        team,
+        LINE_X.TEAM.x,
+        yForLine(LINE_Y.TEAM_COLLEGE, teamFontSize),
+        LINE_X.TEAM.width,
+        {
+          font: LATO_BOLD,
+          fontSize: teamFontSize,
+          color: ORANGE,
+          align: "center",
+        },
+      );
 
       // ========================================================
-      // 3. COLLEGE
+      // 3. COLLEGE  — same row as TEAM
       // ========================================================
 
       const collegeFontSize = fitTextFontSize(
         doc,
         college,
         LATO_BOLD,
-        300,
+        LINE_X.COLLEGE.width,
         16,
         9,
       );
 
-      drawDynamicText(doc, college, 385, 285, 300, {
-        font: LATO_BOLD,
-        fontSize: collegeFontSize,
-        color: ORANGE,
-        align: "center",
-      });
+      drawDynamicText(
+        doc,
+        college,
+        LINE_X.COLLEGE.x,
+        yForLine(LINE_Y.TEAM_COLLEGE, collegeFontSize),
+        LINE_X.COLLEGE.width,
+        {
+          font: LATO_BOLD,
+          fontSize: collegeFontSize,
+          color: ORANGE,
+          align: "center",
+        },
+      );
 
       // ========================================================
-      // 4. POSITION
+      // 4. POSITION  — row: "..securing ..... place in the ....."
       // ========================================================
 
       const positionFontSize = fitTextFontSize(
         doc,
         position,
         LATO_BOLD,
-        120,
+        LINE_X.POSITION.width,
         16,
         10,
       );
 
-      drawDynamicText(doc, position, 300, 320, 120, {
-        font: LATO_BOLD,
-        fontSize: positionFontSize,
-        color: ORANGE,
-        align: "center",
-      });
+      drawDynamicText(
+        doc,
+        position,
+        LINE_X.POSITION.x,
+        yForLine(LINE_Y.POSITION_EVENT, positionFontSize),
+        LINE_X.POSITION.width,
+        {
+          font: LATO_BOLD,
+          fontSize: positionFontSize,
+          color: ORANGE,
+          align: "center",
+        },
+      );
 
       // ========================================================
-      // 5. EVENT / CATEGORY
+      // 5. EVENT / CATEGORY  — same row as POSITION, NOT the
+      // "category at the National Space Day..." row below it
       // ========================================================
 
-      const eventFontSize = fitTextFontSize(doc, event, LATO_BOLD, 260, 16, 9);
+      const eventFontSize = fitTextFontSize(
+        doc,
+        event,
+        LATO_BOLD,
+        LINE_X.EVENT.width,
+        16,
+        9,
+      );
 
-      drawDynamicText(doc, event, 440, 320, 260, {
-        font: LATO_BOLD,
-        fontSize: eventFontSize,
-        color: ORANGE,
-        align: "center",
-      });
+      drawDynamicText(
+        doc,
+        event,
+        LINE_X.EVENT.x,
+        yForLine(LINE_Y.POSITION_EVENT, eventFontSize),
+        LINE_X.EVENT.width,
+        {
+          font: LATO_BOLD,
+          fontSize: eventFontSize,
+          color: ORANGE,
+          align: "center",
+        },
+      );
 
       // --------------------------------------------------------
       // OUTPUT
       // --------------------------------------------------------
 
       doc.pipe(output);
-
       output.on("finish", resolve);
       output.on("error", reject);
-
       doc.on("error", reject);
-
       doc.end();
     } catch (error) {
       reject(error);
