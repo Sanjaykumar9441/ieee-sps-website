@@ -33,7 +33,7 @@ const ORANGE = "#E66600";
 // ============================================================
 
 const LINE_Y = {
-  NAME: 253, // "Mr./Ms. ....." row — already correct in your output
+  NAME: 252, // "Mr./Ms. ....." row — already correct in your output
   TEAM_COLLEGE: 278, // "Team of ..... From ....." row — RECALIBRATE
   POSITION_EVENT: 309, // "securing ..... place in the ....." row — RECALIBRATE
 };
@@ -240,7 +240,7 @@ function generateMeritCertificate(certificate, output) {
 
       doc.text(
         name,
-        (PAGE_WIDTH - nameWidth) / 2 + 20,
+        (PAGE_WIDTH - nameWidth) / 2 + 40,
         yForLine(LINE_Y.NAME, nameSize),
         {
           lineBreak: false,
