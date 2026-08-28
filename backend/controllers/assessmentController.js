@@ -98,42 +98,6 @@ exports.createAssessment = async (req, res) => {
       });
     }
 
-    if (!body.category_id) {
-      return res.status(400).json({
-        success: false,
-        message: "Assessment category is required.",
-      });
-    }
-
-    if (!body.subject_id) {
-      return res.status(400).json({
-        success: false,
-        message: "Assessment subject is required.",
-      });
-    }
-
-    const { data: subject, error: subjectError } =
-      await Assessment.getSubjectById(body.subject_id);
-
-    if (subjectError) {
-      console.error("SUBJECT LOOKUP ERROR:", subjectError);
-      throw subjectError;
-    }
-
-    if (!subject) {
-      return res.status(400).json({
-        success: false,
-        message: "Selected subject does not exist.",
-      });
-    }
-
-    if (subject.category_id !== body.category_id) {
-      return res.status(400).json({
-        success: false,
-        message: "Selected subject does not belong to the selected category.",
-      });
-    }
-
     if (body.passing_score == null && body.pass_percentage != null) {
       body.passing_score =
         (Number(body.total_questions) *
@@ -141,9 +105,6 @@ exports.createAssessment = async (req, res) => {
           Number(body.pass_percentage)) /
         100;
     }
-
-    body.category_id = String(body.category_id).trim();
-    body.subject_id = String(body.subject_id).trim();
 
     const { data, error } = await Assessment.create(body);
 

@@ -24,7 +24,7 @@ interface Props {
 
 interface PreviewQuestion {
   question_text: string;
-  question_type: string;
+  question_type: "MCQ";
   difficulty: string;
   marks: number;
   negative_marks?: number;
@@ -103,9 +103,7 @@ export default function ImportQuestionsModal({
         return {
           question_text: String(row["Question"] || "").trim(),
 
-          question_type: String(row["Question Type"] || "MCQ")
-            .trim()
-            .toUpperCase(),
+          question_type: "MCQ",
 
           difficulty: String(row["Difficulty"] || "MEDIUM")
             .trim()
@@ -276,7 +274,6 @@ export default function ImportQuestionsModal({
                 <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
                     "Question",
-                    "Question Type",
                     "Option A",
                     "Option B",
                     "Option C",

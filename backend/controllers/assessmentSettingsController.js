@@ -30,14 +30,8 @@ const defaultSettings = {
   },
 
   login: {
-    otpRequired: true,
-    emailLogin: true,
-    rollNumberLogin: false,
     allowedStudentsOnly: true,
-    singleDevice: true,
-    allowRelogin: false,
-    loginWindow: 15,
-    maxLoginAttempts: 5,
+    authentication: "EMAIL_COMMON_PASSWORD",
   },
 
   rules: {
@@ -77,15 +71,7 @@ const defaultSettings = {
     generateCertificates: false,
   },
 
-  notifications: {
-    sendOtpEmail: true,
-    sendWelcomeEmail: false,
-    sendReminderEmail: true,
-    sendSubmissionEmail: true,
-    sendResultEmail: false,
-    sendCertificateEmail: false,
-    reminderBeforeMinutes: 30,
-  },
+  notifications: {},
 
   certificate: {
     enabled: false,
@@ -225,6 +211,10 @@ exports.getSettings = async (req, res) => {
           assessment.show_leaderboard ??
           true,
 
+        showScore: dbSettings?.allow_result_view ?? true,
+
+        allowAnswerReview: dbSettings?.allow_answer_review ?? true,
+
         passingPercentage: assessment.pass_percentage ?? 40,
 
         generateCertificates: dbSettings?.auto_generate_certificate ?? false,
@@ -340,6 +330,7 @@ exports.updateSettings = async (req, res) => {
       assessmentUpdate.auto_submit = settings.rules.autoSubmit;
     }
 
+
     if (settings.security?.fullscreenRequired !== undefined) {
       assessmentUpdate.anti_cheat_enabled =
         settings.security.fullscreenRequired;
@@ -392,11 +383,14 @@ exports.updateSettings = async (req, res) => {
     const settingsUpdate = {
       assessment_id: id,
 
-      allow_result_view: settings.results?.showScore ?? true,
+      allow_result_view: settings.results?.allowResultView ?? true,
 
       allow_certificate_download: settings.certificate?.enabled ?? false,
 
-      allow_answer_review: settings.rules?.allowReview ?? true,
+      allow_answer_review:
+        settings.results?.allowAnswerReview ??
+        settings.rules?.allowReview ??
+        true,
 
       leaderboard_enabled: settings.results?.leaderboardEnabled ?? true,
 

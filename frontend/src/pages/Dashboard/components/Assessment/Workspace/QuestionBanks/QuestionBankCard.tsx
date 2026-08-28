@@ -41,10 +41,6 @@ export default function QuestionBankCard({
         <div className="flex justify-between items-start">
           <div>
             <h2 className="text-xl font-bold">{bank.name}</h2>
-
-            <p className="text-gray-500 mt-1 text-sm">
-              {bank.description || "No description"}
-            </p>
           </div>
 
           <BookOpen size={28} className="text-[#00629B]" />
@@ -64,28 +60,6 @@ export default function QuestionBankCard({
     <h3 className="text-2xl font-bold text-[#00629B]">
       {bank.questions_to_pick ?? 0}
     </h3>
-  </div>
-</div>
-        <div className="mt-6 space-y-3">
-  <div className="flex justify-between">
-    <span className="text-gray-500">Difficulty</span>
-    <span className="font-semibold">
-      {bank.difficulty || "Not specified"}
-    </span>
-  </div>
-
-  <div className="flex justify-between">
-    <span className="text-gray-500">Estimated Time</span>
-    <span className="font-semibold">
-      {bank.estimated_minutes ?? 0} mins
-    </span>
-  </div>
-
-  <div className="flex justify-between">
-    <span className="text-gray-500">Questions to Pick</span>
-    <span className="font-semibold">
-      {bank.questions_to_pick ?? bank.total_questions}
-    </span>
   </div>
 </div>
         <div className="grid grid-cols-2 gap-3 mt-8">

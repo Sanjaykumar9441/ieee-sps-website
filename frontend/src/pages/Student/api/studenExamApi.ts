@@ -49,32 +49,32 @@ export const checkAssessment = async (
 };
 
 /* ============================================================
-   SEND OTP
+   EMAIL + COMMON PASSWORD LOGIN
 ============================================================ */
 
-export const sendOtp = async (assessmentId: string, email: string) => {
-  const { data } = await axios.post(`${API}/api/student-auth/send-otp`, {
-    assessmentId,
-    email,
-  });
-
-  return data;
-};
-
-/* ============================================================
-   VERIFY OTP
-============================================================ */
-
-export const verifyOtp = async (
+export const loginStudent = async (
   assessmentId: string,
   email: string,
-  otp: string,
+  password: string,
 ) => {
-  const { data } = await axios.post(`${API}/api/student-auth/verify-otp`, {
+  const { data } = await axios.post(`${API}/api/student-auth/login`, {
     assessmentId,
     email,
-    otp,
+    password,
   });
+
+  if (!data.success) {
+    throw new Error(data.message || "Unable to login.");
+  }
+
+  if (data.token) {
+    localStorage.setItem("studentToken", data.token);
+    localStorage.setItem("token", data.token);
+  }
+
+  if (data.student) {
+    localStorage.setItem("student", JSON.stringify(data.student));
+  }
 
   return data;
 };

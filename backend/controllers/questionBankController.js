@@ -6,7 +6,7 @@ function normalizeQuestion(question, bankId) {
   return {
     bank_id: bankId,
 
-    question_type: question.question_type || "MCQ",
+    question_type: String(question.question_type || "MCQ").trim().toUpperCase(),
 
     question_text: String(question.question_text || "").trim(),
 
@@ -45,8 +45,8 @@ function validateQuestion(question, index) {
     errors.push("Question text is required.");
   }
 
-  if (!question.question_type) {
-    errors.push("Question type is required.");
+  if (question.question_type !== "MCQ") {
+    errors.push("Only MCQ questions are supported.");
   }
 
   if (
@@ -142,9 +142,6 @@ exports.create = async (req, res) => {
     const payload = {
       assessment_id: body.assessment_id,
       name: body.name.trim(),
-      description: body.description || null,
-      difficulty: body.difficulty || "Medium",
-      estimated_minutes: Number(body.estimated_minutes || 30),
       questions_to_pick: Number(body.questions_to_pick),
     };
 
@@ -497,7 +494,17 @@ exports.finalImport = async (req, res) => {
     let imported = 0;
 
     if (importableQuestions.length > 0) {
-      const { data, error } = await Question.bulkCreate(importableQuestions);
+      const rowsForDb = importableQuestions.map((question) => {
+        const optionKeys = ["A", "B", "C", "D", "E"];
+        const options = {};
+        (question.options || []).forEach((option, index) => {
+          const text = String(option ?? "").trim();
+          if (text && optionKeys[index]) options[optionKeys[index]] = text;
+        });
+        return { ...question, options };
+      });
+
+      const { data, error } = await Question.bulkCreate(rowsForDb);
 
       if (error) throw error;
 

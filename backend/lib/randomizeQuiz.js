@@ -123,16 +123,31 @@ function shuffleQuestionOptions(options, correctAnswers) {
    Build Frozen Attempt Questions
 ===================================== */
 
-function buildAttemptQuestions(attemptId, questions, questionsToPick) {
-  const selected = selectRandomQuestions(questions, questionsToPick);
+function buildAttemptQuestions(
+  attemptId,
+  questions,
+  questionsToPick,
+  { selectRandom = true, shuffleQuestions = true, shuffleOptions = true } = {},
+) {
+  const selected = selectRandom
+    ? selectRandomQuestions(questions, questionsToPick)
+    : [...questions].slice(0, questionsToPick);
 
-  const orderedQuestions = shuffle(selected);
+  const orderedQuestions = shuffleQuestions ? shuffle(selected) : selected;
 
   return orderedQuestions.map((question, index) => {
-    const { shuffled_options, correct_answers } = shuffleQuestionOptions(
-      question.options,
-      question.correct_answers,
-    );
+    const randomized = shuffleOptions
+      ? shuffleQuestionOptions(question.options, question.correct_answers)
+      : {
+          shuffled_options: question.options,
+          correct_answers: Array.isArray(question.correct_answers)
+            ? question.correct_answers.length === 1
+              ? question.correct_answers[0]
+              : question.correct_answers
+            : question.correct_answers,
+        };
+
+    const { shuffled_options, correct_answers } = randomized;
 
     return {
       attempt_id: attemptId ?? null,

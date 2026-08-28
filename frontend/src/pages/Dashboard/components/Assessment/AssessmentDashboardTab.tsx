@@ -28,6 +28,8 @@ export default function AssessmentDashboardTab() {
     useState<Assessment | null>(null);
 
   const [openCreateModal, setOpenCreateModal] = useState(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
 
   const fetchAssessments = async () => {
     try {
@@ -191,7 +193,7 @@ export default function AssessmentDashboardTab() {
                 key={assessment.id}
                 assessment={assessment}
                 onDashboard={setSelectedAssessment}
-                onEdit={() => {}}
+                onEdit={(assessment) => { setEditingAssessment(assessment); setOpenEditModal(true); }}
                 onDuplicate={handleDuplicate}
                 onPublish={handlePublish}
                 onUnpublish={handleUnpublish}
@@ -217,6 +219,13 @@ export default function AssessmentDashboardTab() {
       <CreateAssessmentModal
         open={openCreateModal}
         onClose={() => setOpenCreateModal(false)}
+        onCreated={fetchAssessments}
+      />
+
+      <CreateAssessmentModal
+        open={openEditModal}
+        assessment={editingAssessment}
+        onClose={() => { setOpenEditModal(false); setEditingAssessment(null); }}
         onCreated={fetchAssessments}
       />
     </div>

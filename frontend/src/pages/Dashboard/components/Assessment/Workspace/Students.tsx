@@ -7,7 +7,6 @@ import AddStudentModal from "./AddStudentModal";
 import ImportStudentsModal from "./ImportStudentsModal";
 import {
   getAllowedStudents,
-  sendBulkOtp,
   blockStudents,
   unblockStudents,
   deleteStudents,
@@ -27,8 +26,6 @@ export interface AllowedStudent {
 
   created_at: string;
   status: "allowed" | "blocked";
-
-  otp_sent: boolean;
 
   // Computed by backend
   logged_in: boolean;
@@ -134,31 +131,6 @@ export default function Students({ assessment }: Props) {
       (student.branch || "").toLowerCase().includes(query)
     );
   });
-
-  const handleSendOtp = async () => {
-    if (selectedStudents.length === 0) {
-      toast.error("Please select at least one student.");
-      return;
-    }
-
-    try {
-      setProcessing(true);
-
-      const data = await sendBulkOtp(assessment.id, selectedStudents);
-
-      toast.success(data.message || "OTP sent successfully.");
-
-      setSelectedStudents([]);
-
-      fetchStudents();
-    } catch (err) {
-      console.error(err);
-
-      toast.error("Unable to send OTP.");
-    } finally {
-      setProcessing(false);
-    }
-  };
 
   const handleBlock = async () => {
     if (selectedStudents.length === 0) {
@@ -285,7 +257,6 @@ export default function Students({ assessment }: Props) {
         "Email",
         "Branch",
         "Status",
-        "OTP",
         "Logged In",
         "Attempt",
         "Submitted",
@@ -297,7 +268,6 @@ export default function Students({ assessment }: Props) {
         student.email,
         student.branch || "",
         student.status,
-        student.otp_sent ? "Sent" : "Not Sent",
         student.logged_in ? "Logged In" : "Not Logged In",
         student.attempt_started ? "Started" : "Not Started",
         student.submitted ? "Submitted" : "Not Submitted",
@@ -416,13 +386,6 @@ export default function Students({ assessment }: Props) {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <button
-              disabled={processing}
-              onClick={handleSendOtp}
-              className="rounded-xl bg-green-600 px-5 py-2 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Send OTP
-            </button>
 
             <button
               disabled={processing}
@@ -495,7 +458,6 @@ export default function Students({ assessment }: Props) {
 
               <th className="p-4 text-left">Status</th>
 
-              <th className="p-4 text-left">OTP</th>
 
               <th className="p-4 text-left">Login</th>
 
@@ -550,16 +512,6 @@ export default function Students({ assessment }: Props) {
                 <td className="p-4">
                   <span
                     className={
-                      student.otp_sent ? "text-green-600" : "text-gray-400"
-                    }
-                  >
-                    {student.otp_sent ? "Sent" : "Not Sent"}
-                  </span>
-                </td>
-
-                <td className="p-4">
-                  <span
-                    className={
                       student.logged_in ? "text-green-600" : "text-gray-400"
                     }
                   >
@@ -596,29 +548,6 @@ export default function Students({ assessment }: Props) {
                       className="rounded border px-3 py-1"
                     >
                       View
-                    </button>
-
-                    <button
-                      onClick={async () => {
-                        try {
-                          const data = await sendBulkOtp(assessment.id, [
-                            student.id,
-                          ]);
-
-                          toast.success(
-                            data.message || "OTP sent successfully.",
-                          );
-
-                          fetchStudents();
-                        } catch (err) {
-                          console.error(err);
-
-                          toast.error("Unable to send OTP.");
-                        }
-                      }}
-                      className="rounded border px-3 py-1 text-blue-600"
-                    >
-                      Send OTP
                     </button>
 
                     <button

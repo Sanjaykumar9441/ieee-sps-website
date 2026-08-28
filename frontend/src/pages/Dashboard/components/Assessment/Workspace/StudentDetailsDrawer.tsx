@@ -6,7 +6,6 @@ import { socket } from "../../../../../lib/socket";
 import { AllowedStudent } from "./Students";
 import {
   getStudentDetails,
-  sendBulkOtp,
   blockStudents,
   unblockStudents,
   deleteStudents,
@@ -216,22 +215,6 @@ export default function StudentDetailsDrawer({
                   </span>
                 </div>
 
-                {/* OTP */}
-
-                <div>
-                  <p className="text-sm text-gray-500">OTP</p>
-
-                  <span
-                    className={`mt-2 inline-flex rounded-full px-3 py-1 text-sm font-medium ${
-                      details?.student?.otp_sent
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {details?.student?.otp_sent ? "Sent" : "Not Sent"}
-                  </span>
-                </div>
-
                 {/* Login */}
 
                 <div>
@@ -292,22 +275,6 @@ export default function StudentDetailsDrawer({
               <h3 className="mb-5 text-xl font-semibold">Timeline</h3>
 
               <div className="space-y-5">
-                <div className="flex items-start gap-4">
-                  <div className="mt-1 rounded-full bg-green-500 p-2">
-                    <Clock size={14} className="text-white" />
-                  </div>
-
-                  <div>
-                    <p className="font-medium">OTP Sent</p>
-
-                    <p className="text-sm text-gray-500">
-                      {details?.student?.otp_sent
-                        ? "OTP sent"
-                        : "Not Available"}
-                    </p>
-                  </div>
-                </div>
-
                 <div className="flex items-start gap-4">
                   <div className="mt-1 rounded-full bg-blue-500 p-2">
                     <Clock size={14} className="text-white" />
@@ -407,33 +374,6 @@ export default function StudentDetailsDrawer({
             {/* Footer Actions */}
 
             <div className="mt-8 flex flex-wrap justify-end gap-3 border-t pt-6">
-              <button
-                type="button"
-                disabled={processing}
-                onClick={async () => {
-                  if (!student) return;
-
-                  try {
-                    setProcessing(true);
-
-                    const data = await sendBulkOtp(assessmentId, [student.id]);
-
-                    toast.success(data.message || "OTP sent successfully.");
-
-                    await onRefresh();
-                    await fetchDetails();
-                  } catch (err) {
-                    console.error(err);
-                    toast.error("Unable to send OTP.");
-                  } finally {
-                    setProcessing(false);
-                  }
-                }}
-                className="rounded-xl bg-green-600 px-5 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Send OTP
-              </button>
-
               <button
                 type="button"
                 disabled={processing}

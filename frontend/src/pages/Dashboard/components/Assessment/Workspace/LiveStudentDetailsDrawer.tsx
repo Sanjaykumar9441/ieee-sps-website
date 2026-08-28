@@ -5,7 +5,6 @@ import { socket } from "../../../../../lib/socket";
 import { LiveStudent } from "./LiveMonitor";
 import {
   getLiveStudentDetails,
-  sendBulkOtp,
   blockStudents,
   unblockStudents,
   deleteStudents,
@@ -112,138 +111,6 @@ export default function LiveStudentDetailsDrawer({
       setLoading(false);
     }
   }, [student]);
-
-  const handleSendOtp = async () => {
-    if (!student) return;
-
-    try {
-      setProcessing(true);
-
-      const data = await sendBulkOtp(assessmentId, [student.studentId]);
-
-      toast.success(data.message || "OTP sent successfully.");
-
-      await onRefresh();
-      await fetchDetails();
-    } catch (err) {
-      console.error(err);
-      toast.error("Unable to send OTP.");
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleBlock = async () => {
-    if (!student) return;
-
-    try {
-      setProcessing(true);
-
-      const data =
-        details?.student.status === "blocked"
-          ? await unblockStudents(assessmentId, [student.studentId])
-          : await blockStudents(assessmentId, [student.studentId]);
-
-      toast.success(data.message || "Student status updated.");
-
-      await onRefresh();
-      await fetchDetails();
-    } catch (err) {
-      console.error(err);
-
-      toast.error(
-        details?.student.status === "blocked"
-          ? "Unable to unblock student."
-          : "Unable to block student.",
-      );
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!student) return;
-
-    if (!window.confirm("Delete this student?")) {
-      return;
-    }
-
-    try {
-      setProcessing(true);
-
-      const data = await deleteStudents(assessmentId, [student.studentId]);
-
-      toast.success(data.message);
-
-      await onRefresh();
-
-      onClose();
-    } catch (err) {
-      console.error(err);
-
-      toast.error("Unable to delete student.");
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleForceSubmit = async () => {
-    if (!student) return;
-
-    try {
-      setProcessing(true);
-
-      if (!details?.attempt?.id) {
-        toast.error("No assessment attempt found.");
-        return;
-      }
-
-      const data = await forceSubmitAttempt(details.attempt.id);
-
-      toast.success(data.message);
-
-      await onRefresh();
-
-      await fetchDetails();
-    } catch (err) {
-      console.error(err);
-
-      toast.error("Unable to force submit.");
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleDisqualify = async () => {
-    if (!student) return;
-
-    try {
-      setProcessing(true);
-
-      const reason =
-        window.prompt("Reason for disqualification?") ||
-        "Disqualified by admin";
-
-      if (!details?.attempt?.id) {
-        toast.error("No assessment attempt found.");
-        return;
-      }
-
-      const data = await disqualifyAttempt(details.attempt.id, reason);
-
-      toast.success(data.message);
-
-      await onRefresh();
-
-      await fetchDetails();
-    } catch (err) {
-      console.error(err);
-
-      toast.error("Unable to disqualify student.");
-    } finally {
-      setProcessing(false);
-    }
-  };
 
   useEffect(() => {
     if (!open || !student) return;
@@ -627,14 +494,6 @@ export default function LiveStudentDetailsDrawer({
               <h3 className="mb-6 text-xl font-bold">Actions</h3>
 
               <div className="flex flex-wrap gap-4">
-                <button
-                  disabled={processing}
-                  onClick={handleSendOtp}
-                  className="rounded-xl bg-green-600 px-5 py-3 text-white disabled:opacity-50"
-                >
-                  Send OTP
-                </button>
-
                 <button
                   disabled={processing}
                   onClick={handleBlock}

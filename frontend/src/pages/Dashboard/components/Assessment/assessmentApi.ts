@@ -21,7 +21,10 @@ api.interceptors.request.use((config) => {
 
 export const getAssessments = async () => {
   const { data } = await api.get("/assessments");
-  return data.assessments;
+  return (data.assessments || []).map((assessment: any) => ({
+    ...assessment,
+    is_published: assessment.status === "PUBLISHED",
+  }));
 };
 
 export const getAssessmentCategories = async () => {
@@ -245,18 +248,6 @@ export const getDashboardAnalytics = async (
 export const getAllowedStudents = async (assessmentId: string) => {
   const { data } = await api.get(`/student-auth/${assessmentId}`);
   return data.students;
-};
-
-export const sendBulkOtp = async (
-  assessmentId: string,
-  studentIds: string[],
-) => {
-  const { data } = await api.post("/student-auth/send-bulk-otp", {
-    assessmentId,
-    studentIds,
-  });
-
-  return data;
 };
 
 export const blockStudents = async (

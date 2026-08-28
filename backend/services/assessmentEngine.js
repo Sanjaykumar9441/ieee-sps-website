@@ -59,23 +59,31 @@ async function getBankQuestions(bankId) {
   return data || [];
 }
 
-async function buildQuestionPaper(assessmentId) {
-  const mappings = await getAssessmentBanks(assessmentId);
+async function buildQuestionPaper(assessment) {
+  const mappings = await getAssessmentBanks(assessment.id);
 
   let paper = [];
+  const randomQuestions = assessment.random_questions ?? true;
+  const shuffleQuestions = assessment.shuffle_questions ?? true;
 
   for (const mapping of mappings) {
     const bankQuestions = await getBankQuestions(mapping.question_bank_id);
+    const count = Number(mapping.questions_to_pick);
 
-    const picked = selectRandomQuestions(
-      bankQuestions,
-      Number(mapping.questions_to_pick),
-    );
+    if (bankQuestions.length < count) {
+      throw new Error(
+        `Question bank has only ${bankQuestions.length} active MCQ questions but ${count} are required.`,
+      );
+    }
+
+    const picked = randomQuestions
+      ? selectRandomQuestions(bankQuestions, count)
+      : bankQuestions.slice(0, count);
 
     paper.push(...picked);
   }
 
-  return shuffle(paper);
+  return shuffleQuestions ? shuffle(paper) : paper;
 }
 
 /* ============================================================
@@ -113,7 +121,7 @@ function normalizeQuestion(question) {
 ============================================================ */
 
 exports.generateAttempt = async (assessment) => {
-  const paper = await buildQuestionPaper(assessment.id);
+  const paper = await buildQuestionPaper(assessment);
 
   if (!paper.length) {
     throw new Error("No active questions are available for this assessment.");
@@ -121,7 +129,11 @@ exports.generateAttempt = async (assessment) => {
 
   const normalized = paper.map(normalizeQuestion);
 
-  return buildAttemptQuestions(null, normalized, normalized.length);
+  return buildAttemptQuestions(null, normalized, normalized.length, {
+    selectRandom: false,
+    shuffleQuestions: false,
+    shuffleOptions: assessment.shuffle_options ?? true,
+  });
 };
 
 /* ============================================================

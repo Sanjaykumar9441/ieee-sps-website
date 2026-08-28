@@ -3,7 +3,6 @@ import toast from "react-hot-toast";
 
 import StudentExam from "./StudentExam";
 import StudentLogin from "../components/StudentLogin";
-import VerifyOtp from "../components/VerifyOtp";
 import ExamInstructions from "../components/ExamInstructions";
 
 import {
@@ -19,7 +18,7 @@ interface Props {
   onStartExam: (assessmentId: string) => void;
 }
 
-type Step = "loading" | "login" | "otp" | "instructions";
+type Step = "loading" | "login" | "instructions";
 type ExamStatus = "NOT_STARTED" | "LIVE" | "CLOSED";
 
 interface ExamData {
@@ -38,7 +37,6 @@ export default function StudentExamPortal({
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [examStatus, setExamStatus] = useState<ExamStatus>("NOT_STARTED");
   const [countdown, setCountdown] = useState(0);
-  const [email, setEmail] = useState("");
   const [examData, setExamData] = useState<ExamData | null>(null);
 
   const handleStartExam = async () => {
@@ -207,21 +205,7 @@ export default function StudentExamPortal({
       <StudentLogin
         assessmentId={assessmentId}
         assessmentTitle={assessment.title}
-        onOtpSent={(studentEmail) => {
-          setEmail(studentEmail);
-          setStep("otp");
-        }}
-      />
-    );
-  }
-
-  if (step === "otp") {
-    return (
-      <VerifyOtp
-        assessmentId={assessmentId}
-        email={email}
-        onVerified={() => setStep("instructions")}
-        onBack={() => setStep("login")}
+        onLoggedIn={() => setStep("instructions")}
       />
     );
   }

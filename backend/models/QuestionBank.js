@@ -64,34 +64,13 @@ class QuestionBank {
       };
     }
 
-    // ---------------------------------------------------------
-    // 1. Get subject from assessment
-    // ---------------------------------------------------------
-    const { data: assessment, error: assessmentError } = await supabase
-      .from("assessments")
-      .select("subject_id")
-      .eq("id", assessment_id)
-      .single();
-
-    if (assessmentError) {
-      return { error: assessmentError };
-    }
-
-    if (!assessment?.subject_id) {
-      return {
-        error: {
-          message: "This assessment does not have a subject assigned.",
-        },
-      };
-    }
-
-    bankData.subject_id = assessment.subject_id;
+    // Question banks are intentionally independent of category/subject.
+    // Reusable banks are matched by name only.
     bankData.name = bankData.name.trim();
-
-    // Supabase enum requires uppercase values
-    if (bankData.difficulty) {
-      bankData.difficulty = bankData.difficulty.toUpperCase();
-    }
+    delete bankData.description;
+    delete bankData.difficulty;
+    delete bankData.estimated_minutes;
+    bankData.subject_id = null;
 
     // ---------------------------------------------------------
     // 2. Check whether this reusable bank already exists
@@ -99,7 +78,6 @@ class QuestionBank {
     const { data: existingBank, error: existingBankError } = await supabase
       .from(TABLE)
       .select("*")
-      .eq("subject_id", bankData.subject_id)
       .eq("name", bankData.name)
       .maybeSingle();
 

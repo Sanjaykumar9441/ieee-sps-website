@@ -35,11 +35,7 @@ interface Question {
 
   question_text: string;
 
-  question_type:
-    | "MCQ"
-    | "MULTIPLE_CORRECT"
-    | "TRUE_FALSE"
-    | "SUBJECTIVE";
+  question_type: "MCQ";
 
   difficulty: "Easy" | "Medium" | "Hard";
 
@@ -67,11 +63,7 @@ interface Question {
 
 interface ImportQuestion {
   question_text: string;
-  question_type:
-    | "MCQ"
-    | "MULTIPLE_CORRECT"
-    | "TRUE_FALSE"
-    | "SUBJECTIVE";
+  question_type: "MCQ";
 
   difficulty: "Easy" | "Medium" | "Hard";
 
@@ -246,12 +238,6 @@ export default function QuestionBankDetails({
 
     if (!clean) return [];
 
-    if (questionType === "TRUE_FALSE") {
-      return clean === "A" || clean === "TRUE"
-        ? [0]
-        : [1];
-    }
-
     return clean
       .split(/[|,]/)
       .map((answer) => answer.trim())
@@ -297,7 +283,6 @@ export default function QuestionBankDetails({
 
         const requiredHeaders = [
           "question_text",
-          "question_type",
           "difficulty",
           "marks",
           "negative_marks",
@@ -338,10 +323,7 @@ export default function QuestionBankDetails({
               },
             );
 
-            const questionType =
-              row.question_type
-                .trim()
-                .toUpperCase() as ImportQuestion["question_type"];
+            const questionType: ImportQuestion["question_type"] = "MCQ";
 
             const difficultyValue =
               row.difficulty
@@ -355,10 +337,7 @@ export default function QuestionBankDetails({
                   ? "Hard"
                   : "Easy";
 
-            const options =
-              questionType === "SUBJECTIVE"
-                ? []
-                : [
+            const options = [
                     row.option_a,
                     row.option_b,
                     row.option_c,
@@ -552,7 +531,6 @@ export default function QuestionBankDetails({
     const csv = [
       [
         "question_text",
-        "question_type",
         "difficulty",
         "marks",
         "negative_marks",
@@ -568,7 +546,6 @@ export default function QuestionBankDetails({
 
       [
         `"What is a multiplexer?"`,
-        "MCQ",
         "Easy",
         "1",
         "0",
@@ -740,28 +717,6 @@ export default function QuestionBankDetails({
           <h2 className="mt-1 text-2xl font-bold text-[#00629B]">
             {bank.questions_to_pick ??
               0}
-          </h2>
-        </div>
-
-        <div className="rounded-xl border p-5">
-          <p className="text-sm text-gray-500">
-            Difficulty
-          </p>
-
-          <h2 className="mt-1 text-xl font-bold">
-            {bank.difficulty || "-"}
-          </h2>
-        </div>
-
-        <div className="rounded-xl border p-5">
-          <p className="text-sm text-gray-500">
-            Estimated Time
-          </p>
-
-          <h2 className="mt-1 text-2xl font-bold">
-            {bank.estimated_minutes ??
-              0}
-            m
           </h2>
         </div>
 

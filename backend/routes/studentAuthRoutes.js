@@ -21,9 +21,7 @@ router.get("/:assessmentId", verifyToken, controller.getAllowedStudents);
    STUDENT LOGIN
 =========================== */
 
-router.post("/send-otp", controller.sendOtp);
-
-router.post("/verify-otp", controller.verifyOtp);
+router.post("/login", controller.login);
 
 /* ===========================
    ADMIN ACTIONS
@@ -32,8 +30,6 @@ router.post("/verify-otp", controller.verifyOtp);
 router.post("/add", verifyToken, controller.addAllowedStudent);
 
 router.post("/import", verifyToken, controller.importStudents);
-
-router.post("/send-bulk-otp", verifyToken, controller.sendBulkOtp);
 
 router.post("/block", verifyToken, controller.blockStudents);
 

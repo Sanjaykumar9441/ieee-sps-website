@@ -1,5 +1,19 @@
 const Question = require("../models/Question");
 
+function normalizeOptions(options) {
+  if (Array.isArray(options)) {
+    const keys = ["A", "B", "C", "D", "E"];
+    return options.reduce((result, option, index) => {
+      const text = String(option ?? "").trim();
+      if (text && keys[index]) result[keys[index]] = text;
+      return result;
+    }, {});
+  }
+
+  if (options && typeof options === "object") return options;
+  return {};
+}
+
 exports.list = async (req, res) => {
   try {
     const { questionBankId } = req.params;
@@ -63,9 +77,11 @@ exports.create = async (req, res) => {
         .trim()
         .toUpperCase(),
 
-      question_type: String(req.body.question_type || "MCQ")
-        .trim()
-        .toUpperCase(),
+      question_type: "MCQ",
+      options: normalizeOptions(req.body.options),
+      correct_answers: Array.isArray(req.body.correct_answers)
+        ? req.body.correct_answers
+        : [],
     };
 
     const { data, error } = await Question.create(payload);
@@ -103,8 +119,14 @@ exports.update = async (req, res) => {
         difficulty: String(req.body.difficulty).trim().toUpperCase(),
       }),
 
-      ...(req.body.question_type !== undefined && {
-        question_type: String(req.body.question_type).trim().toUpperCase(),
+      question_type: "MCQ",
+      ...(req.body.options !== undefined && {
+        options: normalizeOptions(req.body.options),
+      }),
+      ...(req.body.correct_answers !== undefined && {
+        correct_answers: Array.isArray(req.body.correct_answers)
+          ? req.body.correct_answers
+          : [],
       }),
     };
 
@@ -320,12 +342,8 @@ exports.validateQuestions = async (req, res) => {
         errors.push(`Row ${row}: Question text is required.`);
       }
 
-      if (
-        !["MCQ", "MULTIPLE_CORRECT", "TRUE_FALSE", "SUBJECTIVE"].includes(
-          question.question_type,
-        )
-      ) {
-        errors.push(`Row ${row}: Invalid question type.`);
+      if (String(question.question_type || "MCQ").trim().toUpperCase() !== "MCQ") {
+        errors.push(`Row ${row}: Only MCQ questions are supported.`);
       }
 
       const difficulty = String(question.difficulty || "")
@@ -475,11 +493,7 @@ exports.finalImport = async (req, res) => {
           .trim()
           .toUpperCase(),
 
-        question_type: String(
-          question.question_type || "MCQ"
-        )
-          .trim()
-          .toUpperCase(),
+        question_type: "MCQ",
 
         options:
           question.question_type === "SUBJECTIVE"
