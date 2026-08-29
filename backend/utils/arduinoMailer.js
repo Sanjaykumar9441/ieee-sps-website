@@ -1,54 +1,98 @@
-const SibApiV3Sdk = require("sib-api-v3-sdk");
+/**
+ * Arduino Days 2026 - Brevo Transactional Email Sender
+ * Uses Brevo HTTP API through axios.
+ */
 
-const client = SibApiV3Sdk.ApiClient.instance;
-client.authentications["api-key"].apiKey = process.env.BREVO_API_KEY;
+const axios = require("axios");
 
-const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
-
-const sendMail = async (to, subject, htmlContent, pdfBuffer, filename) => {
+const sendMail = async (
+  to,
+  subject,
+  htmlContent,
+  pdfBuffer,
+  filename
+) => {
   try {
+    const apiKey = process.env.BREVO_API_KEY;
+    const senderEmail = process.env.BREVO_SENDER_EMAIL;
+    const senderName =
+      process.env.BREVO_SENDER_NAME || "IEEE SPS Student Branch Chapter";
+
+    if (!apiKey) {
+      throw new Error("BREVO_API_KEY is not configured");
+    }
+
+    if (!senderEmail) {
+      throw new Error("BREVO_SENDER_EMAIL is not configured");
+    }
+
     const email = {
       sender: {
-        name: "Arduino Days 2026",
-        email: "ieee.club.aus@gmail.com",
+        name: senderName,
+        email: senderEmail,
       },
 
-      to: [{ email: to }],
+      to: [
+        {
+          email: to,
+        },
+      ],
 
-      subject: subject,
+      subject,
 
-      htmlContent: htmlContent,
+      htmlContent,
 
-      // 👇 Plain text fallback (important for Gmail)
-      textContent: "Your Arduino Days 2026 registration has been confirmed. Please see the attached event pass.",
+      // Plain-text fallback
+      textContent:
+        "Your Arduino Days 2026 registration has been confirmed. Please see the attached event pass.",
 
-      // 👇 Prevent Gmail showing quoted / collapsed message
       headers: {
         "X-Mailer": "ArduinoRegistrationMailer",
         "Auto-Submitted": "auto-generated",
-        "Precedence": "bulk"
+        Precedence: "bulk",
       },
 
+      // Keep PDF attachment functionality
       attachment: pdfBuffer
         ? [
             {
-              name: filename,
+              name: filename || "event-pass.pdf",
               content: pdfBuffer.toString("base64"),
             },
           ]
         : [],
     };
 
-    await apiInstance.sendTransacEmail(email);
-
-    console.log("✅ Email sent:", to);
-  } catch (error) {
-    console.error(
-      "❌ Brevo Mail error:",
-      error.response?.body || error.message
+    const response = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      email,
+      {
+        headers: {
+          accept: "application/json",
+          "api-key": apiKey,
+          "content-type": "application/json",
+        },
+        timeout: 15000,
+      }
     );
 
-    throw error;
+    console.log(
+      "✅ Arduino registration email sent:",
+      to,
+      response.data?.messageId || ""
+    );
+
+    return response.data;
+  } catch (error) {
+    const brevoError =
+      error?.response?.data?.message ||
+      error?.response?.data?.code ||
+      error?.message ||
+      "Brevo email sending failed";
+
+    console.error("❌ Arduino Brevo Mail error:", brevoError);
+
+    throw new Error(brevoError);
   }
 };
 
