@@ -1,12 +1,5 @@
-const SibApiV3Sdk = require("sib-api-v3-sdk");
-
+const axios = require("axios");
 const { renderVerificationEmail } = require("./renderEmail");
-
-const client = SibApiV3Sdk.ApiClient.instance;
-
-client.authentications["api-key"].apiKey = process.env.BREVO_API_KEY;
-
-const api = new SibApiV3Sdk.TransactionalEmailsApi();
 
 const sendVerificationEmail = async (registration, pdfBuffer) => {
   const leader = registration.members[0];
@@ -22,11 +15,25 @@ const sendVerificationEmail = async (registration, pdfBuffer) => {
 
   const html = await renderVerificationEmail(registration);
 
+  const apiKey = process.env.BREVO_API_KEY;
+  const senderEmail = process.env.BREVO_SENDER_EMAIL;
+  const senderName =
+    process.env.BREVO_SENDER_NAME ||
+    "IEEE SPS Student Branch Chapter";
+
+  if (!apiKey) {
+    throw new Error("BREVO_API_KEY is not configured");
+  }
+
+  if (!senderEmail) {
+    throw new Error("BREVO_SENDER_EMAIL is not configured");
+  }
+
   try {
     const emailData = {
       sender: {
-        name: "IEEE SPS Student Branch Chapter",
-        email: process.env.BREVO_SENDER_EMAIL,
+        name: senderName,
+        email: senderEmail,
       },
 
       to: [
@@ -40,35 +47,53 @@ const sendVerificationEmail = async (registration, pdfBuffer) => {
 
       htmlContent: html,
 
-      attachment: [
-        {
-          name: `National_Space_Day_2026_Verified_Acknowledgement_${registration.registrationId}.pdf`,
-          content: pdfBuffer.toString("base64"),
-        },
-      ],
+      attachment: pdfBuffer
+        ? [
+            {
+              name: `National_Space_Day_2026_Verified_Acknowledgement_${registration.registrationId}.pdf`,
+              content: pdfBuffer.toString("base64"),
+            },
+          ]
+        : [],
     };
 
-    // IMPORTANT:
-    // Only send "cc" when there are actually CC recipients.
+    // Only send CC when there are actually CC recipients
     if (ccMembers.length > 0) {
       emailData.cc = ccMembers;
     }
 
-    await api.sendTransacEmail(emailData);
+    const response = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      emailData,
+      {
+        headers: {
+          accept: "application/json",
+          "api-key": apiKey,
+          "content-type": "application/json",
+        },
+        timeout: 15000,
+      }
+    );
 
     console.log(
       `Verification email sent to ${leader.email}` +
         (ccMembers.length > 0
           ? ` (CC: ${ccMembers.length} members)`
-          : " (No CC members)"),
-    );
-  } catch (error) {
-    console.error(
-      "Brevo Error:",
-      error.response?.body || error.message || error,
+          : " (No CC members)") +
+        ` | Message ID: ${response.data?.messageId || "N/A"}`
     );
 
-    throw error;
+    return response.data;
+  } catch (error) {
+    const brevoError =
+      error?.response?.data?.message ||
+      error?.response?.data?.code ||
+      error?.message ||
+      "Brevo email sending failed";
+
+    console.error("❌ Brevo Verification Email Error:", brevoError);
+
+    throw new Error(brevoError);
   }
 };
 
