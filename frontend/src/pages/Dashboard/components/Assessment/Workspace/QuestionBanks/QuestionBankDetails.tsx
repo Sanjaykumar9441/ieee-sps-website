@@ -37,26 +37,11 @@ interface Question {
 
   question_type: "MCQ";
 
-  difficulty: "Easy" | "Medium" | "Hard";
-
-  marks: number;
-  negative_marks: number;
-
-  explanation: string;
-
-  question_image_id: string | null;
-
   options: string[];
 
   correct_answers: number[];
 
-  estimated_seconds: number;
-
-  tags: string[];
-
   language: string;
-
-  version: number;
 
   is_active: boolean;
 }
@@ -65,20 +50,9 @@ interface ImportQuestion {
   question_text: string;
   question_type: "MCQ";
 
-  difficulty: "Easy" | "Medium" | "Hard";
-
-  marks: number;
-  negative_marks: number;
-
-  explanation: string;
-
   options: string[];
 
   correct_answers: number[];
-
-  estimated_seconds: number;
-
-  tags: string[];
 
   language: string;
 }
@@ -97,8 +71,6 @@ export default function QuestionBankDetails({
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
-
-  const [difficulty, setDifficulty] = useState("all");
 
   const [showImport, setShowImport] = useState(false);
 
@@ -247,11 +219,8 @@ export default function QuestionBankDetails({
       );
   };
 
-  const handleCSVImport = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleCSVImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-
     if (!file) return;
 
     if (!file.name.toLowerCase().endsWith(".csv")) {
@@ -260,158 +229,59 @@ export default function QuestionBankDetails({
     }
 
     const reader = new FileReader();
-
     reader.onload = () => {
       try {
         const text = String(reader.result || "");
-
-        const lines = text
-          .split(/\r?\n/)
-          .filter((line) => line.trim());
+        const lines = text.split(/\r?\n/).filter((line) => line.trim());
 
         if (lines.length < 2) {
-          toast.error(
-            "CSV must contain a header and at least one question.",
-          );
+          toast.error("CSV must contain a header and at least one question.");
           return;
         }
 
-        const headers = parseCSVLine(lines[0]).map(
-          (header) =>
-            header.trim().toLowerCase(),
-        );
-
+        const headers = parseCSVLine(lines[0]).map((header) => header.trim().toLowerCase());
         const requiredHeaders = [
           "question_text",
-          "difficulty",
-          "marks",
-          "negative_marks",
           "option_a",
           "option_b",
           "option_c",
           "option_d",
           "correct_answer",
-          "estimated_seconds",
-          "tags",
-          "language",
         ];
+        const missingHeaders = requiredHeaders.filter((header) => !headers.includes(header));
 
-        const missingHeaders =
-          requiredHeaders.filter(
-            (header) =>
-              !headers.includes(header),
-          );
-
-        if (missingHeaders.length > 0) {
-          toast.error(
-            `Missing columns: ${missingHeaders.join(", ")}`,
-          );
+        if (missingHeaders.length) {
+          toast.error(`Missing columns: ${missingHeaders.join(", ")}`);
           return;
         }
 
-        const parsed: ImportQuestion[] =
-          lines.slice(1).map((line) => {
-            const values = parseCSVLine(line);
+        const parsed: ImportQuestion[] = lines.slice(1).map((line) => {
+          const values = parseCSVLine(line);
+          const row: Record<string, string> = {};
+          headers.forEach((header, index) => { row[header] = values[index] || ""; });
 
-            const row: Record<string, string> =
-              {};
-
-            headers.forEach(
-              (header, index) => {
-                row[header] =
-                  values[index] || "";
-              },
-            );
-
-            const questionType: ImportQuestion["question_type"] = "MCQ";
-
-            const difficultyValue =
-              row.difficulty
-                .trim()
-                .toLowerCase();
-
-            const normalizedDifficulty =
-              difficultyValue === "medium"
-                ? "Medium"
-                : difficultyValue === "hard"
-                  ? "Hard"
-                  : "Easy";
-
-            const options = [
-                    row.option_a,
-                    row.option_b,
-                    row.option_c,
-                    row.option_d,
-                  ]
-                    .map((option) =>
-                      option.trim(),
-                    )
-                    .filter(Boolean);
-
-            return {
-              question_text:
-                row.question_text.trim(),
-
-              question_type: questionType,
-
-              difficulty:
-                normalizedDifficulty,
-
-              marks:
-                Number(row.marks) || 0,
-
-              negative_marks:
-                Number(row.negative_marks) ||
-                0,
-
-              explanation:
-                row.explanation?.trim() || "",
-
-              options,
-
-              correct_answers:
-                parseCorrectAnswers(
-                  row.correct_answer,
-                  questionType,
-                ),
-
-              estimated_seconds:
-                Number(
-                  row.estimated_seconds,
-                ) || 0,
-
-              tags: row.tags
-                ? row.tags
-                    .split("|")
-                    .map((tag) =>
-                      tag.trim(),
-                    )
-                    .filter(Boolean)
-                : [],
-
-              language:
-                row.language?.trim() || "en",
-            };
-          });
+          return {
+            question_text: row.question_text.trim(),
+            question_type: "MCQ",
+            options: [row.option_a, row.option_b, row.option_c, row.option_d]
+              .map((option) => option.trim())
+              .filter(Boolean),
+            correct_answers: parseCorrectAnswers(row.correct_answer, "MCQ"),
+            language: "en",
+          };
+        });
 
         setImportQuestions(parsed);
         setImportErrors([]);
         setDuplicateCount(0);
-
-        toast.success(
-          `${parsed.length} questions loaded.`,
-        );
+        toast.success(`${parsed.length} questions loaded.`);
       } catch (err) {
         console.error(err);
-
-        toast.error(
-          "Unable to parse CSV file.",
-        );
+        toast.error("Unable to parse CSV file.");
       }
     };
 
     reader.readAsText(file);
-
     event.target.value = "";
   };
 
@@ -529,53 +399,17 @@ export default function QuestionBankDetails({
 
   const downloadTemplate = () => {
     const csv = [
-      [
-        "question_text",
-        "difficulty",
-        "marks",
-        "negative_marks",
-        "option_a",
-        "option_b",
-        "option_c",
-        "option_d",
-        "correct_answer",
-        "estimated_seconds",
-        "tags",
-        "language",
-      ].join(","),
-
-      [
-        `"What is a multiplexer?"`,
-        "Easy",
-        "1",
-        "0",
-        `"MUX"`,
-        `"Encoder"`,
-        `"Decoder"`,
-        `"Register"`,
-        "A",
-        "60",
-        `"Digital Electronics|MUX"`,
-        "en",
-      ].join(","),
+      ["question_text", "option_a", "option_b", "option_c", "option_d", "correct_answer"].join(","),
+      ['"What is a multiplexer?"', '"MUX"', '"Encoder"', '"Decoder"', '"Register"', "A"].join(","),
     ].join("\n");
-
-    const blob = new Blob([csv], {
-      type: "text/csv;charset=utf-8;",
-    });
-
-    const url =
-      URL.createObjectURL(blob);
-
-    const link =
-      document.createElement("a");
-
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
     link.href = url;
-    link.download =
-      "question-import-template.csv";
-
+    link.download = "question-import-template.csv";
+    document.body.appendChild(link);
     link.click();
-
+    document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
@@ -587,13 +421,10 @@ export default function QuestionBankDetails({
     );
   }
 
-  const filteredQuestions =
-    questions.filter(
-      (question) =>
-        difficulty === "all" ||
-        question.difficulty ===
-          difficulty,
-    );
+  const filteredQuestions = questions.filter((question) => {
+    const query = search.trim().toLowerCase();
+    return !query || question.question_text.toLowerCase().includes(query);
+  });
 
   if (showEditor) {
     return (
@@ -663,7 +494,7 @@ export default function QuestionBankDetails({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="relative">
           <Search
             size={18}
@@ -680,22 +511,6 @@ export default function QuestionBankDetails({
           />
         </div>
 
-        <select
-          value={difficulty}
-          onChange={(e) =>
-            setDifficulty(e.target.value)
-          }
-          className="rounded-xl border px-4"
-        >
-          <option value="all">
-            All Difficulties
-          </option>
-          <option value="Easy">Easy</option>
-          <option value="Medium">
-            Medium
-          </option>
-          <option value="Hard">Hard</option>
-        </select>
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
@@ -720,35 +535,19 @@ export default function QuestionBankDetails({
           </h2>
         </div>
 
-        <div className="rounded-xl border p-5">
-          <p className="text-sm text-gray-500">
-            Version
-          </p>
-
-          <h2 className="mt-1 text-2xl font-bold">
-            {bank.version}
-          </h2>
-        </div>
       </div>
 
       {filteredQuestions.length === 0 ? (
         <div className="rounded-2xl border py-24 text-center">
           <h2 className="text-2xl font-bold">
-            {search.trim() ||
-            difficulty !== "all"
-              ? "No Matching Questions"
-              : "No Questions Yet"}
+            {search.trim() ? "No Matching Questions" : "No Questions Yet"}
           </h2>
 
           <p className="mt-3 text-gray-500">
-            {search.trim() ||
-            difficulty !== "all"
-              ? "Try changing your search or difficulty filter."
-              : "Create or import your first question."}
+            {search.trim() ? "Try changing your search." : "Create or import your first question."}
           </p>
 
-          {!search.trim() &&
-            difficulty === "all" && (
+          {!search.trim() && (
               <div className="mt-6 flex justify-center gap-3">
                 <button
                   onClick={() => {
@@ -793,23 +592,7 @@ export default function QuestionBankDetails({
                       }
                     </p>
 
-                    <div className="mt-4 flex gap-3 text-sm">
-                      <span>
-                        {
-                          question.difficulty
-                        }
-                      </span>
-
-                      <span>
-                        {question.marks} Marks
-                      </span>
-
-                      <span>
-                        {
-                          question.question_type
-                        }
-                      </span>
-                    </div>
+                    <div className="mt-4 text-sm text-gray-500">MCQ · 4 options · 1 mark</div>
                   </div>
 
                   <div className="flex gap-3">
@@ -984,14 +767,6 @@ export default function QuestionBankDetails({
                           </th>
 
                           <th className="p-3 text-left">
-                            Difficulty
-                          </th>
-
-                          <th className="p-3 text-left">
-                            Marks
-                          </th>
-
-                          <th className="p-3 text-left">
                             Correct
                           </th>
                         </tr>
@@ -1021,18 +796,6 @@ export default function QuestionBankDetails({
                               <td className="p-3">
                                 {
                                   question.question_type
-                                }
-                              </td>
-
-                              <td className="p-3">
-                                {
-                                  question.difficulty
-                                }
-                              </td>
-
-                              <td className="p-3">
-                                {
-                                  question.marks
                                 }
                               </td>
 

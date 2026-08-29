@@ -18,8 +18,6 @@ interface ImportStudent {
   rollNo: string;
   email: string;
   department: string;
-  year: string;
-  section: string;
 }
 
 interface DuplicateRow extends ImportStudent {
@@ -112,10 +110,6 @@ export default function ImportStudentsModal({
           .toLowerCase(),
 
         department: String(row["Department"] ?? row["department"] ?? "").trim(),
-
-        year: String(row["Year"] ?? row["year"] ?? "").trim(),
-
-        section: String(row["Section"] ?? row["section"] ?? "").trim(),
       }));
 
       setStudents(mapped);
@@ -294,10 +288,6 @@ export default function ImportStudentsModal({
                         <th className="p-3 text-left">Email</th>
 
                         <th className="p-3 text-left">Department</th>
-
-                        <th className="p-3 text-left">Year</th>
-
-                        <th className="p-3 text-left">Section</th>
                       </tr>
                     </thead>
 
@@ -310,18 +300,13 @@ export default function ImportStudentsModal({
                         <td className="p-3">sanjay@example.com</td>
 
                         <td className="p-3">ECE</td>
-
-                        <td className="p-3">2</td>
-
-                        <td className="p-3">A</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
 
                 <p className="mt-4 text-sm text-gray-500">
-                  Name, Roll No and Email are required. Department, Year and
-                  Section may be left empty.
+                  Name, Roll No and Email are required. Department may be left empty.
                 </p>
               </div>
             </div>
@@ -354,10 +339,6 @@ export default function ImportStudentsModal({
                       <th className="p-3 text-left">Email</th>
 
                       <th className="p-3 text-left">Department</th>
-
-                      <th className="p-3 text-left">Year</th>
-
-                      <th className="p-3 text-left">Section</th>
                     </tr>
                   </thead>
 
@@ -376,10 +357,6 @@ export default function ImportStudentsModal({
                         <td className="p-3">{student.email || "—"}</td>
 
                         <td className="p-3">{student.department || "—"}</td>
-
-                        <td className="p-3">{student.year || "—"}</td>
-
-                        <td className="p-3">{student.section || "—"}</td>
                       </tr>
                     ))}
                   </tbody>

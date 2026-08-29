@@ -12,18 +12,12 @@ interface AssessmentRecord {
   end_time?: string | null;
   duration_minutes?: number | null;
   total_questions?: number | null;
-  marks_per_question?: number | null;
-  negative_marks?: number | null;
   pass_percentage?: number | null;
-  passing_score?: number | null;
+  negative_marks?: number | null;
   shuffle_questions?: boolean | null;
   shuffle_options?: boolean | null;
   random_questions?: boolean | null;
   allow_resume?: boolean | null;
-  auto_submit?: boolean | null;
-  show_leaderboard?: boolean | null;
-  anti_cheat_enabled?: boolean | null;
-  socket_monitoring?: boolean | null;
 }
 
 interface Props {
@@ -41,17 +35,12 @@ interface FormState {
   end_time: string;
   duration_minutes: number;
   total_questions: number;
-  marks_per_question: number;
-  negative_marks: number;
   pass_percentage: number;
-  passing_score: number;
+  negative_marking: boolean;
+  negative_marks: number;
   shuffle_questions: boolean;
   shuffle_options: boolean;
   random_questions: boolean;
-  auto_submit: boolean;
-  show_leaderboard: boolean;
-  anti_cheat_enabled: boolean;
-  socket_monitoring: boolean;
 }
 
 const initialForm: FormState = {
@@ -62,17 +51,12 @@ const initialForm: FormState = {
   end_time: "",
   duration_minutes: 30,
   total_questions: 20,
-  marks_per_question: 1,
-  negative_marks: 0,
   pass_percentage: 40,
-  passing_score: 8,
+  negative_marking: false,
+  negative_marks: 0,
   shuffle_questions: true,
   shuffle_options: true,
   random_questions: false,
-  auto_submit: true,
-  show_leaderboard: false,
-  anti_cheat_enabled: true,
-  socket_monitoring: true,
 };
 
 const slugify = (value: string) =>
@@ -109,17 +93,12 @@ export default function CreateAssessmentModal({ open, onClose, onCreated, assess
         end_time: toDateTimeLocal(assessment.end_time),
         duration_minutes: Number(assessment.duration_minutes ?? 30),
         total_questions: Number(assessment.total_questions ?? 20),
-        marks_per_question: Number(assessment.marks_per_question ?? 1),
-        negative_marks: Number(assessment.negative_marks ?? 0),
         pass_percentage: Number(assessment.pass_percentage ?? 40),
-        passing_score: Number(assessment.passing_score ?? 8),
+        negative_marking: Number(assessment.negative_marks ?? 0) > 0,
+        negative_marks: Number(assessment.negative_marks ?? 0),
         shuffle_questions: assessment.shuffle_questions ?? true,
         shuffle_options: assessment.shuffle_options ?? true,
         random_questions: assessment.random_questions ?? false,
-        auto_submit: assessment.auto_submit ?? true,
-        show_leaderboard: assessment.show_leaderboard ?? false,
-        anti_cheat_enabled: assessment.anti_cheat_enabled ?? true,
-        socket_monitoring: assessment.socket_monitoring ?? true,
       });
       setSlugTouched(true);
     } else {
@@ -148,12 +127,9 @@ export default function CreateAssessmentModal({ open, onClose, onCreated, assess
     if (new Date(form.end_time).getTime() <= new Date(form.start_time).getTime()) return toast.error("End time must be after start time.");
     if (form.duration_minutes < 1) return toast.error("Duration must be at least 1 minute.");
     if (form.total_questions < 1) return toast.error("Total questions must be at least 1.");
-    if (form.marks_per_question <= 0) return toast.error("Marks per question must be greater than 0.");
-    if (form.negative_marks < 0) return toast.error("Negative marks cannot be negative.");
     if (form.pass_percentage < 0 || form.pass_percentage > 100) return toast.error("Pass percentage must be between 0 and 100.");
-
-    const totalMarks = form.total_questions * form.marks_per_question;
-    if (form.passing_score < 0 || form.passing_score > totalMarks) return toast.error(`Passing marks must be between 0 and ${totalMarks}.`);
+    if (form.negative_marks < 0 || !Number.isFinite(form.negative_marks)) return toast.error("Negative marks must be 0 or greater.");
+    const configuredNegativeMarks = form.negative_marking ? Number(form.negative_marks) : 0;
 
     try {
       setSaving(true);
@@ -165,17 +141,17 @@ export default function CreateAssessmentModal({ open, onClose, onCreated, assess
         end_time: new Date(form.end_time).toISOString(),
         duration_minutes: Number(form.duration_minutes),
         total_questions: Number(form.total_questions),
-        marks_per_question: Number(form.marks_per_question),
-        negative_marks: Number(form.negative_marks),
         pass_percentage: Number(form.pass_percentage),
-        passing_score: Number(form.passing_score),
+        marks_per_question: 1,
+        negative_marks: configuredNegativeMarks,
+        passing_score: Number(((Number(form.total_questions) * Number(form.pass_percentage)) / 100).toFixed(2)),
+        auto_submit: true,
+        show_leaderboard: true,
+        anti_cheat_enabled: true,
+        socket_monitoring: true,
         shuffle_questions: form.shuffle_questions,
         shuffle_options: form.shuffle_options,
         random_questions: form.random_questions,
-        auto_submit: form.auto_submit,
-        show_leaderboard: form.show_leaderboard,
-        anti_cheat_enabled: form.anti_cheat_enabled,
-        socket_monitoring: form.socket_monitoring,
       };
 
       if (isEdit && assessment?.id) {
@@ -228,10 +204,18 @@ export default function CreateAssessmentModal({ open, onClose, onCreated, assess
                 <Field label="Ends At" required><input type="datetime-local" value={form.end_time} onChange={(e) => updateField("end_time", e.target.value)} className="input" required /></Field>
                 <Field label="Duration (minutes)" required><div className="relative"><Clock size={17} className="absolute left-3 top-3 text-gray-400" /><input type="number" min={1} value={form.duration_minutes} onChange={(e) => updateField("duration_minutes", Number(e.target.value))} className="input pl-10" required /></div></Field>
                 <Field label="Total Questions" required><input type="number" min={1} value={form.total_questions} onChange={(e) => updateField("total_questions", Number(e.target.value))} className="input" required /></Field>
-                <Field label="Marks Per Question" required><input type="number" min={0.01} step="0.01" value={form.marks_per_question} onChange={(e) => updateField("marks_per_question", Number(e.target.value))} className="input" required /></Field>
-                <Field label="Negative Marks"><input type="number" min={0} step="0.01" value={form.negative_marks} onChange={(e) => updateField("negative_marks", Number(e.target.value))} className="input" /></Field>
                 <Field label="Pass Percentage"><input type="number" min={0} max={100} step="0.01" value={form.pass_percentage} onChange={(e) => updateField("pass_percentage", Number(e.target.value))} className="input" /></Field>
-                <Field label="Passing Marks"><input type="number" min={0} step="0.01" value={form.passing_score} onChange={(e) => updateField("passing_score", Number(e.target.value))} className="input" /></Field>
+              </div>
+              <div className="mt-5 rounded-xl border border-gray-200 p-4">
+                <Toggle label="Negative Marking" description="Apply a penalty for each wrong answer." checked={form.negative_marking} onChange={(v) => updateField("negative_marking", v)} />
+                {form.negative_marking && (
+                  <div className="mt-4 max-w-xs">
+                    <Field label="Negative Marks per Wrong Answer">
+                      <input type="number" min={0} step="0.01" value={form.negative_marks} onChange={(e) => updateField("negative_marks", Number(e.target.value))} className="input" />
+                    </Field>
+                    <p className="mt-1 text-xs text-gray-500">This value applies to every MCQ in this assessment.</p>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -241,10 +225,6 @@ export default function CreateAssessmentModal({ open, onClose, onCreated, assess
                 <Toggle label="Shuffle Questions" description="Randomize question order." checked={form.shuffle_questions} onChange={(v) => updateField("shuffle_questions", v)} />
                 <Toggle label="Shuffle Options" description="Randomize answer option order." checked={form.shuffle_options} onChange={(v) => updateField("shuffle_options", v)} />
                 <Toggle label="Random Question Selection" description="Select a random set from the question banks." checked={form.random_questions} onChange={(v) => updateField("random_questions", v)} />
-                <Toggle label="Auto Submit" description="Submit automatically when the assessment timer expires." checked={form.auto_submit} onChange={(v) => updateField("auto_submit", v)} />
-                <Toggle label="Leaderboard" description="Enable leaderboard functionality." checked={form.show_leaderboard} onChange={(v) => updateField("show_leaderboard", v)} />
-                <Toggle label="Anti-Cheat" description="Enable assessment anti-cheat controls." checked={form.anti_cheat_enabled} onChange={(v) => updateField("anti_cheat_enabled", v)} />
-                <Toggle label="Live Monitoring" description="Enable live assessment monitoring." checked={form.socket_monitoring} onChange={(v) => updateField("socket_monitoring", v)} />
               </div>
             </section>
 

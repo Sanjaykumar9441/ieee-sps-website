@@ -39,8 +39,6 @@ export interface AnalyticsData {
     maximumMarks: number;
 
     passingMarks: number;
-
-    negativeMarking: boolean;
   };
   departmentPerformance: {
     department: string;
@@ -58,15 +56,11 @@ export interface AnalyticsData {
 
     questionText: string;
 
-    difficulty: "Easy" | "Medium" | "Hard";
-
     correctPercentage: number;
 
     wrongPercentage: number;
 
     skippedPercentage: number;
-
-    averageTime: number;
   }[];
   topPerformers: {
     studentId: string;
@@ -103,13 +97,6 @@ export interface AnalyticsData {
     timeTaken: number;
     score: number;
   }[];
-  difficultyOverview: {
-    easy: number;
-    medium: number;
-    hard: number;
-    averageAccuracy: number;
-    averageQuestionTime: number;
-  };
   completion: {
     allowed: number;
     loggedIn: number;
@@ -127,8 +114,6 @@ export interface AnalyticsData {
   liveActivity: {
     online: number;
     taking: number;
-    reviewing: number;
-    averageQuestion: number;
   };
   assessmentStatus: {
     status: string;
@@ -151,13 +136,11 @@ export default function Analytics({ assessment }: Props) {
     lowestScore: 0,
     passPercentage: 0,
     averageTime: 0,
-
     assessmentSummary: {
       totalQuestions: 0,
       duration: 0,
       maximumMarks: 0,
       passingMarks: 0,
-      negativeMarking: false,
     },
     departmentPerformance: [],
     questionAnalysis: [],
@@ -165,60 +148,24 @@ export default function Analytics({ assessment }: Props) {
     bottomPerformers: [],
     fastestSubmissions: [],
     slowestSubmissions: [],
-    difficultyOverview: {
-      easy: 0,
-      medium: 0,
-      hard: 0,
-      averageAccuracy: 0,
-      averageQuestionTime: 0,
-    },
-    completion: {
-      allowed: 0,
-      loggedIn: 0,
-      started: 0,
-      submitted: 0,
-      pending: 0,
-    },
-    integrity: {
-      warnings: 0,
-      forceSubmitted: 0,
-      disqualified: 0,
-      tabSwitches: 0,
-      windowBlur: 0,
-    },
-    liveActivity: {
-      online: 0,
-      taking: 0,
-      reviewing: 0,
-      averageQuestion: 0,
-    },
-    assessmentStatus: {
-      status: "Inactive",
-      duration: 0,
-      questions: 0,
-      studentsOnline: 0,
-      lastSubmission: "-",
-    },
+    completion: { allowed: 0, loggedIn: 0, started: 0, submitted: 0, pending: 0 },
+    integrity: { warnings: 0, forceSubmitted: 0, disqualified: 0, tabSwitches: 0, windowBlur: 0 },
+    liveActivity: { online: 0, taking: 0 },
+    assessmentStatus: { status: "Inactive", duration: 0, questions: 0, studentsOnline: 0, lastSubmission: "-" },
   });
 
   const [department, setDepartment] = useState("all");
-
   const [liveUpdates, setLiveUpdates] = useState(true);
-
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-
       const data = await getDashboardAnalytics(assessment.id, department);
-
       setAnalytics(data);
-
       setLastUpdated(new Date());
     } catch (err) {
       console.error(err);
-
       toast.error("Unable to load analytics.");
     } finally {
       setLoading(false);
@@ -361,13 +308,6 @@ export default function Analytics({ assessment }: Props) {
             </h3>
           </div>
 
-          <div className="rounded-xl border p-5">
-            <p className="text-sm text-gray-500">Negative Marking</p>
-
-            <h3 className="mt-2 text-2xl font-bold">
-              {analytics.assessmentSummary.negativeMarking ? "Yes" : "No"}
-            </h3>
-          </div>
 
           <div className="rounded-xl border p-5">
             <p className="text-sm text-gray-500">Total Attempts</p>
@@ -382,65 +322,33 @@ export default function Analytics({ assessment }: Props) {
       {/* Department Performance */}
 
       <div className="rounded-2xl border bg-white p-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">Department Performance</h2>
-
-            <p className="mt-1 text-gray-500">
-              Performance comparison across departments.
-            </p>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold">Department Performance</h2>
+          <p className="mt-1 text-gray-500">Performance comparison across departments.</p>
         </div>
-
         <div className="mt-8 overflow-x-auto">
           <table className="min-w-full">
             <thead className="border-b bg-gray-50">
               <tr>
                 <th className="p-4 text-left">Department</th>
-
                 <th className="p-4 text-center">Participants</th>
-
                 <th className="p-4 text-center">Average Score</th>
-
                 <th className="p-4 text-center">Highest Score</th>
-
                 <th className="p-4 text-center">Pass %</th>
               </tr>
             </thead>
-
             <tbody>
               {analytics.departmentPerformance.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-gray-500">
-                    Department analytics not available.
-                  </td>
+                <tr><td colSpan={5} className="py-12 text-center text-gray-500">Department analytics not available.</td></tr>
+              ) : analytics.departmentPerformance.map((dept) => (
+                <tr key={dept.department} className="border-b transition hover:bg-gray-50">
+                  <td className="p-4 font-semibold">{dept.department}</td>
+                  <td className="p-4 text-center">{dept.participants}</td>
+                  <td className="p-4 text-center font-semibold">{dept.averageScore}</td>
+                  <td className="p-4 text-center font-semibold">{dept.highestScore}</td>
+                  <td className="p-4 text-center">{dept.passPercentage}%</td>
                 </tr>
-              ) : (
-                analytics.departmentPerformance.map((dept) => (
-                  <tr
-                    key={dept.department}
-                    className="border-b transition hover:bg-gray-50"
-                  >
-                    <td className="p-4 font-semibold">{dept.department}</td>
-
-                    <td className="p-4 text-center">{dept.participants}</td>
-
-                    <td className="p-4 text-center font-semibold text-blue-600">
-                      {dept.averageScore}
-                    </td>
-
-                    <td className="p-4 text-center font-semibold text-green-600">
-                      {dept.highestScore}
-                    </td>
-
-                    <td className="p-4 text-center">
-                      <span className="rounded-full bg-green-100 px-3 py-1 font-medium text-green-700">
-                        {dept.passPercentage}%
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
         </div>
@@ -449,89 +357,34 @@ export default function Analytics({ assessment }: Props) {
       {/* Question Analysis */}
 
       <div className="rounded-2xl border bg-white p-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">Question Analysis</h2>
-
-            <p className="mt-1 text-gray-500">
-              Analyze the performance of every question.
-            </p>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold">Question Analysis</h2>
+          <p className="mt-1 text-gray-500">Accuracy and response status for each MCQ.</p>
         </div>
-
         <div className="mt-8 overflow-x-auto">
           <table className="min-w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="border-b bg-gray-50">
               <tr>
                 <th className="p-4 text-left">Question</th>
-
-                <th className="p-4 text-center">Difficulty</th>
-
                 <th className="p-4 text-center">Correct %</th>
-
                 <th className="p-4 text-center">Wrong %</th>
-
                 <th className="p-4 text-center">Skipped %</th>
-
-                <th className="p-4 text-center">Avg Time</th>
               </tr>
             </thead>
-
             <tbody>
               {analytics.questionAnalysis.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-gray-500">
-                    Question analysis not available.
+                <tr><td colSpan={4} className="py-12 text-center text-gray-500">Question analytics not available.</td></tr>
+              ) : analytics.questionAnalysis.map((question) => (
+                <tr key={question.questionNumber} className="border-b">
+                  <td className="p-4">
+                    <p className="font-semibold">Question {question.questionNumber}</p>
+                    <p className="mt-1 max-w-2xl text-sm text-gray-500">{question.questionText}</p>
                   </td>
+                  <td className="p-4 text-center font-semibold text-green-600">{question.correctPercentage}%</td>
+                  <td className="p-4 text-center font-semibold text-red-600">{question.wrongPercentage}%</td>
+                  <td className="p-4 text-center font-semibold text-yellow-600">{question.skippedPercentage}%</td>
                 </tr>
-              ) : (
-                analytics.questionAnalysis.map((question) => (
-                  <tr
-                    key={question.questionNumber}
-                    className="border-b hover:bg-gray-50"
-                  >
-                    <td className="p-4">
-                      <div>
-                        <p className="font-semibold">
-                          Q{question.questionNumber}
-                        </p>
-
-                        <p className="mt-1 text-sm text-gray-500 line-clamp-2">
-                          {question.questionText}
-                        </p>
-                      </div>
-                    </td>
-
-                    <td className="p-4 text-center">
-                      <span
-                        className={`rounded-full px-3 py-1 text-sm font-medium ${
-                          question.difficulty === "Easy"
-                            ? "bg-green-100 text-green-700"
-                            : question.difficulty === "Medium"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {question.difficulty}
-                      </span>
-                    </td>
-
-                    <td className="p-4 text-center text-green-600 font-semibold">
-                      {question.correctPercentage}%
-                    </td>
-
-                    <td className="p-4 text-center text-red-600 font-semibold">
-                      {question.wrongPercentage}%
-                    </td>
-
-                    <td className="p-4 text-center text-yellow-600 font-semibold">
-                      {question.skippedPercentage}%
-                    </td>
-
-                    <td className="p-4 text-center">-</td>
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
         </div>
@@ -775,58 +628,6 @@ export default function Analytics({ assessment }: Props) {
                 )}
               </tbody>
             </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Difficulty Overview */}
-
-      <div className="rounded-2xl border bg-white p-8">
-        <div>
-          <h2 className="text-2xl font-bold">Difficulty Overview</h2>
-
-          <p className="mt-1 text-gray-500">
-            Overall assessment difficulty analysis.
-          </p>
-        </div>
-
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-xl border p-5">
-            <p className="text-sm text-gray-500">Easy Questions</p>
-
-            <h3 className="mt-2 text-3xl font-bold text-green-600">
-              {analytics.difficultyOverview.easy}
-            </h3>
-          </div>
-
-          <div className="rounded-xl border p-5">
-            <p className="text-sm text-gray-500">Medium Questions</p>
-
-            <h3 className="mt-2 text-3xl font-bold text-yellow-600">
-              {analytics.difficultyOverview.medium}
-            </h3>
-          </div>
-
-          <div className="rounded-xl border p-5">
-            <p className="text-sm text-gray-500">Hard Questions</p>
-
-            <h3 className="mt-2 text-3xl font-bold text-red-600">
-              {analytics.difficultyOverview.hard}
-            </h3>
-          </div>
-
-          <div className="rounded-xl border p-5">
-            <p className="text-sm text-gray-500">Average Accuracy</p>
-
-            <h3 className="mt-2 text-3xl font-bold text-blue-600">
-              {analytics.difficultyOverview.averageAccuracy}%
-            </h3>
-          </div>
-
-          <div className="rounded-xl border p-5">
-            <p className="text-sm text-gray-500">Avg Question Time</p>
-
-            <h3 className="mt-2 text-3xl font-bold text-purple-600">-</h3>
           </div>
         </div>
       </div>

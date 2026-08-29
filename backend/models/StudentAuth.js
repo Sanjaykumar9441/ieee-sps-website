@@ -1,7 +1,7 @@
 const { supabase } = require("../lib/supabase");
 
 class StudentAuth {
-  static async getStudentDetails(studentId) {
+  static async getStudentDetails(studentId, assessmentId) {
     const { data, error } = await supabase
       .from("assessment_allowed_students")
       .select(
@@ -22,6 +22,7 @@ class StudentAuth {
       `,
       )
       .eq("id", studentId)
+      .eq("assessment_id", assessmentId)
       .single();
 
     return { data, error };

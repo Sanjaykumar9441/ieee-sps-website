@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Search, Download, Trophy } from "lucide-react";
+import { Search, Trophy } from "lucide-react";
 
 import { socket } from "../../../../../lib/socket";
 import { Assessment } from "../../Assessment/AssessmentCard";
@@ -47,8 +47,6 @@ export default function Leaderboard({ assessment }: Props) {
   const [sortBy, setSortBy] = useState("rank");
 
   const [liveUpdates, setLiveUpdates] = useState(true);
-
-  const [exportOpen, setExportOpen] = useState(false);
 
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
@@ -149,7 +147,7 @@ export default function Leaderboard({ assessment }: Props) {
           )
         : 0;
 
-    const passingPercentage = assessment.passPercentage ?? 40;
+    const passingPercentage = assessment.pass_percentage ?? 40;
 
     const passPercentage =
       participants > 0
@@ -168,7 +166,7 @@ export default function Leaderboard({ assessment }: Props) {
       average,
       passPercentage,
     };
-  }, [filteredStudents, assessment.passPercentage]);
+  }, [filteredStudents, assessment.pass_percentage]);
 
   const topStudents = [...filteredStudents]
     .sort((a, b) => a.rank - b.rank)
@@ -193,13 +191,6 @@ export default function Leaderboard({ assessment }: Props) {
     );
   }
 
-  const handleExportExcel = () => {
-    toast.success("Excel export coming soon.");
-  };
-
-  const handleExportPdf = () => {
-    toast.success("PDF export coming soon.");
-  };
 
   return (
     <div className="space-y-8">
@@ -411,39 +402,6 @@ export default function Leaderboard({ assessment }: Props) {
             Reset Filters
           </button>
 
-          <div className="relative">
-            <button
-              onClick={() => setExportOpen((prev) => !prev)}
-              className="flex items-center gap-2 rounded-xl border px-5 py-3 hover:bg-gray-50"
-            >
-              <Download size={18} />
-              Export
-            </button>
-
-            {exportOpen && (
-              <div className="absolute right-0 top-14 z-30 w-44 rounded-xl border bg-white shadow-xl">
-                <button
-                  onClick={() => {
-                    setExportOpen(false);
-                    handleExportExcel();
-                  }}
-                  className="block w-full px-4 py-3 text-left hover:bg-gray-50"
-                >
-                  Export Excel
-                </button>
-
-                <button
-                  onClick={() => {
-                    setExportOpen(false);
-                    handleExportPdf();
-                  }}
-                  className="block w-full px-4 py-3 text-left hover:bg-gray-50"
-                >
-                  Export PDF
-                </button>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 

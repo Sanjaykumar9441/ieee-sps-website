@@ -16,6 +16,7 @@ export type InfractionType =
 interface UseAntiCheatProps {
   attemptId: string | null;
   enabled?: boolean;
+  observeBrowserEvents?: boolean;
 }
 
 interface InfractionResponse {
@@ -31,6 +32,7 @@ const MAX_INFRACTIONS = 5;
 export default function useAntiCheat({
   attemptId,
   enabled = true,
+  observeBrowserEvents = true,
 }: UseAntiCheatProps) {
   const [infractionCount, setInfractionCount] = useState(0);
   const [warning, setWarning] = useState<string | null>(null);
@@ -139,7 +141,7 @@ export default function useAntiCheat({
   }, [loadInfractions]);
 
   useEffect(() => {
-    if (!attemptId || !enabled) return;
+    if (!attemptId || !enabled || !observeBrowserEvents) return;
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
@@ -170,7 +172,7 @@ export default function useAntiCheat({
 
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
-  }, [attemptId, enabled, reportInfraction]);
+  }, [attemptId, enabled, observeBrowserEvents, reportInfraction]);
 
   const dismissWarning = () => {
     setWarning(null);

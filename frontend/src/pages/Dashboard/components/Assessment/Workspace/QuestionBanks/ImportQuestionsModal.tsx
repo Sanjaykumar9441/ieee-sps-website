@@ -25,13 +25,10 @@ interface Props {
 interface PreviewQuestion {
   question_text: string;
   question_type: "MCQ";
-  difficulty: string;
-  marks: number;
-  negative_marks?: number;
-  options?: string[];
-  correct_answers?: string[];
-  explanation?: string;
+  options: string[];
+  correct_answers: string[];
 }
+
 
 type ImportStep = "upload" | "preview" | "validation" | "summary";
 
@@ -102,27 +99,16 @@ export default function ImportQuestionsModal({
 
         return {
           question_text: String(row["Question"] || "").trim(),
-
           question_type: "MCQ",
-
-          difficulty: String(row["Difficulty"] || "MEDIUM")
-            .trim()
-            .toUpperCase(),
-
-          marks: Number(row["Marks"] || 1),
-
-          negative_marks: Number(row["Negative Marks"] || 0),
-
           options,
-
           correct_answers: correctAnswer
             ? correctAnswer
                 .split(",")
-                .map((answer: string) => answer.trim())
-                .filter(Boolean)
+                .map((answer: string) => answer.trim().toUpperCase())
+                .filter((answer: string) => /^[A-D]$/.test(answer))
+                .map((answer: string) => "ABCD".indexOf(answer))
+                .slice(0, 1)
             : [],
-
-          explanation: String(row["Explanation"] || "").trim() || undefined,
         };
       });
 
@@ -279,10 +265,6 @@ export default function ImportQuestionsModal({
                     "Option C",
                     "Option D",
                     "Correct Answer",
-                    "Explanation",
-                    "Difficulty",
-                    "Marks",
-                    "Negative Marks",
                   ].map((column) => (
                     <div
                       key={column}
@@ -325,13 +307,7 @@ export default function ImportQuestionsModal({
 
                     <p className="mt-2">{question.question_text}</p>
 
-                    <div className="mt-3 flex gap-4 text-sm text-gray-500">
-                      <span>{question.question_type}</span>
-
-                      <span>{question.difficulty}</span>
-
-                      <span>{question.marks} Marks</span>
-                    </div>
+                    <div className="mt-3 text-sm text-gray-500">MCQ · 4 options · 1 mark</div>
                   </div>
                 ))}
               </div>

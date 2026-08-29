@@ -52,6 +52,8 @@ export default function StudentExam({
   remainingSeconds: initialSeconds,
   onSubmitted,
 }: Props) {
+  const securitySubmitRef = useRef<(() => void) | null>(null);
+
   /* ============================================================
      ANTI-CHEAT
   ============================================================ */
@@ -66,6 +68,9 @@ export default function StudentExam({
   } = useAntiCheat({
     attemptId,
     enabled: true,
+    // StudentExam owns the browser-event policy so Escape can have
+    // the requested first-warning / second-Escape submit behaviour.
+    observeBrowserEvents: false,
   });
 
   /* ============================================================
@@ -141,6 +146,11 @@ export default function StudentExam({
         ?.selected_answers || []
     );
 
+  const answerCacheRef = useRef<Record<number, string[]>>({
+    [firstQuestion.question_order]:
+      firstQuestion.assessment_answers?.[0]?.selected_answers || [],
+  });
+
   const [saving, setSaving] = useState(false);
 
   const [loadingQuestion, setLoadingQuestion] =
@@ -150,9 +160,13 @@ export default function StudentExam({
 
   const [submitting, setSubmitting] = useState(false);
 
-  const previousVisibility = useRef(
-    document.visibilityState
-  );
+  const previousVisibility = useRef(document.visibilityState);
+  const escapeWarningRef = useRef(false);
+  const escapeCountRef = useRef(0);
+  const lastEscapeAtRef = useRef(0);
+  const intentionalFullscreenExitRef = useRef(false);
+  const escapeResetTimerRef = useRef<number | null>(null);
+  const securitySubmittingRef = useRef(false);
 
   /* ============================================================
      PALETTE
@@ -227,6 +241,16 @@ export default function StudentExam({
       window.clearInterval(interval);
     };
   }, [syncServerState]);
+
+  // Keep the visible timer moving every second. The server remains authoritative
+  // and the 15-second sync above corrects any local clock drift.
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setRemainingSeconds((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, []);
 
   /* ============================================================
      EXPIRE / AUTO SUBMIT
@@ -394,6 +418,78 @@ export default function StudentExam({
     onSubmitted,
   ]);
 
+  const handleSecurityAutoSubmit = useCallback(async () => {
+    if (securitySubmittingRef.current) return;
+    securitySubmittingRef.current = true;
+
+    try {
+      // Best effort: preserve the answer currently visible before submitting.
+      if (question) {
+        try {
+          await saveAnswer(attemptId, question.id, selectedAnswers);
+        } catch (error) {
+          console.warn("[EXAM] Could not save answer before security submit:", error);
+        }
+      }
+
+      const result = await submitAssessment(attemptId);
+      if (
+        result?.success === true ||
+        result?.expired === true ||
+        result?.status === "SUBMITTED" ||
+        result?.status === "EXPIRED"
+      ) {
+        toast.error("Assessment submitted because you left the examination window.");
+        onSubmitted();
+        return;
+      }
+
+      const status = await getAssessmentStatus(attemptId);
+      if (
+        status?.status === "SUBMITTED" ||
+        status?.status === "EXPIRED" ||
+        status?.status === "DISQUALIFIED" ||
+        status?.remainingSeconds <= 0
+      ) {
+        toast.error("Assessment submitted because you left the examination window.");
+        onSubmitted();
+        return;
+      }
+
+      securitySubmittingRef.current = false;
+      toast.error("Security submission could not be confirmed. Please return to the exam window.");
+    } catch (error: any) {
+      console.error("[EXAM] Security auto-submit failed:", error);
+
+      try {
+        const status = await getAssessmentStatus(attemptId);
+        if (
+          status?.status === "SUBMITTED" ||
+          status?.status === "EXPIRED" ||
+          status?.status === "DISQUALIFIED" ||
+          status?.remainingSeconds <= 0
+        ) {
+          onSubmitted();
+          return;
+        }
+      } catch (statusError) {
+        console.error("[EXAM] Unable to verify security submission:", statusError);
+      }
+
+      securitySubmittingRef.current = false;
+      toast.error(error?.response?.data?.message || "Security submission failed. Return to the exam window.");
+    }
+  }, [attemptId, question?.id, selectedAnswers, onSubmitted]);
+
+  useEffect(() => {
+    securitySubmitRef.current = () => {
+      void handleSecurityAutoSubmit();
+    };
+    return () => {
+      securitySubmitRef.current = null;
+    };
+  }, [handleSecurityAutoSubmit]);
+
   /* ============================================================
      LOAD QUESTION
   ============================================================ */
@@ -442,10 +538,16 @@ export default function StudentExam({
         result.remainingSeconds
       );
 
-      setSelectedAnswers(
-        result.question.assessment_answers?.[0]
-          ?.selected_answers || []
-      );
+      const serverAnswers =
+        result.question.assessment_answers?.[0]?.selected_answers || [];
+      const cachedAnswers = answerCacheRef.current[number];
+      const answers =
+        serverAnswers.length > 0 || cachedAnswers === undefined
+          ? serverAnswers
+          : cachedAnswers;
+
+      answerCacheRef.current[number] = answers;
+      setSelectedAnswers(answers);
     } catch (error: any) {
       console.error(
         "[EXAM] Question loading error:",
@@ -480,6 +582,7 @@ export default function StudentExam({
 
     try {
       setSaving(true);
+      answerCacheRef.current[currentQuestion] = [...selectedAnswers];
 
       await saveAnswer(
         attemptId,
@@ -508,6 +611,22 @@ export default function StudentExam({
     }
   };
 
+  const handleAnswerChange = useCallback((answers: string[]) => {
+    setSelectedAnswers(answers);
+    answerCacheRef.current[currentQuestion] = [...answers];
+  }, [currentQuestion]);
+
+  const handleQuestionSelect = async (number: number) => {
+    if (number === currentQuestion) return;
+
+    // Preserve the current answer before changing questions. This also makes
+    // palette navigation behave like Save & Next / Previous.
+    const saved = await saveCurrentAnswer();
+    if (!saved) return;
+
+    await loadQuestion(number);
+  };
+
   /* ============================================================
      NEXT
   ============================================================ */
@@ -534,13 +653,12 @@ export default function StudentExam({
   ============================================================ */
 
   const handlePrevious = async () => {
-    if (currentQuestion <= 1) {
-      return;
-    }
+    if (currentQuestion <= 1) return;
 
-    await loadQuestion(
-      currentQuestion - 1
-    );
+    const saved = await saveCurrentAnswer();
+    if (!saved) return;
+
+    await loadQuestion(currentQuestion - 1);
   };
 
   /* ============================================================
@@ -616,60 +734,103 @@ export default function StudentExam({
   };
 
   /* ============================================================
-     FULLSCREEN ENFORCEMENT
+     FULLSCREEN / WINDOW EXIT POLICY
   ============================================================ */
 
   useEffect(() => {
-    const handleFullscreenChange =
-      () => {
-        const active =
-          Boolean(
-            document.fullscreenElement
-          );
+    const handleFullscreenChange = () => {
+      const active = Boolean(document.fullscreenElement);
+      setIsFullscreen(active);
 
-        setIsFullscreen(active);
+      if (active) return;
 
-        if (!active) {
-          void reportInfraction(
-            "FULLSCREEN_EXIT"
-          );
+      // The first Escape is a warning only. The second Escape within
+      // the short grace window submits the attempt.
+      if (escapeWarningRef.current) {
+        return;
+      }
 
-          toast.error(
-            "Fullscreen mode is required during the examination."
-          );
+      if (intentionalFullscreenExitRef.current) {
+        intentionalFullscreenExitRef.current = false;
+        escapeWarningRef.current = false;
+        return;
+      }
 
-          window.setTimeout(() => {
-            if (
-              !document.fullscreenElement
-            ) {
-              void enterFullscreen();
-            }
-          }, 500);
-        }
-      };
+      // Fullscreen was exited by another method (mouse/browser control).
+      // Treat that as leaving the exam and submit immediately.
+      void reportInfraction("FULLSCREEN_EXIT");
+      toast.error("Fullscreen was exited. Submitting your assessment.");
+      void securitySubmitRef.current?.();
 
-    document.addEventListener(
-      "fullscreenchange",
-      handleFullscreenChange
-    );
+      escapeWarningRef.current = true;
+      if (escapeResetTimerRef.current) {
+        window.clearTimeout(escapeResetTimerRef.current);
+      }
+      escapeResetTimerRef.current = window.setTimeout(() => {
+        escapeWarningRef.current = false;
+      }, 1800);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+
+      const now = Date.now();
+      if (escapeResetTimerRef.current) {
+        window.clearTimeout(escapeResetTimerRef.current);
+      }
+
+      escapeCountRef.current =
+        now - lastEscapeAtRef.current <= 1800
+          ? escapeCountRef.current + 1
+          : 1;
+      lastEscapeAtRef.current = now;
+
+      if (escapeCountRef.current === 1) {
+        toast.error("Warning: Escape detected. A second Escape will submit your assessment.");
+        void reportInfraction("FULLSCREEN_EXIT");
+        escapeWarningRef.current = true;
+        escapeResetTimerRef.current = window.setTimeout(() => {
+          escapeCountRef.current = 0;
+          escapeWarningRef.current = false;
+          lastEscapeAtRef.current = 0;
+        }, 1800);
+        return;
+      }
+
+      // Allow the browser's second Escape to leave fullscreen. The next
+      // tab/window change is what triggers the actual security submission.
+      escapeCountRef.current = 0;
+      // Mark this fullscreenchange as the intentional second Escape so it
+      // does not create another warning or immediate submission.
+      intentionalFullscreenExitRef.current = true;
+      escapeWarningRef.current = true;
+      lastEscapeAtRef.current = 0;
+      void reportInfraction("FULLSCREEN_EXIT");
+      toast.error("Fullscreen exited. Switching tabs or leaving this window will submit the assessment.");
+      escapeResetTimerRef.current = window.setTimeout(() => {
+        escapeWarningRef.current = false;
+        intentionalFullscreenExitRef.current = false;
+      }, 700);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("keydown", handleKeyDown, true);
 
     return () => {
-      document.removeEventListener(
-        "fullscreenchange",
-        handleFullscreenChange
-      );
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("keydown", handleKeyDown, true);
+      if (escapeResetTimerRef.current) {
+        window.clearTimeout(escapeResetTimerRef.current);
+      }
+      intentionalFullscreenExitRef.current = false;
     };
   }, [reportInfraction]);
 
   useEffect(() => {
-    const timer =
-      window.setTimeout(() => {
-        void enterFullscreen();
-      }, 300);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
+    const timer = window.setTimeout(() => {
+      void enterFullscreen();
+    }, 300);
+    return () => window.clearTimeout(timer);
   }, []);
 
   /* ============================================================
@@ -677,39 +838,32 @@ export default function StudentExam({
   ============================================================ */
 
   useEffect(() => {
-    const handleVisibility =
-      () => {
-        const current =
-          document.visibilityState;
+    const handleVisibility = () => {
+      const current = document.visibilityState;
 
-        if (
-          previousVisibility.current ===
-            "visible" &&
-          current === "hidden"
-        ) {
-          void reportInfraction(
-            "TAB_SWITCH"
-          );
+      if (previousVisibility.current === "visible" && current === "hidden") {
+        void reportInfraction("TAB_SWITCH");
+        void securitySubmitRef.current?.();
+      }
 
-          toast.error(
-            "Leaving the examination window is not allowed."
-          );
-        }
+      previousVisibility.current = current;
+    };
 
-        previousVisibility.current =
-          current;
-      };
+    const handleBlur = () => {
+      // A real window blur means the student has left the exam window.
+      // Fullscreen's own exit is handled separately so the first Escape remains a warning.
+      if (document.visibilityState === "visible" && document.fullscreenElement) {
+        void reportInfraction("WINDOW_BLUR");
+        void securitySubmitRef.current?.();
+      }
+    };
 
-    document.addEventListener(
-      "visibilitychange",
-      handleVisibility
-    );
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("blur", handleBlur);
 
     return () => {
-      document.removeEventListener(
-        "visibilitychange",
-        handleVisibility
-      );
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("blur", handleBlur);
     };
   }, [reportInfraction]);
 
@@ -1082,7 +1236,7 @@ export default function StudentExam({
                       selectedAnswers
                     }
                     onChange={
-                      setSelectedAnswers
+                      handleAnswerChange
                     }
                   />
                 ) : (
@@ -1210,7 +1364,7 @@ export default function StudentExam({
                   currentQuestion={
                     currentQuestion
                   }
-                  onSelect={loadQuestion}
+                  onSelect={handleQuestionSelect}
                 />
 
                 {/* =================================================

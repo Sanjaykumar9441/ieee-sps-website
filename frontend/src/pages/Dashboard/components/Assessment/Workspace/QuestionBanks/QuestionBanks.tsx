@@ -18,11 +18,7 @@ export interface QuestionBank {
   id: string;
   subject_id: string | null;
   name: string;
-  description: string | null;
-  difficulty: string | null;
-  estimated_minutes: number | null;
   total_questions: number;
-  version: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;

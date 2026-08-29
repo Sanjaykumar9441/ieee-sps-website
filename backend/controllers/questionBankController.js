@@ -3,37 +3,26 @@ const Question = require("../models/Question");
 const liveEvents = require("../services/liveEvents");
 
 function normalizeQuestion(question, bankId) {
+  const options = Array.isArray(question.options) ? question.options : [];
+  const correctAnswers = Array.isArray(question.correct_answers)
+    ? question.correct_answers.slice(0, 1)
+    : [];
+
   return {
     bank_id: bankId,
-
-    question_type: String(question.question_type || "MCQ").trim().toUpperCase(),
-
+    question_type: "MCQ",
     question_text: String(question.question_text || "").trim(),
-
-    question_image_id: question.question_image_id || null,
-
-    options: Array.isArray(question.options) ? question.options : [],
-
-    correct_answers: Array.isArray(question.correct_answers)
-      ? question.correct_answers
-      : [],
-
-    explanation: question.explanation || null,
-
-    difficulty: question.difficulty || "MEDIUM",
-
-    marks: Number(question.marks || 1),
-
-    negative_marks: Number(question.negative_marks || 0),
-
-    estimated_seconds: Number(question.estimated_seconds || 60),
-
-    tags: question.tags || [],
-
-    language: question.language || "English",
-
-    version: Number(question.version || 1),
-
+    question_image_id: null,
+    options,
+    correct_answers: correctAnswers,
+    explanation: null,
+    difficulty: "MEDIUM",
+    marks: 1,
+    negative_marks: 0,
+    estimated_seconds: 60,
+    tags: [],
+    language: "English",
+    version: 1,
     is_active: true,
   };
 }

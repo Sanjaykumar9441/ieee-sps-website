@@ -286,8 +286,10 @@ export const deleteStudents = async (
   return data;
 };
 
-export const getStudentDetails = async (studentId: string) => {
-  const { data } = await api.get(`/student-auth/details/${studentId}`);
+export const getStudentDetails = async (studentId: string, assessmentId?: string) => {
+  const { data } = await api.get(`/student-auth/details/${studentId}`, {
+    params: assessmentId ? { assessmentId } : undefined,
+  });
 
   return data;
 };

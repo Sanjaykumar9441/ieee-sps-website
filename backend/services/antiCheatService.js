@@ -13,6 +13,29 @@ CONFIGURATION
 
 const MAX_INFRACTIONS = 5;
 
+async function autoSubmitAttempt(attempt) {
+  if (!attempt || ["SUBMITTED", "DISQUALIFIED", "EXPIRED"].includes(attempt.status)) {
+    return { success: true, alreadyFinished: true };
+  }
+
+  const result = await scoring.calculateScore(attempt.id);
+  const updatedAttempt = await engine.finishAttempt(attempt.id, result, "SUBMITTED");
+
+  await session.unlockStudent(updatedAttempt.assessment_id, updatedAttempt.student_id);
+
+  // These events cause the admin Students/Leaderboard/Analytics views to refresh.
+  liveEvents.emitStudentSubmitted(updatedAttempt.assessment_id);
+  liveEvents.emitLeaderboard(updatedAttempt.assessment_id, []);
+  liveEvents.emitDashboardRefresh(updatedAttempt.assessment_id);
+
+  return {
+    success: true,
+    autoSubmitted: true,
+    status: updatedAttempt.status,
+    score: result.score,
+  };
+}
+
 /*
 ============================================================
 SAVE INFRACTION
@@ -95,6 +118,12 @@ exports.reportInfraction = async (attemptId, type, metadata = {}) => {
 
     totalInfractions,
   });
+
+  // A tab/window exit ends the attempt immediately. FULLSCREEN_EXIT is
+  // intentionally excluded because the first Escape is only a warning.
+  if (type === "TAB_SWITCH" || type === "WINDOW_BLUR") {
+    return await autoSubmitAttempt(attempt);
+  }
 
   /*
   --------------------------------------------------------

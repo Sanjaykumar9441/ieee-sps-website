@@ -1,3 +1,18 @@
+function validateMCQPayload(payload) {
+  if (!payload.question_text) return "Question text is required.";
+  if (!payload.bank_id) return "Question Bank ID is required.";
+  if (!payload.options || typeof payload.options !== "object") return "MCQ options are required.";
+  const optionKeys = Object.keys(payload.options).filter((key) => payload.options[key]);
+  if (optionKeys.length !== 4) return "Exactly four MCQ options are required.";
+  if (!Array.isArray(payload.correct_answers) || payload.correct_answers.length !== 1) {
+    return "Exactly one correct answer is required.";
+  }
+  const answer = payload.correct_answers[0];
+  if (typeof answer === "number" && Number.isInteger(answer) && answer >= 0 && answer < 4) return null;
+  if (typeof answer === "string" && /^[A-D]$/i.test(answer)) return null;
+  return "Correct answer must be A-D or option index 0-3.";
+}
+
 const Question = require("../models/Question");
 
 function normalizeOptions(options) {
@@ -71,18 +86,28 @@ exports.get = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const payload = {
-      ...req.body,
-
-      difficulty: String(req.body.difficulty || "MEDIUM")
-        .trim()
-        .toUpperCase(),
-
+      bank_id: req.body.bank_id,
+      question_text: String(req.body.question_text || "").trim(),
       question_type: "MCQ",
       options: normalizeOptions(req.body.options),
       correct_answers: Array.isArray(req.body.correct_answers)
-        ? req.body.correct_answers
+        ? req.body.correct_answers.slice(0, 1)
         : [],
+      // Fixed assessment format: every MCQ is one mark with no negative marking.
+      marks: 1,
+      negative_marks: 0,
+      difficulty: "MEDIUM",
+      explanation: null,
+      question_image_id: null,
+      estimated_seconds: 60,
+      tags: [],
+      language: "English",
     };
+
+    const validationError = validateMCQPayload(payload);
+    if (validationError) {
+      return res.status(400).json({ success: false, message: validationError });
+    }
 
     const { data, error } = await Question.create(payload);
 
@@ -113,22 +138,37 @@ exports.update = async (req, res) => {
     }
 
     const payload = {
-      ...req.body,
-
-      ...(req.body.difficulty !== undefined && {
-        difficulty: String(req.body.difficulty).trim().toUpperCase(),
-      }),
-
       question_type: "MCQ",
+      ...(req.body.question_text !== undefined && {
+        question_text: String(req.body.question_text || "").trim(),
+      }),
       ...(req.body.options !== undefined && {
         options: normalizeOptions(req.body.options),
       }),
       ...(req.body.correct_answers !== undefined && {
         correct_answers: Array.isArray(req.body.correct_answers)
-          ? req.body.correct_answers
+          ? req.body.correct_answers.slice(0, 1)
           : [],
       }),
+      // Keep the simplified MCQ format consistent on every edit.
+      marks: 1,
+      negative_marks: 0,
+      difficulty: "MEDIUM",
+      explanation: null,
+      question_image_id: null,
+      estimated_seconds: 60,
+      tags: [],
+      language: "English",
     };
+
+    const existing = await Question.getById(id);
+    if (existing.error || !existing.data) {
+      return res.status(404).json({ success: false, message: "Question not found." });
+    }
+    const validationError = validateMCQPayload({ ...existing.data, ...payload });
+    if (validationError) {
+      return res.status(400).json({ success: false, message: validationError });
+    }
 
     const { data, error } = await Question.update(id, payload);
 
@@ -324,87 +364,39 @@ exports.checkDuplicates = async (req, res) => {
 
 exports.validateQuestions = async (req, res) => {
   try {
+    const { bankId } = req.params;
     const { questions } = req.body;
 
-    if (!Array.isArray(questions)) {
-      return res.status(400).json({
-        success: false,
-        message: "Questions must be an array.",
-      });
+    if (!bankId) {
+      return res.status(400).json({ success: false, message: "Question Bank ID is required." });
+    }
+    if (!Array.isArray(questions) || questions.length === 0) {
+      return res.status(400).json({ success: false, valid: false, errors: ["No questions supplied."] });
     }
 
     const errors = [];
-
     questions.forEach((question, index) => {
-      const row = index + 2;
+      const row = index + 1;
+      const text = String(question.question_text || "").trim();
+      const options = Array.isArray(question.options) ? question.options.map((o) => String(o || "").trim()).filter(Boolean) : [];
+      const correct = Array.isArray(question.correct_answers) ? question.correct_answers : [];
 
-      if (!question.question_text?.trim()) {
-        errors.push(`Row ${row}: Question text is required.`);
-      }
-
-      if (String(question.question_type || "MCQ").trim().toUpperCase() !== "MCQ") {
-        errors.push(`Row ${row}: Only MCQ questions are supported.`);
-      }
-
-      const difficulty = String(question.difficulty || "")
-        .trim()
-        .toUpperCase();
-
-      if (!["EASY", "MEDIUM", "HARD"].includes(difficulty)) {
-        errors.push(`Row ${row}: Difficulty must be Easy, Medium or Hard.`);
-      }
-
-      if (Number(question.marks) <= 0) {
-        errors.push(`Row ${row}: Marks must be greater than 0.`);
-      }
-
-      if (Number(question.negative_marks) < 0) {
-        errors.push(`Row ${row}: Negative marks cannot be negative.`);
-      }
-
-      if (Number(question.estimated_seconds) <= 0) {
-        errors.push(`Row ${row}: Estimated seconds must be greater than 0.`);
-      }
-
-      if (
-        question.question_type === "MCQ" ||
-        question.question_type === "MULTIPLE_CORRECT"
-      ) {
-        if (!Array.isArray(question.options) || question.options.length < 2) {
-          errors.push(`Row ${row}: At least two options are required.`);
-        }
-
-        if (
-          !Array.isArray(question.correct_answers) ||
-          question.correct_answers.length === 0
-        ) {
-          errors.push(`Row ${row}: Correct answer is required.`);
-        }
-      }
-
-      if (question.question_type === "TRUE_FALSE") {
-        if (
-          !Array.isArray(question.correct_answers) ||
-          question.correct_answers.length !== 1 ||
-          ![0, 1].includes(question.correct_answers[0])
-        ) {
-          errors.push(`Row ${row}: Correct answer must be True or False.`);
-        }
+      if (!text) errors.push(`Row ${row}: Question text is required.`);
+      if (String(question.question_type || "MCQ").toUpperCase() !== "MCQ") errors.push(`Row ${row}: Only MCQ questions are supported.`);
+      if (options.length !== 4) errors.push(`Row ${row}: Exactly four options are required.`);
+      if (correct.length !== 1) errors.push(`Row ${row}: Exactly one correct answer is required.`);
+      if (correct.length === 1) {
+        const answer = correct[0];
+        const validIndex = Number.isInteger(answer) && answer >= 0 && answer < 4;
+        const validLetter = typeof answer === "string" && /^[A-D]$/i.test(answer);
+        if (!validIndex && !validLetter) errors.push(`Row ${row}: Correct answer must be A-D or option index 0-3.`);
       }
     });
 
-    return res.json({
-      success: true,
-      valid: errors.length === 0,
-      errors,
-    });
+    return res.json({ success: true, valid: errors.length === 0, errors });
   } catch (err) {
     console.error("Validate Questions Error:", err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -413,128 +405,79 @@ exports.finalImport = async (req, res) => {
     const { bankId } = req.params;
     const { questions } = req.body;
 
-    if (!bankId) {
-      return res.status(400).json({
-        success: false,
-        message: "Question Bank ID is required.",
-      });
-    }
-
+    if (!bankId) return res.status(400).json({ success: false, message: "Question Bank ID is required." });
     if (!Array.isArray(questions) || questions.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "No questions to import.",
-      });
+      return res.status(400).json({ success: false, message: "No questions to import." });
     }
 
-    const rows = questions.map((question) => {
-      let normalizedOptions = {};
+    const normalized = questions.map((question) => {
+      const rawOptions = Array.isArray(question.options) ? question.options : [];
+      const options = {};
+      ["A", "B", "C", "D"].forEach((key, index) => {
+        const value = String(rawOptions[index] ?? "").trim();
+        if (value) options[key] = value;
+      });
 
-      /*
-       * MCQ / MULTIPLE_CORRECT
-       *
-       * Frontend sends:
-       *
-       * [
-       *   "Option A",
-       *   "Option B",
-       *   "Option C",
-       *   "Option D"
-       * ]
-       *
-       * Database stores:
-       *
-       * {
-       *   A: "Option A",
-       *   B: "Option B",
-       *   C: "Option C",
-       *   D: "Option D"
-       * }
-       */
-      if (
-        question.question_type !== "SUBJECTIVE" &&
-        Array.isArray(question.options)
-      ) {
-        const optionKeys = ["A", "B", "C", "D", "E"];
-
-        question.options.forEach((option, index) => {
-          if (
-            option !== null &&
-            option !== undefined &&
-            String(option).trim() !== ""
-          ) {
-            normalizedOptions[optionKeys[index]] =
-              String(option).trim();
-          }
-        });
-      }
-
-      /*
-       * If options are already supplied as an object,
-       * preserve them.
-       */
-      if (
-        question.question_type !== "SUBJECTIVE" &&
-        question.options &&
-        !Array.isArray(question.options) &&
-        typeof question.options === "object"
-      ) {
-        normalizedOptions = question.options;
-      }
+      let correct = Array.isArray(question.correct_answers) ? question.correct_answers.slice(0, 1) : [];
+      correct = correct.map((answer) => {
+        if (typeof answer === "string" && /^[A-D]$/i.test(answer.trim())) return answer.trim().toUpperCase();
+        if (typeof answer === "string" && /^\d+$/.test(answer.trim())) return ["A", "B", "C", "D"][Number(answer)];
+        if (typeof answer === "number" && Number.isInteger(answer)) return ["A", "B", "C", "D"][answer];
+        return answer;
+      });
 
       return {
-        ...question,
-
         bank_id: bankId,
-
-        difficulty: String(
-          question.difficulty || "MEDIUM"
-        )
-          .trim()
-          .toUpperCase(),
-
+        question_text: String(question.question_text || "").trim(),
         question_type: "MCQ",
-
-        options:
-          question.question_type === "SUBJECTIVE"
-            ? {}
-            : normalizedOptions,
-
-        correct_answers:
-          question.question_type === "SUBJECTIVE"
-            ? []
-            : question.correct_answers || [],
-
-        tags: question.tags || [],
-
-        language: question.language || "en",
-
-        version: question.version || 1,
-
+        options,
+        correct_answers: correct,
+        marks: 1,
+        negative_marks: 0,
+        difficulty: "MEDIUM",
+        explanation: null,
+        question_image_id: null,
+        estimated_seconds: 60,
+        tags: [],
+        language: "English",
+        version: 1,
         is_active: true,
       };
     });
 
-    const { data, error } =
-      await Question.bulkCreate(rows);
+    const invalid = [];
+    normalized.forEach((question, index) => {
+      const options = Object.keys(question.options);
+      const correct = question.correct_answers[0];
+      if (!question.question_text) invalid.push(`Row ${index + 1}: Question text is required.`);
+      if (options.length !== 4) invalid.push(`Row ${index + 1}: Exactly four options are required.`);
+      if (!correct || !["A", "B", "C", "D"].includes(correct)) invalid.push(`Row ${index + 1}: Select one correct answer from A-D.`);
+    });
+    if (invalid.length) return res.status(400).json({ success: false, message: "Some questions failed validation.", errors: invalid });
 
-    if (error) {
-      throw error;
+    const { data: existingQuestions, error: existingError } = await Question.getAll(bankId);
+    if (existingError) throw existingError;
+    const existingTexts = new Set((existingQuestions || []).map((q) => q.question_text?.trim().toLowerCase()));
+    const importable = normalized.filter((q) => !existingTexts.has(q.question_text.toLowerCase()));
+    const duplicateCount = normalized.length - importable.length;
+
+    let imported = 0;
+    if (importable.length) {
+      const { data, error } = await Question.bulkCreate(importable);
+      if (error) throw error;
+      imported = data?.length || 0;
     }
 
     return res.status(201).json({
       success: true,
-      message: `${data.length} questions imported successfully.`,
-      questions: data,
-      importedCount: data.length,
+      message: `${imported} questions imported successfully.`,
+      importedCount: imported,
+      duplicateCount,
+      questions: importable,
     });
-
   } catch (err) {
     console.error("Final Import Error:", err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
+

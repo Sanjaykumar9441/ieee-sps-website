@@ -1,4 +1,4 @@
-import { Check, Flag } from "lucide-react";
+import { Check } from "lucide-react";
 
 import type { PaletteQuestion } from "../types";
 
@@ -38,13 +38,7 @@ export default function QuestionPalette({
               key={item.id}
               type="button"
               onClick={() => onSelect(item.questionOrder)}
-              title={
-                item.markedForReview
-                  ? "Marked for review"
-                  : item.answered
-                    ? "Answered"
-                    : "Not answered"
-              }
+              title={item.answered ? "Answered" : "Not answered"}
               className={`relative h-10 rounded-lg text-sm font-semibold border transition ${
                 current
                   ? "bg-[#00629B] text-white border-[#00629B]"
@@ -61,15 +55,6 @@ export default function QuestionPalette({
                 </span>
               )}
 
-              {item.markedForReview && (
-                <span className="absolute -bottom-1 -right-1">
-                  <Flag
-                    size={12}
-                    className={current ? "text-white" : "text-amber-500"}
-                    fill="currentColor"
-                  />
-                </span>
-              )}
             </button>
           );
         })}
@@ -82,10 +67,6 @@ export default function QuestionPalette({
 
         <Legend className="bg-[#00629B]" label="Current" dark />
 
-        <div className="flex items-center gap-2 text-slate-500">
-          <Flag size={12} className="text-amber-500" fill="currentColor" />
-          Review
-        </div>
       </div>
     </div>
   );

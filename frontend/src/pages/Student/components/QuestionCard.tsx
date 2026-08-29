@@ -1,4 +1,4 @@
-import { Check, Image as ImageIcon } from "lucide-react";
+import { Check } from "lucide-react";
 import type { AttemptQuestion } from "../types";
 
 interface Props {
@@ -104,32 +104,6 @@ export default function QuestionCard({
     data.questionOrder ??
     "";
 
-  /*
-   * ============================================================
-   * MARKS
-   * ============================================================
-   */
-
-  const marks = Number(
-    rawQuestion.marks ??
-      data.marks ??
-      1,
-  );
-
-  /*
-   * ============================================================
-   * MULTIPLE CORRECT
-   * ============================================================
-   */
-
-  const normalizedType =
-    String(type).toUpperCase();
-
-  const multiple =
-    normalizedType === "MULTIPLE_CORRECT" ||
-    normalizedType ===
-      "MULTIPLE_CHOICE_MULTIPLE" ||
-    normalizedType === "MULTIPLE";
 
   /*
    * ============================================================
@@ -595,31 +569,7 @@ export default function QuestionCard({
    * ============================================================
    */
 
-  const toggleOption = (
-    key: string,
-  ) => {
-    if (multiple) {
-      if (
-        selectedAnswers.includes(
-          key,
-        )
-      ) {
-        onChange(
-          selectedAnswers.filter(
-            (item) =>
-              item !== key,
-          ),
-        );
-      } else {
-        onChange([
-          ...selectedAnswers,
-          key,
-        ]);
-      }
-
-      return;
-    }
-
+  const toggleOption = (key: string) => {
     onChange([key]);
   };
 
@@ -638,22 +588,9 @@ export default function QuestionCard({
         <div className="flex items-start justify-between gap-5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-[#00629B]">
-              Question{" "}
-              {questionOrder}
+              Question {questionOrder}
             </p>
-
-            <p className="text-xs text-slate-400 mt-1">
-              {multiple
-                ? "Select all correct answers"
-                : "Select one answer"}
-            </p>
-          </div>
-
-          <div className="shrink-0 px-3 py-1.5 rounded-lg bg-slate-50 text-xs font-semibold text-slate-600">
-            {marks}{" "}
-            {marks === 1
-              ? "Mark"
-              : "Marks"}
+            <p className="text-xs text-slate-400 mt-1">Select one answer</p>
           </div>
         </div>
 
@@ -666,18 +603,6 @@ export default function QuestionCard({
             </span>
           )}
         </div>
-
-        {/* IMAGE */}
-
-        {(rawQuestion.question_image_id ||
-          data.question_image_id) && (
-          <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5 flex items-center justify-center">
-            <ImageIcon
-              size={30}
-              className="text-slate-300"
-            />
-          </div>
-        )}
 
         {/* OPTIONS */}
 

@@ -6,9 +6,15 @@ exports.getAssessments = async (req, res) => {
 
     if (error) throw error;
 
+    const assessments = (data || []).map((assessment) => ({
+      ...assessment,
+      is_published:
+        assessment.is_published ?? assessment.status === "PUBLISHED",
+    }));
+
     return res.json({
       success: true,
-      assessments: data,
+      assessments,
     });
   } catch (err) {
     return res.status(500).json({
@@ -89,9 +95,30 @@ exports.getAssessment = async (req, res) => {
 
 exports.createAssessment = async (req, res) => {
   try {
-    const body = { ...req.body };
+    const body = {
+      title: String(req.body.title || "").trim(),
+      slug: String(req.body.slug || "").trim(),
+      description: req.body.description?.trim() || null,
+      start_time: req.body.start_time || null,
+      end_time: req.body.end_time || null,
+      duration_minutes: Number(req.body.duration_minutes || 30),
+      total_questions: Number(req.body.total_questions || 0),
+      pass_percentage: Number(req.body.pass_percentage ?? 40),
+      // MCQ format: 1 mark per question; negative marking is assessment-level.
+      marks_per_question: 1,
+      negative_marks: Math.max(0, Number(req.body.negative_marks ?? 0)),
+      auto_submit: true,
+      show_leaderboard: true,
+      anti_cheat_enabled: true,
+      socket_monitoring: true,
+      shuffle_questions: req.body.shuffle_questions !== false,
+      shuffle_options: req.body.shuffle_options !== false,
+      random_questions: req.body.random_questions !== false,
+      status: req.body.status || "DRAFT",
+      is_active: Boolean(req.body.is_active),
+    };
 
-    if (!body.title?.trim()) {
+    if (!body.title) {
       return res.status(400).json({
         success: false,
         message: "Assessment title is required.",
@@ -139,7 +166,40 @@ exports.updateAssessment = async (req, res) => {
       });
     }
 
-    const { data, error } = await Assessment.update(id, req.body);
+    const input = req.body || {};
+    const update = {};
+
+    if (input.title !== undefined) update.title = String(input.title).trim();
+    if (input.slug !== undefined) update.slug = String(input.slug).trim();
+    if (input.description !== undefined) update.description = input.description?.trim() || null;
+    if (input.start_time !== undefined) update.start_time = input.start_time;
+    if (input.end_time !== undefined) update.end_time = input.end_time;
+    if (input.duration_minutes !== undefined) update.duration_minutes = Number(input.duration_minutes);
+    if (input.total_questions !== undefined) update.total_questions = Number(input.total_questions);
+    if (input.pass_percentage !== undefined) update.pass_percentage = Number(input.pass_percentage);
+    if (input.shuffle_questions !== undefined) update.shuffle_questions = Boolean(input.shuffle_questions);
+    if (input.shuffle_options !== undefined) update.shuffle_options = Boolean(input.shuffle_options);
+    if (input.random_questions !== undefined) update.random_questions = Boolean(input.random_questions);
+    if (input.negative_marks !== undefined) {
+      const negativeMarks = Number(input.negative_marks);
+      if (!Number.isFinite(negativeMarks) || negativeMarks < 0) {
+        return res.status(400).json({ success: false, message: "Negative marks must be a valid number greater than or equal to 0." });
+      }
+      update.negative_marks = negativeMarks;
+    }
+
+    // Marks per MCQ are fixed; negative marking is assessment-level.
+    update.marks_per_question = 1;
+    update.auto_submit = true;
+    update.show_leaderboard = true;
+    update.anti_cheat_enabled = true;
+    update.socket_monitoring = true;
+
+    if (!update.title && input.title !== undefined) {
+      return res.status(400).json({ success: false, message: "Assessment title is required." });
+    }
+
+    const { data, error } = await Assessment.update(id, update);
 
     if (error) throw error;
 
@@ -299,7 +359,10 @@ exports.publishAssessment = async (req, res) => {
 
     if (error) throw error;
 
-    return res.json(data);
+    return res.json({
+      success: true,
+      assessment: { ...data, is_published: true },
+    });
   } catch (err) {
     return res.status(500).json({
       success: false,
@@ -323,7 +386,10 @@ exports.unpublishAssessment = async (req, res) => {
 
     if (error) throw error;
 
-    return res.json(data);
+    return res.json({
+      success: true,
+      assessment: { ...data, is_published: false },
+    });
   } catch (err) {
     return res.status(500).json({
       success: false,

@@ -68,7 +68,7 @@ export default function StudentDetailsDrawer({
     try {
       setLoading(true);
 
-      const data = await getStudentDetails(student.id);
+      const data = await getStudentDetails(student.id, assessmentId);
 
       setDetails(data);
     } catch (err) {

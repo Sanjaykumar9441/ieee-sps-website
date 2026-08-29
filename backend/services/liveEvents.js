@@ -95,12 +95,6 @@ exports.emitStudentUnblocked = (assessmentId, data) =>
 exports.emitStudentDeleted = (assessmentId, data) =>
   emit(assessmentId, "studentDeleted", data);
 
-/* ============================================================
-   OTP EVENTS
-============================================================ */
-
-exports.emitOtpSent = (assessmentId, data) =>
-  emit(assessmentId, "otpSent", data);
 
 /* ============================================
    Anti Cheat Events

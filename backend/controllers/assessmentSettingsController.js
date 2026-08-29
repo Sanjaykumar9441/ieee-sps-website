@@ -322,8 +322,10 @@ exports.updateSettings = async (req, res) => {
 
     if (settings.rules?.negativeMarking !== undefined) {
       assessmentUpdate.negative_marks = settings.rules.negativeMarking
-        ? Number(settings.rules.negativeMarks || 0)
+        ? Math.max(0, Number(settings.rules.negativeMarks || 0))
         : 0;
+    } else if (settings.rules?.negativeMarks !== undefined) {
+      assessmentUpdate.negative_marks = Math.max(0, Number(settings.rules.negativeMarks || 0));
     }
 
     if (settings.rules?.autoSubmit !== undefined) {
@@ -331,14 +333,20 @@ exports.updateSettings = async (req, res) => {
     }
 
 
-    if (settings.security?.fullscreenRequired !== undefined) {
+    if (settings.security?.antiCheatEnabled !== undefined) {
       assessmentUpdate.anti_cheat_enabled =
-        settings.security.fullscreenRequired;
+        Boolean(settings.security.antiCheatEnabled);
+    } else if (settings.security?.fullscreenRequired !== undefined) {
+      assessmentUpdate.anti_cheat_enabled =
+        Boolean(settings.security.fullscreenRequired);
     }
 
-    if (settings.security?.windowBlurDetection !== undefined) {
+    if (settings.security?.socketMonitoring !== undefined) {
       assessmentUpdate.socket_monitoring =
-        settings.security.windowBlurDetection;
+        Boolean(settings.security.socketMonitoring);
+    } else if (settings.security?.windowBlurDetection !== undefined) {
+      assessmentUpdate.socket_monitoring =
+        Boolean(settings.security.windowBlurDetection);
     }
 
     if (settings.results?.passingPercentage !== undefined) {
@@ -346,6 +354,13 @@ exports.updateSettings = async (req, res) => {
         settings.results.passingPercentage,
       );
     }
+
+    // Marks per MCQ are fixed; negative marking remains assessment-configurable.
+    assessmentUpdate.marks_per_question = 1;
+    assessmentUpdate.auto_submit = true;
+    assessmentUpdate.show_leaderboard = true;
+    assessmentUpdate.anti_cheat_enabled = true;
+    assessmentUpdate.socket_monitoring = true;
 
     // ---------------------------------------------------------
     // Schedule

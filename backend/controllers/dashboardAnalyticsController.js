@@ -218,7 +218,6 @@ Students whose attempt is currently IN_PROGRESS.
         ? Number(((passedStudents / submitted) * 100).toFixed(2))
         : 0;
 
-    const negativeMarking = Number(assessment.negative_marks || 0) > 0;
 
     /* ========================================================
        DEPARTMENT PERFORMANCE
@@ -394,8 +393,6 @@ Students whose attempt is currently IN_PROGRESS.
 
           questionText: item.questions?.question_text || "-",
 
-          difficulty: item.questions?.difficulty || "Medium",
-
           total: 0,
 
           correct: 0,
@@ -412,7 +409,7 @@ Students whose attempt is currently IN_PROGRESS.
 
       const answer = item.assessment_answers?.[0];
 
-      if (!answer) {
+      if (!answer || !Array.isArray(answer.selected_answers) || answer.selected_answers.length === 0) {
         stats.skipped++;
         continue;
       }
@@ -445,12 +442,6 @@ Students whose attempt is currently IN_PROGRESS.
 
       questionText: question.questionText,
 
-      difficulty:
-        question.difficulty === "easy"
-          ? "Easy"
-          : question.difficulty === "hard"
-            ? "Hard"
-            : "Medium",
 
       correctPercentage:
         question.total > 0
@@ -467,34 +458,7 @@ Students whose attempt is currently IN_PROGRESS.
           ? Number(((question.skipped / question.total) * 100).toFixed(2))
           : 0,
 
-      averageTime: 0,
     }));
-
-    /* ========================================================
-       DIFFICULTY OVERVIEW
-    ======================================================== */
-
-    const difficultyOverview = {
-      easy: questionAnalysis.filter((q) => q.difficulty === "Easy").length,
-
-      medium: questionAnalysis.filter((q) => q.difficulty === "Medium").length,
-
-      hard: questionAnalysis.filter((q) => q.difficulty === "Hard").length,
-
-      averageAccuracy:
-        questionAnalysis.length > 0
-          ? Number(
-              (
-                questionAnalysis.reduce(
-                  (sum, q) => sum + q.correctPercentage,
-                  0,
-                ) / questionAnalysis.length
-              ).toFixed(2),
-            )
-          : 0,
-
-      averageQuestionTime: 0,
-    };
 
     /* ========================================================
        INTEGRITY
@@ -552,8 +516,6 @@ Students whose attempt is currently IN_PROGRESS.
     const liveActivity = {
       online: onlineStudents,
       taking: takingStudents,
-      reviewing: 0,
-      averageQuestion: 0,
     };
 
     /* ========================================================
@@ -615,7 +577,6 @@ Students whose attempt is currently IN_PROGRESS.
 
           passingMarks,
 
-          negativeMarking,
         },
 
         departmentPerformance,
@@ -629,8 +590,6 @@ Students whose attempt is currently IN_PROGRESS.
         fastestSubmissions,
 
         slowestSubmissions,
-
-        difficultyOverview,
 
         completion: {
           allowed: participants,

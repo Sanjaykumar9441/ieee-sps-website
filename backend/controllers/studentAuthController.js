@@ -321,17 +321,23 @@ exports.getAllowedStudents = async (req, res) => {
 exports.getStudentDetails = async (req, res) => {
   try {
     const { studentId } = req.params;
+    const assessmentId = String(req.query.assessmentId || "").trim();
 
-    if (!studentId) {
+    if (!studentId || !assessmentId) {
       return res.status(400).json({
         success: false,
-        message: "Student ID is required.",
+        message: "Student ID and Assessment ID are required.",
       });
     }
 
-    const { data, error } = await StudentAuth.getStudentDetails(studentId);
+    const { data, error } = await StudentAuth.getStudentDetails(studentId, assessmentId);
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === "PGRST116") {
+        return res.status(404).json({ success: false, message: "Student not found for this assessment." });
+      }
+      throw error;
+    }
 
     const attempt = data.assessment_attempts?.[0] || null;
 
@@ -579,10 +585,6 @@ exports.importStudents = async (req, res) => {
 
       const department = String(student.department || "").trim();
 
-      const year = String(student.year || "").trim();
-
-      const section = String(student.section || "").trim();
-
       /* Required fields */
 
       if (!name || !rollNo || !email) {
@@ -611,24 +613,6 @@ exports.importStudents = async (req, res) => {
         return;
       }
 
-      /* Year */
-
-      const parsedYear = Number(year);
-
-      if (
-        year &&
-        (!Number.isInteger(parsedYear) || parsedYear < 1 || parsedYear > 4)
-      ) {
-        errors.push({
-          row: rowNumber,
-          name,
-          rollNo,
-          email,
-          reason: "Year must be between 1 and 4.",
-        });
-
-        return;
-      }
 
       /* Duplicate in database */
 

@@ -52,7 +52,8 @@ async function getBankQuestions(bankId) {
     `,
     )
     .eq("bank_id", bankId)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .eq("question_type", "MCQ");
 
   if (error) throw error;
 
@@ -90,29 +91,19 @@ async function buildQuestionPaper(assessment) {
    NORMALIZE QUESTION
 ============================================================ */
 
-function normalizeQuestion(question) {
+function normalizeQuestion(question, assessment) {
   return {
     id: question.id,
     bank_id: question.bank_id,
-
     question_text: question.question_text,
-    question_type: question.question_type,
-
-    question_image_id: question.question_image_id ?? null,
-
-    explanation: question.explanation ?? "",
-
-    options: question.options || [],
-
-    correct_answers: question.correct_answers || [],
-
-    difficulty: question.difficulty,
-
-    marks: Number(question.marks || 1),
-
-    negative_marks: Number(question.negative_marks || 0),
-
-    estimated_seconds: Number(question.estimated_seconds || 60),
+    question_type: "MCQ",
+    options: question.options || {},
+    correct_answers: Array.isArray(question.correct_answers)
+      ? question.correct_answers.slice(0, 1)
+      : [],
+    // Freeze the assessment-level negative marking into each attempt question.
+    marks: 1,
+    negative_marks: Math.max(0, Number(assessment?.negative_marks || 0)),
   };
 }
 
@@ -127,7 +118,7 @@ exports.generateAttempt = async (assessment) => {
     throw new Error("No active questions are available for this assessment.");
   }
 
-  const normalized = paper.map(normalizeQuestion);
+  const normalized = paper.map((question) => normalizeQuestion(question, assessment));
 
   return buildAttemptQuestions(null, normalized, normalized.length, {
     selectRandom: false,
@@ -291,21 +282,13 @@ exports.getQuestion = async (attemptId, questionNumber) => {
     question_order: data.question_order,
 
     question_text: source.question_text,
-    question_type: source.question_type,
-
-    question_image_id: source.question_image_id ?? null,
-
-    explanation: source.explanation ?? "",
+    question_type: "MCQ",
 
     options: data.shuffled_options || {},
 
-    difficulty: source.difficulty,
+    marks: 1,
 
-    estimated_seconds: source.estimated_seconds ?? 60,
-
-    marks: Number(data.marks ?? source.marks ?? 1),
-
-    negative_marks: Number(data.negative_marks ?? source.negative_marks ?? 0),
+    negative_marks: Number(data.negative_marks ?? 0),
 
     assessment_answers: data.assessment_answers || [],
   };
