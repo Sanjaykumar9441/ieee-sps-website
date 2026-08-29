@@ -6,7 +6,7 @@
  * so every student sees a fixed paper even after refresh/resume.
  */
 
-const OPTION_KEYS = Object.freeze(["A", "B", "C", "D", "E"]);
+const OPTION_KEYS = Object.freeze(["A", "B", "C", "D"]);
 
 /* =====================================
    Fisher–Yates Shuffle

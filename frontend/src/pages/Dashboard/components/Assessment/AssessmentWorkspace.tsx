@@ -10,7 +10,7 @@ import Students from "../Assessment/Workspace/Students";
 import LiveMonitor from "../Assessment/Workspace/LiveMonitor";
 import Leaderboard from "../Assessment/Workspace/Leaderboard";
 import Analytics from "../Assessment/Workspace/Analytics";
-//import Export from "./Export";
+import Export from "../Assessment/Workspace/Export";
 import Settings from "../Assessment/Workspace/Settings";
 
 interface Props {
@@ -35,7 +35,7 @@ const tabs: WorkspaceTab[] = [
   "live",
   "leaderboard",
   "analytics",
-  //"export",
+  "export",
   "settings",
 ];
 
@@ -106,7 +106,7 @@ export default function AssessmentWorkspace({ assessment, onClose }: Props) {
 
           {activeTab === "analytics" && <Analytics assessment={assessment} />}
 
-          {/* activeTab === "export" && <Export assessment={assessment} /> */}
+          {activeTab === "export" && <Export assessment={assessment} />}
 
           {activeTab === "settings" && <Settings assessment={assessment} />}
         </div>

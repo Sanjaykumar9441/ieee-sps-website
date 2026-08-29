@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
+const axios = require("axios");
 const { supabase } = require("../lib/supabase");
 const assessmentService = require("../services/assessmentService");
 const liveEvents = require("../services/liveEvents");
@@ -15,97 +17,126 @@ exports.login = async (req, res) => {
     const assessmentId = String(req.body.assessmentId || "").trim();
     const email = String(req.body.email || "").trim().toLowerCase();
     const password = String(req.body.password || "");
+    const otp = String(req.body.otp || "").trim();
 
-    if (!assessmentId || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Assessment ID, email and password are required.",
-      });
+    if (!assessmentId || !email) return res.status(400).json({ success: false, message: "Assessment ID and email are required." });
+
+    const { data: assessment, error: assessmentError } = await assessmentService.getAssessment(assessmentId);
+    if (assessmentError || !assessment) return res.status(404).json({ success: false, message: "Assessment not found." });
+    if (assessment.status !== "PUBLISHED" || !assessment.is_active) return res.status(403).json({ success: false, message: "Assessment is not available for login." });
+
+    const { data: student, error: studentError } = await assessmentService.getAllowedStudent(assessmentId, email);
+    if (studentError || !student) return res.status(401).json({ success: false, message: "This email is not registered for the assessment." });
+    if (student.status === "blocked") return res.status(403).json({ success: false, message: "Your access has been blocked." });
+
+    const method = String(assessment.login_method || "PASSWORD").toUpperCase();
+    if (method === "OTP") {
+      if (!otp) return res.status(400).json({ success: false, message: "OTP is required." });
+      if (!student.otp_hash || !student.otp_expires_at || new Date(student.otp_expires_at).getTime() < Date.now()) return res.status(401).json({ success: false, message: "OTP has expired. Request a new OTP." });
+      const validOtp = await bcrypt.compare(otp, student.otp_hash);
+      if (!validOtp) return res.status(401).json({ success: false, message: "Invalid OTP." });
+    } else {
+      const passwordHash = process.env.ASSESSMENT_COMMON_PASSWORD_HASH;
+      if (!passwordHash) return res.status(500).json({ success: false, message: "Assessment password login is not configured on the server." });
+      if (!password) return res.status(400).json({ success: false, message: "Password is required." });
+      if (!(await bcrypt.compare(password, passwordHash))) return res.status(401).json({ success: false, message: "Invalid email or password." });
     }
 
-    const passwordHash = process.env.ASSESSMENT_COMMON_PASSWORD_HASH;
-    if (!passwordHash) {
-      console.error("ASSESSMENT_COMMON_PASSWORD_HASH is not configured.");
-      return res.status(500).json({
-        success: false,
-        message: "Assessment login is not configured on the server.",
-      });
-    }
-
-    const { data: assessment, error: assessmentError } =
-      await assessmentService.getAssessment(assessmentId);
-
-    if (assessmentError || !assessment) {
-      return res.status(404).json({ success: false, message: "Assessment not found." });
-    }
-
-    if (assessment.status !== "PUBLISHED" || !assessment.is_active) {
-      return res.status(403).json({
-        success: false,
-        message: "Assessment is not available for login.",
-      });
-    }
-
-    const { data: student, error: studentError } =
-      await assessmentService.getAllowedStudent(assessmentId, email);
-
-    if (studentError || !student) {
-      return res.status(401).json({
-        success: false,
-        message: "This email is not registered for the assessment.",
-      });
-    }
-
-    if (student.status === "blocked") {
-      return res.status(403).json({ success: false, message: "Your access has been blocked." });
-    }
-
-    const passwordValid = await bcrypt.compare(password, passwordHash);
-    if (!passwordValid) {
-      return res.status(401).json({ success: false, message: "Invalid email or password." });
-    }
-
-    const { data: updatedStudent, error: updateError } = await supabase
-      .from("assessment_allowed_students")
-      .update({
-        has_logged_in: true,
-        first_login_at: student.first_login_at || new Date().toISOString(),
-      })
-      .eq("id", student.id)
-      .select()
-      .single();
-
+    const update = { has_logged_in: true, first_login_at: student.first_login_at || new Date().toISOString() };
+    if (method === "OTP") { update.otp_hash = null; update.otp_expires_at = null; }
+    const { data: updatedStudent, error: updateError } = await supabase.from("assessment_allowed_students").update(update).eq("id", student.id).select().single();
     if (updateError) throw updateError;
 
-    const token = jwt.sign(
-      {
-        id: updatedStudent.id,
-        assessmentId,
-        email: updatedStudent.email,
-        rollNo: updatedStudent.roll_no,
-        name: updatedStudent.name,
-        role: "student",
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "8h" },
-    );
-
+    const token = jwt.sign({ id: updatedStudent.id, assessmentId, email: updatedStudent.email, rollNo: updatedStudent.roll_no, name: updatedStudent.name, role: "student" }, process.env.JWT_SECRET, { expiresIn: "8h" });
     liveEvents.emitStudentLoggedIn(assessmentId);
     liveEvents.emitStudentStatusChanged(assessmentId);
     liveEvents.emitDashboardRefresh(assessmentId);
-
-    return res.json({
-      success: true,
-      token,
-      student: {
-        id: updatedStudent.id,
-        name: updatedStudent.name,
-        email: updatedStudent.email,
-        rollNo: updatedStudent.roll_no,
-      },
-    });
+    return res.json({ success: true, token, student: { id: updatedStudent.id, name: updatedStudent.name, email: updatedStudent.email, rollNo: updatedStudent.roll_no } });
   } catch (err) {
     console.error("STUDENT LOGIN ERROR:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.sendOtp = async (req, res) => {
+  try {
+    const assessmentId = String(req.body.assessmentId || "").trim();
+    const email = String(req.body.email || "").trim().toLowerCase();
+    if (!assessmentId || !email) return res.status(400).json({ success: false, message: "Assessment ID and email are required." });
+    const { data: assessment } = await assessmentService.getAssessment(assessmentId);
+    if (!assessment || assessment.status !== "PUBLISHED" || !assessment.is_active) return res.status(403).json({ success: false, message: "Assessment is not available." });
+    if (String(assessment.login_method || "PASSWORD").toUpperCase() !== "OTP") return res.status(400).json({ success: false, message: "OTP login is not enabled for this assessment." });
+    const { data: student } = await assessmentService.getAllowedStudent(assessmentId, email);
+    if (!student || student.status === "blocked") return res.status(401).json({ success: false, message: "This email is not registered for the assessment." });
+    const brevoApiKey = process.env.BREVO_API_KEY;
+    const senderEmail = process.env.BREVO_SENDER_EMAIL;
+    const senderName = process.env.BREVO_SENDER_NAME || "IEEE SPS";
+
+    if (!brevoApiKey || !senderEmail) {
+      return res.status(500).json({
+        success: false,
+        message: "Brevo OTP email service is not configured on the server.",
+      });
+    }
+
+    const code = String(crypto.randomInt(100000, 1000000));
+    const hash = await bcrypt.hash(code, 10);
+    const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    const subject = `${assessment.title} - Assessment OTP`;
+    const textContent = `Hello ${student.name || "Student"},\n\nYour assessment OTP is ${code}.\n\nThis OTP expires in 10 minutes. Do not share this code with anyone.\n\nRegards,\n${senderName}`;
+    const htmlContent = `
+      <div style="font-family:Arial,sans-serif;line-height:1.6;color:#1f2937;max-width:600px;margin:0 auto;">
+        <h2>${assessment.title}</h2>
+        <p>Hello ${student.name || "Student"},</p>
+        <p>Use the following OTP to log in to your assessment:</p>
+        <div style="font-size:32px;font-weight:700;letter-spacing:8px;padding:16px 20px;background:#f3f4f6;border-radius:8px;text-align:center;">${code}</div>
+        <p>This OTP expires in <strong>10 minutes</strong>.</p>
+        <p>Do not share this code with anyone.</p>
+        <p>Regards,<br>${senderName}</p>
+      </div>
+    `;
+
+    try {
+      await axios.post(
+        "https://api.brevo.com/v3/smtp/email",
+        {
+          sender: { email: senderEmail, name: senderName },
+          to: [{ email, name: student.name || undefined }],
+          subject,
+          textContent,
+          htmlContent,
+        },
+        {
+          headers: {
+            accept: "application/json",
+            "api-key": brevoApiKey,
+            "content-type": "application/json",
+          },
+          timeout: 15000,
+        },
+      );
+    } catch (brevoError) {
+      console.error(
+        "BREVO OTP SEND ERROR:",
+        brevoError.response?.data || brevoError.message,
+      );
+      return res.status(502).json({
+        success: false,
+        message: "Unable to send OTP email. Please try again.",
+      });
+    }
+
+    const { error } = await supabase
+      .from("assessment_allowed_students")
+      .update({ otp_hash: hash, otp_expires_at: expires })
+      .eq("id", student.id);
+
+    if (error) throw error;
+
+    return res.json({ success: true, message: "OTP sent to your registered email." });
+  } catch (err) {
+    console.error("SEND OTP ERROR:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -282,9 +313,11 @@ exports.getAllowedStudents = async (req, res) => {
         `
         *,
         assessment_attempts (
-  id,
-  status
-)
+          id,
+          status,
+          started_at,
+          submitted_at
+        )
       `,
       )
       .eq("assessment_id", assessmentId)
@@ -293,7 +326,8 @@ exports.getAllowedStudents = async (req, res) => {
     if (error) throw error;
 
     const students = (data || []).map((student) => {
-      const attempt = student.assessment_attempts?.[0] || null;
+      const attempt = [...(student.assessment_attempts || [])]
+        .sort((a, b) => new Date(b.started_at || 0).getTime() - new Date(a.started_at || 0).getTime())[0] || null;
 
       return {
         ...student,

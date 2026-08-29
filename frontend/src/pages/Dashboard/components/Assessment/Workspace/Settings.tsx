@@ -26,12 +26,16 @@ interface Settings {
   };
   rules: { randomQuestions: boolean; randomOptions: boolean };
   results: { passingPercentage: number };
+  login: { authentication: "PASSWORD" | "OTP" };
+  live: { enabled: boolean };
 }
 
 const defaults: Settings = {
   schedule: { startDate: "", startTime: "", endDate: "", endTime: "", duration: 30 },
   rules: { randomQuestions: true, randomOptions: true },
   results: { passingPercentage: 40 },
+  login: { authentication: "PASSWORD" },
+  live: { enabled: true },
 };
 
 export default function Settings({ assessment }: Props) {
@@ -51,6 +55,8 @@ export default function Settings({ assessment }: Props) {
         ...defaults,
         schedule: { ...defaults.schedule, ...(incoming.schedule || {}) },
         rules: { ...defaults.rules, ...(incoming.rules || {}) },
+        login: { ...defaults.login, ...(incoming.login || {}), authentication: incoming.login?.authentication === "OTP" ? "OTP" : "PASSWORD" },
+        live: { ...defaults.live, ...(incoming.live || {}) },
         results: {
           ...defaults.results,
           ...(incoming.results || {}),
@@ -72,6 +78,7 @@ export default function Settings({ assessment }: Props) {
       await axios.put(`${API}/api/assessment-settings/${assessment.id}`, settings, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      localStorage.setItem(`assessment_live_updates:${assessment.id}`, String(settings.live.enabled));
       toast.success("Settings saved successfully.");
       await fetchSettings();
     } catch (err: any) {
@@ -118,10 +125,10 @@ export default function Settings({ assessment }: Props) {
         </div>
       </Section>
 
-      <Section icon={<LogIn size={22} />} title="Login & Access" description="Student authentication is fixed and is not configurable per assessment.">
-        <div className="rounded-xl border bg-gray-50 p-5">
-          <p className="font-semibold">Registered Email + Common Password</p>
-          <p className="mt-1 text-sm text-gray-600">Only students registered in this assessment can log in. The common password is verified on the backend and is never stored in Supabase or frontend code.</p>
+      <Section icon={<LogIn size={22} />} title="Login & Access" description="Choose how registered students authenticate for this assessment.">
+        <div className="grid gap-4 md:grid-cols-2">
+          <Toggle label="Password Login" description="Registered email + common password." checked={settings.login.authentication === "PASSWORD"} onChange={(v) => v && setSettings((s) => ({ ...s, login: { authentication: "PASSWORD" } }))} />
+          <Toggle label="OTP Login" description="One-time code sent to the registered email." checked={settings.login.authentication === "OTP"} onChange={(v) => v && setSettings((s) => ({ ...s, login: { authentication: "OTP" } }))} />
         </div>
       </Section>
 
@@ -129,6 +136,9 @@ export default function Settings({ assessment }: Props) {
         <div className="grid gap-4 md:grid-cols-2">
           <Toggle label="Randomize Questions" description="Shuffle question order for each attempt." checked={settings.rules.randomQuestions} onChange={(v) => setSettings((s) => ({ ...s, rules: { ...s.rules, randomQuestions: v } }))} />
           <Toggle label="Randomize Options" description="Shuffle answer options for each attempt." checked={settings.rules.randomOptions} onChange={(v) => setSettings((s) => ({ ...s, rules: { ...s.rules, randomOptions: v } }))} />
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <Toggle label="Live Updates" description="Refresh live student, leaderboard and analytics data through real-time events." checked={settings.live.enabled} onChange={(v) => setSettings((s) => ({ ...s, live: { enabled: v } }))} />
         </div>
         <div className="mt-4 rounded-xl border bg-gray-50 p-5">
           <p className="font-semibold">Auto-submit is always enabled</p>

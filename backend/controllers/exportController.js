@@ -1,732 +1,96 @@
-const ExcelJS = require("exceljs");
 const { supabase } = require("../lib/supabase");
+const ExcelJS = require("exceljs");
+const PDFDocument = require("pdfkit");
 
-/* ============================================================
-   PRIVATE HELPERS
-============================================================ */
+function secondsToText(seconds) {
+  const s = Math.max(0, Number(seconds || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return h ? `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}` : `${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+}
 
-/*
---------------------------------------------------------
-Assessment
---------------------------------------------------------
-*/
+async function buildRows(assessmentId) {
+  const { data: assessment, error: ae } = await supabase.from("assessments").select("*").eq("id", assessmentId).single();
+  if (ae || !assessment) throw new Error("Assessment not found.");
 
-async function getAssessment(assessmentId) {
-  const { data, error } = await supabase
-    .from("assessments")
-    .select("*")
-    .eq("id", assessmentId)
-    .single();
+  const { data: attempts, error: atErr } = await supabase.from("assessment_attempts").select(`id,student_id,status,score,correct,wrong,unanswered,percentage,started_at,submitted_at,disqualified_reason,assessment_allowed_students(name,roll_no,email,branch)`).eq("assessment_id", assessmentId);
+  if (atErr) throw atErr;
 
+  const submitted = (attempts || []).filter(a => ["SUBMITTED","EXPIRED","DISQUALIFIED"].includes(a.status));
+  const rows = submitted.map((a, i) => {
+    const st = a.assessment_allowed_students || {};
+    const start = a.started_at ? new Date(a.started_at).getTime() : 0;
+    const end = a.submitted_at ? new Date(a.submitted_at).getTime() : 0;
+    const timeTaken = start && end ? Math.max(0, Math.floor((end-start)/1000)) : 0;
+    return { rank: 0, attemptId:a.id, name:st.name||"", rollNo:st.roll_no||"", email:st.email||"", department:st.branch||"", status:a.status, score:Number(a.score||0), correct:Number(a.correct||0), wrong:Number(a.wrong||0), skipped:Number(a.unanswered||0), percentage:Number(a.percentage||0), timeTaken, startedAt:a.started_at||"", submittedAt:a.submitted_at||"", disqualifiedReason:a.disqualified_reason||"" };
+  });
+  rows.sort((a,b)=> b.score-a.score || new Date(a.submittedAt||0)-new Date(b.submittedAt||0) || a.rollNo.localeCompare(b.rollNo));
+  rows.forEach((r,i)=>r.rank=i+1);
+  return {assessment, rows};
+}
+
+async function buildQuestionRows(assessmentId) {
+  const { data: attempts, error } = await supabase.from("assessment_attempts").select("id,status").eq("assessment_id", assessmentId).in("status", ["SUBMITTED","EXPIRED","DISQUALIFIED"]);
   if (error) throw error;
-
-  return data;
+  const ids=(attempts||[]).map(a=>a.id);
+  if (!ids.length) return [];
+  const { data, error: qe } = await supabase.from("assessment_attempt_questions").select("question_order,question_id,correct_answers,assessment_answers(selected_answers),questions(question_text)").in("attempt_id", ids);
+  if (qe) throw qe;
+  const map=new Map();
+  for(const item of data||[]){ const key=item.question_id; if(!map.has(key)) map.set(key,{questionNumber:item.question_order,question:item.questions?.question_text||"",total:0,correct:0,wrong:0,skipped:0}); const row=map.get(key); row.total++; const selected=item.assessment_answers?.[0]?.selected_answers; if(!Array.isArray(selected)||!selected.length){row.skipped++;continue;} const norm=v=>String(v).trim().toUpperCase(); const a=[...selected].map(norm).sort(); const c=(Array.isArray(item.correct_answers)?item.correct_answers:[item.correct_answers]).map(norm).sort(); if(JSON.stringify(a)===JSON.stringify(c)) row.correct++; else row.wrong++; }
+  return [...map.values()].sort((a,b)=>a.questionNumber-b.questionNumber).map(r=>({...r,correctPercentage:r.total?Number((r.correct/r.total*100).toFixed(2)):0,wrongPercentage:r.total?Number((r.wrong/r.total*100).toFixed(2)):0,skippedPercentage:r.total?Number((r.skipped/r.total*100).toFixed(2)):0}));
 }
 
-/*
---------------------------------------------------------
-Leaderboard
---------------------------------------------------------
-*/
-
-async function buildLeaderboard(assessmentId) {
-  const { data, error } = await supabase
-    .from("assessment_attempts")
-    .select(
-      `
-      id,
-      student_id,
-      score,
-      status,
-      started_at,
-      submitted_at,
-      assessment_allowed_students(
-        name,
-        roll_no,
-        email,
-        department,
-        section
-      )
-    `,
-    )
-    .eq("assessment_id", assessmentId)
-    .eq("status", "SUBMITTED");
-
-  if (error) throw error;
-
-  return (data || [])
-    .sort((a, b) => {
-      if (Number(b.score) !== Number(a.score))
-        return Number(b.score) - Number(a.score);
-
-      const time = new Date(a.submitted_at) - new Date(b.submitted_at);
-
-      if (time !== 0) return time;
-
-      return (a.assessment_allowed_students?.roll_no || "").localeCompare(
-        b.assessment_allowed_students?.roll_no || "",
-      );
-    })
-    .map((student, index) => ({
-      rank: index + 1,
-
-      name: student.assessment_allowed_students?.name,
-
-      roll_no: student.assessment_allowed_students?.roll_no,
-
-      email: student.assessment_allowed_students?.email,
-
-      department: student.assessment_allowed_students?.department,
-
-      section: student.assessment_allowed_students?.section,
-
-      score: student.score,
-
-      status: student.status,
-
-      submitted_at: student.submitted_at,
-    }));
-}
-
-/*
---------------------------------------------------------
-Analytics
---------------------------------------------------------
-*/
-
-async function buildAnalytics(assessmentId, assessment) {
-  const { count: registeredStudents } = await supabase
-    .from("assessment_allowed_students")
-    .select("*", {
-      count: "exact",
-      head: true,
-    })
-    .eq("assessment_id", assessmentId);
-
-  const { data: attempts } = await supabase
-    .from("assessment_attempts")
-    .select("*")
-    .eq("assessment_id", assessmentId);
-
-  const submitted = attempts.filter((a) => a.status === "SUBMITTED");
-
-  const scores = submitted.map((a) => Number(a.score || 0));
-
-  let averageScore = 0;
-  let highestScore = 0;
-  let lowestScore = 0;
-
-  if (scores.length) {
-    averageScore = scores.reduce((a, b) => a + b, 0) / scores.length;
-
-    highestScore = Math.max(...scores);
-
-    lowestScore = Math.min(...scores);
-  }
-
-  /*
-  -------------------------
-  Passing Score
-  -------------------------
-  */
-
-  let passingScore = assessment.passing_score;
-
-  if (passingScore == null) {
-    passingScore =
-      (assessment.total_questions *
-        assessment.marks_per_question *
-        assessment.pass_percentage) /
-      100;
-  }
-
-  const passed = submitted.filter(
-    (a) => Number(a.score) >= Number(passingScore),
-  ).length;
-
-  return {
-    registeredStudents,
-
-    loggedInStudents: 0,
-
-    startedStudents: attempts.length,
-
-    submittedStudents: submitted.length,
-
-    disqualifiedStudents: attempts.filter((a) => a.status === "DISQUALIFIED")
-      .length,
-
-    averageScore: Number(averageScore.toFixed(2)),
-
-    highestScore,
-
-    lowestScore,
-
-    passingScore,
-
-    passPercentage: submitted.length
-      ? Number(((passed / submitted.length) * 100).toFixed(2))
-      : 0,
-  };
-}
-
-/*
---------------------------------------------------------
-Allowed Students
---------------------------------------------------------
-*/
-
-async function getAllowedStudents(assessmentId) {
-  const { data, error } = await supabase
-    .from("assessment_allowed_students")
-    .select("*")
-    .eq("assessment_id", assessmentId)
-    .order("roll_no");
-
-  if (error) throw error;
-
-  return data || [];
-}
-
-/*
---------------------------------------------------------
-Disqualified
---------------------------------------------------------
-*/
-
-async function getDisqualified(assessmentId) {
-  const { data, error } = await supabase
-    .from("assessment_attempts")
-    .select(
-      `
-        *,
-        assessment_allowed_students(
-          name,
-          roll_no,
-          email
-        )
-      `,
-    )
-    .eq("assessment_id", assessmentId)
-    .eq("status", "DISQUALIFIED");
-
-  if (error) throw error;
-
-  return data || [];
-}
-
-/*
---------------------------------------------------------
-Infractions
---------------------------------------------------------
-*/
-
-async function getInfractions(assessmentId) {
-  const { data, error } = await supabase
-    .from("assessment_infractions")
-    .select("*")
-    .eq("assessment_id", assessmentId);
-
-  if (error) throw error;
-
-  return data || [];
-}
-
-/* ============================================================
-   EXPORT EXCEL
-============================================================ */
-
-exports.exportExcel = async (req, res) => {
+exports.download = async (req,res) => {
   try {
     const { assessmentId } = req.params;
+    const format = String(req.query.format || "xlsx").toLowerCase();
+    const type = String(req.query.type || "results").toLowerCase();
+    const {assessment, rows} = await buildRows(assessmentId);
+    const questionRows = (type === "question-analysis" || type === "question_analysis") ? await buildQuestionRows(assessmentId) : [];
 
-    if (!assessmentId) {
-      return res.status(400).json({
-        success: false,
-        message: "Assessment ID is required.",
-      });
+    if (format === "pdf") {
+      if (type === "question-analysis" || type === "question_analysis") {
+        res.setHeader("Content-Type","application/pdf");
+        res.setHeader("Content-Disposition",`attachment; filename="${assessment.slug || "assessment"}-question-analysis.pdf"`);
+        const doc=new PDFDocument({margin:36,size:"A4"}); doc.pipe(res);
+        doc.fontSize(18).text(`${assessment.title || "Assessment"} - Question Analysis`); doc.fontSize(9).text(`Generated: ${new Date().toLocaleString("en-IN")}`); doc.moveDown();
+        questionRows.forEach(r=>{ doc.fontSize(10).font("Helvetica-Bold").text(`Q${r.questionNumber}. ${r.question}`); doc.font("Helvetica").fontSize(9).text(`Attempts: ${r.total}   Correct: ${r.correctPercentage}%   Wrong: ${r.wrongPercentage}%   Skipped: ${r.skippedPercentage}%`); doc.moveDown(.5); if(doc.y>730) doc.addPage(); });
+        doc.end(); return;
+      }
+      res.setHeader("Content-Type","application/pdf");
+      res.setHeader("Content-Disposition",`attachment; filename="${assessment.slug || "assessment"}-${type}.pdf"`);
+      const doc = new PDFDocument({margin:36,size:"A4",layout:"landscape"});
+      doc.pipe(res);
+      doc.fontSize(18).text(assessment.title || "Assessment Results");
+      doc.fontSize(9).text(`Generated: ${new Date().toLocaleString("en-IN")}`);
+      doc.moveDown();
+      const cols=["Rank","Name","Roll No","Department","Score","Correct","Wrong","Skipped","%","Time","Submitted"];
+      const widths=[35,100,70,75,45,45,40,45,40,60,100];
+      let y=doc.y;
+      const drawRow=(vals,bold=false)=>{let x=36; doc.fontSize(7).font(bold?"Helvetica-Bold":"Helvetica"); vals.forEach((v,i)=>{doc.text(String(v??""),x,y,{width:widths[i],ellipsis:true});x+=widths[i];}); y+=16;if(y>550){doc.addPage();y=36;}};
+      drawRow(cols,true);
+      rows.forEach(r=>drawRow([r.rank,r.name,r.rollNo,r.department,r.score,r.correct,r.wrong,r.skipped,r.percentage,secondsToText(r.timeTaken),r.submittedAt?new Date(r.submittedAt).toLocaleString("en-IN"):"-" ]));
+      doc.end();
+      return;
     }
 
-    /*
-    --------------------------------------------------------
-    Load Data
-    --------------------------------------------------------
-    */
-
-    const assessment = await getAssessment(assessmentId);
-
-    const leaderboard = await buildLeaderboard(assessmentId);
-
-    const analytics = await buildAnalytics(assessmentId, assessment);
-
-    const students = await getAllowedStudents(assessmentId);
-
-    const disqualified = await getDisqualified(assessmentId);
-
-    const infractions = await getInfractions(assessmentId);
-
-    /*
-    --------------------------------------------------------
-    Workbook
-    --------------------------------------------------------
-    */
-
-    const workbook = new ExcelJS.Workbook();
-
-    workbook.creator = "IEEE SPS";
-
-    workbook.company = "IEEE SPS Student Branch Chapter";
-
-    workbook.subject = "Assessment Report";
-
-    workbook.created = new Date();
-
-    /* ========================================================
-       LEADERBOARD
-    ======================================================== */
-
-    const leaderboardSheet = workbook.addWorksheet("Leaderboard");
-
-    leaderboardSheet.columns = [
-      {
-        header: "Rank",
-        key: "rank",
-        width: 10,
-      },
-      {
-        header: "Name",
-        key: "name",
-        width: 28,
-      },
-      {
-        header: "Roll Number",
-        key: "roll_no",
-        width: 20,
-      },
-      {
-        header: "Department",
-        key: "department",
-        width: 18,
-      },
-      {
-        header: "Section",
-        key: "section",
-        width: 12,
-      },
-      {
-        header: "Email",
-        key: "email",
-        width: 35,
-      },
-      {
-        header: "Score",
-        key: "score",
-        width: 12,
-      },
-      {
-        header: "Status",
-        key: "status",
-        width: 15,
-      },
-      {
-        header: "Submitted At",
-        key: "submitted_at",
-        width: 28,
-      },
-    ];
-
-    leaderboard.forEach((row) => {
-      leaderboardSheet.addRow(row);
-    });
-
-    leaderboardSheet.getRow(1).font = {
-      bold: true,
-    };
-
-    /* ========================================================
-       ANALYTICS
-    ======================================================== */
-
-    const analyticsSheet = workbook.addWorksheet("Analytics");
-
-    analyticsSheet.columns = [
-      {
-        header: "Metric",
-        key: "metric",
-        width: 40,
-      },
-      {
-        header: "Value",
-        key: "value",
-        width: 20,
-      },
-    ];
-
-    analyticsSheet.addRows([
-      {
-        metric: "Registered Students",
-        value: analytics.registeredStudents,
-      },
-      {
-        metric: "Logged In Students",
-        value: analytics.loggedInStudents,
-      },
-      {
-        metric: "Started Students",
-        value: analytics.startedStudents,
-      },
-      {
-        metric: "Submitted Students",
-        value: analytics.submittedStudents,
-      },
-      {
-        metric: "Disqualified Students",
-        value: analytics.disqualifiedStudents,
-      },
-      {
-        metric: "Average Score",
-        value: analytics.averageScore,
-      },
-      {
-        metric: "Highest Score",
-        value: analytics.highestScore,
-      },
-      {
-        metric: "Lowest Score",
-        value: analytics.lowestScore,
-      },
-      {
-        metric: "Passing Score",
-        value: analytics.passingScore,
-      },
-      {
-        metric: "Pass Percentage",
-        value: analytics.passPercentage + "%",
-      },
-    ]);
-
-    analyticsSheet.getRow(1).font = {
-      bold: true,
-    };
-
-    /* ========================================================
-       ASSESSMENT SETTINGS
-    ======================================================== */
-
-    const settingsSheet = workbook.addWorksheet("Assessment Settings");
-
-    settingsSheet.columns = [
-      {
-        header: "Property",
-        key: "property",
-        width: 35,
-      },
-      {
-        header: "Value",
-        key: "value",
-        width: 35,
-      },
-    ];
-
-    settingsSheet.addRows([
-      {
-        property: "Title",
-        value: assessment.title,
-      },
-      {
-        property: "Duration",
-        value: assessment.duration_minutes + " Minutes",
-      },
-      {
-        property: "Total Questions",
-        value: assessment.total_questions,
-      },
-      {
-        property: "Marks Per Question",
-        value: assessment.marks_per_question,
-      },
-      {
-        property: "Negative Marks",
-        value: assessment.negative_marks,
-      },
-      {
-        property: "Passing Score",
-        value: analytics.passingScore,
-      },
-      {
-        property: "Pass Percentage",
-        value: assessment.pass_percentage + "%",
-      },
-      {
-        property: "Status",
-        value: assessment.status,
-      },
-    ]);
-
-    settingsSheet.getRow(1).font = {
-      bold: true,
-    };
-
-    /* ========================================================
-       ALLOWED STUDENTS
-    ======================================================== */
-
-    const studentSheet = workbook.addWorksheet("Allowed Students");
-
-    studentSheet.columns = [
-      {
-        header: "Name",
-        key: "name",
-      },
-      {
-        header: "Roll Number",
-        key: "roll_no",
-      },
-      {
-        header: "Department",
-        key: "department",
-      },
-      {
-        header: "Section",
-        key: "section",
-      },
-      {
-        header: "Email",
-        key: "email",
-      },
-      {
-        header: "Logged In",
-        key: "has_logged_in",
-      },
-    ];
-
-    students.forEach((student) => studentSheet.addRow(student));
-
-    studentSheet.getRow(1).font = {
-      bold: true,
-    };
-
-    /* ========================================================
-       DISQUALIFIED
-    ======================================================== */
-
-    const disqualifiedSheet = workbook.addWorksheet("Disqualified");
-
-    disqualifiedSheet.columns = [
-      {
-        header: "Name",
-        key: "name",
-      },
-      {
-        header: "Roll Number",
-        key: "roll_no",
-      },
-      {
-        header: "Email",
-        key: "email",
-      },
-      {
-        header: "Status",
-        key: "status",
-      },
-    ];
-
-    disqualified.forEach((attempt) => {
-      disqualifiedSheet.addRow({
-        name: attempt.assessment_allowed_students?.name,
-
-        roll_no: attempt.assessment_allowed_students?.roll_no,
-
-        email: attempt.assessment_allowed_students?.email,
-
-        status: attempt.status,
-      });
-    });
-
-    disqualifiedSheet.getRow(1).font = {
-      bold: true,
-    };
-
-    /* ========================================================
-       INFRACTIONS
-    ======================================================== */
-
-    const infractionsSheet = workbook.addWorksheet("Infractions");
-
-    infractionsSheet.columns = [
-      {
-        header: "Attempt ID",
-        key: "attempt_id",
-      },
-      {
-        header: "Type",
-        key: "type",
-      },
-      {
-        header: "Occurred At",
-        key: "occurred_at",
-      },
-    ];
-
-    infractions.forEach((row) => infractionsSheet.addRow(row));
-
-    infractionsSheet.getRow(1).font = {
-      bold: true,
-    };
-
-    /*
-    --------------------------------------------------------
-    Download
-    --------------------------------------------------------
-    */
-
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    );
-
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${assessment.title}-Report.xlsx"`,
-    );
-
-    await workbook.xlsx.write(res);
-
-    res.end();
-  } catch (err) {
-    console.error(err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
-
-/* ============================================================
-   EXPORT CSV
-============================================================ */
-
-exports.exportCSV = async (req, res) => {
-  try {
-    const { assessmentId } = req.params;
-
-    if (!assessmentId) {
-      return res.status(400).json({
-        success: false,
-        message: "Assessment ID is required.",
-      });
+    const wb=new ExcelJS.Workbook();
+    if (type === "question-analysis" || type === "question_analysis") {
+      const ws=wb.addWorksheet("Question Analysis");
+      ws.columns=[{header:"Question No",key:"questionNumber",width:14},{header:"Question",key:"question",width:70},{header:"Attempts",key:"total",width:12},{header:"Correct",key:"correct",width:12},{header:"Wrong",key:"wrong",width:12},{header:"Skipped",key:"skipped",width:12},{header:"Correct %",key:"correctPercentage",width:12},{header:"Wrong %",key:"wrongPercentage",width:12},{header:"Skipped %",key:"skippedPercentage",width:12}];
+      ws.addRows(questionRows); ws.getRow(1).font={bold:true}; ws.views=[{state:"frozen",ySplit:1}];
+      res.setHeader("Content-Type","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); res.setHeader("Content-Disposition",`attachment; filename="${assessment.slug || "assessment"}-question-analysis.xlsx"`); await wb.xlsx.write(res); return res.end();
     }
-
-    /*
-    --------------------------------------------------------
-    Load Data
-    --------------------------------------------------------
-    */
-
-    const assessment = await getAssessment(assessmentId);
-
-    const leaderboard = await buildLeaderboard(assessmentId);
-
-    /*
-    --------------------------------------------------------
-    Headers
-    --------------------------------------------------------
-    */
-
-    const headers = [
-      "Rank",
-      "Name",
-      "Roll Number",
-      "Department",
-      "Section",
-      "Email",
-      "Score",
-      "Status",
-      "Result",
-      "Submitted At",
+    const ws=wb.addWorksheet(type === "leaderboard" ? "Leaderboard" : "Results");
+    ws.columns=[
+      {header:"Rank",key:"rank",width:8},{header:"Name",key:"name",width:24},{header:"Roll No",key:"rollNo",width:18},{header:"Email",key:"email",width:30},{header:"Department",key:"department",width:16},{header:"Status",key:"status",width:16},{header:"Score",key:"score",width:10},{header:"Correct",key:"correct",width:10},{header:"Wrong",key:"wrong",width:10},{header:"Skipped",key:"skipped",width:10},{header:"Percentage",key:"percentage",width:12},{header:"Time Taken",key:"timeTaken",width:14},{header:"Started At",key:"startedAt",width:24},{header:"Submitted At",key:"submittedAt",width:24},{header:"Disqualified Reason",key:"disqualifiedReason",width:30}
     ];
-
-    /*
-    --------------------------------------------------------
-    Passing Score
-    --------------------------------------------------------
-    */
-
-    let passingScore = assessment.passing_score;
-
-    if (passingScore == null) {
-      passingScore =
-        (assessment.total_questions *
-          assessment.marks_per_question *
-          assessment.pass_percentage) /
-        100;
-    }
-
-    /*
-    --------------------------------------------------------
-    Rows
-    --------------------------------------------------------
-    */
-
-    const rows = leaderboard.map((student) => [
-      student.rank,
-
-      student.name,
-
-      student.roll_no,
-
-      student.department,
-
-      student.section,
-
-      student.email,
-
-      student.score,
-
-      student.status,
-
-      Number(student.score) >= Number(passingScore) ? "PASS" : "FAIL",
-
-      student.submitted_at,
-    ]);
-
-    /*
-    --------------------------------------------------------
-    Build CSV
-    --------------------------------------------------------
-    */
-
-    const csv = [
-      headers.join(","),
-
-      ...rows.map((row) =>
-        row
-          .map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`)
-          .join(","),
-      ),
-    ].join("\n");
-
-    /*
-    --------------------------------------------------------
-    Download
-    --------------------------------------------------------
-    */
-
-    res.setHeader("Content-Type", "text/csv");
-
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${assessment.title}-Leaderboard.csv"`,
-    );
-
-    return res.status(200).send(csv);
-  } catch (err) {
-    console.error(err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
+    ws.addRows(rows.map(r=>({...r,timeTaken:secondsToText(r.timeTaken),startedAt:r.startedAt?new Date(r.startedAt).toLocaleString("en-IN"):"",submittedAt:r.submittedAt?new Date(r.submittedAt).toLocaleString("en-IN"):""})));
+    ws.getRow(1).font={bold:true}; ws.views=[{state:"frozen",ySplit:1}]; ws.autoFilter={from:"A1",to:`O${Math.max(1,rows.length+1)}`};
+    res.setHeader("Content-Type","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition",`attachment; filename="${assessment.slug || "assessment"}-${type}.xlsx"`);
+    await wb.xlsx.write(res); res.end();
+  } catch(err){ console.error("EXPORT ERROR",err); res.status(500).json({success:false,message:err.message}); }
 };

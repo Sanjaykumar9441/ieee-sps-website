@@ -125,7 +125,7 @@ export interface AnalyticsData {
 }
 
 export default function Analytics({ assessment }: Props) {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => localStorage.getItem(`assessment_live_updates:${assessment.id}`) !== "false");
 
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     participants: 0,

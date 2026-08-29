@@ -1,16 +1,21 @@
 function validateMCQPayload(payload) {
   if (!payload.question_text) return "Question text is required.";
   if (!payload.bank_id) return "Question Bank ID is required.";
-  if (!payload.options || typeof payload.options !== "object") return "MCQ options are required.";
-  const optionKeys = Object.keys(payload.options).filter((key) => payload.options[key]);
-  if (optionKeys.length !== 4) return "Exactly four MCQ options are required.";
-  if (!Array.isArray(payload.correct_answers) || payload.correct_answers.length !== 1) {
-    return "Exactly one correct answer is required.";
-  }
-  const answer = payload.correct_answers[0];
-  if (typeof answer === "number" && Number.isInteger(answer) && answer >= 0 && answer < 4) return null;
-  if (typeof answer === "string" && /^[A-D]$/i.test(answer)) return null;
-  return "Correct answer must be A-D or option index 0-3.";
+  if (!Array.isArray(payload.options) && (!payload.options || typeof payload.options !== "object")) return "MCQ options are required.";
+  const options = normalizeOptions(payload.options);
+  if (Object.keys(options).length !== 4) return "Exactly four MCQ options are required.";
+  const type = String(payload.question_type || "MCQ").toUpperCase();
+  const correct = Array.isArray(payload.correct_answers) ? payload.correct_answers : [];
+  if (!correct.length) return "At least one correct answer is required.";
+  if (type === "MCQ" && correct.length !== 1) return "MCQ requires exactly one correct answer.";
+  const valid = correct.every((answer) => {
+    if (typeof answer === "number") return Number.isInteger(answer) && answer >= 0 && answer < 4;
+    if (typeof answer === "string" && /^[A-D]$/i.test(answer)) return true;
+    if (typeof answer === "string" && /^\d+$/.test(answer)) return Number(answer) >= 0 && Number(answer) < 4;
+    return false;
+  });
+  if (!valid) return "Correct answers must be A-D or option indices 0-3.";
+  return null;
 }
 
 const Question = require("../models/Question");
@@ -88,11 +93,9 @@ exports.create = async (req, res) => {
     const payload = {
       bank_id: req.body.bank_id,
       question_text: String(req.body.question_text || "").trim(),
-      question_type: "MCQ",
+      question_type: String(req.body.question_type || "MCQ").toUpperCase() === "MULTIPLE_CORRECT" ? "MULTIPLE_CORRECT" : "MCQ",
       options: normalizeOptions(req.body.options),
-      correct_answers: Array.isArray(req.body.correct_answers)
-        ? req.body.correct_answers.slice(0, 1)
-        : [],
+      correct_answers: Array.isArray(req.body.correct_answers) ? [...new Set(req.body.correct_answers)] : [],
       // Fixed assessment format: every MCQ is one mark with no negative marking.
       marks: 1,
       negative_marks: 0,
@@ -138,7 +141,7 @@ exports.update = async (req, res) => {
     }
 
     const payload = {
-      question_type: "MCQ",
+      question_type: String(req.body.question_type || "MCQ").toUpperCase() === "MULTIPLE_CORRECT" ? "MULTIPLE_CORRECT" : "MCQ",
       ...(req.body.question_text !== undefined && {
         question_text: String(req.body.question_text || "").trim(),
       }),
@@ -147,7 +150,7 @@ exports.update = async (req, res) => {
       }),
       ...(req.body.correct_answers !== undefined && {
         correct_answers: Array.isArray(req.body.correct_answers)
-          ? req.body.correct_answers.slice(0, 1)
+          ? [...new Set(req.body.correct_answers)]
           : [],
       }),
       // Keep the simplified MCQ format consistent on every edit.
@@ -382,7 +385,7 @@ exports.validateQuestions = async (req, res) => {
       const correct = Array.isArray(question.correct_answers) ? question.correct_answers : [];
 
       if (!text) errors.push(`Row ${row}: Question text is required.`);
-      if (String(question.question_type || "MCQ").toUpperCase() !== "MCQ") errors.push(`Row ${row}: Only MCQ questions are supported.`);
+      if (String(question.question_type || "MCQ").toUpperCase() !== "MCQ") errors.push(`Row ${row}: Only MCQ and multiple-correct questions are supported.`);
       if (options.length !== 4) errors.push(`Row ${row}: Exactly four options are required.`);
       if (correct.length !== 1) errors.push(`Row ${row}: Exactly one correct answer is required.`);
       if (correct.length === 1) {

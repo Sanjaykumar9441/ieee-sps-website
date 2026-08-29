@@ -116,6 +116,8 @@ exports.createAssessment = async (req, res) => {
       random_questions: req.body.random_questions !== false,
       status: req.body.status || "DRAFT",
       is_active: Boolean(req.body.is_active),
+      login_method: ["PASSWORD", "OTP"].includes(String(req.body.login_method || "PASSWORD").toUpperCase()) ? String(req.body.login_method || "PASSWORD").toUpperCase() : "PASSWORD",
+      live_updates_enabled: req.body.live_updates_enabled !== false,
     };
 
     if (!body.title) {
@@ -180,6 +182,12 @@ exports.updateAssessment = async (req, res) => {
     if (input.shuffle_questions !== undefined) update.shuffle_questions = Boolean(input.shuffle_questions);
     if (input.shuffle_options !== undefined) update.shuffle_options = Boolean(input.shuffle_options);
     if (input.random_questions !== undefined) update.random_questions = Boolean(input.random_questions);
+    if (input.login_method !== undefined) {
+      const method = String(input.login_method).toUpperCase();
+      if (!["PASSWORD", "OTP"].includes(method)) return res.status(400).json({ success: false, message: "Login method must be PASSWORD or OTP." });
+      update.login_method = method;
+    }
+    if (input.live_updates_enabled !== undefined) update.live_updates_enabled = Boolean(input.live_updates_enabled);
     if (input.negative_marks !== undefined) {
       const negativeMarks = Number(input.negative_marks);
       if (!Number.isFinite(negativeMarks) || negativeMarks < 0) {

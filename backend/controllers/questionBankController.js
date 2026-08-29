@@ -5,12 +5,12 @@ const liveEvents = require("../services/liveEvents");
 function normalizeQuestion(question, bankId) {
   const options = Array.isArray(question.options) ? question.options : [];
   const correctAnswers = Array.isArray(question.correct_answers)
-    ? question.correct_answers.slice(0, 1)
+    ? [...new Set(question.correct_answers)]
     : [];
 
   return {
     bank_id: bankId,
-    question_type: "MCQ",
+    question_type: String(question.question_type || "MCQ").toUpperCase() === "MULTIPLE_CORRECT" ? "MULTIPLE_CORRECT" : "MCQ",
     question_text: String(question.question_text || "").trim(),
     question_image_id: null,
     options,
@@ -34,8 +34,8 @@ function validateQuestion(question, index) {
     errors.push("Question text is required.");
   }
 
-  if (question.question_type !== "MCQ") {
-    errors.push("Only MCQ questions are supported.");
+  if (!["MCQ", "MULTIPLE_CORRECT"].includes(question.question_type)) {
+    errors.push("Only MCQ and multiple-correct questions are supported.");
   }
 
   if (
@@ -62,9 +62,6 @@ function validateQuestion(question, index) {
     errors.push("Correct answer must match one of the options.");
   }
 
-  if (Number(question.marks) <= 0) {
-    errors.push("Marks must be greater than 0.");
-  }
 
   return {
     question: `Question ${index + 1}`,

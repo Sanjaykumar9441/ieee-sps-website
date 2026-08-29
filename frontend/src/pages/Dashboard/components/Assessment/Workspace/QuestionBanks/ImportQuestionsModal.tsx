@@ -24,7 +24,7 @@ interface Props {
 
 interface PreviewQuestion {
   question_text: string;
-  question_type: "MCQ";
+  question_type: "MCQ" | "MULTIPLE_CORRECT";
   options: string[];
   correct_answers: string[];
 }
@@ -99,7 +99,7 @@ export default function ImportQuestionsModal({
 
         return {
           question_text: String(row["Question"] || "").trim(),
-          question_type: "MCQ",
+          question_type: String(row["Question Type"] || "MCQ").toUpperCase() === "MULTIPLE_CORRECT" ? "MULTIPLE_CORRECT" : "MCQ",
           options,
           correct_answers: correctAnswer
             ? correctAnswer
@@ -107,7 +107,6 @@ export default function ImportQuestionsModal({
                 .map((answer: string) => answer.trim().toUpperCase())
                 .filter((answer: string) => /^[A-D]$/.test(answer))
                 .map((answer: string) => "ABCD".indexOf(answer))
-                .slice(0, 1)
             : [],
         };
       });

@@ -52,15 +52,23 @@ export const checkAssessment = async (
    EMAIL + COMMON PASSWORD LOGIN
 ============================================================ */
 
+export const requestStudentOtp = async (assessmentId: string, email: string) => {
+  const { data } = await axios.post(`${API}/api/student-auth/send-otp`, { assessmentId, email });
+  if (!data.success) throw new Error(data.message || "Unable to send OTP.");
+  return data;
+};
+
 export const loginStudent = async (
   assessmentId: string,
   email: string,
-  password: string,
+  passwordOrOtp: string,
+  method: "PASSWORD" | "OTP" = "PASSWORD",
 ) => {
   const { data } = await axios.post(`${API}/api/student-auth/login`, {
     assessmentId,
     email,
-    password,
+    password: method === "PASSWORD" ? passwordOrOtp : undefined,
+    otp: method === "OTP" ? passwordOrOtp : undefined,
   });
 
   if (!data.success) {

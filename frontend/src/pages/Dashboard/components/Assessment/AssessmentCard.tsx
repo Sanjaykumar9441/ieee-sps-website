@@ -25,6 +25,8 @@ export interface Assessment {
   show_leaderboard?: boolean;
   anti_cheat_enabled?: boolean;
   socket_monitoring?: boolean;
+  login_method?: "PASSWORD" | "OTP";
+  live_updates_enabled?: boolean;
 }
 
 interface Props {
@@ -56,7 +58,7 @@ export default function AssessmentCard({ assessment, onDashboard, onEdit, onDupl
         <Info icon={<FileText size={18} />} label="Questions" value={assessment.total_questions} />
         <Info icon={<Clock size={18} />} label="Duration" value={`${assessment.duration_minutes} mins`} />
         <Info icon={<Activity size={18} />} label="Status" value={assessment.is_active ? "Running" : "Stopped"} />
-        <Info icon={<Users size={18} />} label="Created" value={new Date(assessment.created_at).toLocaleDateString()} />
+        <Info icon={<Users size={18} />} label="Created" value={new Date(assessment.created_at).toLocaleString()} />
       </div>
 
       <div className="mt-8 grid grid-cols-3 gap-3">

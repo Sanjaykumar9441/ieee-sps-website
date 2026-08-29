@@ -21,6 +21,7 @@ router.get("/:assessmentId", verifyToken, controller.getAllowedStudents);
    STUDENT LOGIN
 =========================== */
 
+router.post("/send-otp", controller.sendOtp);
 router.post("/login", controller.login);
 
 /* ===========================

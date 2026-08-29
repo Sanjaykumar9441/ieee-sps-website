@@ -55,6 +55,15 @@ export default function StudentExamPortal({
       }
 
       const result = await startAssessment(assessmentId);
+      // The start button is a user gesture, so browsers allow us to open the
+      // dedicated exam page in a new tab. The active attempt is persisted in
+      // localStorage and is resumed by the new tab.
+      const examUrl = window.location.href;
+      const examWindow = window.open(examUrl, "_blank", "noopener,noreferrer");
+      if (examWindow) {
+        setTimeout(() => { try { window.close(); } catch {} }, 150);
+        return;
+      }
       setExamData(result);
       onStartExam(assessmentId);
     } catch (err: any) {
@@ -206,6 +215,7 @@ export default function StudentExamPortal({
         assessmentId={assessmentId}
         assessmentTitle={assessment.title}
         onLoggedIn={() => setStep("instructions")}
+        loginMethod={(assessment.login_method || "PASSWORD") === "OTP" ? "OTP" : "PASSWORD"}
       />
     );
   }

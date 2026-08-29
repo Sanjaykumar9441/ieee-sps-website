@@ -31,7 +31,7 @@ const defaultSettings = {
 
   login: {
     allowedStudentsOnly: true,
-    authentication: "EMAIL_COMMON_PASSWORD",
+    authentication: "PASSWORD",
   },
 
   rules: {
@@ -72,6 +72,8 @@ const defaultSettings = {
   },
 
   notifications: {},
+
+  live: { enabled: true },
 
   certificate: {
     enabled: false,
@@ -174,6 +176,13 @@ exports.getSettings = async (req, res) => {
 
         autoEnd: assessment.auto_submit ?? true,
       },
+
+      login: {
+        ...defaultSettings.login,
+        authentication: assessment.login_method || "PASSWORD",
+      },
+
+      live: { enabled: assessment.live_updates_enabled ?? true },
 
       rules: {
         ...defaultSettings.rules,
@@ -308,6 +317,18 @@ exports.updateSettings = async (req, res) => {
 
     if (settings.schedule?.duration !== undefined) {
       assessmentUpdate.duration_minutes = Number(settings.schedule.duration);
+    }
+
+    if (settings.login?.authentication !== undefined) {
+      const method = String(settings.login.authentication).toUpperCase();
+      if (!["PASSWORD", "OTP"].includes(method)) {
+        return res.status(400).json({ success: false, message: "Login method must be PASSWORD or OTP." });
+      }
+      assessmentUpdate.login_method = method;
+    }
+
+    if (settings.live?.enabled !== undefined) {
+      assessmentUpdate.live_updates_enabled = Boolean(settings.live.enabled);
     }
 
     if (settings.rules?.randomQuestions !== undefined) {

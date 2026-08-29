@@ -14,7 +14,7 @@ interface Question {
   id?: string;
   bank_id?: string;
   question_text: string;
-  question_type: "MCQ";
+  question_type: "MCQ" | "MULTIPLE_CORRECT";
   options: string[];
   correct_answers: number[];
 }
@@ -35,6 +35,7 @@ export default function QuestionEditor({
   const [loading, setLoading] = useState(false);
   const [validation, setValidation] = useState<string[]>([]);
   const [question, setQuestion] = useState<Question>(blankQuestion);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (!initialQuestion) {
@@ -58,7 +59,7 @@ export default function QuestionEditor({
               : Number(answer),
           )
           .filter((index: number) => Number.isInteger(index) && index >= 0 && index < 4)
-          .slice(0, 1)
+          .filter((value: number, index: number, arr: number[]) => arr.indexOf(value) === index)
       : rawCorrect == null
         ? []
         : [Number(rawCorrect)];
@@ -67,7 +68,7 @@ export default function QuestionEditor({
       id: initialQuestion.id,
       bank_id: initialQuestion.bank_id,
       question_text: initialQuestion.question_text || "",
-      question_type: "MCQ",
+      question_type: ((initialQuestion as any).question_type === "MULTIPLE_CORRECT" ? "MULTIPLE_CORRECT" : "MCQ") as Question["question_type"],
       options,
       correct_answers: correct,
     });
@@ -89,8 +90,11 @@ export default function QuestionEditor({
       errors.push("Answer options must be different.");
     }
 
-    if (question.correct_answers.length !== 1) {
-      errors.push("Select exactly one correct answer.");
+    if (question.correct_answers.length < 1) {
+      errors.push("Select at least one correct answer.");
+    }
+    if (question.question_type === "MCQ" && question.correct_answers.length !== 1) {
+      errors.push("MCQ requires exactly one correct answer.");
     }
 
     const correctIndex = question.correct_answers[0];
@@ -114,7 +118,7 @@ export default function QuestionEditor({
 
       const payload = {
         question_text: question.question_text.trim(),
-        question_type: "MCQ" as const,
+        question_type: question.question_type,
         options: question.options.map((option) => option.trim()),
         correct_answers: question.correct_answers,
       };
@@ -146,10 +150,11 @@ export default function QuestionEditor({
   };
 
   const setCorrectAnswer = (index: number) => {
-    setQuestion((current) => ({
-      ...current,
-      correct_answers: [index],
-    }));
+    setQuestion((current) => {
+      if (current.question_type === "MCQ") return { ...current, correct_answers: [index] };
+      const exists = current.correct_answers.includes(index);
+      return { ...current, correct_answers: exists ? current.correct_answers.filter((i) => i !== index) : [...current.correct_answers, index] };
+    });
   };
 
   return (
@@ -159,16 +164,16 @@ export default function QuestionEditor({
           <button type="button" onClick={onBack} className="flex items-center gap-2">
             <ArrowLeft size={18} /> Back
           </button>
-          <h1 className="mt-3 text-3xl font-bold">MCQ Question Editor</h1>
+          <h1 className="mt-3 text-3xl font-bold">Question Editor</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Create a multiple-choice question with four options and one correct answer.
+            Create an MCQ or multiple-correct question with four options.
           </p>
         </div>
 
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={() => document.getElementById("student-preview")?.scrollIntoView({ behavior: "smooth" })}
+            onClick={() => setPreviewOpen(true)}
             className="flex items-center gap-2 rounded-xl border px-5 py-3"
           >
             <Eye size={18} /> Preview
@@ -202,6 +207,13 @@ export default function QuestionEditor({
 
       <section className="mt-8 rounded-2xl border bg-white p-6">
         <h2 className="text-xl font-semibold">Question</h2>
+        <div className="mt-5 max-w-sm">
+          <label className="mb-2 block text-sm font-medium">Question Type</label>
+          <select value={question.question_type} onChange={(e) => setQuestion((q) => ({ ...q, question_type: e.target.value as Question["question_type"], correct_answers: e.target.value === "MCQ" ? q.correct_answers.slice(0, 1) : q.correct_answers }))} className="w-full rounded-xl border p-3">
+            <option value="MCQ">MCQ — One Correct Answer</option>
+            <option value="MULTIPLE_CORRECT">Multiple Choice — Multiple Correct Answers</option>
+          </select>
+        </div>
         <textarea
           rows={6}
           value={question.question_text}
@@ -213,14 +225,14 @@ export default function QuestionEditor({
 
       <section className="mt-8 rounded-2xl border bg-white p-6" id="student-preview">
         <h2 className="text-xl font-semibold">Answer Options</h2>
-        <p className="mt-1 text-sm text-gray-500">Select exactly one correct option.</p>
+        <p className="mt-1 text-sm text-gray-500">{question.question_type === "MCQ" ? "Select exactly one correct option." : "Select all correct options."}</p>
 
         <div className="mt-5 space-y-4">
           {question.options.map((option, index) => (
             <div key={index} className="flex items-center gap-3">
               <input
-                type="radio"
-                name="correct-answer"
+                type={question.question_type === "MCQ" ? "radio" : "checkbox"}
+                name={question.question_type === "MCQ" ? "correct-answer" : undefined}
                 checked={question.correct_answers.includes(index)}
                 onChange={() => setCorrectAnswer(index)}
                 aria-label={`Mark option ${String.fromCharCode(65 + index)} correct`}
@@ -236,6 +248,24 @@ export default function QuestionEditor({
           ))}
         </div>
       </section>
+
+      {previewOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setPreviewOpen(false)}>
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b px-6 py-5">
+              <div><h2 className="text-xl font-bold">Student Preview</h2><p className="text-sm text-gray-500">This is how the question will appear to students.</p></div>
+              <button type="button" onClick={() => setPreviewOpen(false)} className="rounded-lg border px-3 py-2">Close</button>
+            </div>
+            <div className="p-6">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#00629B]">Question 1</p>
+              <p className="mt-4 text-lg font-medium text-slate-900">{question.question_text || "Question text will appear here."}</p>
+              <div className="mt-6 space-y-3">
+                {question.options.map((option, index) => <div key={index} className="flex items-start gap-3 rounded-xl border p-4"><span className="font-bold">{String.fromCharCode(65+index)}</span><span>{option || "Option not filled"}</span></div>)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

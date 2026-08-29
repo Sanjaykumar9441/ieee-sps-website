@@ -53,7 +53,7 @@ async function getBankQuestions(bankId) {
     )
     .eq("bank_id", bankId)
     .eq("is_active", true)
-    .eq("question_type", "MCQ");
+    .in("question_type", ["MCQ", "MULTIPLE_CORRECT"]);
 
   if (error) throw error;
 
@@ -96,13 +96,11 @@ function normalizeQuestion(question, assessment) {
     id: question.id,
     bank_id: question.bank_id,
     question_text: question.question_text,
-    question_type: "MCQ",
+    question_type: String(question.question_type || "MCQ").toUpperCase() === "MULTIPLE_CORRECT" ? "MULTIPLE_CORRECT" : "MCQ",
     options: question.options || {},
-    correct_answers: Array.isArray(question.correct_answers)
-      ? question.correct_answers.slice(0, 1)
-      : [],
-    // Freeze the assessment-level negative marking into each attempt question.
-    marks: 1,
+    correct_answers: Array.isArray(question.correct_answers) ? [...question.correct_answers] : [],
+    // Freeze assessment-level marking into the attempt.
+    marks: Math.max(0, Number(assessment?.marks_per_question ?? 1)),
     negative_marks: Math.max(0, Number(assessment?.negative_marks || 0)),
   };
 }
@@ -282,11 +280,11 @@ exports.getQuestion = async (attemptId, questionNumber) => {
     question_order: data.question_order,
 
     question_text: source.question_text,
-    question_type: "MCQ",
+    question_type: source.question_type === "MULTIPLE_CORRECT" ? "MULTIPLE_CORRECT" : "MCQ",
 
     options: data.shuffled_options || {},
 
-    marks: 1,
+    marks: Number(data.marks ?? 1),
 
     negative_marks: Number(data.negative_marks ?? 0),
 

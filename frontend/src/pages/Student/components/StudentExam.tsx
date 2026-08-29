@@ -93,7 +93,9 @@ export default function StudentExam({
       }
 
       if (typeof data.remainingSeconds === "number") {
-        setRemainingSeconds(data.remainingSeconds);
+        const seconds = Math.max(0, Number(data.remainingSeconds));
+        deadlineRef.current = Date.now() + seconds * 1000;
+        setRemainingSeconds(seconds);
       }
 
       if (data.palette) {
@@ -132,6 +134,8 @@ export default function StudentExam({
 
   const [remainingSeconds, setRemainingSeconds] =
     useState(initialSeconds);
+
+  const deadlineRef = useRef(Date.now() + Math.max(0, initialSeconds) * 1000);
 
   const [isFullscreen, setIsFullscreen] = useState(
     Boolean(document.fullscreenElement)
@@ -242,15 +246,16 @@ export default function StudentExam({
     };
   }, [syncServerState]);
 
-  // Keep the visible timer moving every second. The server remains authoritative
-  // and the 15-second sync above corrects any local clock drift.
+  // Run the visible countdown from an absolute deadline. This prevents the timer
+  // from freezing/resetting while questions are loading or navigation is occurring.
   useEffect(() => {
+    deadlineRef.current = Date.now() + Math.max(0, initialSeconds) * 1000;
     const interval = window.setInterval(() => {
-      setRemainingSeconds((seconds) => Math.max(0, seconds - 1));
-    }, 1000);
-
+      const seconds = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
+      setRemainingSeconds(seconds);
+    }, 250);
     return () => window.clearInterval(interval);
-  }, []);
+  }, [initialSeconds]);
 
   /* ============================================================
      EXPIRE / AUTO SUBMIT
@@ -534,9 +539,9 @@ export default function StudentExam({
         String(number)
       );
 
-      setRemainingSeconds(
-        result.remainingSeconds
-      );
+      const serverSeconds = Math.max(0, Number(result.remainingSeconds || 0));
+      deadlineRef.current = Date.now() + serverSeconds * 1000;
+      setRemainingSeconds(serverSeconds);
 
       const serverAnswers =
         result.question.assessment_answers?.[0]?.selected_answers || [];
@@ -744,20 +749,12 @@ export default function StudentExam({
 
       if (active) return;
 
-      // The first Escape is a warning only. The second Escape within
-      // the short grace window submits the attempt.
-      if (escapeWarningRef.current) {
-        return;
-      }
-
+      // A fullscreen exit not caused by the two-Escape policy is treated as
+      // leaving the exam and submits immediately.
       if (intentionalFullscreenExitRef.current) {
         intentionalFullscreenExitRef.current = false;
-        escapeWarningRef.current = false;
         return;
       }
-
-      // Fullscreen was exited by another method (mouse/browser control).
-      // Treat that as leaving the exam and submit immediately.
       void reportInfraction("FULLSCREEN_EXIT");
       toast.error("Fullscreen was exited. Submitting your assessment.");
       void securitySubmitRef.current?.();
@@ -788,25 +785,27 @@ export default function StudentExam({
       if (escapeCountRef.current === 1) {
         toast.error("Warning: Escape detected. A second Escape will submit your assessment.");
         void reportInfraction("FULLSCREEN_EXIT");
+        // Browsers exit fullscreen immediately after Escape. Mark this first
+        // Escape as intentional so fullscreenchange does not auto-submit.
+        intentionalFullscreenExitRef.current = true;
         escapeWarningRef.current = true;
         escapeResetTimerRef.current = window.setTimeout(() => {
           escapeCountRef.current = 0;
           escapeWarningRef.current = false;
+          intentionalFullscreenExitRef.current = false;
           lastEscapeAtRef.current = 0;
         }, 1800);
         return;
       }
 
-      // Allow the browser's second Escape to leave fullscreen. The next
-      // tab/window change is what triggers the actual security submission.
+      // Second Escape inside the grace window submits the attempt. Prevent
+      // the browser fullscreenchange event from submitting a second time.
       escapeCountRef.current = 0;
-      // Mark this fullscreenchange as the intentional second Escape so it
-      // does not create another warning or immediate submission.
-      intentionalFullscreenExitRef.current = true;
-      escapeWarningRef.current = true;
       lastEscapeAtRef.current = 0;
+      intentionalFullscreenExitRef.current = true;
       void reportInfraction("FULLSCREEN_EXIT");
-      toast.error("Fullscreen exited. Switching tabs or leaving this window will submit the assessment.");
+      toast.error("Second Escape detected. Submitting your assessment.");
+      void securitySubmitRef.current?.();
       escapeResetTimerRef.current = window.setTimeout(() => {
         escapeWarningRef.current = false;
         intentionalFullscreenExitRef.current = false;

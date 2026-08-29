@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { X, Plus, Settings2, Calendar, Clock, Shuffle, Trophy } from "lucide-react";
+import { X, Plus, Settings2, Calendar, Clock, Shuffle, Trophy, LogIn } from "lucide-react";
 import toast from "react-hot-toast";
 import { createAssessment, updateAssessment } from "./assessmentApi";
 
@@ -41,6 +41,7 @@ interface FormState {
   shuffle_questions: boolean;
   shuffle_options: boolean;
   random_questions: boolean;
+  login_method: "PASSWORD" | "OTP";
 }
 
 const initialForm: FormState = {
@@ -57,6 +58,7 @@ const initialForm: FormState = {
   shuffle_questions: true,
   shuffle_options: true,
   random_questions: false,
+  login_method: "PASSWORD",
 };
 
 const slugify = (value: string) =>
@@ -99,6 +101,7 @@ export default function CreateAssessmentModal({ open, onClose, onCreated, assess
         shuffle_questions: assessment.shuffle_questions ?? true,
         shuffle_options: assessment.shuffle_options ?? true,
         random_questions: assessment.random_questions ?? false,
+        login_method: (assessment as any).login_method === "OTP" ? "OTP" : "PASSWORD",
       });
       setSlugTouched(true);
     } else {
@@ -152,6 +155,8 @@ export default function CreateAssessmentModal({ open, onClose, onCreated, assess
         shuffle_questions: form.shuffle_questions,
         shuffle_options: form.shuffle_options,
         random_questions: form.random_questions,
+        login_method: form.login_method,
+        live_updates_enabled: true,
       };
 
       if (isEdit && assessment?.id) {
@@ -216,6 +221,15 @@ export default function CreateAssessmentModal({ open, onClose, onCreated, assess
                     <p className="mt-1 text-xs text-gray-500">This value applies to every MCQ in this assessment.</p>
                   </div>
                 )}
+              </div>
+            </section>
+
+
+            <section>
+              <div className="mb-4 flex items-center gap-2"><LogIn size={18} className="text-[#00629B]" /><h3 className="font-semibold">Student Login</h3></div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Toggle label="Password Login" description="Registered email + common assessment password." checked={form.login_method === "PASSWORD"} onChange={(v) => v && updateField("login_method", "PASSWORD")} />
+                <Toggle label="OTP Login" description="Send a one-time code to the registered email." checked={form.login_method === "OTP"} onChange={(v) => v && updateField("login_method", "OTP")} />
               </div>
             </section>
 

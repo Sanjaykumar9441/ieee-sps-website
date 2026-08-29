@@ -31,7 +31,7 @@ export interface LeaderboardStudent {
 }
 
 export default function Leaderboard({ assessment }: Props) {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => localStorage.getItem(`assessment_live_updates:${assessment.id}`) !== "false");
 
   const [students, setStudents] = useState<LeaderboardStudent[]>([]);
 

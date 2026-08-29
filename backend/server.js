@@ -54,7 +54,6 @@ const adminForceSubmitRoutes = require("./routes/adminForceSubmitRoutes");
 const dashboardAnalyticsRoutes = require("./routes/dashboardAnalyticsRoutes");
 const exportRoutes = require("./routes/exportRoutes");
 const studentAuthRoutes = require("./routes/studentAuthRoutes");
-const emailworker = require("../backend/services/emailWorker");
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);

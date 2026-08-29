@@ -35,7 +35,7 @@ interface Question {
 
   question_text: string;
 
-  question_type: "MCQ";
+  question_type: "MCQ" | "MULTIPLE_CORRECT";
 
   options: string[];
 
@@ -48,7 +48,7 @@ interface Question {
 
 interface ImportQuestion {
   question_text: string;
-  question_type: "MCQ";
+  question_type: "MCQ" | "MULTIPLE_CORRECT";
 
   options: string[];
 
@@ -262,7 +262,7 @@ export default function QuestionBankDetails({
 
           return {
             question_text: row.question_text.trim(),
-            question_type: "MCQ",
+            question_type: (String(row.question_type || "MCQ").toUpperCase() === "MULTIPLE_CORRECT" ? "MULTIPLE_CORRECT" : "MCQ"),
             options: [row.option_a, row.option_b, row.option_c, row.option_d]
               .map((option) => option.trim())
               .filter(Boolean),

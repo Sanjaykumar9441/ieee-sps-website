@@ -29,14 +29,17 @@ class QuestionBank {
 
     if (bankError) return { error: bankError };
 
-    const result = banks.map((bank) => {
+    const result = await Promise.all(banks.map(async (bank) => {
       const mapping = mappings.find((m) => m.question_bank_id === bank.id);
-
-      return {
-        ...bank,
-        questions_to_pick: mapping?.questions_to_pick ?? 0,
-      };
-    });
+      const { count, error: countError } = await supabase
+        .from("questions")
+        .select("id", { count: "exact", head: true })
+        .eq("bank_id", bank.id)
+        .eq("is_active", true)
+        .in("question_type", ["MCQ", "MULTIPLE_CORRECT"]);
+      if (countError) throw countError;
+      return { ...bank, total_questions: count ?? 0, questions_to_pick: mapping?.questions_to_pick ?? 0 };
+    }));
 
     return { data: result };
   }
