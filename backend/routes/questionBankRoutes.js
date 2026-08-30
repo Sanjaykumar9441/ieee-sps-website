@@ -1,33 +1,16 @@
 const express = require("express");
-
 const router = express.Router();
 
-const controller = require("../controllers/questionBankController");
+const questionBankController = require("../controllers/questionBankController");
+const questionController = require("../controllers/questionController");
 
-/* ============================================================
-QUESTION BANK CRUD
-============================================================ */
+router.get("/assessment/:assessmentId", questionBankController.list);
+router.post("/", questionBankController.create);
+router.put("/:id", questionBankController.update);
+router.post("/:id/duplicate", questionBankController.duplicate);
+router.delete("/:id", questionBankController.delete);
 
-router.get("/assessment/:assessmentId", controller.list);
-
-router.post("/", controller.create);
-
-router.put("/:id", controller.update);
-
-router.post("/:id/duplicate", controller.duplicate);
-
-router.delete("/:id", controller.delete);
-
-/* ============================================================
-QUESTION IMPORT
-============================================================ */
-
-router.post("/:bankId/import", controller.importQuestions);
-
-router.post("/:bankId/validate", controller.validateQuestions);
-
-router.post("/:bankId/duplicates", controller.checkDuplicates);
-
-router.post("/:bankId/final-import", controller.finalImport);
+// Backward-compatible create-question endpoint used by older QuestionEditor builds.
+router.post("/:bankId/questions", questionController.create);
 
 module.exports = router;

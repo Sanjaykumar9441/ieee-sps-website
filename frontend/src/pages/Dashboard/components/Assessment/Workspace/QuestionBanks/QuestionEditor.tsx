@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Eye, CheckCircle, Save } from "lucide-react";
+import { ArrowLeft, CheckCircle, Save } from "lucide-react";
 import toast from "react-hot-toast";
 import { createQuestion, updateQuestion } from "../../../Assessment/assessmentApi";
 
@@ -14,16 +14,31 @@ interface Question {
   id?: string;
   bank_id?: string;
   question_text: string;
-  question_type: "MCQ" | "MULTIPLE_CORRECT";
+  question_type: "MCQ" | "MULTIPLE_CORRECT" | "TRUE_FALSE" | "SUBJECTIVE";
+  difficulty: "Easy" | "Medium" | "Hard";
+  marks: number;
+  negative_marks: number;
+  explanation: string;
   options: string[];
-  correct_answers: number[];
+  correct_answers?: number[];
+  correct_answer?: number[];
+  tags: string[];
+  language?: string;
+  estimated_seconds?: number;
 }
 
-const blankQuestion: Question = {
+const emptyQuestion: Question = {
   question_text: "",
   question_type: "MCQ",
+  difficulty: "Easy",
+  marks: 1,
+  negative_marks: 0,
+  explanation: "",
   options: ["", "", "", ""],
   correct_answers: [],
+  tags: [],
+  language: "en",
+  estimated_seconds: 60,
 };
 
 export default function QuestionEditor({
@@ -32,242 +47,387 @@ export default function QuestionEditor({
   onBack,
   onSaved,
 }: Props) {
+  const [question, setQuestion] = useState<Question>(emptyQuestion);
   const [loading, setLoading] = useState(false);
   const [validation, setValidation] = useState<string[]>([]);
-  const [question, setQuestion] = useState<Question>(blankQuestion);
-  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (!initialQuestion) {
-      setQuestion(blankQuestion);
+      setQuestion(emptyQuestion);
       return;
     }
 
-    const sourceOptions: any = (initialQuestion as any).options;
-    const options = Array.isArray(sourceOptions)
-      ? sourceOptions.slice(0, 4)
-      : ["A", "B", "C", "D"].map((key) => sourceOptions?.[key] ?? "");
-
-    while (options.length < 4) options.push("");
-
-    const rawCorrect = (initialQuestion as any).correct_answers;
-    const correct = Array.isArray(rawCorrect)
-      ? rawCorrect
-          .map((answer: any) =>
-            typeof answer === "string" && /^[A-D]$/i.test(answer)
-              ? "ABCD".indexOf(answer.toUpperCase())
-              : Number(answer),
-          )
-          .filter((index: number) => Number.isInteger(index) && index >= 0 && index < 4)
-          .filter((value: number, index: number, arr: number[]) => arr.indexOf(value) === index)
-      : rawCorrect == null
-        ? []
-        : [Number(rawCorrect)];
+    const answers =
+      initialQuestion.correct_answers ??
+      initialQuestion.correct_answer ??
+      [];
 
     setQuestion({
-      id: initialQuestion.id,
-      bank_id: initialQuestion.bank_id,
-      question_text: initialQuestion.question_text || "",
-      question_type: ((initialQuestion as any).question_type === "MULTIPLE_CORRECT" ? "MULTIPLE_CORRECT" : "MCQ") as Question["question_type"],
-      options,
-      correct_answers: correct,
+      ...emptyQuestion,
+      ...initialQuestion,
+      correct_answers: answers,
+      options: Array.isArray(initialQuestion.options)
+        ? initialQuestion.options
+        : ["", "", "", ""],
     });
   }, [initialQuestion]);
 
-  const handleValidate = () => {
+  const answers = question.correct_answers ?? [];
+
+  const setType = (type: Question["question_type"]) => {
+    setQuestion((current) => ({
+      ...current,
+      question_type: type,
+      correct_answers:
+        type === "MCQ" || type === "TRUE_FALSE"
+          ? current.correct_answers?.slice(0, 1) ?? []
+          : current.correct_answers ?? [],
+      options:
+        type === "TRUE_FALSE" || type === "SUBJECTIVE"
+          ? []
+          : current.options.length
+            ? current.options
+            : ["", "", "", ""],
+    }));
+    setValidation([]);
+  };
+
+  const validate = () => {
     const errors: string[] = [];
-    const options = question.options.map((o) => o.trim());
+    const options = question.options.filter((x) => x.trim());
 
-    if (!question.question_text.trim()) {
-      errors.push("Question text is required.");
-    }
+    if (!question.question_text.trim()) errors.push("Question text is required.");
+    if (question.marks <= 0) errors.push("Marks must be greater than 0.");
+    if (question.negative_marks < 0) errors.push("Negative marks cannot be negative.");
 
-    if (options.filter(Boolean).length !== 4) {
-      errors.push("All four answer options are required.");
-    }
-
-    if (new Set(options.filter(Boolean)).size !== options.filter(Boolean).length) {
-      errors.push("Answer options must be different.");
+    if (question.question_type === "MCQ") {
+      if (options.length < 2) errors.push("MCQ needs at least two options.");
+      if (answers.length !== 1) errors.push("MCQ needs exactly one correct answer.");
     }
 
-    if (question.correct_answers.length < 1) {
-      errors.push("Select at least one correct answer.");
-    }
-    if (question.question_type === "MCQ" && question.correct_answers.length !== 1) {
-      errors.push("MCQ requires exactly one correct answer.");
-    }
-    if (question.question_type === "MULTIPLE_CORRECT" && question.correct_answers.length < 2) {
-      errors.push("Multiple Choice requires at least two correct answers.");
+    if (question.question_type === "MULTIPLE_CORRECT") {
+      if (options.length < 2) errors.push("Multiple Correct needs at least two options.");
+      if (answers.length < 2) {
+        errors.push("Multiple Correct needs at least two correct answers.");
+      }
     }
 
-    const correctIndex = question.correct_answers[0];
-    if (
-      correctIndex !== undefined &&
-      (correctIndex < 0 || correctIndex >= 4 || !options[correctIndex])
-    ) {
-      errors.push("The selected correct answer is invalid.");
+    if (question.question_type === "TRUE_FALSE" && answers.length !== 1) {
+      errors.push("Select True or False.");
     }
 
     setValidation(errors);
     if (!errors.length) toast.success("Question is valid.");
-    return errors;
+    return !errors.length;
   };
 
-  const handleSave = async () => {
-    if (handleValidate().length) return;
+  const save = async () => {
+    if (!validate()) return;
 
     try {
       setLoading(true);
 
       const payload = {
+        bank_id: bankId,
         question_text: question.question_text.trim(),
         question_type: question.question_type,
-        options: question.options.map((option) => option.trim()),
-        correct_answers: question.correct_answers,
+        difficulty: question.difficulty,
+        marks: Number(question.marks),
+        negative_marks: Number(question.negative_marks),
+        explanation: question.explanation?.trim() || null,
+        options:
+          question.question_type === "SUBJECTIVE"
+            ? []
+            : question.options.map((x) => x.trim()).filter(Boolean),
+        correct_answers:
+          question.question_type === "SUBJECTIVE" ? [] : answers,
+        tags: question.tags,
+        language: question.language || "en",
+        estimated_seconds: Number(question.estimated_seconds || 60),
       };
 
       if (question.id) {
         await updateQuestion(question.id, payload);
       } else {
-        await createQuestion({ ...payload, bank_id: bankId });
+        await createQuestion(payload);
       }
 
       toast.success("Question saved successfully.");
       onSaved();
-    } catch (err: any) {
-      console.error(err);
+    } catch (error: any) {
+      console.error("Question save error:", error);
       toast.error(
-        err?.response?.data?.message || "Unable to save question.",
+        error?.response?.data?.message ||
+          "Unable to save question.",
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const setOption = (index: number, value: string) => {
-    setQuestion((current) => {
-      const options = [...current.options];
-      options[index] = value;
-      return { ...current, options };
-    });
-  };
-
-  const setCorrectAnswer = (index: number) => {
-    setQuestion((current) => {
-      if (current.question_type === "MCQ") return { ...current, correct_answers: [index] };
-      const exists = current.correct_answers.includes(index);
-      return { ...current, correct_answers: exists ? current.correct_answers.filter((i) => i !== index) : [...current.correct_answers, index] };
-    });
-  };
-
   return (
-    <div className="pb-10">
-      <div className="flex items-center justify-between border-b pb-5">
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <button type="button" onClick={onBack} className="flex items-center gap-2">
-            <ArrowLeft size={18} /> Back
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-2 text-[#00629B]"
+          >
+            <ArrowLeft size={18} />
+            Back
           </button>
           <h1 className="mt-3 text-3xl font-bold">Question Editor</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Create an MCQ or multiple-correct question with four options.
+          <p className="mt-1 text-gray-500">
+            Create an MCQ, Multiple Correct, True/False or Subjective question.
           </p>
         </div>
 
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={() => setPreviewOpen(true)}
+            onClick={validate}
             className="flex items-center gap-2 rounded-xl border px-5 py-3"
           >
-            <Eye size={18} /> Preview
+            <CheckCircle size={18} />
+            Validate
           </button>
           <button
             type="button"
-            onClick={handleValidate}
-            className="flex items-center gap-2 rounded-xl border px-5 py-3"
-          >
-            <CheckCircle size={18} /> Validate
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
+            onClick={save}
             disabled={loading}
             className="flex items-center gap-2 rounded-xl bg-[#00629B] px-5 py-3 text-white disabled:opacity-50"
           >
-            <Save size={18} /> {loading ? "Saving..." : "Save"}
+            <Save size={18} />
+            {loading ? "Saving..." : "Save"}
           </button>
         </div>
       </div>
 
-      {validation.length > 0 && (
-        <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          <p className="font-semibold">Please fix the following:</p>
-          <ul className="mt-2 list-disc pl-5">
-            {validation.map((error) => <li key={error}>{error}</li>)}
-          </ul>
-        </div>
-      )}
+      <section className="rounded-2xl border bg-white p-6">
+        <h2 className="text-xl font-semibold">Basic Information</h2>
 
-      <section className="mt-8 rounded-2xl border bg-white p-6">
-        <h2 className="text-xl font-semibold">Question</h2>
-        <div className="mt-5 max-w-sm">
-          <label className="mb-2 block text-sm font-medium">Question Type</label>
-          <select value={question.question_type} onChange={(e) => setQuestion((q) => ({ ...q, question_type: e.target.value as Question["question_type"], correct_answers: e.target.value === "MCQ" ? q.correct_answers.slice(0, 1) : q.correct_answers }))} className="w-full rounded-xl border p-3">
+        <div className="mt-5 grid gap-5 md:grid-cols-4">
+          <select
+            value={question.question_type}
+            onChange={(e) =>
+              setType(e.target.value as Question["question_type"])
+            }
+            className="rounded-xl border p-3"
+          >
             <option value="MCQ">MCQ — One Correct Answer</option>
-            <option value="MULTIPLE_CORRECT">Multiple Choice — Multiple Correct Answers</option>
+            <option value="MULTIPLE_CORRECT">Multiple Correct</option>
+            <option value="TRUE_FALSE">True / False</option>
+            <option value="SUBJECTIVE">Subjective</option>
           </select>
+
+          <select
+            value={question.difficulty}
+            onChange={(e) =>
+              setQuestion({
+                ...question,
+                difficulty: e.target.value as Question["difficulty"],
+              })
+            }
+            className="rounded-xl border p-3"
+          >
+            <option value="Easy">Easy</option>
+            <option value="Medium">Medium</option>
+            <option value="Hard">Hard</option>
+          </select>
+
+          <input
+            type="number"
+            min="1"
+            value={question.marks}
+            onChange={(e) =>
+              setQuestion({ ...question, marks: Number(e.target.value) })
+            }
+            className="rounded-xl border p-3"
+            placeholder="Marks"
+          />
+
+          <input
+            type="number"
+            min="0"
+            value={question.negative_marks}
+            onChange={(e) =>
+              setQuestion({
+                ...question,
+                negative_marks: Number(e.target.value),
+              })
+            }
+            className="rounded-xl border p-3"
+            placeholder="Negative Marks"
+          />
         </div>
+      </section>
+
+      <section className="rounded-2xl border bg-white p-6">
+        <h2 className="text-xl font-semibold">Question</h2>
+
         <textarea
           rows={6}
           value={question.question_text}
-          onChange={(e) => setQuestion({ ...question, question_text: e.target.value })}
+          onChange={(e) =>
+            setQuestion({
+              ...question,
+              question_text: e.target.value,
+            })
+          }
           placeholder="Enter question here..."
           className="mt-5 w-full rounded-xl border p-4"
         />
       </section>
 
-      <section className="mt-8 rounded-2xl border bg-white p-6" id="student-preview">
-        <h2 className="text-xl font-semibold">Answer Options</h2>
-        <p className="mt-1 text-sm text-gray-500">{question.question_type === "MCQ" ? "Select exactly one correct option." : "Select all correct options."}</p>
+      {(question.question_type === "MCQ" ||
+        question.question_type === "MULTIPLE_CORRECT") && (
+        <section className="rounded-2xl border bg-white p-6">
+          <h2 className="text-xl font-semibold">
+            Answer Options
+          </h2>
 
-        <div className="mt-5 space-y-4">
-          {question.options.map((option, index) => (
-            <div key={index} className="flex items-center gap-3">
-              <input
-                type={question.question_type === "MCQ" ? "radio" : "checkbox"}
-                name={question.question_type === "MCQ" ? "correct-answer" : undefined}
-                checked={question.correct_answers.includes(index)}
-                onChange={() => setCorrectAnswer(index)}
-                aria-label={`Mark option ${String.fromCharCode(65 + index)} correct`}
-              />
-              <span className="w-6 font-semibold">{String.fromCharCode(65 + index)}</span>
-              <input
-                value={option}
-                onChange={(e) => setOption(index, e.target.value)}
-                placeholder={`Option ${String.fromCharCode(65 + index)}`}
-                className="w-full rounded-xl border p-3"
-              />
-            </div>
-          ))}
-        </div>
+          <p className="mt-1 text-sm text-gray-500">
+            {question.question_type === "MCQ"
+              ? "Select exactly one correct answer."
+              : "Select two or more correct answers."}
+          </p>
+
+          <div className="mt-6 space-y-4">
+            {question.options.map((option, index) => (
+              <div key={index} className="flex items-center gap-3">
+                <input
+                  type={question.question_type === "MCQ" ? "radio" : "checkbox"}
+                  checked={answers.includes(index)}
+                  onChange={() => {
+                    if (question.question_type === "MCQ") {
+                      setQuestion({
+                        ...question,
+                        correct_answers: [index],
+                      });
+                    } else {
+                      const next = answers.includes(index)
+                        ? answers.filter((x) => x !== index)
+                        : [...answers, index];
+
+                      setQuestion({
+                        ...question,
+                        correct_answers: next,
+                      });
+                    }
+                    setValidation([]);
+                  }}
+                />
+
+                <span className="w-7 font-semibold">
+                  {String.fromCharCode(65 + index)}.
+                </span>
+
+                <input
+                  value={option}
+                  onChange={(e) => {
+                    const next = [...question.options];
+                    next[index] = e.target.value;
+                    setQuestion({ ...question, options: next });
+                  }}
+                  placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                  className="flex-1 rounded-xl border p-3"
+                />
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={() =>
+                setQuestion({
+                  ...question,
+                  options: [...question.options, ""],
+                })
+              }
+              className="rounded-xl border px-5 py-2"
+            >
+              + Add Option
+            </button>
+          </div>
+        </section>
+      )}
+
+      {question.question_type === "TRUE_FALSE" && (
+        <section className="rounded-2xl border bg-white p-6">
+          <h2 className="text-xl font-semibold">Correct Answer</h2>
+
+          <div className="mt-5 flex gap-8">
+            {[["True", 0], ["False", 1]].map(([label, value]) => (
+              <label key={String(label)} className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  checked={answers[0] === value}
+                  onChange={() =>
+                    setQuestion({
+                      ...question,
+                      correct_answers: [Number(value)],
+                    })
+                  }
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {question.question_type === "SUBJECTIVE" && (
+        <section className="rounded-2xl border bg-white p-6">
+          <h2 className="text-xl font-semibold">Subjective Question</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Students will type their answer during the exam.
+          </p>
+        </section>
+      )}
+
+      <section className="rounded-2xl border bg-white p-6">
+        <h2 className="text-xl font-semibold">Explanation</h2>
+        <textarea
+          rows={5}
+          value={question.explanation}
+          onChange={(e) =>
+            setQuestion({
+              ...question,
+              explanation: e.target.value,
+            })
+          }
+          placeholder="Optional explanation shown after the assessment."
+          className="mt-5 w-full rounded-xl border p-4"
+        />
       </section>
 
-      {previewOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setPreviewOpen(false)}>
-          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b px-6 py-5">
-              <div><h2 className="text-xl font-bold">Student Preview</h2><p className="text-sm text-gray-500">This is how the question will appear to students.</p></div>
-              <button type="button" onClick={() => setPreviewOpen(false)} className="rounded-lg border px-3 py-2">Close</button>
-            </div>
-            <div className="p-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#00629B]">Question 1</p>
-              <p className="mt-4 text-lg font-medium text-slate-900">{question.question_text || "Question text will appear here."}</p>
-              <div className="mt-6 space-y-3">
-                {question.options.map((option, index) => <div key={index} className="flex items-start gap-3 rounded-xl border p-4"><span className="font-bold">{String.fromCharCode(65+index)}</span><span>{option || "Option not filled"}</span></div>)}
-              </div>
-            </div>
+      <section className="rounded-2xl border bg-white p-6">
+        <h2 className="text-xl font-semibold">Tags</h2>
+        <input
+          value={question.tags.join(", ")}
+          onChange={(e) =>
+            setQuestion({
+              ...question,
+              tags: e.target.value
+                .split(",")
+                .map((x) => x.trim())
+                .filter(Boolean),
+            })
+          }
+          placeholder="Arrays, Loops, Digital Electronics"
+          className="mt-5 w-full rounded-xl border p-3"
+        />
+      </section>
+
+      {validation.length > 0 && (
+        <section className="rounded-2xl border border-red-200 bg-red-50 p-6">
+          <h2 className="font-semibold text-red-700">Validation Errors</h2>
+          <div className="mt-3 space-y-1 text-sm text-red-600">
+            {validation.map((error, index) => (
+              <p key={index}>• {error}</p>
+            ))}
           </div>
-        </div>
+        </section>
       )}
     </div>
   );
