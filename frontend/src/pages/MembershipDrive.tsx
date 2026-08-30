@@ -168,7 +168,7 @@ const MembershipDrive = () => {
     try {
       setSubmitting(true);
       await axios.post(
-        "https://ieee-sps-website.onrender.com/api/membership/register",
+        "VITE_API_URL/api/membership/register",
         {
           event: EVENT.title,
           ...formData,
