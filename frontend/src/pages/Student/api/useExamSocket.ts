@@ -27,18 +27,57 @@ export default function useExamSocket({ attemptId, assessmentId, enabled = true,
   useEffect(() => {
     if (!enabled || !attemptId || !assessmentId) return;
 
-    const handleConnect = async () => { setConnected(true); setReconnecting(false); await syncAttempt(); };
-    const handleDisconnect = (reason: string) => { console.warn("[EXAM SOCKET] Disconnected:", reason); setConnected(false); setReconnecting(true); onConnectionLost?.(); };
+    const joinRooms = () => {
+      // The backend broadcasts force-submit/status events to the assessment room.
+      // Join both rooms so the student's exam receives admin actions immediately.
+      socket.emit("joinAssessmentRoom", assessmentId);
+      socket.emit("joinAttemptRoom", attemptId);
+    };
+
+    const handleConnect = async () => {
+      setConnected(true);
+      setReconnecting(false);
+      joinRooms();
+      await syncAttempt();
+    };
+
+    const handleDisconnect = (reason: string) => {
+      console.warn("[EXAM SOCKET] Disconnected:", reason);
+      setConnected(false);
+      setReconnecting(true);
+      onConnectionLost?.();
+    };
+
     const handleReconnectAttempt = () => setReconnecting(true);
-    const handleReconnect = async () => { setConnected(true); setReconnecting(false); setReconnectCount(v => v + 1); await syncAttempt(); onReconnected?.(); };
+
+    const handleReconnect = async () => {
+      setConnected(true);
+      setReconnecting(false);
+      setReconnectCount(v => v + 1);
+      joinRooms();
+      await syncAttempt();
+      onReconnected?.();
+    };
+
     const handleReconnectError = (error: Error) => console.warn("[EXAM SOCKET] Reconnect error:", error.message);
     const handleReconnectFailed = () => setReconnecting(false);
 
-    // Admin force-submit emits this event. Immediately ask the server for the authoritative state.
-    // StudentExam already calls onSubmitted() when the resync reports SUBMITTED/DISQUALIFIED/EXPIRED.
+    // Admin force-submit emits this event to assessment-<assessmentId>.
+    // The student's socket is now actually in that room, so the server state
+    // is synchronized immediately and StudentExam can unmount its timer.
     const handleForceSubmitted = (data: any) => {
       const id = data?.id || data?.attemptId || data?.attempt_id;
       if (id && String(id) !== String(attemptId)) return;
+
+      if (["SUBMITTED", "DISQUALIFIED", "EXPIRED"].includes(data?.status)) {
+        onResync?.({
+          success: true,
+          ...data,
+          status: data.status,
+        });
+        return;
+      }
+
       void syncAttempt();
     };
 
@@ -50,7 +89,11 @@ export default function useExamSocket({ attemptId, assessmentId, enabled = true,
     socket.io.on("reconnect_error", handleReconnectError);
     socket.io.on("reconnect_failed", handleReconnectFailed);
 
-    if (socket.connected) void handleConnect(); else socket.connect();
+    if (socket.connected) {
+      void handleConnect();
+    } else {
+      socket.connect();
+    }
 
     return () => {
       socket.off("connect", handleConnect);
