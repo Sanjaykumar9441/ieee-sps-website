@@ -239,7 +239,7 @@ const ArduinoRegistrationsTab = ({
   const fetchRegistrations = async () => {  
     try {  
       const res = await axios.get(  
-        "VITE_API_URL
+        "VITE_API_URL/api/registrations",  
         {  
           headers: { Authorization: `Bearer ${token}` },  
         }  
