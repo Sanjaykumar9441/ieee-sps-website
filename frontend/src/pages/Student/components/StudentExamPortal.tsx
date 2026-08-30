@@ -30,6 +30,9 @@ interface ExamData {
   question: any;
 }
 
+const isExamWindow = () =>
+  new URLSearchParams(window.location.search).get("examWindow") === "1";
+
 export default function StudentExamPortal({
   assessmentId,
   onStartExam,
@@ -47,25 +50,60 @@ export default function StudentExamPortal({
       return;
     }
 
-    try {
-      try {
-        if (!document.fullscreenElement) {
-          await document.documentElement.requestFullscreen();
-        }
-      } catch (fullscreenError) {
-        console.warn("Fullscreen request was not allowed:", fullscreenError);
-      }
+    // Open synchronously from the user click so Edge treats it as a user-initiated
+    // popup instead of blocking it after the asynchronous API request.
+    const width = Math.max(1024, window.screen.availWidth || window.innerWidth);
+    const height = Math.max(700, window.screen.availHeight || window.innerHeight);
+    const examWindow = window.open(
+      "about:blank",
+      "student-exam-window",
+      [
+        "popup=yes",
+        `width=${width}`,
+        `height=${height}`,
+        "left=0",
+        "top=0",
+        "menubar=no",
+        "toolbar=no",
+        "location=yes",
+        "status=no",
+        "scrollbars=yes",
+        "resizable=yes",
+      ].join(","),
+    );
 
+    if (!examWindow) {
+      toast.error(
+        "The exam window was blocked. Please allow pop-ups for this site and click Start Exam again.",
+      );
+      return;
+    }
+
+    examWindow.document.title = "Examination";
+    examWindow.document.body.innerHTML =
+      '<div style="font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#334155"><div style="text-align:center"><div style="font-size:18px;font-weight:600">Opening examination...</div><div style="margin-top:8px;color:#64748b">Please wait.</div></div></div>';
+
+    try {
       const result = await startAssessment(assessmentId);
 
       if (!result?.attemptId) {
         throw new Error("Assessment started but no attempt was created.");
       }
 
-      setExamData(result);
+      // The exam is intentionally rendered only in the dedicated window.
+      // The original instructions window must never render StudentExam.
       onStartExam(assessmentId);
+      examWindow.location.replace(
+        `${window.location.origin}/student/exam/${assessmentId}?examWindow=1`,
+      );
+      examWindow.focus();
     } catch (err: any) {
       console.error("[EXAM] Unable to start:", err);
+      try {
+        examWindow.close();
+      } catch {
+        // Ignore browsers that prevent scripts from closing a window.
+      }
 
       toast.error(
         err?.response?.data?.message ||
@@ -141,27 +179,31 @@ export default function StudentExamPortal({
           setCountdown(0);
         }
 
-        const savedAttemptId = localStorage.getItem("studentAttemptId");
+        // Only the dedicated exam window may resume/render an active attempt.
+        // This prevents the original login/instructions tab from also opening
+        // the exam after Start Exam has created the attempt.
+        if (isExamWindow()) {
+          const savedAttemptId = localStorage.getItem("studentAttemptId");
 
-        // Do not resume before the official exam start time.
-        if (savedAttemptId && now >= startTime && now < endTime) {
-          try {
-            const resumed = await resumeAssessment(
-              assessmentId,
-              savedAttemptId,
-            );
+          if (savedAttemptId && now >= startTime && now < endTime) {
+            try {
+              const resumed = await resumeAssessment(
+                assessmentId,
+                savedAttemptId,
+              );
 
-            if (!mounted) return;
+              if (!mounted) return;
 
-            setExamData(resumed);
-            return;
-          } catch (resumeError) {
-            console.log("[EXAM] No active attempt to resume.", resumeError);
+              setExamData(resumed);
+              return;
+            } catch (resumeError) {
+              console.log("[EXAM] No active attempt to resume.", resumeError);
 
-            localStorage.removeItem("studentAttemptId");
-            localStorage.removeItem(
-              `studentCurrentQuestion:${savedAttemptId}`,
-            );
+              localStorage.removeItem("studentAttemptId");
+              localStorage.removeItem(
+                `studentCurrentQuestion:${savedAttemptId}`,
+              );
+            }
           }
         }
 
