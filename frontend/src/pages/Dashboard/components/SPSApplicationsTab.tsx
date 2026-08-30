@@ -69,7 +69,7 @@ const SPSApplicationsTab = () => {
       const token = localStorage.getItem("token");
 
       const res = await axios.get(  
-        "https://ieee-sps-website.onrender.com/api/sps-applications",  
+        "VITE_API_URL
         {  
           headers: {  
             Authorization: `Bearer ${token}`,  
@@ -95,7 +95,7 @@ const SPSApplicationsTab = () => {
       const token = localStorage.getItem("token");
 
       await axios.delete(  
-        `https://ieee-sps-website.onrender.com/api/sps-applications/${id}`,  
+        `VITE_API_URL/api/sps-applications/${id}`,  
         {  
           headers: {  
             Authorization: `Bearer ${token}`,  
@@ -122,7 +122,7 @@ const SPSApplicationsTab = () => {
       await Promise.all(  
         selectedRows.map((id) =>  
           axios.delete(  
-            `https://ieee-sps-website.onrender.com/api/sps-applications/${id}`,  
+            `VITE_API_URL/api/sps-applications/${id}`,  
             {  
               headers: {  
                 Authorization: `Bearer ${token}`,  

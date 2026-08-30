@@ -481,7 +481,7 @@ Status: ✅ Confirmed`,
       );
     }
     await axios.post(
-      "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+      "VITE_API_URL/api/send-confirmation-email",
       { registration },
     );
 
@@ -843,7 +843,7 @@ router.post("/telegram-webhook", async (req, res) => {
     await registration.save();
 
     await axios.post(
-      "https://ieee-sps-website.onrender.com/api/send-confirmation-email",
+      "VITE_API_URL/api/send-confirmation-email",
       { registration },
     );
 

@@ -21,7 +21,7 @@ const LoginHistoryTab = () => {
       setRefreshing(true);  
       const token = localStorage.getItem("token");  
       const res = await axios.get(  
-        "https://ieee-sps-website.onrender.com/api/admin-access",  
+        "VITE_API_URL/api/admin-access",  
         { headers: { Authorization: `Bearer ${token}` } },  
       );  
       setAdmins(res.data);  
@@ -39,7 +39,7 @@ const LoginHistoryTab = () => {
       const token = localStorage.getItem("token");
 
       await axios.delete(  
-        "https://ieee-sps-website.onrender.com/api/admin-access/clear-all",  
+        "VITE_API_URL/api/admin-access/clear-all",  
         {  
           headers: {  
             Authorization: `Bearer ${token}`,  
@@ -60,7 +60,7 @@ const LoginHistoryTab = () => {
       const token = localStorage.getItem("token");
 
       await axios.delete(  
-        `https://ieee-sps-website.onrender.com/api/admin-access/${id}/login-history`,  
+        `VITE_API_URL/api/admin-access/${id}/login-history`,  
         {  
           headers: {  
             Authorization: `Bearer ${token}`,  

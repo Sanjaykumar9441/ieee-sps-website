@@ -16,7 +16,7 @@ const ChangePassword = () => {
       const token = localStorage.getItem("token");
 
       await axios.post(  
-        "https://ieee-sps-website.onrender.com/api/admin-access/change-password",  
+        "VITE_API_URL/api/admin-access/change-password",  
         {  
           currentPassword,  
           newPassword,  

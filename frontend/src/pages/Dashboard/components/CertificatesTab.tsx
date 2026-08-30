@@ -15,7 +15,7 @@ import {
   Square,
 } from "lucide-react";
 
-const API = "https://ieee-sps-website.onrender.com";
+const API = "VITE_API_URL";
 
 const CERTIFICATE_TYPES = [
   { value: "PARTICIPATION", label: "Participation" },

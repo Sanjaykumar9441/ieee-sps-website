@@ -102,7 +102,7 @@ const MembershipDrive = () => {
   const fetchSettings = async () => {
     try {
       const res = await axios.get(
-        "https://ieee-sps-website.onrender.com/api/membership/settings",
+        "VITE_API_URL,
       );
 
       setSettings(res.data);
@@ -168,7 +168,7 @@ const MembershipDrive = () => {
     try {
       setSubmitting(true);
       await axios.post(
-        "https://ieee-sps-website.onrender.com/api/membership/register",
+        "VITE_API_URL/api/membership/register",
         {
           event: EVENT.title,
           ...formData,

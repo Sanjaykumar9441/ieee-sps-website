@@ -5,7 +5,7 @@
 ### Signal Processing Society · Student Branch Chapter
 
 [![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-ieeespsaditya.vercel.app-00AEEF?style=for-the-badge)](https://ieeespsaditya.vercel.app)
-[![Backend](https://img.shields.io/badge/🔗_Backend-Render-46E3B7?style=for-the-badge)](https://ieee-sps-website.onrender.com)
+[![Backend](https://img.shields.io/badge/🔗_Backend-Render-46E3B7?style=for-the-badge)](VITE_API_URL)
 
 ![React](https://img.shields.io/badge/React_18-61DAFB?style=flat-square&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)

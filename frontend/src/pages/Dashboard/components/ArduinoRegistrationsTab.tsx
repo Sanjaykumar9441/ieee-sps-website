@@ -239,7 +239,7 @@ const ArduinoRegistrationsTab = ({
   const fetchRegistrations = async () => {  
     try {  
       const res = await axios.get(  
-        "https://ieee-sps-website.onrender.com/api/registrations",  
+        "VITE_API_URL
         {  
           headers: { Authorization: `Bearer ${token}` },  
         }  
@@ -269,7 +269,7 @@ const ArduinoRegistrationsTab = ({
     if (!confirm("Confirm this registration?")) return;  
     try {  
       await axios.put(  
-        `https://ieee-sps-website.onrender.com/api/confirm/${id}`,  
+        `VITE_API_URL/api/confirm/${id}`,  
         {},  
         { headers: { Authorization: `Bearer ${token}` } }  
       );  
@@ -281,7 +281,7 @@ const ArduinoRegistrationsTab = ({
 
   const deleteRegistration = async (id: string) => {  
     if (!confirm("Delete this registration?")) return;  
-    await axios.delete(`https://ieee-sps-website.onrender.com/api/${id}`, {  
+    await axios.delete(`VITE_API_URL/api/${id}`, {  
       headers: { Authorization: `Bearer ${token}` },  
     });  
     fetchRegistrations();  

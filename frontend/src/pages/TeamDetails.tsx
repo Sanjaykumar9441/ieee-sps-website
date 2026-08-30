@@ -16,7 +16,7 @@ const TeamDetails = () => {
   const fetchMember = async () => {
     try {
       const res = await axios.get(
-        `https://ieee-sps-website.onrender.com/team/${id}`,
+        `VITE_API_URL
       );
       setMember(res.data);
     } catch (err) {

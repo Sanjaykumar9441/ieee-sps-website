@@ -13,7 +13,7 @@ const ActivityLogsTab = () => {
       const token = localStorage.getItem("token");
 
       const res = await axios.get(  
-        "https://ieee-sps-website.onrender.com/api/activity-logs",  
+        "VITE_API_URL
         {  
           headers: {  
             Authorization: `Bearer ${token}`,  
@@ -32,7 +32,7 @@ const ActivityLogsTab = () => {
       const token = localStorage.getItem("token");
 
       await axios.delete(  
-        `https://ieee-sps-website.onrender.com/api/activity-logs/${id}`,  
+        `VITE_API_URL/api/activity-logs/${id}`,  
         {  
           headers: {  
             Authorization: `Bearer ${token}`,  
@@ -54,7 +54,7 @@ const ActivityLogsTab = () => {
       const token = localStorage.getItem("token");
 
       await axios.delete(  
-        "https://ieee-sps-website.onrender.com/api/activity-logs",  
+        "VITE_API_URL
         {  
           headers: {  
             Authorization: `Bearer ${token}`,  

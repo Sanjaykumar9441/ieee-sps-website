@@ -18,7 +18,7 @@ const Profile = () => {
       const token = localStorage.getItem("token");
 
       const res = await axios.get(  
-        "https://ieee-sps-website.onrender.com/api/admin-access/profile",  
+        "VITE_API_URL",  
         {  
           headers: {  
             Authorization: `Bearer ${token}`,  

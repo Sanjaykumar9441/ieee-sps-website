@@ -64,7 +64,7 @@ const Dashboard = () => {
 
   const fetchRegistrationStatus = async () => {
     const res = await axios.get(
-      "https://ieee-sps-website.onrender.com/events/registration-status",
+      "VITE_API_URL/events/registration-status",
     );
     setRegistrationOpen(res.data.registrationOpen);
   };
@@ -120,7 +120,7 @@ const Dashboard = () => {
     if (userRole === "superadmin") return;
     try {
       const res = await axios.get(
-        "https://ieee-sps-website.onrender.com/api/admin-access/profile",
+        "VITE_API_URL/api/admin-access/profile",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -183,12 +183,12 @@ const Dashboard = () => {
 
   /* FETCH */
   const fetchEvents = async () => {
-    const res = await axios.get("https://ieee-sps-website.onrender.com/events");
+    const res = await axios.get("VITE_API_URL/events");
     setEvents(res.data);
   };
 
   const fetchMembers = async () => {
-    const res = await axios.get("https://ieee-sps-website.onrender.com/team");
+    const res = await axios.get("VITE_API_URL/team");
     setMembers(
       res.data.sort(
         (a: any, b: any) => Number(a.priority) - Number(b.priority),
@@ -199,7 +199,7 @@ const Dashboard = () => {
   const fetchMessages = async () => {
     try {
       const res = await axios.get(
-        "https://ieee-sps-website.onrender.com/contact",
+        "VITE_API_URL/contact",
         { headers: { Authorization: `Bearer ${token}` } },
       );
       setMessages(res.data);
@@ -212,7 +212,7 @@ const Dashboard = () => {
     try {
       const token = localStorage.getItem("token");
       const res = await axios.get(
-        "https://ieee-sps-website.onrender.com/api/sps-applications",
+        "VITE_API_URL/api/sps-applications",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -230,7 +230,7 @@ const Dashboard = () => {
       const token = localStorage.getItem("token");
 
       const res = await axios.get(
-        "https://ieee-sps-website.onrender.com/api/membership",
+        "VITE_API_URL/api/membership",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -246,7 +246,7 @@ const Dashboard = () => {
 
   const deleteMessage = async (id: string) => {
     if (!confirm("Delete this message?")) return;
-    await axios.delete(`https://ieee-sps-website.onrender.com/contact/${id}`, {
+    await axios.delete(`VITE_API_URL/contact/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     fetchMessages();
@@ -274,7 +274,7 @@ const Dashboard = () => {
       for (let i = 0; i < images.length; i++)
         formData.append("images", images[i]);
     }
-    await axios.post("https://ieee-sps-website.onrender.com/events", formData, {
+    await axios.post("VITE_API_URL/events", formData, {
       headers: { Authorization: `Bearer ${token}` },
     });
     alert("Event Uploaded Successfully");
@@ -305,7 +305,7 @@ const Dashboard = () => {
           formData.append("images", newData.newImages[i]);
       }
       await axios.put(
-        `https://ieee-sps-website.onrender.com/events/${event._id}`,
+        `VITE_API_URL/events/${event._id}`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -319,7 +319,7 @@ const Dashboard = () => {
 
   const deleteEvent = async (id: string) => {
     if (!confirm("Delete this event?")) return;
-    await axios.delete(`https://ieee-sps-website.onrender.com/events/${id}`, {
+    await axios.delete(`VITE_API_URL/events/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     fetchEvents();
@@ -338,7 +338,7 @@ const Dashboard = () => {
     formData.append("linkedIn", linkedIn);
     formData.append("priority", priority.toString());
     if (photo) formData.append("photo", photo);
-    await axios.post("https://ieee-sps-website.onrender.com/team", formData, {
+    await axios.post("VITE_API_URL/team", formData, {
       headers: { Authorization: `Bearer ${token}` },
     });
     alert("Member Added Successfully");
@@ -356,7 +356,7 @@ const Dashboard = () => {
 
   const deleteMember = async (id: string) => {
     if (!confirm("Delete this member?")) return;
-    await axios.delete(`https://ieee-sps-website.onrender.com/team/${id}`, {
+    await axios.delete(`VITE_API_URL/team/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     fetchMembers();
@@ -374,7 +374,7 @@ const Dashboard = () => {
     formData.append("priority", member.priority);
     if (member.newPhoto) formData.append("photo", member.newPhoto);
     await axios.put(
-      `https://ieee-sps-website.onrender.com/team/${member._id}`,
+      `VITE_API_URL/team/${member._id}`,
       formData,
       { headers: { Authorization: `Bearer ${token}` } },
     );
@@ -504,7 +504,7 @@ const Dashboard = () => {
     if (userRole === "superadmin") return;
     try {
       const res = await axios.get(
-        "https://ieee-sps-website.onrender.com/api/admin-access/permissions",
+        "VITE_API_URL/api/admin-access/permissions",
         {
           headers: {
             Authorization: `Bearer ${token}`,

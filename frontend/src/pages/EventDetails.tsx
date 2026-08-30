@@ -20,7 +20,7 @@ const EventDetails = () => {
   useEffect(() => { fetchEvent(); }, []);
 
   const fetchEvent = async () => {
-    const res = await axios.get(`https://ieee-sps-website.onrender.com/events/${id}`);
+    const res = await axios.get(`VITE_API_URL/events/${id}`);
     setEvent(res.data);
   };
 
