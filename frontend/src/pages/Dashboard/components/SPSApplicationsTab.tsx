@@ -68,7 +68,7 @@ const SPSApplicationsTab = () => {
 
       const token = localStorage.getItem("token");
 
-      const res = await axios.get(  
+      const res = await axios.get( 
         "VITE_API_URL/api/sps-applications",  
         {  
           headers: {  

@@ -55,7 +55,7 @@ const DEPARTMENTS = [
 const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];  
 const PAGE_SIZES = [10, 25, 50, 100];
 
-const API_BASE = "VITE_API_URL
+const API_BASE = "VITE_API_URL/api/membership";
 
 /** Shared dark-theme classes for text inputs and selects */  
 const fieldCls =  
