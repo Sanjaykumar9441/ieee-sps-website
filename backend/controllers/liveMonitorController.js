@@ -57,12 +57,17 @@ exports.getLiveStudents = async (req, res) => {
         supabase.from("assessment_infractions").select("id",{count:"exact",head:true}).eq("attempt_id",attempt.id),
         supabase.from("assessment_activity").select("activity_type,metadata,created_at").eq("attempt_id",attempt.id).order("created_at",{ascending:false}),
       ]);
-      if(qError)throw qError;if(iError)throw iError;if(aError)throw aError;
+      if(qError)throw qError;
+      // Infractions/activity are monitoring enrichments. A legacy deployment
+      // must not make the entire Live Monitor refresh fail if one optional
+      // column/table is unavailable.
+      if(iError) console.warn("Live monitor infraction query unavailable:", iError.message);
+      if(aError) console.warn("Live monitor activity query unavailable:", aError.message);
       const acts=activities||[]; const remainingSeconds=await safeRemainingSeconds(attempt);
       const autoSubmitted=acts.some(a=>["AUTO_SUBMIT","SECURITY_AUTO_SUBMIT"].includes(a.activity_type));
       const forceSubmitted=acts.some(a=>a.activity_type==="FORCE_SUBMIT");
       const disqualifiedByAdmin=acts.some(a=>a.activity_type==="DISQUALIFY");
-      students.push({attemptId:attempt.id,studentId:attempt.student_id,studentName:student?.name||"Unknown Student",rollNo:student?.roll_no||"",email:student?.email||"",department:student?.branch||"",currentQuestion:Number(attempt.current_question||0),answeredQuestions:Number(attempt.answered_questions||0),totalQuestions:Number(totalQuestions||0),score:Number(attempt.score||0),remainingSeconds,isExpired:remainingSeconds<=0&&attempt.status==="IN_PROGRESS",expiresAt:attempt.expires_at,startedAt:attempt.started_at,submittedAt:attempt.submitted_at,resumedCount:Number(attempt.resumed_count||0),violations:Number(violations||0),disqualifiedReason:attempt.disqualified_reason||null,autoSubmitted,forceSubmitted,disqualifiedByAdmin,status:attempt.status==="IN_PROGRESS"?"LIVE":attempt.status==="DISQUALIFIED"?"DISQUALIFIED":"SUBMITTED"});
+      students.push({attemptId:attempt.id,studentId:attempt.student_id,studentName:student?.name||"Unknown Student",rollNo:student?.roll_no||"",email:student?.email||"",department:student?.branch||"",currentQuestion:Number(attempt.current_question||0),answeredQuestions:Number(attempt.answered_questions||0),totalQuestions:Number(totalQuestions||0),score:Number(attempt.score||0),remainingSeconds,isExpired:remainingSeconds<=0&&attempt.status==="IN_PROGRESS",expiresAt:attempt.expires_at,startedAt:attempt.started_at,submittedAt:attempt.submitted_at,resumedCount:Number(attempt.resumed_count||0),violations:Number(iError ? 0 : (violations||0)),disqualifiedReason:attempt.disqualified_reason||null,autoSubmitted,forceSubmitted,disqualifiedByAdmin,status:attempt.status==="IN_PROGRESS"?"LIVE":attempt.status==="DISQUALIFIED"?"DISQUALIFIED":"SUBMITTED"});
     }
     return res.json({success:true,liveUpdatesEnabled:assessment.live_updates_enabled!==false,totalStudents:students.length,students});
   } catch(err){console.error("LIVE MONITOR ERROR:",err);return res.status(500).json({success:false,message:err.message});}

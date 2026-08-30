@@ -57,6 +57,7 @@ export default function LiveMonitor({ assessment }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [students, setStudents] = useState<LiveStudent[]>([]);
 
@@ -65,16 +66,22 @@ export default function LiveMonitor({ assessment }: Props) {
   const [status, setStatus] = useState("all");
   const [liveUpdates, setLiveUpdates] = useState(assessment.live_updates_enabled !== false);
 
-  const fetchStudents = useCallback(async () => {
+  const fetchStudents = useCallback(async (manual = false) => {
+    if (manual) setRefreshing(true);
     try {
-      const students = await getLiveStudents(assessment.id);
-
-      setStudents(students || []);
-    } catch (err) {
-      console.error(err);
-      toast.error("Unable to load live monitor.");
+      const nextStudents = await getLiveStudents(assessment.id);
+      setStudents(nextStudents || []);
+      if (manual) toast.success("Live monitor refreshed");
+    } catch (err: any) {
+      console.error("Live monitor refresh error:", err);
+      if (manual) {
+        toast.error(err?.response?.data?.message || "Unable to refresh live monitor.");
+      } else {
+        toast.error(err?.response?.data?.message || "Unable to load live monitor.");
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [assessment.id]);
 
@@ -249,11 +256,13 @@ export default function LiveMonitor({ assessment }: Props) {
         </div>
 
         <button
-          onClick={fetchStudents}
-          className="flex items-center gap-2 rounded-xl border px-5 py-3 hover:bg-gray-50"
+          type="button"
+          onClick={() => void fetchStudents(true)}
+          disabled={refreshing}
+          className="flex items-center gap-2 rounded-xl border px-5 py-3 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <RefreshCw size={18} />
-          Refresh
+          <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />
+          {refreshing ? "Refreshing..." : "Refresh"}
         </button>
       </div>
 

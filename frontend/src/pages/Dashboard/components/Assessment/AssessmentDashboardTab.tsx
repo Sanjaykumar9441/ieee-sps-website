@@ -37,6 +37,10 @@ export default function AssessmentDashboardTab() {
       const data = await getAssessments();
 
       setAssessments(data);
+      setSelectedAssessment((current) => {
+        if (!current) return current;
+        return data.find((item: Assessment) => item.id === current.id) || current;
+      });
     } catch (err) {
       console.error(err);
 

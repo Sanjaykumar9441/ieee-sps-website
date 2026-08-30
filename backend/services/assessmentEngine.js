@@ -33,6 +33,9 @@ async function getAssessmentBanks(assessmentId) {
 }
 
 async function getBankQuestions(bankId) {
+  // Do not filter by question_type in Supabase. Older imported rows may use
+  // MULTIPLE_CHOICE / MULTIPLE even though the current enum uses
+  // MULTIPLE_CORRECT. Fetch active rows and normalize in JavaScript.
   const { data, error } = await supabase
     .from("questions")
     .select(
@@ -52,12 +55,27 @@ async function getBankQuestions(bankId) {
     `,
     )
     .eq("bank_id", bankId)
-    .eq("is_active", true)
-    .in("question_type", ["MCQ", "MULTIPLE_CORRECT"]);
+    .eq("is_active", true);
 
   if (error) throw error;
 
-  return data || [];
+  return (data || [])
+    .map((question) => ({
+      ...question,
+      question_type: normalizeQuestionType(question.question_type),
+    }))
+    .filter(Boolean);
+}
+
+function normalizeQuestionType(value) {
+  const type = String(value || "MCQ")
+    .trim()
+    .toUpperCase()
+    .replace(/[- ]/g, "_");
+
+  return ["MULTIPLE_CORRECT", "MULTIPLE_CHOICE", "MULTIPLE"].includes(type)
+    ? "MULTIPLE_CORRECT"
+    : "MCQ";
 }
 
 async function buildQuestionPaper(assessment) {
@@ -69,11 +87,22 @@ async function buildQuestionPaper(assessment) {
 
   for (const mapping of mappings) {
     const bankQuestions = await getBankQuestions(mapping.question_bank_id);
-    const count = Number(mapping.questions_to_pick);
+    let count = Number(mapping.questions_to_pick);
+
+    // For the common one-bank setup, the assessment total is authoritative.
+    // This also repairs older banks that were created before the total/pick
+    // fields were synchronized correctly.
+    if (mappings.length === 1 && Number(assessment.total_questions) > 0) {
+      count = Number(assessment.total_questions);
+    }
+
+    if (!Number.isInteger(count) || count < 1) {
+      throw new Error("Question bank selection count must be at least 1.");
+    }
 
     if (bankQuestions.length < count) {
       throw new Error(
-        `Question bank has only ${bankQuestions.length} active MCQ questions but ${count} are required.`,
+        `Question bank has only ${bankQuestions.length} active questions but ${count} are required.`,
       );
     }
 
@@ -82,6 +111,13 @@ async function buildQuestionPaper(assessment) {
       : bankQuestions.slice(0, count);
 
     paper.push(...picked);
+  }
+
+  const configuredTotal = Number(assessment.total_questions || 0);
+  if (configuredTotal > 0 && paper.length !== configuredTotal) {
+    throw new Error(
+      `Assessment is configured for ${configuredTotal} questions, but its question-bank allocations provide ${paper.length}. Adjust Questions to Pick in Question Banks.`,
+    );
   }
 
   return shuffleQuestions ? shuffle(paper) : paper;

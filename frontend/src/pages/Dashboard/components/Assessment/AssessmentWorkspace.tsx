@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   X, LayoutDashboard, Database, Users, Radio, Trophy, BarChart3,
   Download, Settings2, Clock3
@@ -33,7 +33,16 @@ function formatDate(value?:string|null){
 }
 
 export default function AssessmentWorkspace({assessment,onClose}:Props){
- const [activeTab,setActiveTab]=useState<WorkspaceTab>("overview");
+ const storageKey = `assessment-workspace-tab:${assessment.id}`;
+ const [activeTab,setActiveTab]=useState<WorkspaceTab>(()=>{
+  try {
+   const saved = sessionStorage.getItem(storageKey) as WorkspaceTab | null;
+   return saved && tabs.some((tab)=>tab.id===saved) ? saved : "overview";
+  } catch { return "overview"; }
+ });
+ useEffect(()=>{
+  try { sessionStorage.setItem(storageKey, activeTab); } catch {}
+ },[storageKey,activeTab]);
  const status=assessment.is_published?"Published":"Draft";
  return (
   <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl">

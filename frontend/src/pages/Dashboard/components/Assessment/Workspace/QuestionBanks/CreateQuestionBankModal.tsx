@@ -4,19 +4,19 @@ import toast from "react-hot-toast";
 import { createQuestionBank, updateQuestionBank } from "../../../Assessment/assessmentApi";
 import type { QuestionBank } from "./QuestionBanks";
 
-interface Props { open: boolean; assessmentId: string; bank?: QuestionBank | null; onClose: () => void; onSaved: () => void; }
+interface Props { open: boolean; assessmentId: string; totalQuestions?: number; bank?: QuestionBank | null; onClose: () => void; onSaved: () => void; }
 
-export default function CreateQuestionBankModal({ open, assessmentId, bank, onClose, onSaved }: Props) {
+export default function CreateQuestionBankModal({ open, assessmentId, totalQuestions = 20, bank, onClose, onSaved }: Props) {
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
-  const [questionsToPick, setQuestionsToPick] = useState(10);
+  const [questionsToPick, setQuestionsToPick] = useState(Math.max(1, Number(assessmentId ? 20 : 10)));
   const isEdit = Boolean(bank);
 
   useEffect(() => {
     if (!open) return;
     setName(bank?.name || "");
-    setQuestionsToPick(Math.max(1, Number(bank?.questions_to_pick ?? 10)));
-  }, [open, bank]);
+    setQuestionsToPick(Math.max(1, Number(bank?.questions_to_pick ?? totalQuestions)));
+  }, [open, bank, totalQuestions]);
 
   const handleSubmit = async () => {
     const trimmedName = name.trim();

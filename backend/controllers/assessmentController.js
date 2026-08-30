@@ -3,12 +3,49 @@ const { supabase } = require("../lib/supabase");
 
 async function enrichAssessmentQuestions(assessment) {
   if (!assessment?.id) return assessment;
+
+  // total_questions is the assessment configuration. Do not silently
+  // replace it with a question-bank allocation after the admin edits it.
+  // For older assessments that still have 0, use the existing bank allocation
+  // as a compatibility fallback.
+  const configuredTotal = Number(assessment.total_questions || 0);
+  if (configuredTotal > 0) return { ...assessment, total_questions: configuredTotal };
+
   const { data: mappings } = await supabase
     .from("assessment_question_banks")
     .select("questions_to_pick")
     .eq("assessment_id", assessment.id);
-  const selected = (mappings || []).reduce((sum, m) => sum + Number(m.questions_to_pick || 0), 0);
-  return { ...assessment, total_questions: selected || Number(assessment.total_questions || 0) };
+  const selected = (mappings || []).reduce(
+    (sum, m) => sum + Math.max(0, Number(m.questions_to_pick || 0)),
+    0,
+  );
+  return { ...assessment, total_questions: selected };
+}
+
+async function syncSingleBankAllocation(assessmentId, totalQuestions) {
+  const { data: mappings, error } = await supabase
+    .from("assessment_question_banks")
+    .select("id, question_bank_id, questions_to_pick")
+    .eq("assessment_id", assessmentId)
+    .order("id", { ascending: true });
+
+  if (error) throw error;
+  if (!mappings?.length) return;
+
+  // With one bank there is no ambiguity: Questions Per Attempt and the
+  // assessment total must remain identical.
+  if (mappings.length === 1) {
+    const { error: updateError } = await supabase
+      .from("assessment_question_banks")
+      .update({ questions_to_pick: totalQuestions })
+      .eq("id", mappings[0].id);
+    if (updateError) throw updateError;
+    return;
+  }
+
+  // Multiple banks are explicit allocations. Do not destroy those allocations
+  // when an admin edits the overall total; report the current allocation so it
+  // can be adjusted in the Question Banks tab.
 }
 
 exports.getAssessments = async (req, res) => {
@@ -221,10 +258,16 @@ exports.updateAssessment = async (req, res) => {
 
     if (error) throw error;
 
+    if (input.total_questions !== undefined) {
+      await syncSingleBankAllocation(id, Number(input.total_questions));
+    }
+
+    const enriched = await enrichAssessmentQuestions(data);
+
     return res.json({
       success: true,
       message: "Assessment updated successfully.",
-      assessment: data,
+      assessment: enriched,
     });
   } catch (err) {
     return res.status(500).json({

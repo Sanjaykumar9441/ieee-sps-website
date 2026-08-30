@@ -20,7 +20,7 @@ async function syncQuestionBankTotal(bankId) {
 
   if (updateError) throw updateError;
 
-  return total;
+  return effectiveTotal;
 }
 
 async function getAssessmentIdsForBank(bankId) {
@@ -55,7 +55,7 @@ async function syncAssessmentQuestionCount(assessmentId) {
     activeBankIds = new Set((activeBanks || []).map((bank) => bank.id));
   }
 
-  const total = (mappings || []).reduce(
+  const allocatedTotal = (mappings || []).reduce(
     (sum, row) => activeBankIds.has(row.question_bank_id)
       ? sum + Math.max(0, Number(row.questions_to_pick || 0))
       : sum,
@@ -64,28 +64,35 @@ async function syncAssessmentQuestionCount(assessmentId) {
 
   const { data: assessment, error: assessmentError } = await supabase
     .from("assessments")
-    .select("marks_per_question, pass_percentage")
+    .select("total_questions, marks_per_question, pass_percentage")
     .eq("id", assessmentId)
     .single();
 
   if (assessmentError) throw assessmentError;
 
+  // The assessment's total_questions is the administrator's configured
+  // Questions Per Attempt value. Question-bank allocations must not silently
+  // overwrite it whenever questions are imported/deleted.
+  const configuredTotal = Math.max(0, Number(assessment?.total_questions || 0));
+  const effectiveTotal = configuredTotal > 0 ? configuredTotal : allocatedTotal;
   const marks = Math.max(0, Number(assessment?.marks_per_question ?? 1));
   const passPercentage = Math.max(0, Number(assessment?.pass_percentage ?? 40));
-  const passingScore = Number(((total * marks * passPercentage) / 100).toFixed(2));
+  const passingScore = Number(((effectiveTotal * marks * passPercentage) / 100).toFixed(2));
+
+  const updatePayload = {
+    passing_score: passingScore,
+    updated_at: new Date().toISOString(),
+  };
+  if (configuredTotal === 0 && allocatedTotal > 0) updatePayload.total_questions = allocatedTotal;
 
   const { error: updateError } = await supabase
     .from("assessments")
-    .update({
-      total_questions: total,
-      passing_score: passingScore,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq("id", assessmentId);
 
   if (updateError) throw updateError;
 
-  return total;
+  return effectiveTotal;
 }
 
 async function syncAssessmentsForBank(bankId) {
