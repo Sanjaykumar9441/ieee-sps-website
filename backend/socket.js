@@ -15,7 +15,6 @@ const initSocket = (socketServer) => {
 
         socket.join(`assessment-${assessmentId}`);
 
-        console.log(`📊 Admin joined assessment-${assessmentId}`);
       } catch (err) {
         console.error(err);
       }

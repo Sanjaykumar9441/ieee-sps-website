@@ -193,64 +193,6 @@ export default function StudentDetailsDrawer({
               </div>
             </div>
 
-            {/* Assessment Status */}
-
-            <div className="rounded-2xl border bg-white p-6">
-              <h3 className="mb-5 text-xl font-semibold">Assessment Status</h3>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Allowed / Blocked */}
-
-                <div>
-                  <p className="text-sm text-gray-500">Status</p>
-
-                  <span
-                    className={`mt-2 inline-flex rounded-full px-3 py-1 text-sm font-medium ${
-                      details?.student?.status === "allowed"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {details?.student?.status}
-                  </span>
-                </div>
-
-                {/* Attempt */}
-
-                <div>
-                  <p className="text-sm text-gray-500">Attempt</p>
-
-                  <span
-                    className={`mt-2 inline-flex rounded-full px-3 py-1 text-sm font-medium ${
-                      details?.student?.attempt_started
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {details?.student?.attempt_started
-                      ? "Started"
-                      : "Not Started"}
-                  </span>
-                </div>
-
-                {/* Submitted */}
-
-                <div>
-                  <p className="text-sm text-gray-500">Submission</p>
-
-                  <span
-                    className={`mt-2 inline-flex rounded-full px-3 py-1 text-sm font-medium ${
-                      details?.student?.submitted
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {details?.student?.submitted ? "Submitted" : "Pending"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
             {/* Timeline */}
 
             <div className="rounded-2xl border bg-white p-6">

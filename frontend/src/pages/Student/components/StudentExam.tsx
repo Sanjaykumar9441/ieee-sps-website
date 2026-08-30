@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  AlertTriangle,
-  Flag,
-  Maximize,
-  Send,
-  ShieldCheck,
-} from "lucide-react";
+
+import { AlertTriangle, Flag, Maximize, Send, ShieldCheck } from "lucide-react";
 
 import toast from "react-hot-toast";
 
@@ -16,14 +11,9 @@ import {
   saveAnswer,
   submitAssessment,
 } from "../api/studenExamApi";
-
 import useAntiCheat from "../api/useAntiCheat";
 import useExamSocket from "../api/useExamSocket";
-
-import type {
-  AttemptQuestion,
-  PaletteQuestion,
-} from "../types";
+import type { AttemptQuestion, PaletteQuestion } from "../types";
 
 import ExamHeader from "../components/ExamHeader";
 import QuestionCard from "../components/QuestionCard";
@@ -52,12 +42,6 @@ export default function StudentExam({
   remainingSeconds: initialSeconds,
   onSubmitted,
 }: Props) {
-  const securitySubmitRef = useRef<(() => void) | null>(null);
-
-  /* ============================================================
-     ANTI-CHEAT
-  ============================================================ */
-
   const {
     infractionCount,
     maxInfractions,
@@ -68,34 +52,22 @@ export default function StudentExam({
   } = useAntiCheat({
     attemptId,
     enabled: true,
-    // StudentExam owns the browser-event policy so Escape can have
-    // the requested first-warning / second-Escape submit behaviour.
-    observeBrowserEvents: false,
   });
 
-  /* ============================================================
-     SOCKET
-  ============================================================ */
-
-  const {
-    connected,
-    reconnecting,
-    reconnectCount,
-  } = useExamSocket({
+  const { connected, reconnecting, reconnectCount } = useExamSocket({
     attemptId,
     assessmentId,
     enabled: true,
 
     onResync: (data) => {
+      console.log("[EXAM] Reconnected and synchronized:", data);
 
       if (!data?.success) {
         return;
       }
 
       if (typeof data.remainingSeconds === "number") {
-        const seconds = Math.max(0, Number(data.remainingSeconds));
-        deadlineRef.current = Date.now() + seconds * 1000;
-        setRemainingSeconds(seconds);
+        setRemainingSeconds(data.remainingSeconds);
       }
 
       if (data.palette) {
@@ -120,60 +92,43 @@ export default function StudentExam({
     },
   });
 
-  /* ============================================================
-     STATE
-  ============================================================ */
+  const [question, setQuestion] = useState<AttemptQuestion>(firstQuestion);
 
-  const [question, setQuestion] =
-    useState<AttemptQuestion | null>(
-      firstQuestion ?? null
-    );
+  const [currentQuestion, setCurrentQuestion] = useState(
+    firstQuestion.question_order,
+  );
 
-  const [currentQuestion, setCurrentQuestion] =
-    useState(firstQuestion.question_order);
-
-  const [remainingSeconds, setRemainingSeconds] =
-    useState(initialSeconds);
-
-  const deadlineRef = useRef(Date.now() + Math.max(0, initialSeconds) * 1000);
+  const [remainingSeconds, setRemainingSeconds] = useState(initialSeconds);
 
   const [isFullscreen, setIsFullscreen] = useState(
-    Boolean(document.fullscreenElement)
-  );
-  const [fullscreenPrompt, setFullscreenPrompt] = useState(
-    !document.fullscreenElement,
+    Boolean(document.fullscreenElement),
   );
 
-  const [palette, setPalette] =
-    useState<PaletteQuestion[]>([]);
+  const [palette, setPalette] = useState<PaletteQuestion[]>([]);
 
-  const [selectedAnswers, setSelectedAnswers] =
-    useState<string[]>(
-      firstQuestion.assessment_answers?.[0]
-        ?.selected_answers || []
-    );
-
-  const answerCacheRef = useRef<Record<number, string[]>>({
-    [firstQuestion.question_order]:
-      firstQuestion.assessment_answers?.[0]?.selected_answers || [],
-  });
+  const [selectedAnswers, setSelectedAnswers] = useState<string[]>(
+    firstQuestion.assessment_answers?.[0]?.selected_answers || [],
+  );
 
   const [saving, setSaving] = useState(false);
 
-  const [loadingQuestion, setLoadingQuestion] =
-    useState(false);
+  const [loadingQuestion, setLoadingQuestion] = useState(false);
 
   const [submitOpen, setSubmitOpen] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
 
+  const [violations, setViolations] = useState(0);
+
   const previousVisibility = useRef(document.visibilityState);
-  const escapeWarningRef = useRef(false);
-  const escapeCountRef = useRef(0);
-  const lastEscapeAtRef = useRef(0);
-  const intentionalFullscreenExitRef = useRef(false);
-  const escapeResetTimerRef = useRef<number | null>(null);
-  const securitySubmittingRef = useRef(false);
+
+  // Escape has its own exam rule: first and second single presses warn;
+  // the third single press submits automatically. Two quick presses also
+  // submit immediately. Refs keep this deterministic across renders.
+  const escapePressCount = useRef(0);
+  const lastEscapeAt = useRef(0);
+  const escapeHandledRef = useRef(false);
+  const securitySubmitRef = useRef(false);
 
   /* ============================================================
      PALETTE
@@ -185,36 +140,86 @@ export default function StudentExam({
 
       setPalette(result.palette);
     } catch (error) {
-      console.error(
-        "[EXAM] Palette error:",
-        error
-      );
+      console.error("Palette error:", error);
     }
   }, [attemptId]);
 
   useEffect(() => {
-    void loadPalette();
+    loadPalette();
   }, [loadPalette]);
+
+  /* ============================================================
+     TIMER
+  ============================================================ */
+
+  useEffect(() => {
+    const sync = async () => {
+      try {
+        const status = await getAssessmentStatus(attemptId);
+
+        if (status.expired || status.remainingSeconds <= 0) {
+          onSubmitted();
+          return;
+        }
+
+        setRemainingSeconds(status.remainingSeconds);
+
+        if (status.palette) {
+          setPalette(status.palette);
+        }
+      } catch (error) {
+        console.error("Status sync error:", error);
+      }
+    };
+
+    const interval = window.setInterval(sync, 15000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [attemptId, onSubmitted]);
 
   /* ============================================================
      SERVER STATUS SYNC
   ============================================================ */
 
-  const syncServerState = useCallback(async () => {
+  useEffect(() => {
+    const sync = async () => {
+      try {
+        const status = await getAssessmentStatus(attemptId);
+
+        if (status.expired || status.remainingSeconds <= 0) {
+          onSubmitted();
+          return;
+        }
+
+        setRemainingSeconds(status.remainingSeconds);
+
+        if (status.palette) {
+          setPalette(status.palette);
+        }
+      } catch (error) {
+        console.error("Status sync error:", error);
+      }
+    };
+
+    const interval = window.setInterval(sync, 15000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [attemptId, onSubmitted]);
+
+  const syncServerState = async () => {
     try {
-      const data =
-        await getAssessmentStatus(attemptId);
+      const data = await getAssessmentStatus(attemptId);
 
       if (!data?.success) {
         return;
       }
 
-      if (
-        typeof data.remainingSeconds === "number"
-      ) {
-        setRemainingSeconds(
-          data.remainingSeconds
-        );
+      if (typeof data.remainingSeconds === "number") {
+        setRemainingSeconds(data.remainingSeconds);
       }
 
       if (
@@ -222,20 +227,14 @@ export default function StudentExam({
         data.status === "DISQUALIFIED" ||
         data.status === "EXPIRED"
       ) {
-        console.warn(
-          "[EXAM] Server says attempt is finished:",
-          data.status
-        );
+        console.warn("[EXAM] Server says attempt is finished:", data.status);
 
         onSubmitted();
       }
     } catch (error) {
-      console.error(
-        "[EXAM] Failed to synchronize:",
-        error
-      );
+      console.error("[EXAM] Failed to synchronize:", error);
     }
-  }, [attemptId, onSubmitted]);
+  };
 
   useEffect(() => {
     void syncServerState();
@@ -247,291 +246,35 @@ export default function StudentExam({
     return () => {
       window.clearInterval(interval);
     };
-  }, [syncServerState]);
-
-  // Run the visible countdown from an absolute deadline. This prevents the timer
-  // from freezing/resetting while questions are loading or navigation is occurring.
-  useEffect(() => {
-    deadlineRef.current = Date.now() + Math.max(0, initialSeconds) * 1000;
-    const interval = window.setInterval(() => {
-      const seconds = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
-      setRemainingSeconds(seconds);
-    }, 250);
-    return () => window.clearInterval(interval);
-  }, [initialSeconds]);
+  }, [attemptId, onSubmitted]);
 
   /* ============================================================
-     EXPIRE / AUTO SUBMIT
+     EXPIRE
   ============================================================ */
 
-  const autoSubmittingRef =
-    useRef(false);
-
-  const handleExpire = useCallback(async () => {
-    /*
-     * Prevent multiple submit requests.
-     *
-     * ExamTimer can call onExpire more than once
-     * because the timer remains at 0 for a short time.
-     */
-    if (autoSubmittingRef.current) {
-      return;
-    }
-
+  const handleExpire = useCallback(() => {
     if (remainingSeconds > 0) {
       return;
     }
 
-    autoSubmittingRef.current = true;
+    toast.error("Time is over. Your assessment is being submitted.");
 
-    try {
-      toast(
-        "Time is over. Submitting your assessment...",
-        {
-          icon: "⏰",
-        }
-      );
-
-      /*
-       * Save the currently selected answer first.
-       */
-      if (question) {
-        try {
-          await saveAnswer(
-            attemptId,
-            question.id,
-            selectedAnswers
-          );
-        } catch (saveError) {
-          /*
-           * Do not block submission if the final answer
-           * could not be saved.
-           *
-           * The backend timer still determines the
-           * official attempt state.
-           */
-          console.warn(
-            "[EXAM] Final answer could not be saved:",
-            saveError
-          );
-        }
-      }
-
-      /*
-       * Submit the attempt on the backend.
-       */
-      const result =
-        await submitAssessment(attemptId);
-
-      console.log(
-        "[EXAM] Auto-submit response:",
-        result
-      );
-
-      /*
-       * The backend may return:
-       *
-       * success: true
-       *
-       * OR
-       *
-       * expired: true
-       *
-       * if the server already expired the attempt.
-       */
-      if (
-        result?.success === true ||
-        result?.expired === true ||
-        result?.status === "SUBMITTED" ||
-        result?.status === "EXPIRED"
-      ) {
-        onSubmitted();
-        return;
-      }
-
-      /*
-       * If the backend does not explicitly return success,
-       * check the current server status.
-       */
-      const status =
-        await getAssessmentStatus(attemptId);
-
-      if (
-        status?.status === "SUBMITTED" ||
-        status?.status === "EXPIRED" ||
-        status?.status === "DISQUALIFIED" ||
-        status?.expired === true ||
-        status?.remainingSeconds <= 0
-      ) {
-        onSubmitted();
-        return;
-      }
-
-      /*
-       * Submission genuinely failed.
-       */
-      autoSubmittingRef.current = false;
-
-      toast.error(
-        status?.message ||
-          result?.message ||
-          "Unable to submit the assessment."
-      );
-    } catch (error: any) {
-      console.error(
-        "[EXAM] Automatic submission failed:",
-        error
-      );
-
-      /*
-       * Check server once more.
-       *
-       * The backend may have submitted the attempt even
-       * if the frontend request received an error.
-       */
-      try {
-        const status =
-          await getAssessmentStatus(attemptId);
-
-        if (
-          status?.status === "SUBMITTED" ||
-          status?.status === "EXPIRED" ||
-          status?.status === "DISQUALIFIED" ||
-          status?.expired === true ||
-          status?.remainingSeconds <= 0
-        ) {
-          onSubmitted();
-          return;
-        }
-      } catch (statusError) {
-        console.error(
-          "[EXAM] Unable to verify final attempt status:",
-          statusError
-        );
-      }
-
-      autoSubmittingRef.current = false;
-
-      toast.error(
-        error?.response?.data?.message ||
-          error?.message ||
-          "Automatic submission failed. Please wait."
-      );
-    }
-  }, [
-    attemptId,
-    remainingSeconds,
-    question?.id,
-    selectedAnswers,
-    onSubmitted,
-  ]);
-
-  const handleSecurityAutoSubmit = useCallback(async () => {
-    if (securitySubmittingRef.current) return;
-    securitySubmittingRef.current = true;
-
-    try {
-      // Best effort: preserve the answer currently visible before submitting.
-      if (question) {
-        try {
-          await saveAnswer(attemptId, question.id, selectedAnswers);
-        } catch (error) {
-          console.warn("[EXAM] Could not save answer before security submit:", error);
-        }
-      }
-
-      const result = await submitAssessment(attemptId, "SECURITY_AUTO_SUBMIT");
-      if (
-        result?.success === true ||
-        result?.expired === true ||
-        result?.status === "SUBMITTED" ||
-        result?.status === "EXPIRED"
-      ) {
-        toast.error("Assessment submitted because you left the examination window.");
-        onSubmitted();
-        return;
-      }
-
-      const status = await getAssessmentStatus(attemptId);
-      if (
-        status?.status === "SUBMITTED" ||
-        status?.status === "EXPIRED" ||
-        status?.status === "DISQUALIFIED" ||
-        status?.remainingSeconds <= 0
-      ) {
-        toast.error("Assessment submitted because you left the examination window.");
-        onSubmitted();
-        return;
-      }
-
-      securitySubmittingRef.current = false;
-      toast.error("Security submission could not be confirmed. Please return to the exam window.");
-    } catch (error: any) {
-      console.error("[EXAM] Security auto-submit failed:", error);
-
-      try {
-        const status = await getAssessmentStatus(attemptId);
-        if (
-          status?.status === "SUBMITTED" ||
-          status?.status === "EXPIRED" ||
-          status?.status === "DISQUALIFIED" ||
-          status?.remainingSeconds <= 0
-        ) {
-          onSubmitted();
-          return;
-        }
-      } catch (statusError) {
-        console.error("[EXAM] Unable to verify security submission:", statusError);
-      }
-
-      securitySubmittingRef.current = false;
-      toast.error(error?.response?.data?.message || "Security submission failed. Return to the exam window.");
-    }
-  }, [attemptId, question?.id, selectedAnswers, onSubmitted]);
-
-  useEffect(() => {
-    securitySubmitRef.current = () => {
-      void handleSecurityAutoSubmit();
-    };
-    return () => {
-      securitySubmitRef.current = null;
-    };
-  }, [handleSecurityAutoSubmit]);
+    onSubmitted();
+  }, [remainingSeconds, onSubmitted]);
 
   /* ============================================================
      LOAD QUESTION
   ============================================================ */
 
-  const loadQuestion = async (
-    number: number
-  ) => {
-    if (
-      number < 1 ||
-      number > totalQuestions ||
-      loadingQuestion
-    ) {
+  const loadQuestion = async (number: number) => {
+    if (number < 1 || number > totalQuestions || loadingQuestion) {
       return;
     }
 
     try {
       setLoadingQuestion(true);
 
-      const result =
-        await getQuestion(
-          attemptId,
-          number
-        );
-
-      console.log(
-        "[EXAM] Question response:",
-        result
-      );
-
-      if (!result?.question) {
-        throw new Error(
-          "Question data is missing from server response."
-        );
-      }
+      const result = await getQuestion(attemptId, number);
 
       setQuestion(result.question);
 
@@ -539,33 +282,18 @@ export default function StudentExam({
 
       localStorage.setItem(
         `studentCurrentQuestion:${attemptId}`,
-        String(number)
+        String(number),
       );
 
-      const serverSeconds = Math.max(0, Number(result.remainingSeconds || 0));
-      deadlineRef.current = Date.now() + serverSeconds * 1000;
-      setRemainingSeconds(serverSeconds);
+      setRemainingSeconds(result.remainingSeconds);
 
-      const serverAnswers =
-        result.question.assessment_answers?.[0]?.selected_answers || [];
-      const cachedAnswers = answerCacheRef.current[number];
-      const answers =
-        serverAnswers.length > 0 || cachedAnswers === undefined
-          ? serverAnswers
-          : cachedAnswers;
-
-      answerCacheRef.current[number] = answers;
-      setSelectedAnswers(answers);
+      setSelectedAnswers(
+        result.question.assessment_answers?.[0]?.selected_answers || [],
+      );
     } catch (error: any) {
-      console.error(
-        "[EXAM] Question loading error:",
-        error
-      );
+      console.error(error);
 
-      toast.error(
-        error?.message ||
-          "Unable to load question."
-      );
+      toast.error(error?.message || "Unable to load question.");
     } finally {
       setLoadingQuestion(false);
     }
@@ -576,42 +304,18 @@ export default function StudentExam({
   ============================================================ */
 
   const saveCurrentAnswer = async () => {
-    /*
-     * Important:
-     * Question can temporarily be null while loading.
-     */
-    if (!question) {
-      toast.error(
-        "Question is not loaded."
-      );
-
-      return false;
-    }
-
     try {
       setSaving(true);
-      answerCacheRef.current[currentQuestion] = [...selectedAnswers];
 
-      await saveAnswer(
-        attemptId,
-        question.id,
-        selectedAnswers
-      );
+      await saveAnswer(attemptId, question.id, selectedAnswers);
 
       await loadPalette();
 
       return true;
     } catch (error: any) {
-      console.error(
-        "[EXAM] Save answer error:",
-        error
-      );
+      console.error(error);
 
-      toast.error(
-        error?.response?.data?.message ||
-          error?.message ||
-          "Unable to save answer."
-      );
+      toast.error(error?.message || "Unable to save answer.");
 
       return false;
     } finally {
@@ -619,40 +323,17 @@ export default function StudentExam({
     }
   };
 
-  const handleAnswerChange = useCallback((answers: string[]) => {
-    setSelectedAnswers(answers);
-    answerCacheRef.current[currentQuestion] = [...answers];
-  }, [currentQuestion]);
-
-  const handleQuestionSelect = async (number: number) => {
-    if (number === currentQuestion) return;
-
-    // Preserve the current answer before changing questions. This also makes
-    // palette navigation behave like Save & Next / Previous.
-    const saved = await saveCurrentAnswer();
-    if (!saved) return;
-
-    await loadQuestion(number);
-  };
-
   /* ============================================================
      NEXT
   ============================================================ */
 
   const handleNext = async () => {
-    const saved =
-      await saveCurrentAnswer();
+    const saved = await saveCurrentAnswer();
 
-    if (!saved) {
-      return;
-    }
+    if (!saved) return;
 
-    if (
-      currentQuestion < totalQuestions
-    ) {
-      await loadQuestion(
-        currentQuestion + 1
-      );
+    if (currentQuestion < totalQuestions) {
+      await loadQuestion(currentQuestion + 1);
     }
   };
 
@@ -661,10 +342,9 @@ export default function StudentExam({
   ============================================================ */
 
   const handlePrevious = async () => {
-    if (currentQuestion <= 1) return;
-
-    const saved = await saveCurrentAnswer();
-    if (!saved) return;
+    if (currentQuestion <= 1) {
+      return;
+    }
 
     await loadQuestion(currentQuestion - 1);
   };
@@ -677,52 +357,44 @@ export default function StudentExam({
     try {
       setSubmitting(true);
 
-      /*
-       * Save current answer before submitting.
-       */
-      const saved =
-        await saveCurrentAnswer();
+      await saveCurrentAnswer();
 
-      if (!saved) {
-        setSubmitting(false);
-        return;
+      const result = await submitAssessment(attemptId);
+
+      if (result.success === false && !result.expired) {
+        throw new Error(result.message || "Unable to submit assessment.");
       }
 
-      const result =
-        await submitAssessment(
-          attemptId
-        );
-
-      if (
-        result.success === false &&
-        !result.expired
-      ) {
-        throw new Error(
-          result.message ||
-            "Unable to submit assessment."
-        );
-      }
-
-      toast.success(
-        "Assessment submitted successfully."
-      );
+      toast.success("Assessment submitted successfully.");
 
       onSubmitted();
     } catch (error: any) {
-      console.error(
-        "[EXAM] Submit error:",
-        error
-      );
+      console.error(error);
 
-      toast.error(
-        error?.response?.data?.message ||
-          error?.message ||
-          "Unable to submit assessment."
-      );
+      toast.error(error?.message || "Unable to submit assessment.");
     } finally {
       setSubmitting(false);
     }
   };
+
+  const autoSubmitForSecurity = useCallback(
+    async (reason: string) => {
+      if (securitySubmitRef.current) {
+        return;
+      }
+
+      securitySubmitRef.current = true;
+      setSubmitOpen(false);
+
+      try {
+        await handleSubmit();
+      } catch (error) {
+        console.error(`[EXAM] Security auto-submit failed (${reason}):`, error);
+        securitySubmitRef.current = false;
+      }
+    },
+    [handleSubmit],
+  );
 
   /* ============================================================
      FULLSCREEN
@@ -733,129 +405,56 @@ export default function StudentExam({
       if (!document.fullscreenElement) {
         await document.documentElement.requestFullscreen();
       }
-      setIsFullscreen(true);
-      setFullscreenPrompt(false);
     } catch (error) {
-      console.warn("[EXAM] Fullscreen request was blocked:", error);
-      setIsFullscreen(Boolean(document.fullscreenElement));
-      setFullscreenPrompt(true);
+      console.error("Fullscreen error:", error);
     }
   };
 
   /* ============================================================
-     FULLSCREEN / WINDOW EXIT POLICY
-  ============================================================ */
+   FULLSCREEN ENFORCEMENT
+============================================================ */
 
   useEffect(() => {
     const handleFullscreenChange = () => {
       const active = Boolean(document.fullscreenElement);
+
       setIsFullscreen(active);
 
-      if (active) {
-        setFullscreenPrompt(false);
-        return;
+      if (!active) {
+        // Escape itself is handled separately below. Do not count the same
+        // Escape twice as both ESCAPE_PRESS and FULLSCREEN_EXIT.
+        if (escapeHandledRef.current) {
+          escapeHandledRef.current = false;
+          return;
+        }
+
+        void reportInfraction("FULLSCREEN_EXIT");
+
+        toast.error("Fullscreen mode is required during the examination.");
+
+        window.setTimeout(() => {
+          if (!document.fullscreenElement && !securitySubmitRef.current) {
+            void enterFullscreen();
+          }
+        }, 500);
       }
-
-      // The first two Escape presses are deliberate chances/warnings.
-      // Any other fullscreen exit is a security violation and submits.
-      if (intentionalFullscreenExitRef.current) {
-        intentionalFullscreenExitRef.current = false;
-        setFullscreenPrompt(true);
-        return;
-      }
-
-      setFullscreenPrompt(true);
-      void reportInfraction("FULLSCREEN_EXIT");
-      toast.error("Fullscreen was exited. Submitting your assessment.");
-      void securitySubmitRef.current?.();
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.repeat) return;
-
-      const now = Date.now();
-      const DOUBLE_ESCAPE_WINDOW = 850;
-
-      if (escapeResetTimerRef.current) {
-        window.clearTimeout(escapeResetTimerRef.current);
-      }
-
-      const isDoubleEscape =
-        lastEscapeAtRef.current > 0 &&
-        now - lastEscapeAtRef.current <= DOUBLE_ESCAPE_WINDOW;
-
-      if (isDoubleEscape) {
-        // Two quick Escape presses always submit immediately.
-        event.preventDefault();
-        event.stopPropagation();
-        escapeCountRef.current = 0;
-        lastEscapeAtRef.current = 0;
-        intentionalFullscreenExitRef.current = true;
-        void reportInfraction("KEYBOARD_SHORTCUT");
-        toast.error("Double Escape detected. Submitting your assessment.");
-        void securitySubmitRef.current?.();
-        escapeResetTimerRef.current = window.setTimeout(() => {
-          intentionalFullscreenExitRef.current = false;
-          setFullscreenPrompt(false);
-        }, 700);
-        return;
-      }
-
-      escapeCountRef.current += 1;
-      lastEscapeAtRef.current = now;
-
-      if (escapeCountRef.current === 1) {
-        toast.error("Escape detected. You have 2 more chances. A third single Escape will submit the assessment.");
-      } else if (escapeCountRef.current === 2) {
-        toast.error("Second Escape detected. You have 1 more chance. The next single Escape will submit the assessment.");
-      } else {
-        event.preventDefault();
-        event.stopPropagation();
-        escapeCountRef.current = 0;
-        lastEscapeAtRef.current = 0;
-        intentionalFullscreenExitRef.current = true;
-        void reportInfraction("KEYBOARD_SHORTCUT");
-        toast.error("Third Escape detected. Submitting your assessment.");
-        void securitySubmitRef.current?.();
-        escapeResetTimerRef.current = window.setTimeout(() => {
-          intentionalFullscreenExitRef.current = false;
-        }, 700);
-        return;
-      }
-
-      // Escape normally exits browser fullscreen. Treat that exit as the
-      // warning/chance itself, not as an additional automatic submission.
-      intentionalFullscreenExitRef.current = true;
-      void reportInfraction("KEYBOARD_SHORTCUT");
-      setFullscreenPrompt(true);
-
-      escapeResetTimerRef.current = window.setTimeout(() => {
-        escapeCountRef.current = 0;
-        lastEscapeAtRef.current = 0;
-        intentionalFullscreenExitRef.current = false;
-      }, DOUBLE_ESCAPE_WINDOW);
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
-    document.addEventListener("keydown", handleKeyDown, true);
 
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      document.removeEventListener("keydown", handleKeyDown, true);
-      if (escapeResetTimerRef.current) {
-        window.clearTimeout(escapeResetTimerRef.current);
-      }
-      intentionalFullscreenExitRef.current = false;
     };
   }, [reportInfraction]);
 
   useEffect(() => {
-    // Try automatically first. Modern browsers may block this because the
-    // exam tab was opened by navigation rather than a direct gesture in that tab.
     const timer = window.setTimeout(() => {
       void enterFullscreen();
     }, 300);
-    return () => window.clearTimeout(timer);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, []);
 
   /* ============================================================
@@ -867,97 +466,98 @@ export default function StudentExam({
       const current = document.visibilityState;
 
       if (previousVisibility.current === "visible" && current === "hidden") {
-        void reportInfraction("TAB_SWITCH");
-        void securitySubmitRef.current?.();
+        setViolations((value) => value + 1);
+
+        toast.error("Leaving the examination window is not allowed.");
       }
 
       previousVisibility.current = current;
     };
 
-    const handleBlur = () => {
-      // A real window blur means the student has left the exam window.
-      // Fullscreen's own exit is handled separately so the first Escape remains a warning.
-      if (document.visibilityState === "visible" && document.fullscreenElement) {
-        void reportInfraction("WINDOW_BLUR");
-        void securitySubmitRef.current?.();
-      }
-    };
-
     document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("blur", handleBlur);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("blur", handleBlur);
     };
-  }, [reportInfraction]);
+  }, []);
 
   /* ============================================================
-     ANTI-CHEAT — COPY / PASTE / KEYBOARD / CONTEXT MENU
-  ============================================================ */
+   ANTI-CHEAT — COPY / PASTE / KEYBOARD / CONTEXT MENU
+============================================================ */
 
   useEffect(() => {
-    const handleCopy = (
-      event: ClipboardEvent
-    ) => {
+    const handleCopy = (event: ClipboardEvent) => {
       event.preventDefault();
 
-      void reportInfraction(
-        "COPY_ATTEMPT"
-      );
+      void reportInfraction("COPY_ATTEMPT");
 
-      toast.error(
-        "Copying is not allowed during the examination."
-      );
+      toast.error("Copying is not allowed during the examination.");
     };
 
-    const handlePaste = (
-      event: ClipboardEvent
-    ) => {
+    const handlePaste = (event: ClipboardEvent) => {
       event.preventDefault();
 
-      void reportInfraction(
-        "PASTE_ATTEMPT"
-      );
+      void reportInfraction("PASTE_ATTEMPT");
 
-      toast.error(
-        "Pasting is not allowed during the examination."
-      );
+      toast.error("Pasting is not allowed during the examination.");
     };
 
-    const handleCut = (
-      event: ClipboardEvent
-    ) => {
+    const handleCut = (event: ClipboardEvent) => {
       event.preventDefault();
 
-      void reportInfraction(
-        "CUT_ATTEMPT"
-      );
+      void reportInfraction("CUT_ATTEMPT");
 
-      toast.error(
-        "Cutting is not allowed during the examination."
-      );
+      toast.error("Cutting is not allowed during the examination.");
     };
 
-    const handleContextMenu = (
-      event: MouseEvent
-    ) => {
+    const handleContextMenu = (event: MouseEvent) => {
       event.preventDefault();
 
-      void reportInfraction(
-        "CONTEXT_MENU"
-      );
+      void reportInfraction("CONTEXT_MENU");
 
-      toast.error(
-        "Right-click is disabled during the examination."
-      );
+      toast.error("Right-click is disabled during the examination.");
     };
 
-    const handleKeyDown = (
-      event: KeyboardEvent
-    ) => {
-      const key =
-        event.key.toLowerCase();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+
+      // Dedicated Escape policy. A rapid second Escape is an immediate
+      // termination; otherwise the 1st/2nd presses warn and the 3rd submits.
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const now = Date.now();
+        const isDoubleEscape = now - lastEscapeAt.current <= 700;
+        lastEscapeAt.current = now;
+        escapeHandledRef.current = true;
+        window.setTimeout(() => {
+          escapeHandledRef.current = false;
+        }, 1000);
+
+        if (isDoubleEscape) {
+          escapePressCount.current += 1;
+          void reportInfraction("ESCAPE_DOUBLE");
+          toast.error("Two Escape presses detected. Your assessment is being submitted.");
+          void autoSubmitForSecurity("DOUBLE_ESCAPE");
+          return;
+        }
+
+        escapePressCount.current += 1;
+        const count = escapePressCount.current;
+        void reportInfraction("ESCAPE_PRESS");
+
+        if (count >= 3) {
+          toast.error("Third Escape press detected. Your assessment is being submitted.");
+          void autoSubmitForSecurity("THIRD_ESCAPE");
+          return;
+        }
+
+        toast.error(
+          `Escape is not allowed. Warning ${count}/2. A third Escape will submit your assessment.`,
+        );
+        return;
+      }
 
       const blocked =
         (event.ctrlKey && key === "c") ||
@@ -969,9 +569,7 @@ export default function StudentExam({
         (event.ctrlKey && key === "u") ||
         (event.ctrlKey &&
           event.shiftKey &&
-          (key === "i" ||
-            key === "j" ||
-            key === "c")) ||
+          (key === "i" || key === "j" || key === "c")) ||
         event.key === "F12";
 
       if (!blocked) {
@@ -981,83 +579,31 @@ export default function StudentExam({
       event.preventDefault();
       event.stopPropagation();
 
-      void reportInfraction(
-        "KEYBOARD_SHORTCUT"
-      );
+      void reportInfraction("KEYBOARD_SHORTCUT");
 
-      toast.error(
-        "This keyboard shortcut is disabled during the examination."
-      );
+      toast.error("This keyboard shortcut is disabled during the examination.");
     };
 
-    document.addEventListener(
-      "copy",
-      handleCopy
-    );
-
-    document.addEventListener(
-      "paste",
-      handlePaste
-    );
-
-    document.addEventListener(
-      "cut",
-      handleCut
-    );
-
-    document.addEventListener(
-      "contextmenu",
-      handleContextMenu
-    );
-
-    document.addEventListener(
-      "keydown",
-      handleKeyDown
-    );
+    document.addEventListener("copy", handleCopy);
+    document.addEventListener("paste", handlePaste);
+    document.addEventListener("cut", handleCut);
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.removeEventListener(
-        "copy",
-        handleCopy
-      );
-
-      document.removeEventListener(
-        "paste",
-        handlePaste
-      );
-
-      document.removeEventListener(
-        "cut",
-        handleCut
-      );
-
-      document.removeEventListener(
-        "contextmenu",
-        handleContextMenu
-      );
-
-      document.removeEventListener(
-        "keydown",
-        handleKeyDown
-      );
+      document.removeEventListener("copy", handleCopy);
+      document.removeEventListener("paste", handlePaste);
+      document.removeEventListener("cut", handleCut);
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [reportInfraction]);
-
-  /* ============================================================
-     RENDER
-  ============================================================ */
+  }, [autoSubmitForSecurity, reportInfraction]);
 
   return (
     <div className="fixed inset-0 bg-slate-50 flex flex-col overflow-hidden">
-
-      {/* ========================================================
-          CONNECTION LOST
-      ======================================================== */}
-
       {!connected && reconnecting && (
         <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-2xl">
-
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-amber-200 border-t-amber-600" />
             </div>
@@ -1067,9 +613,8 @@ export default function StudentExam({
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Your connection to the examination
-              server was interrupted. Please wait
-              while we reconnect you.
+              Your connection to the examination server was interrupted. Please
+              wait while we reconnect you.
             </p>
 
             <p className="mt-4 text-sm font-semibold text-amber-600">
@@ -1078,33 +623,6 @@ export default function StudentExam({
           </div>
         </div>
       )}
-
-      {!isFullscreen && fullscreenPrompt && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/95 p-6 text-white">
-          <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-white p-8 text-center text-slate-900 shadow-2xl">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#00629B]/10 text-[#00629B]">
-              <Maximize size={30} />
-            </div>
-            <h2 className="mt-5 text-2xl font-bold">Enter Fullscreen to Continue</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              The examination is designed to run in a dedicated fullscreen tab.
-              Click below if your browser did not enter fullscreen automatically.
-            </p>
-            <button
-              type="button"
-              onClick={() => void enterFullscreen()}
-              className="mt-6 w-full rounded-xl bg-[#00629B] px-5 py-3 font-semibold text-white hover:bg-[#00527f]"
-            >
-              Enter Fullscreen & Continue
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================
-          HEADER
-      ======================================================== */}
-
       <ExamHeader
         assessmentTitle={assessmentTitle}
         studentName={studentName}
@@ -1112,373 +630,210 @@ export default function StudentExam({
         onExpire={handleExpire}
       />
 
-      {/* ========================================================
-          MAIN CONTENT
-      ======================================================== */}
-
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto">
           <div className="max-w-[1500px] mx-auto p-4 lg:p-6">
-
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_330px] gap-6">
-
-              {/* ==================================================
+              {/* =================================================
                   MAIN EXAM
-              ================================================== */}
+              ================================================= */}
 
               <main className="min-w-0">
-
                 <div className="flex items-center justify-between mb-4">
-
                   <div>
                     <p className="text-sm font-semibold text-slate-500">
                       Question{" "}
-                      <span className="text-slate-900">
-                        {currentQuestion}
-                      </span>{" "}
+                      <span className="text-slate-900">{currentQuestion}</span>{" "}
                       of{" "}
-                      <span className="text-slate-900">
-                        {totalQuestions}
-                      </span>
+                      <span className="text-slate-900">{totalQuestions}</span>
                     </p>
                   </div>
 
+                  {warning && (
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
+                      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                        <div className="mb-4">
+                          <h2
+                            className={`text-xl font-bold ${
+                              disqualified ? "text-red-600" : "text-amber-600"
+                            }`}
+                          >
+                            {disqualified
+                              ? "Assessment Disqualified"
+                              : "Anti-Cheat Warning"}
+                          </h2>
+
+                          <p className="mt-2 text-sm text-gray-600">
+                            {warning}
+                          </p>
+                        </div>
+
+                        <div className="mb-5 rounded-xl bg-gray-100 p-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">
+                              Violations
+                            </span>
+
+                            <span className="font-bold">
+                              {infractionCount} / {maxInfractions}
+                            </span>
+                          </div>
+                        </div>
+
+                        {!disqualified && (
+                          <button
+                            type="button"
+                            onClick={dismissWarning}
+                            className="w-full rounded-xl bg-[#00629B] px-4 py-3 font-semibold text-white"
+                          >
+                            I Understand
+                          </button>
+                        )}
+
+                        {disqualified && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              window.location.href = "/student";
+                            }}
+                            className="w-full rounded-xl bg-red-600 px-4 py-3 font-semibold text-white"
+                          >
+                            Exit Assessment
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2">
-
-                    {/* =================================================
-                        INFRACTION COUNT
-                    ================================================= */}
-
-                    {infractionCount > 0 && (
+                    {violations > 0 && (
                       <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs font-semibold">
-
                         <AlertTriangle size={14} />
-
-                        {infractionCount} violation
-                        {infractionCount !== 1
-                          ? "s"
-                          : ""}
-
+                        {violations} violation
+                        {violations !== 1 ? "s" : ""}
                       </div>
                     )}
 
-                    {/* =================================================
-                        FULLSCREEN BUTTON
-                    ================================================= */}
-
                     <button
                       type="button"
-                      onClick={
-                        enterFullscreen
-                      }
+                      onClick={enterFullscreen}
                       className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50"
                     >
                       <Maximize size={14} />
 
-                      {isFullscreen
-                        ? "Fullscreen Active"
-                        : "Enter Fullscreen"}
+                      {isFullscreen ? "Fullscreen Active" : "Enter Fullscreen"}
                     </button>
-
                   </div>
                 </div>
 
-                {/* =================================================
-                    ANTI-CHEAT WARNING
-                ================================================= */}
-
-                {warning && (
-                  <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4">
-
-                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-
-                      <div className="mb-4">
-
-                        <h2
-                          className={`text-xl font-bold ${
-                            disqualified
-                              ? "text-red-600"
-                              : "text-amber-600"
-                          }`}
-                        >
-                          {disqualified
-                            ? "Assessment Disqualified"
-                            : "Anti-Cheat Warning"}
-                        </h2>
-
-                        <p className="mt-2 text-sm text-gray-600">
-                          {warning}
-                        </p>
-
-                      </div>
-
-                      <div className="mb-5 rounded-xl bg-gray-100 p-4">
-
-                        <div className="flex items-center justify-between">
-
-                          <span className="text-sm text-gray-600">
-                            Violations
-                          </span>
-
-                          <span className="font-bold">
-                            {infractionCount} /{" "}
-                            {maxInfractions}
-                          </span>
-
-                        </div>
-
-                      </div>
-
-                      {!disqualified && (
-                        <button
-                          type="button"
-                          onClick={
-                            dismissWarning
-                          }
-                          className="w-full rounded-xl bg-[#00629B] px-4 py-3 font-semibold text-white"
-                        >
-                          I Understand
-                        </button>
-                      )}
-
-                      {disqualified && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            window.location.href =
-                              "/student";
-                          }}
-                          className="w-full rounded-xl bg-red-600 px-4 py-3 font-semibold text-white"
-                        >
-                          Exit Assessment
-                        </button>
-                      )}
-
-                    </div>
-                  </div>
-                )}
-
-                {/* =================================================
-                    QUESTION
-                ================================================= */}
-
                 {loadingQuestion ? (
                   <div className="bg-white rounded-2xl border border-slate-200 p-16 flex items-center justify-center">
-
                     <div className="text-center">
-
                       <div className="w-8 h-8 border-3 border-slate-200 border-t-[#00629B] rounded-full animate-spin mx-auto" />
 
                       <p className="text-sm text-slate-400 mt-4">
                         Loading question...
                       </p>
-
                     </div>
-
                   </div>
-                ) : question ? (
+                ) : (
                   <QuestionCard
                     question={question}
-                    selectedAnswers={
-                      selectedAnswers
-                    }
-                    onChange={
-                      handleAnswerChange
-                    }
+                    selectedAnswers={selectedAnswers}
+                    onChange={setSelectedAnswers}
                   />
-                ) : (
-                  <div className="bg-white rounded-2xl border border-slate-200 p-16 flex items-center justify-center">
-
-                    <div className="text-center">
-
-                      <AlertTriangle
-                        className="mx-auto text-amber-500"
-                        size={32}
-                      />
-
-                      <p className="text-sm text-slate-500 mt-4">
-                        Question could not be loaded.
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          loadQuestion(
-                            currentQuestion
-                          )
-                        }
-                        className="mt-4 rounded-xl bg-[#00629B] px-5 py-2 text-sm font-semibold text-white"
-                      >
-                        Retry
-                      </button>
-
-                    </div>
-
-                  </div>
                 )}
 
-                {/* =================================================
-                    NAVIGATION
-                ================================================= */}
-
                 <div className="mt-5">
-
                   <ExamNavigation
-                    currentQuestion={
-                      currentQuestion
-                    }
-                    totalQuestions={
-                      totalQuestions
-                    }
+                    currentQuestion={currentQuestion}
+                    totalQuestions={totalQuestions}
                     saving={saving}
-                    onPrevious={
-                      handlePrevious
-                    }
+                    onPrevious={handlePrevious}
                     onNext={handleNext}
-                    onSaveAndNext={
-                      handleNext
-                    }
+                    onSaveAndNext={handleNext}
                   />
-
                 </div>
-
               </main>
 
-              {/* ==================================================
+              {/* =================================================
                   SIDEBAR
-              ================================================== */}
+              ================================================= */}
 
               <aside className="space-y-5">
-
-                {/* =================================================
-                    EXAM STATUS
-                ================================================= */}
-
                 <div className="bg-white rounded-2xl border border-slate-200 p-5">
-
                   <div className="flex items-center gap-3">
-
                     <div className="w-10 h-10 rounded-xl bg-[#00629B]/10 text-[#00629B] flex items-center justify-center">
                       <ShieldCheck size={20} />
                     </div>
 
                     <div>
-
                       <div className="flex items-center gap-2">
-
                         <p className="font-semibold text-slate-900">
                           Examination Active
                         </p>
 
                         <span
                           className={`h-2 w-2 rounded-full ${
-                            connected
-                              ? "bg-green-500"
-                              : "bg-red-500"
+                            connected ? "bg-green-500" : "bg-red-500"
                           }`}
                         />
-
                       </div>
 
                       <p className="text-xs text-slate-400 mt-0.5">
-
                         {connected
                           ? reconnectCount > 0
                             ? `Connection restored • ${reconnectCount} reconnect${
-                                reconnectCount !== 1
-                                  ? "s"
-                                  : ""
+                                reconnectCount !== 1 ? "s" : ""
                               }`
                             : "Live connection active"
                           : reconnecting
-                          ? "Reconnecting..."
-                          : "Connection lost"}
-
+                            ? "Reconnecting..."
+                            : "Connection lost"}
                       </p>
-
                     </div>
-
                   </div>
-
                 </div>
-
-                {/* =================================================
-                    QUESTION PALETTE
-                ================================================= */}
 
                 <QuestionPalette
                   palette={palette}
-                  currentQuestion={
-                    currentQuestion
-                  }
-                  onSelect={handleQuestionSelect}
+                  currentQuestion={currentQuestion}
+                  onSelect={loadQuestion}
                 />
-
-                {/* =================================================
-                    SUBMIT BUTTON
-                ================================================= */}
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setSubmitOpen(true)
-                  }
+                  onClick={() => setSubmitOpen(true)}
                   className="w-full h-12 rounded-xl bg-[#00629B] text-white font-semibold flex items-center justify-center gap-2 hover:bg-[#00527f] transition"
                 >
                   <Send size={17} />
                   Submit Assessment
                 </button>
 
-                {/* =================================================
-                    INFORMATION
-                ================================================= */}
-
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-
                   <div className="flex gap-3">
-
-                    <Flag
-                      size={17}
-                      className="text-amber-600 shrink-0"
-                    />
+                    <Flag size={17} className="text-amber-600 shrink-0" />
 
                     <p className="text-xs leading-5 text-amber-800">
-                      Make sure you have answered
-                      all required questions before
+                      Make sure you have answered all required questions before
                       submitting.
                     </p>
-
                   </div>
-
                 </div>
-
               </aside>
-
             </div>
-
           </div>
         </div>
       </div>
 
-      {/* ========================================================
-          SUBMIT MODAL
-      ======================================================== */}
-
       <SubmitExamModal
         open={submitOpen}
-        answered={
-          palette.filter(
-            (item) => item.answered
-          ).length
-        }
+        answered={palette.filter((item) => item.answered).length}
         total={totalQuestions}
         submitting={submitting}
-        onClose={() =>
-          setSubmitOpen(false)
-        }
+        onClose={() => setSubmitOpen(false)}
         onConfirm={handleSubmit}
       />
-
     </div>
   );
 }

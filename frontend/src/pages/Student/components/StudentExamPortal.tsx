@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 
 import StudentExam from "./StudentExam";
 import StudentLogin from "../components/StudentLogin";
+import VerifyOtp from "../components/VerifyOtp";
 import ExamInstructions from "../components/ExamInstructions";
 
 import {
@@ -18,7 +19,7 @@ interface Props {
   onStartExam: (assessmentId: string) => void;
 }
 
-type Step = "loading" | "login" | "instructions";
+type Step = "loading" | "login" | "otp" | "instructions";
 type ExamStatus = "NOT_STARTED" | "LIVE" | "CLOSED";
 
 interface ExamData {
@@ -37,6 +38,7 @@ export default function StudentExamPortal({
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [examStatus, setExamStatus] = useState<ExamStatus>("NOT_STARTED");
   const [countdown, setCountdown] = useState(0);
+  const [email, setEmail] = useState("");
   const [examData, setExamData] = useState<ExamData | null>(null);
 
   const handleStartExam = async () => {
@@ -45,31 +47,45 @@ export default function StudentExamPortal({
       return;
     }
 
-    // Open the exam tab synchronously while the Start button still has a
-    // user-activation token. Opening it after an awaited API request is
-    // commonly blocked by the browser.
+    // Open the exam tab synchronously from the user's click. Opening it
+    // before the async API request prevents popup blockers from treating
+    // the new tab as a non-user-initiated window.
     const examWindow = window.open("about:blank", "_blank");
+
+    if (!examWindow) {
+      toast.error("Please allow pop-ups for this site to start the exam.");
+      return;
+    }
 
     try {
       const result = await startAssessment(assessmentId);
-      const examUrl = `${window.location.origin}/student/exam/${assessmentId}?exam=1`;
 
-      if (examWindow && !examWindow.closed) {
-        examWindow.location.replace(examUrl);
-        examWindow.focus();
-        toast.success("Exam opened in a new tab.");
-        return;
-      }
+      // The new tab shares localStorage with this tab. The exam page will
+      // resume this attempt using the attempt/session stored by startAssessment.
+      const examUrl = new URL(window.location.href);
+      examUrl.searchParams.set("exam", "1");
 
-      // Popup blockers: continue in the current tab rather than failing the exam.
-      setExamData(result);
-      onStartExam(assessmentId);
+      examWindow.location.replace(examUrl.toString());
+
+      // Keep the current tab on the instructions page rather than rendering
+      // the exam here. The new tab is the dedicated examination environment.
+      setExamData(null);
+      // The exam is intentionally rendered only in the newly opened tab.
+      // Keep the original instructions tab untouched.
+      void onStartExam;
+      void result;
     } catch (err: any) {
-      if (examWindow && !examWindow.closed) { try { examWindow.close(); } catch (_) {} }
+      examWindow.close();
       console.error("[EXAM] Unable to start:", err);
-      toast.error(err?.response?.data?.message || err?.message || "Unable to start assessment.");
+
+      toast.error(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Unable to start assessment.",
+      );
     }
   };
+
   useEffect(() => {
     if (!assessment) return;
 
@@ -109,6 +125,7 @@ export default function StudentExamPortal({
 
     const loadAssessment = async () => {
       try {
+        const isExamTab = new URLSearchParams(window.location.search).get("exam") === "1";
         const result = await checkAssessment(assessmentId);
 
         if (!mounted) return;
@@ -134,7 +151,7 @@ export default function StudentExamPortal({
         const savedAttemptId = localStorage.getItem("studentAttemptId");
 
         // Do not resume before the official exam start time.
-        if (savedAttemptId && now >= startTime && now < endTime) {
+        if (isExamTab && savedAttemptId && now >= startTime && now < endTime) {
           try {
             const resumed = await resumeAssessment(
               assessmentId,
@@ -207,8 +224,21 @@ export default function StudentExamPortal({
       <StudentLogin
         assessmentId={assessmentId}
         assessmentTitle={assessment.title}
-        onLoggedIn={() => setStep("instructions")}
-        loginMethod={(assessment.login_method || "PASSWORD") === "OTP" ? "OTP" : "PASSWORD"}
+        onOtpSent={(studentEmail) => {
+          setEmail(studentEmail);
+          setStep("otp");
+        }}
+      />
+    );
+  }
+
+  if (step === "otp") {
+    return (
+      <VerifyOtp
+        assessmentId={assessmentId}
+        email={email}
+        onVerified={() => setStep("instructions")}
+        onBack={() => setStep("login")}
       />
     );
   }
