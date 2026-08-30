@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import LiveUpdatesToggle from "./LiveUpdatesToggle";
 import { BarChart3 } from "lucide-react";
 
 import { socket } from "../../../../../lib/socket";
@@ -155,13 +156,13 @@ export default function Analytics({ assessment }: Props) {
   });
 
   const [department, setDepartment] = useState("all");
-  const [liveUpdates, setLiveUpdates] = useState(() => localStorage.getItem(`assessment_live_updates:${assessment.id}`) !== "false");
+  const [liveUpdates, setLiveUpdates] = useState(assessment.live_updates_enabled !== false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const data = await getDashboardAnalytics(assessment.id, department);
+      const data = await getDashboardAnalytics(assessment.id, { department });
       setAnalytics(data);
       setLastUpdated(new Date());
     } catch (err) {
@@ -242,23 +243,9 @@ export default function Analytics({ assessment }: Props) {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
-          <p className="text-sm text-gray-500">
-            Last Updated {lastUpdated.toLocaleTimeString()}
-          </p>
-
-          <span className="text-sm font-medium">🔄 Live Updates</span>
-
-          <button
-            onClick={() => setLiveUpdates(!liveUpdates)}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-              liveUpdates
-                ? "bg-green-600 text-white"
-                : "bg-gray-200 text-gray-700"
-            }`}
-          >
-            {liveUpdates ? "ON" : "OFF"}
-          </button>
+        <div className="space-y-2">
+          <LiveUpdatesToggle assessment={assessment} value={liveUpdates} onChange={setLiveUpdates} />
+          <p className="text-xs text-slate-500">Last updated {lastUpdated.toLocaleTimeString()}</p>
         </div>
       </div>
       <AnalyticsFilters

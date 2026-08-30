@@ -636,6 +636,18 @@ exports.submitAssessment = async (req, res) => {
       });
     }
 
+    if (attempt.status === "DISQUALIFIED") {
+      return res.status(400).json({
+        success: false,
+        message: "This assessment attempt has been disqualified.",
+      });
+    }
+
+    const { data: assessment } = await assessmentService.getAssessment(attempt.assessment_id);
+    const deadlineCandidates = [attempt.expires_at, assessment?.end_time].filter(Boolean).map((value) => new Date(value).getTime()).filter(Number.isFinite);
+    const deadline = deadlineCandidates.length ? Math.min(...deadlineCandidates) : Number.MAX_SAFE_INTEGER;
+    const expired = Date.now() >= deadline;
+
     /*
     ------------------------------------
     SCORE
@@ -651,10 +663,16 @@ exports.submitAssessment = async (req, res) => {
     */
 
     const updatedAttempt = await engine.finishAttempt(attemptId, result);
-    const submissionReason = String(req.body?.reason || "STUDENT_SUBMIT");
+    const requestedReason = String(req.body?.reason || "STUDENT_SUBMIT");
+    const submissionReason = expired ? "AUTO_SUBMIT" : requestedReason;
+    const activityType = submissionReason === "SECURITY_AUTO_SUBMIT"
+      ? "SECURITY_AUTO_SUBMIT"
+      : submissionReason === "AUTO_SUBMIT"
+        ? "AUTO_SUBMIT"
+        : "SUBMIT";
     await supabase.from("assessment_activity").insert({
       attempt_id: attemptId,
-      activity_type: submissionReason === "SECURITY_AUTO_SUBMIT" ? "SECURITY_AUTO_SUBMIT" : "SUBMIT",
+      activity_type: activityType,
       metadata: { source: "student", reason: submissionReason },
     });
     /*
@@ -808,6 +826,8 @@ exports.submitAssessment = async (req, res) => {
 
     return res.json({
       success: true,
+      autoSubmitted: expired,
+      submissionReason,
 
       score: result.score,
 

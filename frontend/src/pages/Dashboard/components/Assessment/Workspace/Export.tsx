@@ -1,58 +1,16 @@
 import { useState } from "react";
-import { FileSpreadsheet, FileText, Download } from "lucide-react";
+import { BarChart3, Download, FileSpreadsheet, FileText, Table2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { downloadAssessmentExport } from "../assessmentApi";
-import { Assessment } from "../AssessmentCard";
+import type { Assessment } from "../AssessmentCard";
 
-export default function ExportTab({ assessment }: { assessment: Assessment }) {\n  const assessmentId = assessment.id;
-  const [busy, setBusy] = useState<string | null>(null);
-
-  const download = async (format: "excel" | "pdf" | "csv") => {
-    try {
-      setBusy(format);
-      await downloadAssessmentExport(assessmentId, format);
-      toast.success(`${format.toUpperCase()} downloaded`);
-    } catch (error) {
-      console.error(error);
-      toast.error(`Unable to download ${format.toUpperCase()}`);
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const button = (
-    format: "excel" | "pdf" | "csv",
-    label: string,
-    Icon: any,
-  ) => (
-    <button
-      type="button"
-      disabled={busy !== null}
-      onClick={() => void download(format)}
-      className="flex items-center gap-3 rounded-xl border px-5 py-4 text-left hover:bg-gray-50 disabled:opacity-50"
-    >
-      <Icon size={20} />
-      <span className="flex-1">
-        <span className="block font-semibold">{label}</span>
-        <span className="text-sm text-gray-500">
-          Results, scores, status and submission times
-        </span>
-      </span>
-      <Download size={18} />
-    </button>
-  );
-
-  return (
-    <div className="space-y-4 rounded-2xl border bg-white p-6">
-      <h2 className="text-xl font-semibold">Export Results</h2>
-      <p className="text-sm text-gray-500">
-        Download complete assessment results and monitoring information.
-      </p>
-      <div className="grid gap-3 md:grid-cols-3">
-        {button("excel", "Excel report", FileSpreadsheet)}
-        {button("pdf", "PDF report", FileText)}
-        {button("csv", "CSV data", FileText)}
-      </div>
-    </div>
-  );
+export default function ExportTab({ assessment }: { assessment: Assessment }) {
+  const [busy,setBusy]=useState<string|null>(null);
+  const download=async(format:"excel"|"pdf"|"csv")=>{try{setBusy(format);await downloadAssessmentExport(assessment.id,format);toast.success(`${format.toUpperCase()} report downloaded.`);}catch(error:any){console.error(error);toast.error(error?.response?.data?.message||`Unable to download ${format.toUpperCase()} report.`);}finally{setBusy(null);}};
+  const cards=[
+    {format:"excel" as const,title:"Premium Excel Workbook",text:"Results, summary, leaderboard and question analysis in separate sheets.",icon:FileSpreadsheet},
+    {format:"pdf" as const,title:"Premium PDF Report",text:"Branded summary, performance statistics and a polished results table.",icon:FileText},
+    {format:"csv" as const,title:"Raw CSV Data",text:"Flat result data for further processing in any spreadsheet tool.",icon:Table2},
+  ];
+  return <div className="space-y-6"><div className="rounded-2xl border bg-white p-6 shadow-sm"><div className="flex items-start gap-4"><div className="rounded-xl bg-blue-50 p-3 text-[#00629B]"><BarChart3 size={22}/></div><div><h2 className="text-2xl font-bold text-slate-900">Export Centre</h2><p className="mt-1 text-sm text-slate-500">Download complete assessment results. Exports include the latest submitted, auto-submitted and disqualified records where applicable.</p></div></div></div><div className="grid gap-4 lg:grid-cols-3">{cards.map(({format,title,text,icon:Icon})=><button key={format} type="button" disabled={busy!==null} onClick={()=>void download(format)} className="group rounded-2xl border bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-50"><div className="flex items-center justify-between"><div className="rounded-xl bg-slate-100 p-3 text-slate-700"><Icon size={22}/></div><Download size={18} className="text-slate-400 group-hover:text-[#00629B]"/></div><h3 className="mt-5 font-bold text-slate-900">{busy===format?"Preparing...":title}</h3><p className="mt-2 text-sm leading-6 text-slate-500">{text}</p></button>)}</div><div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-sm text-blue-900"><strong>Tip:</strong> Use Excel for detailed analysis, PDF for official submission/reporting, and CSV for bulk data processing.</div></div>;
 }

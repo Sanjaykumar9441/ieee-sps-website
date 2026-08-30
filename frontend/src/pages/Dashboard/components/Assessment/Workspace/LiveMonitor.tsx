@@ -63,6 +63,7 @@ export default function LiveMonitor({ assessment }: Props) {
   const [search, setSearch] = useState("");
 
   const [status, setStatus] = useState("all");
+  const [liveUpdates, setLiveUpdates] = useState(assessment.live_updates_enabled !== false);
 
   const fetchStudents = useCallback(async () => {
     try {
@@ -93,7 +94,7 @@ export default function LiveMonitor({ assessment }: Props) {
     } catch (err) {
       console.error(err);
 
-      toast.error("Unable to force submit.");
+      toast.error((err as any)?.response?.data?.message || "Unable to force submit.");
     } finally {
       setProcessingStudent(null);
     }
@@ -118,11 +119,20 @@ export default function LiveMonitor({ assessment }: Props) {
     } catch (err) {
       console.error(err);
 
-      toast.error("Unable to disqualify student.");
+      toast.error((err as any)?.response?.data?.message || "Unable to disqualify student.");
     } finally {
       setProcessingStudent(null);
     }
   };
+
+  useEffect(() => {
+    const onLiveSettingChanged = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.assessmentId === assessment.id && typeof detail.enabled === "boolean") setLiveUpdates(detail.enabled);
+    };
+    window.addEventListener("assessment-live-updates-changed", onLiveSettingChanged);
+    return () => window.removeEventListener("assessment-live-updates-changed", onLiveSettingChanged);
+  }, [assessment.id]);
 
   useEffect(() => {
     void fetchStudents();
@@ -155,6 +165,14 @@ export default function LiveMonitor({ assessment }: Props) {
       socket.emit("leaveAssessmentRoom", assessment.id);
     };
   }, [assessment.id, fetchStudents]);
+
+  useEffect(() => {
+    if (!liveUpdates) return;
+    const interval = window.setInterval(() => {
+      void fetchStudents();
+    }, 5000);
+    return () => window.clearInterval(interval);
+  }, [liveUpdates, fetchStudents]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {

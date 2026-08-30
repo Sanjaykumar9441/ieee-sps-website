@@ -1,265 +1,31 @@
 import { FormEvent, useEffect, useState } from "react";
-import { X, Plus, Settings2, Calendar, Clock, Shuffle, Trophy, LogIn } from "lucide-react";
+import { Calendar, Clock, LogIn, Plus, Settings2, Shuffle, Trophy, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { createAssessment, updateAssessment } from "./assessmentApi";
 
-interface AssessmentRecord {
-  id?: string;
-  title: string;
-  slug?: string;
-  description?: string | null;
-  start_time?: string | null;
-  end_time?: string | null;
-  duration_minutes?: number | null;
-  total_questions?: number | null;
-  pass_percentage?: number | null;
-  negative_marks?: number | null;
-  shuffle_questions?: boolean | null;
-  shuffle_options?: boolean | null;
-  random_questions?: boolean | null;
-  allow_resume?: boolean | null;
+interface AssessmentRecord { id?:string; title:string; slug?:string; description?:string|null; start_time?:string|null; end_time?:string|null; duration_minutes?:number|null; total_questions?:number|null; pass_percentage?:number|null; negative_marks?:number|null; shuffle_questions?:boolean|null; shuffle_options?:boolean|null; random_questions?:boolean|null; login_method?:"PASSWORD"|"OTP"; live_updates_enabled?:boolean; }
+interface Props { open:boolean; onClose:()=>void; onCreated:()=>void; assessment?:AssessmentRecord|null; }
+interface FormState { title:string; slug:string; description:string; start_time:string; end_time:string; duration_minutes:number; total_questions:number; pass_percentage:number; negative_marking:boolean; negative_marks:number; shuffle_questions:boolean; shuffle_options:boolean; random_questions:boolean; login_method:"PASSWORD"|"OTP"; }
+const initialForm:FormState={title:"",slug:"",description:"",start_time:"",end_time:"",duration_minutes:30,total_questions:20,pass_percentage:40,negative_marking:false,negative_marks:0,shuffle_questions:true,shuffle_options:true,random_questions:false,login_method:"PASSWORD"};
+const slugify=(v:string)=>v.toLowerCase().trim().replace(/[^a-z0-9\s-]/g,"").replace(/\s+/g,"-").replace(/-+/g,"-");
+const toLocal=(v?:string|null)=>{if(!v)return"";const d=new Date(v);if(Number.isNaN(d.getTime()))return"";const p=(n:number)=>String(n).padStart(2,"0");return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};
+const toIso=(v:string)=>new Date(v).toISOString();
+
+export default function CreateAssessmentModal({open,onClose,onCreated,assessment}:Props){
+ const isEdit=Boolean(assessment?.id);const [form,setForm]=useState<FormState>(initialForm);const [saving,setSaving]=useState(false);const [slugTouched,setSlugTouched]=useState(false);
+ useEffect(()=>{if(!open){setForm(initialForm);setSlugTouched(false);setSaving(false);return;}if(assessment){setForm({title:assessment.title||"",slug:assessment.slug||"",description:assessment.description||"",start_time:toLocal(assessment.start_time),end_time:toLocal(assessment.end_time),duration_minutes:Number(assessment.duration_minutes??30),total_questions:Number(assessment.total_questions??20),pass_percentage:Number(assessment.pass_percentage??40),negative_marking:Number(assessment.negative_marks??0)>0,negative_marks:Number(assessment.negative_marks??0),shuffle_questions:assessment.shuffle_questions??true,shuffle_options:assessment.shuffle_options??true,random_questions:assessment.random_questions??false,login_method:assessment.login_method==="OTP"?"OTP":"PASSWORD"});setSlugTouched(true);}else{setForm(initialForm);setSlugTouched(false);}},[open,assessment]);
+ const set=(key:keyof FormState,value:any)=>setForm(s=>({...s,[key]:value}));
+ const submit=async(e:FormEvent)=>{e.preventDefault();if(!form.title.trim())return toast.error("Assessment title is required.");if(!form.slug.trim())return toast.error("Assessment code is required.");if(!form.start_time||!form.end_time)return toast.error("Start and end date/time are required.");const start=toIso(form.start_time),end=toIso(form.end_time);if(new Date(end)<=new Date(start))return toast.error("End time must be after start time.");if(form.duration_minutes<1)return toast.error("Duration must be at least 1 minute.");if(form.total_questions<1)return toast.error("Total questions must be at least 1.");if(form.pass_percentage<0||form.pass_percentage>100)return toast.error("Pass percentage must be between 0 and 100.");
+ try{setSaving(true);const negative=form.negative_marking?Math.max(0,Number(form.negative_marks)):0;const payload={title:form.title.trim(),slug:form.slug.trim(),description:form.description.trim()||null,start_time:start,end_time:end,duration_minutes:Number(form.duration_minutes),total_questions:Number(form.total_questions),pass_percentage:Number(form.pass_percentage),marks_per_question:1,negative_marks:negative,passing_score:Number(((form.total_questions*form.pass_percentage)/100).toFixed(2)),auto_submit:true,show_leaderboard:true,anti_cheat_enabled:true,socket_monitoring:true,shuffle_questions:form.shuffle_questions,shuffle_options:form.shuffle_options,random_questions:form.random_questions,login_method:form.login_method,live_updates_enabled:assessment?.live_updates_enabled !== false};if(isEdit&&assessment?.id){await updateAssessment(assessment.id,payload);toast.success("Assessment updated successfully.");}else{await createAssessment({...payload,status:"DRAFT",is_active:false});toast.success("Assessment created successfully.");}onCreated();onClose();}catch(error:any){console.error(error);toast.error(error?.response?.data?.message||"Unable to save assessment.");}finally{setSaving(false);}};
+ if(!open)return null;
+ return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"><div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"><div className="flex items-center justify-between border-b px-6 py-5"><div className="flex items-center gap-3"><div className="rounded-xl bg-[#00629B]/10 p-3 text-[#00629B]"><Plus size={20}/></div><div><h2 className="text-xl font-bold">{isEdit?"Edit Assessment":"Create Assessment"}</h2><p className="mt-1 text-sm text-slate-500">Configure the official exam window, access method and question rules.</p></div></div><button type="button" onClick={onClose} disabled={saving} className="rounded-lg p-2 hover:bg-slate-100"><X size={20}/></button></div>
+ <form onSubmit={submit} className="overflow-y-auto p-6"><div className="space-y-7"><Section icon={<Settings2 size={18}/>} title="Basic Information"><div className="grid gap-5 md:grid-cols-2"><Field label="Assessment Title"><input required value={form.title} onChange={e=>{set("title",e.target.value);if(!slugTouched)set("slug",slugify(e.target.value));}} placeholder="Space Day Quiz 2026"/></Field><Field label="Assessment Code"><input required value={form.slug} onChange={e=>{setSlugTouched(true);set("slug",slugify(e.target.value));}} placeholder="space-day-quiz-2026"/></Field><div className="md:col-span-2"><Field label="Description"><textarea rows={3} value={form.description} onChange={e=>set("description",e.target.value)} placeholder="Optional assessment description..."/></Field></div></div></Section>
+ <Section icon={<Calendar size={18}/>} title="Schedule & Duration"><div className="grid gap-5 md:grid-cols-2"><Field label="Starts At"><input required type="datetime-local" value={form.start_time} onChange={e=>set("start_time",e.target.value)}/></Field><Field label="Ends At"><input required type="datetime-local" value={form.end_time} onChange={e=>set("end_time",e.target.value)}/></Field><Field label="Duration (minutes)"><input required type="number" min={1} value={form.duration_minutes} onChange={e=>set("duration_minutes",Number(e.target.value))}/></Field><Field label="Total Questions"><input required type="number" min={1} value={form.total_questions} onChange={e=>set("total_questions",Number(e.target.value))}/></Field><Field label="Passing Percentage"><input type="number" min={0} max={100} step="0.01" value={form.pass_percentage} onChange={e=>set("pass_percentage",Number(e.target.value))}/></Field></div><div className="mt-5 rounded-xl border bg-slate-50 p-4"><Toggle label="Negative marking" checked={form.negative_marking} onChange={v=>set("negative_marking",v)}/>{form.negative_marking&&<div className="mt-4 max-w-xs"><Field label="Negative marks per wrong answer"><input type="number" min={0} step="0.01" value={form.negative_marks} onChange={e=>set("negative_marks",Number(e.target.value))}/></Field></div>}</div></Section>
+ <Section icon={<LogIn size={18}/>} title="Student Login"><div className="grid gap-4 md:grid-cols-2"><Choice active={form.login_method==="PASSWORD"} title="Password Login" text="Registered email + common assessment password." onClick={()=>set("login_method","PASSWORD")}/><Choice active={form.login_method==="OTP"} title="OTP Login" text="Six-digit OTP sent through Brevo." onClick={()=>set("login_method","OTP")}/></div></Section>
+ <Section icon={<Shuffle size={18}/>} title="Question Paper Rules"><div className="grid gap-4 md:grid-cols-3"><Toggle label="Shuffle questions" checked={form.shuffle_questions} onChange={v=>set("shuffle_questions",v)}/><Toggle label="Shuffle options" checked={form.shuffle_options} onChange={v=>set("shuffle_options",v)}/><Toggle label="Random selection" checked={form.random_questions} onChange={v=>set("random_questions",v)}/></div></Section>
+ {!isEdit&&<div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900"><div className="flex items-start gap-3"><Trophy size={18} className="mt-0.5"/><p><strong>Draft first:</strong> Add question banks and students, verify the test, then publish.</p></div></div>}</div><div className="mt-8 flex justify-end gap-3 border-t pt-5"><button type="button" onClick={onClose} disabled={saving} className="rounded-xl border px-5 py-3">Cancel</button><button type="submit" disabled={saving} className="rounded-xl bg-[#00629B] px-5 py-3 font-semibold text-white disabled:opacity-50">{saving?"Saving...":isEdit?"Save Changes":"Create Assessment"}</button></div></form></div></div>;
 }
-
-interface Props {
-  open: boolean;
-  onClose: () => void;
-  onCreated: () => void;
-  assessment?: AssessmentRecord | null;
-}
-
-interface FormState {
-  title: string;
-  slug: string;
-  description: string;
-  start_time: string;
-  end_time: string;
-  duration_minutes: number;
-  total_questions: number;
-  pass_percentage: number;
-  negative_marking: boolean;
-  negative_marks: number;
-  shuffle_questions: boolean;
-  shuffle_options: boolean;
-  random_questions: boolean;
-  login_method: "PASSWORD" | "OTP";
-}
-
-const initialForm: FormState = {
-  title: "",
-  slug: "",
-  description: "",
-  start_time: "",
-  end_time: "",
-  duration_minutes: 30,
-  total_questions: 20,
-  pass_percentage: 40,
-  negative_marking: false,
-  negative_marks: 0,
-  shuffle_questions: true,
-  shuffle_options: true,
-  random_questions: false,
-  login_method: "PASSWORD",
-};
-
-const slugify = (value: string) =>
-  value.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-");
-
-const toDateTimeLocal = (value?: string | null) => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const offset = date.getTimezoneOffset();
-  return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 16);
-};
-
-export default function CreateAssessmentModal({ open, onClose, onCreated, assessment }: Props) {
-  const isEdit = Boolean(assessment?.id);
-  const [form, setForm] = useState<FormState>(initialForm);
-  const [saving, setSaving] = useState(false);
-  const [slugTouched, setSlugTouched] = useState(false);
-
-  useEffect(() => {
-    if (!open) {
-      setForm(initialForm);
-      setSlugTouched(false);
-      setSaving(false);
-      return;
-    }
-
-    if (assessment) {
-      setForm({
-        title: assessment.title || "",
-        slug: assessment.slug || "",
-        description: assessment.description || "",
-        start_time: toDateTimeLocal(assessment.start_time),
-        end_time: toDateTimeLocal(assessment.end_time),
-        duration_minutes: Number(assessment.duration_minutes ?? 30),
-        total_questions: Number(assessment.total_questions ?? 20),
-        pass_percentage: Number(assessment.pass_percentage ?? 40),
-        negative_marking: Number(assessment.negative_marks ?? 0) > 0,
-        negative_marks: Number(assessment.negative_marks ?? 0),
-        shuffle_questions: assessment.shuffle_questions ?? true,
-        shuffle_options: assessment.shuffle_options ?? true,
-        random_questions: assessment.random_questions ?? false,
-        login_method: (assessment as any).login_method === "OTP" ? "OTP" : "PASSWORD",
-      });
-      setSlugTouched(true);
-    } else {
-      setForm(initialForm);
-      setSlugTouched(false);
-    }
-  }, [open, assessment]);
-
-  if (!open) return null;
-
-  const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleTitleChange = (value: string) => {
-    updateField("title", value);
-    if (!slugTouched) updateField("slug", slugify(value));
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-
-    if (!form.title.trim()) return toast.error("Assessment title is required.");
-    if (!form.slug.trim()) return toast.error("Assessment slug is required.");
-    if (!form.start_time || !form.end_time) return toast.error("Start and end date/time are required.");
-    if (new Date(form.end_time).getTime() <= new Date(form.start_time).getTime()) return toast.error("End time must be after start time.");
-    if (form.duration_minutes < 1) return toast.error("Duration must be at least 1 minute.");
-    if (form.total_questions < 1) return toast.error("Total questions must be at least 1.");
-    if (form.pass_percentage < 0 || form.pass_percentage > 100) return toast.error("Pass percentage must be between 0 and 100.");
-    if (form.negative_marks < 0 || !Number.isFinite(form.negative_marks)) return toast.error("Negative marks must be 0 or greater.");
-    const configuredNegativeMarks = form.negative_marking ? Number(form.negative_marks) : 0;
-
-    try {
-      setSaving(true);
-      const payload = {
-        title: form.title.trim(),
-        slug: form.slug.trim(),
-        description: form.description.trim() || null,
-        start_time: new Date(form.start_time).toISOString(),
-        end_time: new Date(form.end_time).toISOString(),
-        duration_minutes: Number(form.duration_minutes),
-        total_questions: Number(form.total_questions),
-        pass_percentage: Number(form.pass_percentage),
-        marks_per_question: 1,
-        negative_marks: configuredNegativeMarks,
-        passing_score: Number(((Number(form.total_questions) * Number(form.pass_percentage)) / 100).toFixed(2)),
-        auto_submit: true,
-        show_leaderboard: true,
-        anti_cheat_enabled: true,
-        socket_monitoring: true,
-        shuffle_questions: form.shuffle_questions,
-        shuffle_options: form.shuffle_options,
-        random_questions: form.random_questions,
-        login_method: form.login_method,
-        live_updates_enabled: true,
-      };
-
-      if (isEdit && assessment?.id) {
-        await updateAssessment(assessment.id, payload);
-        toast.success("Assessment updated successfully.");
-      } else {
-        await createAssessment({ ...payload, status: "DRAFT", is_active: false });
-        toast.success("Assessment created successfully.");
-      }
-
-      onCreated();
-      onClose();
-    } catch (error: any) {
-      console.error(isEdit ? "Update assessment error:" : "Create assessment error:", error);
-      toast.error(error?.response?.data?.message || "Unable to save assessment.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onMouseDown={(e) => e.target === e.currentTarget && !saving && onClose()}>
-      <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#00629B]/10 text-[#00629B]"><Plus size={22} /></div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">{isEdit ? "Edit Assessment" : "Create Assessment"}</h2>
-              <p className="mt-1 text-sm text-gray-500">{isEdit ? "Update assessment details and settings." : "Configure your assessment before adding questions."}</p>
-            </div>
-          </div>
-          <button type="button" onClick={onClose} disabled={saving} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100"><X size={21} /></button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="overflow-y-auto px-6 py-6">
-          <div className="space-y-8">
-            <section>
-              <div className="mb-4 flex items-center gap-2"><Settings2 size={18} className="text-[#00629B]" /><h3 className="font-semibold">Basic Information</h3></div>
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <Field label="Assessment Title" required><input value={form.title} onChange={(e) => handleTitleChange(e.target.value)} placeholder="Space Day Quiz 2026" className="input" required /></Field>
-                <Field label="Assessment Code" required><input value={form.slug} onChange={(e) => { setSlugTouched(true); updateField("slug", slugify(e.target.value)); }} placeholder="space-day-quiz-2026" className="input" required /><p className="mt-1 text-xs text-gray-400">This code is also used to access the assessment.</p></Field>
-                <div className="md:col-span-2"><Field label="Description"><textarea value={form.description} onChange={(e) => updateField("description", e.target.value)} placeholder="Optional assessment description..." rows={3} className="input resize-none" /></Field></div>
-              </div>
-            </section>
-
-            <section>
-              <div className="mb-4 flex items-center gap-2"><Calendar size={18} className="text-[#00629B]" /><h3 className="font-semibold">Schedule & Duration</h3></div>
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <Field label="Starts At" required><input type="datetime-local" value={form.start_time} onChange={(e) => updateField("start_time", e.target.value)} className="input" required /></Field>
-                <Field label="Ends At" required><input type="datetime-local" value={form.end_time} onChange={(e) => updateField("end_time", e.target.value)} className="input" required /></Field>
-                <Field label="Duration (minutes)" required><div className="relative"><Clock size={17} className="absolute left-3 top-3 text-gray-400" /><input type="number" min={1} value={form.duration_minutes} onChange={(e) => updateField("duration_minutes", Number(e.target.value))} className="input pl-10" required /></div></Field>
-                <Field label="Total Questions" required><input type="number" min={1} value={form.total_questions} onChange={(e) => updateField("total_questions", Number(e.target.value))} className="input" required /></Field>
-                <Field label="Pass Percentage"><input type="number" min={0} max={100} step="0.01" value={form.pass_percentage} onChange={(e) => updateField("pass_percentage", Number(e.target.value))} className="input" /></Field>
-              </div>
-              <div className="mt-5 rounded-xl border border-gray-200 p-4">
-                <Toggle label="Negative Marking" description="Apply a penalty for each wrong answer." checked={form.negative_marking} onChange={(v) => updateField("negative_marking", v)} />
-                {form.negative_marking && (
-                  <div className="mt-4 max-w-xs">
-                    <Field label="Negative Marks per Wrong Answer">
-                      <input type="number" min={0} step="0.01" value={form.negative_marks} onChange={(e) => updateField("negative_marks", Number(e.target.value))} className="input" />
-                    </Field>
-                    <p className="mt-1 text-xs text-gray-500">This value applies to every MCQ in this assessment.</p>
-                  </div>
-                )}
-              </div>
-            </section>
-
-
-            <section>
-              <div className="mb-4 flex items-center gap-2"><LogIn size={18} className="text-[#00629B]" /><h3 className="font-semibold">Student Login</h3></div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <Toggle label="Password Login" description="Registered email + common assessment password." checked={form.login_method === "PASSWORD"} onChange={(v) => v && updateField("login_method", "PASSWORD")} />
-                <Toggle label="OTP Login" description="Send a one-time code to the registered email." checked={form.login_method === "OTP"} onChange={(v) => v && updateField("login_method", "OTP")} />
-              </div>
-            </section>
-
-            <section>
-              <div className="mb-4 flex items-center gap-2"><Shuffle size={18} className="text-[#00629B]" /><h3 className="font-semibold">Assessment Rules</h3></div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <Toggle label="Shuffle Questions" description="Randomize question order." checked={form.shuffle_questions} onChange={(v) => updateField("shuffle_questions", v)} />
-                <Toggle label="Shuffle Options" description="Randomize answer option order." checked={form.shuffle_options} onChange={(v) => updateField("shuffle_options", v)} />
-                <Toggle label="Random Question Selection" description="Select a random set from the question banks." checked={form.random_questions} onChange={(v) => updateField("random_questions", v)} />
-              </div>
-            </section>
-
-            {!isEdit && <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3"><div className="flex items-start gap-3"><Trophy size={18} className="mt-0.5 text-[#00629B]" /><div><p className="text-sm font-semibold text-blue-900">New assessment will be created as Draft</p><p className="mt-1 text-xs leading-5 text-blue-700">Add question banks and registered students, then publish the assessment.</p></div></div></div>}
-          </div>
-
-          <div className="mt-8 flex justify-end gap-3 border-t pt-5">
-            <button type="button" onClick={onClose} disabled={saving} className="rounded-xl border px-5 py-2.5">Cancel</button>
-            <button type="submit" disabled={saving} className="flex items-center gap-2 rounded-xl bg-[#00629B] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"><Plus size={17} />{saving ? "Saving..." : isEdit ? "Save Changes" : "Create Assessment"}</button>
-          </div>
-        </form>
-      </div>
-      <style>{`.input{width:100%;border:1px solid #d1d5db;border-radius:.75rem;padding:.7rem .9rem;font-size:.875rem;outline:none;background:white}.input:focus{border-color:#00629B;box-shadow:0 0 0 3px rgba(0,98,155,.1)}`}</style>
-    </div>
-  );
-}
-
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return <div><label className="mb-2 block text-sm font-medium text-gray-700">{label}{required && <span className="ml-1 text-red-500">*</span>}</label>{children}</div>;
-}
-
-function Toggle({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: (value: boolean) => void }) {
-  return <button type="button" onClick={() => onChange(!checked)} className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 p-4 text-left hover:bg-gray-50"><div><p className="text-sm font-medium text-gray-900">{label}</p><p className="mt-1 text-xs leading-5 text-gray-500">{description}</p></div><div className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full ${checked ? "bg-[#00629B]" : "bg-gray-300"}`}><div className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow ${checked ? "left-6" : "left-1"}`} /></div></button>;
-}
+function Section({icon,title,children}:{icon:React.ReactNode;title:string;children:React.ReactNode}){return <section className="rounded-2xl border bg-white p-5"><div className="mb-5 flex items-center gap-2 text-[#00629B]"><span>{icon}</span><h3 className="font-bold text-slate-900">{title}</h3></div>{children}</section>}
+function Field({label,children}:{label:string;children:React.ReactNode}){return <label className="block text-sm font-semibold text-slate-700">{label}<span className="mt-2 block">{children}</span></label>}
+function Toggle({label,checked,onChange}:{label:string;checked:boolean;onChange:(v:boolean)=>void}){return <button type="button" onClick={()=>onChange(!checked)} className="flex min-h-14 items-center justify-between gap-3 rounded-xl border p-4 text-left"><span className="text-sm font-medium">{label}</span><span className={`relative h-6 w-11 rounded-full ${checked?"bg-[#00629B]":"bg-slate-300"}`}><span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${checked?"left-6":"left-1"}`}/></span></button>}
+function Choice({active,title,text,onClick}:{active:boolean;title:string;text:string;onClick:()=>void}){return <button type="button" onClick={onClick} className={`rounded-xl border p-4 text-left ${active?"border-[#00629B] bg-blue-50":"hover:bg-slate-50"}`}><div className="flex items-center justify-between"><strong>{title}</strong><span className={`h-4 w-4 rounded-full border-2 ${active?"border-[#00629B] bg-[#00629B]":"border-slate-300"}`}/></div><p className="mt-1 text-sm text-slate-500">{text}</p></button>}

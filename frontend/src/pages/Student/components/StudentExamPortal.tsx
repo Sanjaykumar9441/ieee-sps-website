@@ -45,38 +45,40 @@ export default function StudentExamPortal({
       return;
     }
 
+    // Open the exam tab synchronously while the Start button still has a
+    // user-activation token. Opening it after an awaited API request is
+    // commonly blocked by the browser.
+    const examWindow = window.open("about:blank", "_blank", "noopener,noreferrer");
+
     try {
       try {
-        if (!document.fullscreenElement) {
-          await document.documentElement.requestFullscreen();
-        }
+        if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
       } catch (fullscreenError) {
         console.warn("Fullscreen request was not allowed:", fullscreenError);
       }
 
       const result = await startAssessment(assessmentId);
-      // The start button is a user gesture, so browsers allow us to open the
-      // dedicated exam page in a new tab. The active attempt is persisted in
-      // localStorage and is resumed by the new tab.
       const examUrl = window.location.href;
-      const examWindow = window.open(examUrl, "_blank", "noopener,noreferrer");
-      if (examWindow) {
-        setTimeout(() => { try { window.close(); } catch {} }, 150);
+
+      if (examWindow && !examWindow.closed) {
+        examWindow.location.replace(examUrl);
+        examWindow.focus();
+        toast.success("Exam opened in a new tab.");
+        // Closing a normal browser tab is intentionally best-effort; browsers
+        // may refuse window.close() unless this tab was script-opened.
+        setTimeout(() => { try { window.close(); } catch (_) {} }, 250);
         return;
       }
+
+      // Popup blockers: continue in the current tab rather than failing the exam.
       setExamData(result);
       onStartExam(assessmentId);
     } catch (err: any) {
+      if (examWindow && !examWindow.closed) { try { examWindow.close(); } catch (_) {} }
       console.error("[EXAM] Unable to start:", err);
-
-      toast.error(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Unable to start assessment.",
-      );
+      toast.error(err?.response?.data?.message || err?.message || "Unable to start assessment.");
     }
   };
-
   useEffect(() => {
     if (!assessment) return;
 

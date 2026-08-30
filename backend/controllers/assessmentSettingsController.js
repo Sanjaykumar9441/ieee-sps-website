@@ -387,12 +387,16 @@ exports.updateSettings = async (req, res) => {
     // Schedule
     // ---------------------------------------------------------
 
-    if (settings.schedule?.startDate && settings.schedule?.startTime) {
-      assessmentUpdate.start_time = `${settings.schedule.startDate}T${settings.schedule.startTime}:00`;
+    if (settings.schedule?.startIso) {
+      assessmentUpdate.start_time = new Date(settings.schedule.startIso).toISOString();
+    } else if (settings.schedule?.startDate && settings.schedule?.startTime) {
+      assessmentUpdate.start_time = new Date(`${settings.schedule.startDate}T${settings.schedule.startTime}:00`).toISOString();
     }
 
-    if (settings.schedule?.endDate && settings.schedule?.endTime) {
-      assessmentUpdate.end_time = `${settings.schedule.endDate}T${settings.schedule.endTime}:00`;
+    if (settings.schedule?.endIso) {
+      assessmentUpdate.end_time = new Date(settings.schedule.endIso).toISOString();
+    } else if (settings.schedule?.endDate && settings.schedule?.endTime) {
+      assessmentUpdate.end_time = new Date(`${settings.schedule.endDate}T${settings.schedule.endTime}:00`).toISOString();
     }
 
     assessmentUpdate.updated_at = new Date().toISOString();

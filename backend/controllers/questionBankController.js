@@ -1,6 +1,7 @@
 const QuestionBank = require("../models/QuestionBank");
 const Question = require("../models/Question");
 const liveEvents = require("../services/liveEvents");
+const { syncAssessmentQuestionCount } = require("../services/assessmentQuestionCountService");
 
 /* ============================================================
    HELPERS
@@ -19,7 +20,7 @@ function normalizeQuestion(question, bankId) {
     bank_id: bankId,
 
     question_type:
-      question.question_type === "MULTIPLE_CORRECT"
+      ["MULTIPLE_CORRECT", "MULTIPLE_CHOICE", "MULTIPLE"].includes(String(question.question_type || "MCQ").trim().toUpperCase().replace(/[- ]/g, "_"))
         ? "MULTIPLE_CORRECT"
         : "MCQ",
 
@@ -37,8 +38,7 @@ function normalizeQuestion(question, bankId) {
     explanation:
       question.explanation || null,
 
-    difficulty:
-      question.difficulty || "MEDIUM",
+    difficulty: String(question.difficulty || "MEDIUM").trim().toUpperCase(),
 
     // Marks are no longer used for assessment configuration.
     // Keep database compatibility.
@@ -132,11 +132,11 @@ function validateQuestion(question, index) {
     Array.isArray(question.correct_answers) &&
     Array.isArray(question.options)
   ) {
-    const invalidAnswer =
-      question.correct_answers.some(
-        (answer) =>
-          !question.options.includes(answer)
-      );
+    const invalidAnswer = question.correct_answers.some((answer) => {
+      if (typeof answer === "number") return !Number.isInteger(answer) || answer < 0 || answer > 3;
+      const value = String(answer || "").trim().toUpperCase();
+      return !/^[A-D]$/.test(value);
+    });
 
     if (invalidAnswer) {
       errors.push(
@@ -269,10 +269,13 @@ exports.create = async (req, res) => {
       });
     }
 
+    await syncAssessmentQuestionCount(body.assessment_id);
+
     liveEvents.emitQuestionBankCreated(
       body.assessment_id,
       data
     );
+    liveEvents.emitDashboardRefresh(body.assessment_id);
 
     return res.status(201).json({
       success: true,
@@ -303,6 +306,13 @@ exports.update = async (req, res) => {
   try {
     const { id } = req.params;
 
+    if (req.body?.questions_to_pick !== undefined) {
+      const pick = Number(req.body.questions_to_pick);
+      if (!Number.isInteger(pick) || pick < 1) {
+        return res.status(400).json({ success: false, message: "Questions to pick must be at least 1." });
+      }
+    }
+
     if (!id) {
       return res.status(400).json({
         success: false,
@@ -322,10 +332,12 @@ exports.update = async (req, res) => {
     }
 
     if (req.body?.assessment_id) {
+      await syncAssessmentQuestionCount(req.body.assessment_id);
       liveEvents.emitQuestionBankUpdated(
         req.body.assessment_id,
         data
       );
+      liveEvents.emitDashboardRefresh(req.body.assessment_id);
     }
 
     return res.json({
@@ -373,10 +385,12 @@ exports.duplicate = async (req, res) => {
     }
 
     if (data?.assessmentId) {
+      await syncAssessmentQuestionCount(data.assessmentId);
       liveEvents.emitQuestionBankCreated(
         data.assessmentId,
         data.questionBank
       );
+      liveEvents.emitDashboardRefresh(data.assessmentId);
     }
 
     return res.status(201).json({
@@ -425,10 +439,12 @@ exports.delete = async (req, res) => {
     }
 
     if (data?.assessmentId) {
+      await syncAssessmentQuestionCount(data.assessmentId);
       liveEvents.emitQuestionBankDeleted(
         data.assessmentId,
         data.questionBank
       );
+      liveEvents.emitDashboardRefresh(data.assessmentId);
     }
 
     return res.json({

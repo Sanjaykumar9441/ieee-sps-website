@@ -6,6 +6,7 @@ import { socket } from "../../../../../lib/socket";
 import { Assessment } from "../../Assessment/AssessmentCard";
 import LeaderboardStudentDrawer from "./LeaderboardStudentDrawer";
 import { getLeaderboard } from "../../Assessment/assessmentApi";
+import LiveUpdatesToggle from "./LiveUpdatesToggle";
 
 interface Props {
   assessment: Assessment;
@@ -31,7 +32,7 @@ export interface LeaderboardStudent {
 }
 
 export default function Leaderboard({ assessment }: Props) {
-  const [loading, setLoading] = useState(() => localStorage.getItem(`assessment_live_updates:${assessment.id}`) !== "false");
+  const [loading, setLoading] = useState(true);
 
   const [students, setStudents] = useState<LeaderboardStudent[]>([]);
 
@@ -46,7 +47,7 @@ export default function Leaderboard({ assessment }: Props) {
 
   const [sortBy, setSortBy] = useState("rank");
 
-  const [liveUpdates, setLiveUpdates] = useState(() => localStorage.getItem(`assessment_live_updates:${assessment.id}`) !== "false");
+  const [liveUpdates, setLiveUpdates] = useState(assessment.live_updates_enabled !== false);
 
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
@@ -203,23 +204,8 @@ export default function Leaderboard({ assessment }: Props) {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center gap-4">
-        <p className="text-sm text-gray-500">
-          Last Updated {lastUpdated.toLocaleTimeString()}
-        </p>
-        <span className="text-sm font-medium">🔄 Live Updates</span>
-
-        <button
-          onClick={() => setLiveUpdates(!liveUpdates)}
-          className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-            liveUpdates
-              ? "bg-green-600 text-white"
-              : "bg-gray-200 text-gray-700"
-          }`}
-        >
-          {liveUpdates ? "ON" : "OFF"}
-        </button>
-      </div>
+      <LiveUpdatesToggle assessment={assessment} value={liveUpdates} onChange={setLiveUpdates} />
+      <p className="text-xs text-slate-500">Last updated {lastUpdated.toLocaleTimeString()}</p>
       {/* Header */}
 
       <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">

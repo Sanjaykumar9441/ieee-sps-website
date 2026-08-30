@@ -112,3 +112,5 @@ exports.emitQuestionBankUpdated = (assessmentId, data) =>
 
 exports.emitQuestionBankDeleted = (assessmentId, data) =>
   emit(assessmentId, "questionBankDeleted", data);
+exports.emitAssessmentUpdated = (assessmentId, data) =>
+  emit(assessmentId, "assessmentUpdated", data);

@@ -14,7 +14,6 @@ import {
   duplicateAssessment,
   publishAssessment,
   unpublishAssessment,
-  archiveAssessment,
 } from "./assessmentApi";
 
 export default function AssessmentDashboardTab() {
@@ -60,12 +59,15 @@ export default function AssessmentDashboardTab() {
     socket.on("assessmentUpdated", fetchAssessments);
     socket.on("assessmentDeleted", fetchAssessments);
     socket.on("assessmentPublished", fetchAssessments);
+    const refreshFromWorkspace = () => void fetchAssessments();
+    window.addEventListener("assessment-data-changed", refreshFromWorkspace);
 
     return () => {
       socket.off("assessmentCreated", fetchAssessments);
       socket.off("assessmentUpdated", fetchAssessments);
       socket.off("assessmentDeleted", fetchAssessments);
       socket.off("assessmentPublished", fetchAssessments);
+      window.removeEventListener("assessment-data-changed", refreshFromWorkspace);
     };
   }, []);
 
@@ -121,18 +123,6 @@ export default function AssessmentDashboardTab() {
     toast.error("Failed to unpublish assessment");
   }
 };
-
-  const handleArchive = async (id: string) => {
-    try {
-      await archiveAssessment(id);
-
-      toast.success("Assessment archived");
-
-      fetchAssessments();
-    } catch {
-      toast.error("Archive failed");
-    }
-  };
 
   return (
     <div className="space-y-8">
@@ -197,7 +187,6 @@ export default function AssessmentDashboardTab() {
                 onDuplicate={handleDuplicate}
                 onPublish={handlePublish}
                 onUnpublish={handleUnpublish}
-                onArchive={handleArchive}
                 onDelete={handleDelete}
               />
             ))}

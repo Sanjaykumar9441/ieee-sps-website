@@ -118,6 +118,64 @@ export default function LiveStudentDetailsDrawer({
     void fetchDetails();
   }, [open, student, fetchDetails]);
 
+  const handleBlock = async () => {
+    if (!student) return;
+    try {
+      setProcessing(true);
+      const blocked = details?.student?.status !== "blocked";
+      if (blocked) await blockStudents(assessmentId, [student.studentId]);
+      else await unblockStudents(assessmentId, [student.studentId]);
+      toast.success(blocked ? "Student blocked." : "Student unblocked.");
+      await fetchDetails();
+      await onRefresh();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || "Unable to update student access.");
+    } finally { setProcessing(false); }
+  };
+
+  const handleDelete = async () => {
+    if (!student || !window.confirm(`Delete ${student.studentName} from this assessment?`)) return;
+    try {
+      setProcessing(true);
+      await deleteStudents(assessmentId, [student.studentId]);
+      toast.success("Student deleted.");
+      await onRefresh();
+      onClose();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || "Unable to delete student.");
+    } finally { setProcessing(false); }
+  };
+
+  const handleForceSubmit = async () => {
+    if (!details?.attempt?.id || !window.confirm(`Force submit ${student.studentName}'s assessment?`)) return;
+    try {
+      setProcessing(true);
+      const result = await forceSubmitAttempt(details.attempt.id);
+      toast.success(result?.message || "Assessment force submitted.");
+      await fetchDetails();
+      await onRefresh();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || "Unable to force submit.");
+    } finally { setProcessing(false); }
+  };
+
+  const handleDisqualify = async () => {
+    if (!details?.attempt?.id || !window.confirm(`Disqualify ${student.studentName}?`)) return;
+    try {
+      setProcessing(true);
+      const result = await disqualifyAttempt(details.attempt.id, "Disqualified by admin");
+      toast.success(result?.message || "Student disqualified.");
+      await fetchDetails();
+      await onRefresh();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || "Unable to disqualify student.");
+    } finally { setProcessing(false); }
+  };
+
   useEffect(() => {
     if (!open) return;
 

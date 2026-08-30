@@ -10,7 +10,7 @@ async function refreshLeaderboard(assessmentId) {
     .from("assessment_attempts")
     .select("id,student_id,score,correct,wrong,unanswered,percentage,submitted_at,started_at,status")
     .eq("assessment_id", assessmentId)
-    .in("status", ["SUBMITTED", "DISQUALIFIED"]);
+    .eq("status", "SUBMITTED");
 
   if (error) throw error;
 

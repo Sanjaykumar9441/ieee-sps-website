@@ -68,7 +68,7 @@ class QuestionBank {
     const bankData = {
       name: String(rawBank.name || "").trim(),
       description: rawBank.description || null,
-      difficulty: rawBank.difficulty || "Medium",
+      difficulty: String(rawBank.difficulty || "MEDIUM").trim().toUpperCase(),
       estimated_minutes: Number(rawBank.estimated_minutes || 30),
       is_active: rawBank.is_active !== false,
       total_questions: 0,
@@ -152,6 +152,7 @@ class QuestionBank {
 
     const bankData = { ...rawBank };
     if (bankData.name !== undefined) bankData.name = String(bankData.name).trim();
+    if (bankData.difficulty !== undefined) bankData.difficulty = String(bankData.difficulty).trim().toUpperCase();
     if (bankData.estimated_minutes !== undefined) {
       bankData.estimated_minutes = Number(bankData.estimated_minutes);
     }

@@ -1,897 +1,151 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Download, Edit3, Eye, FileUp, Plus, Trash2, Copy } from "lucide-react";
 import toast from "react-hot-toast";
-import {
-  ArrowLeft,
-  Plus,
-  Search,
-  Upload,
-  Download,
-  X,
-  CheckCircle,
-} from "lucide-react";
-
 import { socket } from "../../../../../../lib/socket";
-import {
-  getQuestions,
-  deleteQuestion,
-  searchQuestions,
-  duplicateQuestion,
-  validateImportedQuestions,
-  checkQuestionDuplicates,
-  finalImportQuestions,
-} from "../../../Assessment/assessmentApi";
-
+import { getQuestions, deleteQuestion, duplicateQuestion, validateImportedQuestions, checkQuestionDuplicates, finalImportQuestions } from "../../../Assessment/assessmentApi";
 import { QuestionBank } from "./QuestionBanks";
 import QuestionEditor from "./QuestionEditor";
 
-interface Props {
-  bank: QuestionBank;
-  onBack: () => void;
-}
+interface Props { bank: QuestionBank; onBack: () => void; }
+interface Question { id: string; bank_id: string; question_text: string; question_type: "MCQ" | "MULTIPLE_CORRECT"; options: Record<string,string> | string[]; correct_answers: any[]; is_active: boolean; }
+interface ImportQuestion { question_text: string; question_type: "MCQ" | "MULTIPLE_CORRECT"; options: string[]; correct_answers: string[]; language: string; }
 
-interface Question {
-  id: string;
-  bank_id: string;
+const parseCSV = (text: string) => {
+  const rows: string[][] = [];
+  let row: string[] = [], cell = "", quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i], next = text[i + 1];
+    if (ch === '"' && quoted && next === '"') { cell += '"'; i++; continue; }
+    if (ch === '"') { quoted = !quoted; continue; }
+    if (ch === ',' && !quoted) { row.push(cell); cell = ""; continue; }
+    if ((ch === '\n' || ch === '\r') && !quoted) {
+      if (ch === '\r' && next === '\n') i++;
+      row.push(cell); cell = "";
+      if (row.some((v) => v.trim())) rows.push(row);
+      row = [];
+      continue;
+    }
+    cell += ch;
+  }
+  row.push(cell);
+  if (row.some((v) => v.trim())) rows.push(row);
+  return rows;
+};
 
-  question_text: string;
+const normalizeCorrect = (value: string) => value.split(/[|;,]/).map((v) => v.trim().toUpperCase()).filter(Boolean).map((v) => /^[A-D]$/.test(v) ? v : String.fromCharCode(65 + Number(v))).filter((v) => /^[A-D]$/.test(v));
+const optionArray = (options: Question["options"]) => Array.isArray(options) ? options.slice(0,4) : ["A","B","C","D"].map((k) => String(options?.[k] ?? ""));
 
-  question_type: "MCQ" | "MULTIPLE_CORRECT";
-
-  options: string[];
-
-  correct_answers: number[];
-
-  language: string;
-
-  is_active: boolean;
-}
-
-interface ImportQuestion {
-  question_text: string;
-  question_type: "MCQ" | "MULTIPLE_CORRECT";
-
-  options: string[];
-
-  correct_answers: number[];
-
-  language: string;
-}
-
-export default function QuestionBankDetails({
-  bank,
-  onBack,
-}: Props) {
-  const [showEditor, setShowEditor] = useState(false);
-
-  const [editingQuestion, setEditingQuestion] =
-    useState<Question | null>(null);
-
+export default function QuestionBankDetails({ bank, onBack }: Props) {
   const [questions, setQuestions] = useState<Question[]>([]);
-
   const [loading, setLoading] = useState(true);
-
   const [search, setSearch] = useState("");
-
-  const [showImport, setShowImport] = useState(false);
-
-  const [importQuestions, setImportQuestions] = useState<
-    ImportQuestion[]
-  >([]);
-
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importQuestions, setImportQuestions] = useState<ImportQuestion[]>([]);
   const [importErrors, setImportErrors] = useState<string[]>([]);
-
   const [duplicateCount, setDuplicateCount] = useState(0);
-
-  const [importLoading, setImportLoading] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
+  const [preview, setPreview] = useState<Question | null>(null);
 
   const fetchQuestions = async () => {
-    try {
-      setLoading(true);
-
-      const data = await getQuestions(bank.id);
-
-      setQuestions(data || []);
-    } catch (err) {
-      console.error(err);
-
-      toast.error("Unable to load questions");
-    } finally {
-      setLoading(false);
-    }
+    try { setLoading(true); setQuestions(await getQuestions(bank.id) || []); }
+    catch (error) { console.error(error); toast.error("Unable to load questions"); }
+    finally { setLoading(false); }
   };
 
+  useEffect(() => {
+    void fetchQuestions();
+    const refresh = () => void fetchQuestions();
+    socket.on("questionCreated", refresh); socket.on("questionUpdated", refresh); socket.on("questionDeleted", refresh);
+    return () => { socket.off("questionCreated", refresh); socket.off("questionUpdated", refresh); socket.off("questionDeleted", refresh); };
+  }, [bank.id]);
+
+  const filtered = useMemo(() => questions.filter((q) => q.question_text.toLowerCase().includes(search.toLowerCase())), [questions, search]);
+
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Delete this question?")) {
-      return;
-    }
-
-    try {
-      await deleteQuestion(id);
-
-      toast.success("Question deleted");
-
-      fetchQuestions();
-    } catch (err) {
-      console.error(err);
-
-      toast.error("Unable to delete question");
-    }
+    if (!window.confirm("Delete this question?")) return;
+    try { await deleteQuestion(id); toast.success("Question deleted"); window.dispatchEvent(new CustomEvent("assessment-data-changed")); await fetchQuestions(); }
+    catch (error) { console.error(error); toast.error("Unable to delete question"); }
   };
 
   const handleDuplicate = async (id: string) => {
-    try {
-      await duplicateQuestion(id);
-
-      toast.success("Question duplicated");
-
-      fetchQuestions();
-    } catch (err) {
-      console.error(err);
-
-      toast.error("Unable to duplicate question");
-    }
-  };
-
-  useEffect(() => {
-    fetchQuestions();
-
-    socket.on("questionCreated", fetchQuestions);
-    socket.on("questionUpdated", fetchQuestions);
-    socket.on("questionDeleted", fetchQuestions);
-
-    return () => {
-      socket.off("questionCreated", fetchQuestions);
-      socket.off("questionUpdated", fetchQuestions);
-      socket.off("questionDeleted", fetchQuestions);
-    };
-  }, [bank.id]);
-
-  useEffect(() => {
-    if (!search.trim()) {
-      fetchQuestions();
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      try {
-        const results = await searchQuestions(
-          bank.id,
-          search,
-        );
-
-        setQuestions(results || []);
-      } catch (err) {
-        console.error(err);
-
-        toast.error("Search failed");
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [search, bank.id]);
-
-  const parseCSVLine = (line: string) => {
-    const result: string[] = [];
-
-    let current = "";
-    let insideQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-
-      if (char === '"') {
-        if (
-          insideQuotes &&
-          line[i + 1] === '"'
-        ) {
-          current += '"';
-          i++;
-        } else {
-          insideQuotes = !insideQuotes;
-        }
-      } else if (char === "," && !insideQuotes) {
-        result.push(current.trim());
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-
-    result.push(current.trim());
-
-    return result;
-  };
-
-  const parseCorrectAnswers = (
-    value: string,
-    questionType: string,
-  ) => {
-    const clean = value.trim().toUpperCase();
-
-    if (!clean) return [];
-
-    return clean
-      .split(/[|,]/)
-      .map((answer) => answer.trim())
-      .filter(Boolean)
-      .map((answer) =>
-        answer.charCodeAt(0) - 65,
-      );
-  };
-
-  const handleCSVImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.name.toLowerCase().endsWith(".csv")) {
-      toast.error("Please select a CSV file.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const text = String(reader.result || "");
-        const lines = text.split(/\r?\n/).filter((line) => line.trim());
-
-        if (lines.length < 2) {
-          toast.error("CSV must contain a header and at least one question.");
-          return;
-        }
-
-        const headers = parseCSVLine(lines[0]).map((header) => header.trim().toLowerCase());
-        const requiredHeaders = [
-          "question_text",
-          "option_a",
-          "option_b",
-          "option_c",
-          "option_d",
-          "correct_answer",
-        ];
-        const missingHeaders = requiredHeaders.filter((header) => !headers.includes(header));
-
-        if (missingHeaders.length) {
-          toast.error(`Missing columns: ${missingHeaders.join(", ")}`);
-          return;
-        }
-
-        const parsed: ImportQuestion[] = lines.slice(1).map((line) => {
-          const values = parseCSVLine(line);
-          const row: Record<string, string> = {};
-          headers.forEach((header, index) => { row[header] = values[index] || ""; });
-
-          return {
-            question_text: row.question_text.trim(),
-            question_type: (String(row.question_type || "MCQ").toUpperCase() === "MULTIPLE_CORRECT" ? "MULTIPLE_CORRECT" : "MCQ"),
-            options: [row.option_a, row.option_b, row.option_c, row.option_d]
-              .map((option) => option.trim())
-              .filter(Boolean),
-            correct_answers: parseCorrectAnswers(row.correct_answer, "MCQ"),
-            language: "en",
-          };
-        });
-
-        setImportQuestions(parsed);
-        setImportErrors([]);
-        setDuplicateCount(0);
-        toast.success(`${parsed.length} questions loaded.`);
-      } catch (err) {
-        console.error(err);
-        toast.error("Unable to parse CSV file.");
-      }
-    };
-
-    reader.readAsText(file);
-    event.target.value = "";
-  };
-
-  const handleValidateImport = async () => {
-    if (importQuestions.length === 0) {
-      toast.error("Import questions first.");
-      return;
-    }
-
-    try {
-      setImportLoading(true);
-
-      const result =
-        await validateImportedQuestions(
-          bank.id,
-          importQuestions,
-        );
-
-      if (!result.valid) {
-        setImportErrors(
-          result.errors || [],
-        );
-
-        toast.error(
-          `${result.errors?.length || 0} validation errors found.`,
-        );
-
-        return;
-      }
-
-      setImportErrors([]);
-
-      const duplicateResult =
-        await checkQuestionDuplicates(
-          bank.id,
-          importQuestions,
-        );
-
-      setDuplicateCount(
-        duplicateResult.duplicateCount || 0,
-      );
-
-      if (
-        duplicateResult.duplicateCount > 0
-      ) {
-        toast.error(
-          `${duplicateResult.duplicateCount} duplicate question(s) found.`,
-        );
-      } else {
-        toast.success(
-          "All questions validated successfully.",
-        );
-      }
-    } catch (err) {
-      console.error(err);
-
-      toast.error(
-        "Unable to validate questions.",
-      );
-    } finally {
-      setImportLoading(false);
-    }
-  };
-
-  const handleFinalImport = async () => {
-    if (importQuestions.length === 0) {
-      toast.error("No questions to import.");
-      return;
-    }
-
-    if (importErrors.length > 0) {
-      toast.error(
-        "Fix validation errors before importing.",
-      );
-      return;
-    }
-
-    if (duplicateCount > 0) {
-      toast.error(
-        "Remove duplicate questions before importing.",
-      );
-      return;
-    }
-
-    try {
-      setImportLoading(true);
-
-      const result =
-        await finalImportQuestions(
-          bank.id,
-          importQuestions,
-        );
-
-      toast.success(
-        result.message ||
-          "Questions imported successfully.",
-      );
-
-      setImportQuestions([]);
-      setImportErrors([]);
-      setDuplicateCount(0);
-      setShowImport(false);
-
-      await fetchQuestions();
-    } catch (err) {
-      console.error(err);
-
-      toast.error(
-        "Unable to import questions.",
-      );
-    } finally {
-      setImportLoading(false);
-    }
+    try { await duplicateQuestion(id); toast.success("Question duplicated"); window.dispatchEvent(new CustomEvent("assessment-data-changed")); await fetchQuestions(); }
+    catch (error) { console.error(error); toast.error("Unable to duplicate question"); }
   };
 
   const downloadTemplate = () => {
-    const csv = [
-      ["question_text", "option_a", "option_b", "option_c", "option_d", "correct_answer"].join(","),
-      ['"What is a multiplexer?"', '"MUX"', '"Encoder"', '"Decoder"', '"Register"', "A"].join(","),
-    ].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "question-import-template.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const rows = [
+      ["question_text","question_type","option_a","option_b","option_c","option_d","correct_answers"],
+      ["What is a multiplexer?","MCQ","MUX","Encoder","Decoder","Register","A"],
+      ["Which are programming languages?","MULTIPLE_CORRECT","C","Python","HTML","JavaScript","A|B|D"],
+    ];
+    const csv = rows.map((row) => row.map((v) => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = "assessment-question-template.csv"; link.click(); URL.revokeObjectURL(url);
   };
 
-  if (loading) {
-    return (
-      <div className="py-20 text-center">
-        Loading Questions...
-      </div>
-    );
-  }
+  const handleCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]; event.target.value = "";
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".csv")) return toast.error("Please select a CSV file.");
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const rows = parseCSV(String(reader.result || ""));
+        if (rows.length < 2) throw new Error("CSV must contain a header and at least one question.");
+        const headers = rows[0].map((h) => h.trim().toLowerCase());
+        const required = ["question_text","question_type","option_a","option_b","option_c","option_d","correct_answers"];
+        const missing = required.filter((h) => !headers.includes(h));
+        if (missing.length) throw new Error(`Missing columns: ${missing.join(", ")}`);
+        const parsed = rows.slice(1).map((values) => {
+          const record: Record<string,string> = {}; headers.forEach((h,i) => record[h] = (values[i] || "").trim());
+          const type = ["MULTIPLE_CORRECT","MULTIPLE_CHOICE","MULTIPLE"].includes(record.question_type.toUpperCase().replace(/[ -]/g,"_")) ? "MULTIPLE_CORRECT" : "MCQ";
+          return { question_text: record.question_text, question_type: type as ImportQuestion["question_type"], options: [record.option_a,record.option_b,record.option_c,record.option_d], correct_answers: normalizeCorrect(record.correct_answers), language: "English" };
+        });
+        setImportQuestions(parsed); setImportErrors([]); setDuplicateCount(0); toast.success(`${parsed.length} questions loaded. Click Validate before importing.`);
+      } catch (error: any) { toast.error(error?.message || "Unable to parse CSV"); }
+    };
+    reader.readAsText(file);
+  };
 
-  const filteredQuestions = questions.filter((question) => {
-    const query = search.trim().toLowerCase();
-    return !query || question.question_text.toLowerCase().includes(query);
-  });
+  const validateImport = async () => {
+    if (!importQuestions.length) return toast.error("Choose a CSV first.");
+    try {
+      setImportBusy(true);
+      const validation = await validateImportedQuestions(bank.id, importQuestions);
+      setImportErrors(validation.errors || []);
+      if (!validation.valid) return toast.error(`${validation.errors?.length || 0} validation error(s).`);
+      const duplicates = await checkQuestionDuplicates(bank.id, importQuestions);
+      setDuplicateCount(Number(duplicates.duplicateCount || 0));
+      if (duplicates.duplicateCount) toast.error(`${duplicates.duplicateCount} duplicate question(s) found.`); else toast.success("CSV is valid and ready to import.");
+    } catch (error: any) { console.error(error); toast.error(error?.response?.data?.message || "Unable to validate CSV"); }
+    finally { setImportBusy(false); }
+  };
 
-  if (showEditor) {
-    return (
-      <QuestionEditor
-        bankId={bank.id}
-        initialQuestion={
-          editingQuestion ?? undefined
-        }
-        onBack={() => {
-          setShowEditor(false);
-          setEditingQuestion(null);
-        }}
-        onSaved={() => {
-          setShowEditor(false);
-          setEditingQuestion(null);
-          fetchQuestions();
-        }}
-      />
-    );
-  }
+  const importNow = async () => {
+    if (!importQuestions.length) return toast.error("Choose a CSV first.");
+    if (importErrors.length || duplicateCount) return toast.error("Validate the CSV and remove errors/duplicates first.");
+    try {
+      setImportBusy(true); const result = await finalImportQuestions(bank.id, importQuestions);
+      toast.success(result.message || "Questions imported successfully."); setImportOpen(false); setImportQuestions([]); setDuplicateCount(0); setImportErrors([]); await fetchQuestions(); window.dispatchEvent(new CustomEvent("assessment-data-changed"));
+    } catch (error: any) { console.error(error); toast.error(error?.response?.data?.message || "Unable to import questions"); }
+    finally { setImportBusy(false); }
+  };
+
+  if (loading) return <div className="rounded-2xl border bg-white py-24 text-center text-slate-500">Loading Questions...</div>;
+  if (editorOpen) return <QuestionEditor bankId={bank.id} initialQuestion={editingQuestion as any} onBack={() => { setEditorOpen(false); setEditingQuestion(null); }} onSaved={() => { setEditorOpen(false); setEditingQuestion(null); void fetchQuestions(); window.dispatchEvent(new CustomEvent("assessment-data-changed")); }} />;
 
   return (
-    <>
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 text-[#00629B]"
-      >
-        <ArrowLeft size={18} />
-        Back to Question Banks
-      </button>
+    <div className="space-y-6">
+      <button type="button" onClick={onBack} className="flex items-center gap-2 text-sm font-semibold text-[#00629B]"><ArrowLeft size={18}/> Back to Question Banks</button>
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-sm font-semibold uppercase tracking-[0.15em] text-[#00629B]">{bank.name}</p><h1 className="mt-1 text-3xl font-bold text-slate-900">Question Library</h1><p className="mt-1 text-slate-500">{questions.length} active questions · {bank.questions_to_pick || 0} selected per attempt</p></div><div className="flex flex-wrap gap-3"><button type="button" onClick={() => { setEditingQuestion(null); setEditorOpen(true); }} className="flex items-center gap-2 rounded-xl bg-[#00629B] px-5 py-3 font-semibold text-white"><Plus size={18}/> Add Question</button><button type="button" onClick={() => { setImportOpen(true); setImportQuestions([]); setImportErrors([]); setDuplicateCount(0); }} className="flex items-center gap-2 rounded-xl border border-[#00629B] px-5 py-3 font-semibold text-[#00629B]"><FileUp size={18}/> Import CSV</button></div></div>
+      <div className="rounded-2xl border bg-white p-4"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search questions..." className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#00629B]"/></div>
+      {filtered.length === 0 ? <div className="rounded-2xl border bg-white p-14 text-center"><p className="text-xl font-semibold text-slate-900">{search ? "No matching questions" : "No questions yet"}</p><p className="mt-2 text-sm text-slate-500">Add a question manually or use the CSV template.</p></div> : <div className="space-y-4">{filtered.map((q,index) => { const opts = optionArray(q.options); const correct = q.correct_answers.map((a) => typeof a === "number" ? String.fromCharCode(65+a) : String(a).toUpperCase()); return <div key={q.id} className="rounded-2xl border bg-white p-6 shadow-sm"><div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Q{index+1}</span><span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{q.question_type === "MULTIPLE_CORRECT" ? "Multiple Correct" : "MCQ"}</span><span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">4 options</span></div><p className="mt-4 text-base font-medium leading-7 text-slate-900">{q.question_text}</p><div className="mt-4 grid gap-2 sm:grid-cols-2">{opts.map((opt,i) => <div key={i} className={`rounded-xl border p-3 text-sm ${correct.includes(String.fromCharCode(65+i)) ? "border-emerald-300 bg-emerald-50" : "border-slate-200"}`}><span className="mr-2 font-bold">{String.fromCharCode(65+i)}.</span>{opt}</div>)}</div></div><div className="flex flex-wrap gap-2 lg:w-40 lg:justify-end"><button type="button" onClick={() => setPreview(q)} className="rounded-lg border px-3 py-2 text-sm"><Eye size={15} className="mr-1 inline"/>Preview</button><button type="button" onClick={() => { setEditingQuestion(q); setEditorOpen(true); }} className="rounded-lg border px-3 py-2 text-sm"><Edit3 size={15} className="mr-1 inline"/>Edit</button><button type="button" onClick={() => void handleDuplicate(q.id)} className="rounded-lg border px-3 py-2 text-sm"><Copy size={15} className="mr-1 inline"/>Duplicate</button><button type="button" onClick={() => void handleDelete(q.id)} className="rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600"><Trash2 size={15} className="mr-1 inline"/>Delete</button></div></div></div>})}</div>}
 
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">
-            {bank.name}
-          </h1>
+      {preview && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/60 p-4" onMouseDown={(e) => e.target === e.currentTarget && setPreview(null)}><div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl"><div className="flex items-center justify-between border-b px-6 py-5"><div><h2 className="text-xl font-bold">Student Preview</h2><p className="text-sm text-slate-500">{preview.question_type === "MULTIPLE_CORRECT" ? "Select all correct answers." : "Select one correct answer."}</p></div><button type="button" onClick={() => setPreview(null)} className="rounded-lg border px-4 py-2">Close</button></div><div className="p-6"><p className="text-lg font-semibold text-slate-900">{preview.question_text}</p><div className="mt-6 space-y-3">{optionArray(preview.options).map((opt,i) => <div key={i} className="flex items-start gap-3 rounded-xl border p-4"><span className="flex h-7 w-7 items-center justify-center rounded-lg border font-bold">{String.fromCharCode(65+i)}</span><span>{opt}</span></div>)}</div></div></div></div>}
 
-          <p className="mt-2 text-gray-500">
-            {questions.length} Questions
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={() => {
-              setEditingQuestion(null);
-              setShowEditor(true);
-            }}
-            className="flex items-center gap-2 rounded-xl bg-[#00629B] px-6 py-3 text-white"
-          >
-            <Plus size={18} />
-            Add Question
-          </button>
-
-          <button
-            onClick={() => {
-              setShowImport(true);
-              setImportQuestions([]);
-              setImportErrors([]);
-              setDuplicateCount(0);
-            }}
-            className="flex items-center gap-2 rounded-xl border border-[#00629B] px-6 py-3 text-[#00629B]"
-          >
-            <Upload size={18} />
-            Import Questions
-          </button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="relative">
-          <Search
-            size={18}
-            className="absolute left-3 top-3.5 text-gray-400"
-          />
-
-          <input
-            value={search}
-            onChange={(e) =>
-              setSearch(e.target.value)
-            }
-            placeholder="Search Question..."
-            className="w-full rounded-xl border py-3 pl-10 pr-4"
-          />
-        </div>
-
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-        <div className="rounded-xl border p-5">
-          <p className="text-sm text-gray-500">
-            Total Questions
-          </p>
-
-          <h2 className="text-3xl font-bold">
-            {questions.length}
-          </h2>
-        </div>
-
-        <div className="rounded-xl border p-5">
-          <p className="text-sm text-gray-500">
-            Questions to Pick
-          </p>
-
-          <h2 className="mt-1 text-2xl font-bold text-[#00629B]">
-            {bank.questions_to_pick ??
-              0}
-          </h2>
-        </div>
-
-      </div>
-
-      {filteredQuestions.length === 0 ? (
-        <div className="rounded-2xl border py-24 text-center">
-          <h2 className="text-2xl font-bold">
-            {search.trim() ? "No Matching Questions" : "No Questions Yet"}
-          </h2>
-
-          <p className="mt-3 text-gray-500">
-            {search.trim() ? "Try changing your search." : "Create or import your first question."}
-          </p>
-
-          {!search.trim() && (
-              <div className="mt-6 flex justify-center gap-3">
-                <button
-                  onClick={() => {
-                    setEditingQuestion(
-                      null,
-                    );
-                    setShowEditor(true);
-                  }}
-                  className="rounded-xl bg-[#00629B] px-6 py-3 text-white"
-                >
-                  + Add Question
-                </button>
-
-                <button
-                  onClick={() =>
-                    setShowImport(true)
-                  }
-                  className="rounded-xl border border-[#00629B] px-6 py-3 text-[#00629B]"
-                >
-                  Import Questions
-                </button>
-              </div>
-            )}
-        </div>
-      ) : (
-        <div className="space-y-5">
-          {filteredQuestions.map(
-            (question, index) => (
-              <div
-                key={question.id}
-                className="rounded-2xl border p-6"
-              >
-                <div className="flex justify-between">
-                  <div>
-                    <h3 className="text-lg font-bold">
-                      Question #{index + 1}
-                    </h3>
-
-                    <p className="mt-2">
-                      {
-                        question.question_text
-                      }
-                    </p>
-
-                    <div className="mt-4 text-sm text-gray-500">MCQ · 4 options · 1 mark</div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => {
-                        setEditingQuestion(
-                          question,
-                        );
-                        setShowEditor(true);
-                      }}
-                      className="rounded-xl border px-4 py-2"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        handleDuplicate(
-                          question.id,
-                        )
-                      }
-                      className="rounded-xl border px-4 py-2"
-                    >
-                      Duplicate
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        handleDelete(
-                          question.id,
-                        )
-                      }
-                      className="rounded-xl border border-red-300 px-4 py-2 text-red-600"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ),
-          )}
-        </div>
-      )}
-
-      {/* ====================================================== */}
-      {/* IMPORT MODAL */}
-      {/* ====================================================== */}
-
-      {showImport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b px-6 py-5">
-              <div>
-                <h2 className="text-2xl font-bold">
-                  Import Questions
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-500">
-                  Import questions into{" "}
-                  <strong>
-                    {bank.name}
-                  </strong>
-                </p>
-              </div>
-
-              <button
-                onClick={() =>
-                  setShowImport(false)
-                }
-                className="rounded-lg p-2 hover:bg-gray-100"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-6 p-6">
-              {/* Upload */}
-
-              <div className="rounded-2xl border-2 border-dashed p-8 text-center">
-                <Upload
-                  size={36}
-                  className="mx-auto text-[#00629B]"
-                />
-
-                <h3 className="mt-3 text-lg font-semibold">
-                  Upload CSV
-                </h3>
-
-                <p className="mt-1 text-sm text-gray-500">
-                  Use the provided template
-                  format.
-                </p>
-
-                <div className="mt-5 flex justify-center gap-3">
-                  <button
-                    type="button"
-                    onClick={
-                      downloadTemplate
-                    }
-                    className="flex items-center gap-2 rounded-xl border px-5 py-3"
-                  >
-                    <Download
-                      size={18}
-                    />
-                    Download Template
-                  </button>
-
-                  <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-[#00629B] px-5 py-3 text-white">
-                    <Upload size={18} />
-
-                    Choose CSV
-
-                    <input
-                      type="file"
-                      accept=".csv"
-                      onChange={
-                        handleCSVImport
-                      }
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Preview */}
-
-              {importQuestions.length >
-                0 && (
-                <div>
-                  <div className="mb-4 flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">
-                      Preview (
-                      {
-                        importQuestions.length
-                      }{" "}
-                      questions)
-                    </h3>
-
-                    <button
-                      onClick={
-                        handleValidateImport
-                      }
-                      disabled={
-                        importLoading
-                      }
-                      className="flex items-center gap-2 rounded-xl bg-[#00629B] px-5 py-3 text-white disabled:opacity-50"
-                    >
-                      <CheckCircle
-                        size={18}
-                      />
-
-                      {importLoading
-                        ? "Checking..."
-                        : "Validate"}
-                    </button>
-                  </div>
-
-                  <div className="overflow-x-auto rounded-xl border">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="p-3 text-left">
-                            #
-                          </th>
-
-                          <th className="p-3 text-left">
-                            Question
-                          </th>
-
-                          <th className="p-3 text-left">
-                            Type
-                          </th>
-
-                          <th className="p-3 text-left">
-                            Correct
-                          </th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {importQuestions.map(
-                          (
-                            question,
-                            index,
-                          ) => (
-                            <tr
-                              key={index}
-                              className="border-t"
-                            >
-                              <td className="p-3">
-                                {index +
-                                  1}
-                              </td>
-
-                              <td className="max-w-md p-3">
-                                {
-                                  question.question_text
-                                }
-                              </td>
-
-                              <td className="p-3">
-                                {
-                                  question.question_type
-                                }
-                              </td>
-
-                              <td className="p-3">
-                                {question.correct_answers
-                                  .map(
-                                    (
-                                      answer,
-                                    ) =>
-                                      String.fromCharCode(
-                                        65 +
-                                          answer,
-                                      ),
-                                  )
-                                  .join(
-                                    ", ",
-                                  )}
-                              </td>
-                            </tr>
-                          ),
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Errors */}
-
-              {importErrors.length >
-                0 && (
-                <div className="rounded-xl border border-red-200 bg-red-50 p-5">
-                  <h3 className="font-semibold text-red-700">
-                    Validation Errors
-                  </h3>
-
-                  <div className="mt-3 space-y-1 text-sm text-red-600">
-                    {importErrors.map(
-                      (
-                        error,
-                        index,
-                      ) => (
-                        <p key={index}>
-                          • {error}
-                        </p>
-                      ),
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Duplicates */}
-
-              {duplicateCount > 0 && (
-                <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-5">
-                  <p className="text-sm text-yellow-800">
-                    {duplicateCount} duplicate
-                    question(s) found.
-                    Remove them before
-                    importing.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-3 border-t px-6 py-5">
-              <button
-                onClick={() =>
-                  setShowImport(false)
-                }
-                className="rounded-xl border px-5 py-3"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={
-                  handleFinalImport
-                }
-                disabled={
-                  importLoading ||
-                  importQuestions.length ===
-                    0 ||
-                  importErrors.length > 0 ||
-                  duplicateCount > 0
-                }
-                className="rounded-xl bg-[#00629B] px-6 py-3 text-white disabled:opacity-40"
-              >
-                {importLoading
-                  ? "Importing..."
-                  : `Import ${importQuestions.length} Questions`}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+      {importOpen && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/60 p-4"><div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl"><div className="flex items-center justify-between border-b px-6 py-5"><div><h2 className="text-xl font-bold">Import Questions from CSV</h2><p className="mt-1 text-sm text-slate-500">One format supports both MCQ and Multiple Correct.</p></div><button type="button" onClick={() => !importBusy && setImportOpen(false)} className="rounded-lg border px-3 py-2">Close</button></div><div className="space-y-5 p-6"><div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900"><p className="font-semibold">Required CSV columns</p><p className="mt-1 font-mono text-xs leading-6">question_text, question_type, option_a, option_b, option_c, option_d, correct_answers</p><p className="mt-2">Use <strong>MCQ</strong> + one answer such as <strong>A</strong>, or <strong>MULTIPLE_CORRECT</strong> + answers such as <strong>A|C|D</strong>.</p></div><div className="flex flex-wrap gap-3"><button type="button" onClick={downloadTemplate} className="flex items-center gap-2 rounded-xl border px-4 py-3"><Download size={17}/> Download Template</button><label className="flex cursor-pointer items-center gap-2 rounded-xl bg-[#00629B] px-4 py-3 font-semibold text-white"><FileUp size={17}/> Choose CSV<input type="file" accept=".csv,text/csv" className="hidden" onChange={handleCSV}/></label></div>{importQuestions.length > 0 && <div className="rounded-xl border p-4"><p className="font-semibold">Loaded: {importQuestions.length} questions</p><p className="mt-1 text-sm text-slate-500">Validate before import. Duplicate questions are blocked.</p>{importErrors.length > 0 && <ul className="mt-3 list-disc pl-5 text-sm text-red-600">{importErrors.slice(0,10).map((e) => <li key={e}>{e}</li>)}</ul>}{duplicateCount > 0 && <p className="mt-3 text-sm font-semibold text-amber-700">{duplicateCount} duplicate question(s) found.</p>}</div>}<div className="flex justify-end gap-3"><button type="button" onClick={() => void validateImport()} disabled={importBusy || !importQuestions.length} className="rounded-xl border px-5 py-3 font-semibold disabled:opacity-50">Validate CSV</button><button type="button" onClick={() => void importNow()} disabled={importBusy || !importQuestions.length || importErrors.length > 0 || duplicateCount > 0} className="rounded-xl bg-[#00629B] px-5 py-3 font-semibold text-white disabled:opacity-50">{importBusy ? "Working..." : "Import Questions"}</button></div></div></div></div>}
+    </div>
   );
 }
