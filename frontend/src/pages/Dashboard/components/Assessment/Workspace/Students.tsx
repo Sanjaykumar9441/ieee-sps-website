@@ -108,15 +108,9 @@ export default function Students({ assessment }: Props) {
 
     return {
       allowed: students.filter((s) => s.status === "allowed").length,
-
       blocked: students.filter((s) => s.status === "blocked").length,
-
-      loggedIn: students.filter((s) => s.logged_in).length,
-
       started,
-
       submitted: students.filter((s) => s.submitted).length,
-
       notStarted: students.length - started,
     };
   }, [students]);
@@ -257,7 +251,7 @@ export default function Students({ assessment }: Props) {
         "Email",
         "Branch",
         "Status",
-        "Logged In",
+        "First Login",
         "Attempt",
         "Submitted",
       ];
@@ -268,7 +262,7 @@ export default function Students({ assessment }: Props) {
         student.email,
         student.branch || "",
         student.status,
-        student.logged_in ? "Logged In" : "Not Logged In",
+        student.first_login_at ? new Date(student.first_login_at).toLocaleString() : "Not yet",
         student.attempt_started ? "Started" : "Not Started",
         student.submitted ? "Submitted" : "Not Submitted",
       ]);
@@ -317,7 +311,7 @@ export default function Students({ assessment }: Props) {
   </button>
 </div>
       </div>
-      <div className="grid grid-cols-2 gap-5 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-5 md:grid-cols-3 xl:grid-cols-5">
         <div className="rounded-xl border p-5">
           <p className="text-gray-500">Allowed</p>
 
@@ -329,14 +323,6 @@ export default function Students({ assessment }: Props) {
 
           <h2 className="mt-2 text-3xl font-bold text-red-600">
             {stats.blocked}
-          </h2>
-        </div>
-
-        <div className="rounded-xl border p-5">
-          <p className="text-gray-500">Logged In</p>
-
-          <h2 className="mt-2 text-3xl font-bold text-blue-600">
-            {stats.loggedIn}
           </h2>
         </div>
 
@@ -458,8 +444,7 @@ export default function Students({ assessment }: Props) {
 
               <th className="p-4 text-left">Status</th>
 
-
-              <th className="p-4 text-left">Login</th>
+              <th className="p-4 text-left">First Login</th>
 
               <th className="p-4 text-left">Attempt</th>
 
@@ -509,14 +494,10 @@ export default function Students({ assessment }: Props) {
                   </span>
                 </td>
 
-                <td className="p-4">
-                  <span
-                    className={
-                      student.logged_in ? "text-green-600" : "text-gray-400"
-                    }
-                  >
-                    {student.logged_in ? "Logged In" : "Not Logged In"}
-                  </span>
+                <td className="p-4 text-sm text-gray-600">
+                  {student.first_login_at
+                    ? new Date(student.first_login_at).toLocaleString()
+                    : "Not yet"}
                 </td>
 
                 <td className="p-4">
@@ -588,7 +569,6 @@ export default function Students({ assessment }: Props) {
                     </button>
 
                     <button
-                      disabled={student.logged_in}
                       onClick={async () => {
                         if (!window.confirm("Delete this student?")) {
                           return;

@@ -24,14 +24,7 @@ interface Props { assessment: Assessment; }
 export default function QuestionBanks({ assessment }: Props) {
   const [loading, setLoading] = useState(true);
   const [banks, setBanks] = useState<QuestionBank[]>([]);
-  const [selectedBank, setSelectedBank] = useState<QuestionBank | null>(() => {
-    try {
-      const id = sessionStorage.getItem(`assessment-selected-bank:${assessment.id}`);
-      return id ? ({ id } as QuestionBank) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [selectedBank, setSelectedBank] = useState<QuestionBank | null>(null);
   const [search, setSearch] = useState("");
   const [openCreate, setOpenCreate] = useState(false);
   const [editingBank, setEditingBank] = useState<QuestionBank | null>(null);
@@ -50,7 +43,7 @@ export default function QuestionBanks({ assessment }: Props) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Delete this Question Bank? Existing questions will be kept inactive.")) return;
+    if (!window.confirm("Delete this Question Bank? Its questions will also be deleted permanently.")) return;
     try {
       await deleteQuestionBank(id);
       toast.success("Question Bank deleted");
@@ -92,17 +85,7 @@ export default function QuestionBanks({ assessment }: Props) {
   if (loading) return <div className="rounded-2xl border bg-white py-24 text-center text-slate-500">Loading Question Banks...</div>;
 
   if (selectedBank) {
-    const currentBank = banks.find((item) => item.id === selectedBank.id) || selectedBank;
-    return (
-      <QuestionBankDetails
-        bank={currentBank}
-        onBack={() => {
-          setSelectedBank(null);
-          try { sessionStorage.removeItem(`assessment-selected-bank:${assessment.id}`); } catch {}
-          void fetchBanks();
-        }}
-      />
-    );
+    return <QuestionBankDetails bank={selectedBank} onBack={() => { setSelectedBank(null); void fetchBanks(); }} />;
   }
 
   return (
@@ -115,9 +98,9 @@ export default function QuestionBanks({ assessment }: Props) {
       {filteredBanks.length === 0 ? (
         <div className="rounded-2xl border bg-white p-14 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500"><Database size={26}/></div><h3 className="mt-5 text-xl font-semibold text-slate-900">{search ? "No Question Banks Found" : "No Question Banks Yet"}</h3><p className="mt-2 text-sm text-slate-500">{search ? "Try a different search term." : "Create your first bank and add questions manually or by CSV."}</p>{!search && <button type="button" onClick={() => { setEditingBank(null); setOpenCreate(true); }} className="mt-6 rounded-xl bg-[#00629B] px-5 py-3 font-semibold text-white">Create Question Bank</button>}</div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">{filteredBanks.map((bank) => <QuestionBankCard key={bank.id} bank={bank} onOpen={(value) => { setSelectedBank(value); try { sessionStorage.setItem(`assessment-selected-bank:${assessment.id}`, value.id); } catch {} }} onEdit={(value) => { setEditingBank(value); setOpenCreate(true); }} onDuplicate={handleDuplicate} onDelete={handleDelete}/>)}</div>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">{filteredBanks.map((bank) => <QuestionBankCard key={bank.id} bank={bank} onOpen={setSelectedBank} onEdit={(value) => { setEditingBank(value); setOpenCreate(true); }} onDuplicate={handleDuplicate} onDelete={handleDelete}/>)}</div>
       )}
-      <CreateQuestionBankModal open={openCreate} assessmentId={assessment.id} totalQuestions={Number(assessment.total_questions || 20)} bank={editingBank} onClose={() => { setOpenCreate(false); setEditingBank(null); }} onSaved={fetchBanks}/>
+      <CreateQuestionBankModal open={openCreate} assessmentId={assessment.id} bank={editingBank} onClose={() => { setOpenCreate(false); setEditingBank(null); }} onSaved={fetchBanks}/>
     </div>
   );
 }

@@ -48,25 +48,16 @@ export default function StudentExamPortal({
     // Open the exam tab synchronously while the Start button still has a
     // user-activation token. Opening it after an awaited API request is
     // commonly blocked by the browser.
-    const examWindow = window.open("about:blank", "_blank", "noopener,noreferrer");
+    const examWindow = window.open("about:blank", "_blank");
 
     try {
-      try {
-        if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
-      } catch (fullscreenError) {
-        console.warn("Fullscreen request was not allowed:", fullscreenError);
-      }
-
       const result = await startAssessment(assessmentId);
-      const examUrl = window.location.href;
+      const examUrl = `${window.location.origin}/student/exam/${assessmentId}?exam=1`;
 
       if (examWindow && !examWindow.closed) {
         examWindow.location.replace(examUrl);
         examWindow.focus();
         toast.success("Exam opened in a new tab.");
-        // Closing a normal browser tab is intentionally best-effort; browsers
-        // may refuse window.close() unless this tab was script-opened.
-        setTimeout(() => { try { window.close(); } catch (_) {} }, 250);
         return;
       }
 

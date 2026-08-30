@@ -569,7 +569,19 @@ export default function QuestionCard({
    * ============================================================
    */
 
+  const isMultipleCorrect = String(type).toUpperCase() === "MULTIPLE_CORRECT";
+  const isTrueFalse = String(type).toUpperCase() === "TRUE_FALSE";
+
   const toggleOption = (key: string) => {
+    if (isMultipleCorrect) {
+      onChange(
+        selectedAnswers.includes(key)
+          ? selectedAnswers.filter((answer) => answer !== key)
+          : [...selectedAnswers, key],
+      );
+      return;
+    }
+
     onChange([key]);
   };
 
@@ -590,7 +602,7 @@ export default function QuestionCard({
             <p className="text-xs font-semibold uppercase tracking-wider text-[#00629B]">
               Question {questionOrder}
             </p>
-            <p className="text-xs text-slate-400 mt-1">Select one answer</p>
+            <p className="text-xs text-slate-400 mt-1">{isMultipleCorrect ? "Select all correct answers" : isTrueFalse ? "Select True or False" : "Select one answer"}</p>
           </div>
         </div>
 

@@ -187,7 +187,7 @@ export default function StudentDetailsDrawer({
                       ? new Date(
                           details.student.first_login_at,
                         ).toLocaleString()
-                      : "Not Logged In"}
+                      : "Not yet"}
                   </p>
                 </div>
               </div>
@@ -212,24 +212,6 @@ export default function StudentDetailsDrawer({
                     }`}
                   >
                     {details?.student?.status}
-                  </span>
-                </div>
-
-                {/* Login */}
-
-                <div>
-                  <p className="text-sm text-gray-500">Login</p>
-
-                  <span
-                    className={`mt-2 inline-flex rounded-full px-3 py-1 text-sm font-medium ${
-                      details?.student?.logged_in
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {details?.student?.logged_in
-                      ? "Logged In"
-                      : "Not Logged In"}
                   </span>
                 </div>
 
@@ -281,7 +263,7 @@ export default function StudentDetailsDrawer({
                   </div>
 
                   <div>
-                    <p className="font-medium">Logged In</p>
+                    <p className="font-medium">First Login</p>
 
                     <p className="text-sm text-gray-500">
                       {details?.timeline?.loggedInAt

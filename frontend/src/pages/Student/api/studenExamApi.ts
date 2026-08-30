@@ -23,7 +23,12 @@ const getSessionConfig = (attemptId: string) => {
   const token =
     localStorage.getItem("studentToken") || localStorage.getItem("token");
 
-  const sessionId = sessionStorage.getItem(`quiz_session_${attemptId}`);
+  // sessionStorage is tab-scoped. The exam is intentionally opened in a
+  // new tab, so keep a copy in localStorage as well for the active attempt.
+  const sessionKey = `quiz_session_${attemptId}`;
+  const sessionId =
+    sessionStorage.getItem(sessionKey) ||
+    localStorage.getItem(sessionKey);
 
   return {
     headers: {
@@ -107,7 +112,9 @@ export const startAssessment = async (
   if (data.attemptId) {
     localStorage.setItem("studentAttemptId", data.attemptId);
     if (data.sessionId) {
-      sessionStorage.setItem(`quiz_session_${data.attemptId}`, data.sessionId);
+      const sessionKey = `quiz_session_${data.attemptId}`;
+      sessionStorage.setItem(sessionKey, data.sessionId);
+      localStorage.setItem(sessionKey, data.sessionId);
     }
   }
 

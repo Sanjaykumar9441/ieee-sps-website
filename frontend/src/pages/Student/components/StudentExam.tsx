@@ -140,6 +140,9 @@ export default function StudentExam({
   const [isFullscreen, setIsFullscreen] = useState(
     Boolean(document.fullscreenElement)
   );
+  const [fullscreenPrompt, setFullscreenPrompt] = useState(
+    !document.fullscreenElement,
+  );
 
   const [palette, setPalette] =
     useState<PaletteQuestion[]>([]);
@@ -730,11 +733,12 @@ export default function StudentExam({
       if (!document.fullscreenElement) {
         await document.documentElement.requestFullscreen();
       }
+      setIsFullscreen(true);
+      setFullscreenPrompt(false);
     } catch (error) {
-      console.error(
-        "[EXAM] Fullscreen error:",
-        error
-      );
+      console.warn("[EXAM] Fullscreen request was blocked:", error);
+      setIsFullscreen(Boolean(document.fullscreenElement));
+      setFullscreenPrompt(true);
     }
   };
 
@@ -747,69 +751,89 @@ export default function StudentExam({
       const active = Boolean(document.fullscreenElement);
       setIsFullscreen(active);
 
-      if (active) return;
-
-      // A fullscreen exit not caused by the two-Escape policy is treated as
-      // leaving the exam and submits immediately.
-      if (intentionalFullscreenExitRef.current) {
-        intentionalFullscreenExitRef.current = false;
+      if (active) {
+        setFullscreenPrompt(false);
         return;
       }
+
+      // The first two Escape presses are deliberate chances/warnings.
+      // Any other fullscreen exit is a security violation and submits.
+      if (intentionalFullscreenExitRef.current) {
+        intentionalFullscreenExitRef.current = false;
+        setFullscreenPrompt(true);
+        return;
+      }
+
+      setFullscreenPrompt(true);
       void reportInfraction("FULLSCREEN_EXIT");
       toast.error("Fullscreen was exited. Submitting your assessment.");
       void securitySubmitRef.current?.();
-
-      escapeWarningRef.current = true;
-      if (escapeResetTimerRef.current) {
-        window.clearTimeout(escapeResetTimerRef.current);
-      }
-      escapeResetTimerRef.current = window.setTimeout(() => {
-        escapeWarningRef.current = false;
-      }, 1800);
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
+      if (event.key !== "Escape" || event.repeat) return;
 
       const now = Date.now();
+      const DOUBLE_ESCAPE_WINDOW = 850;
+
       if (escapeResetTimerRef.current) {
         window.clearTimeout(escapeResetTimerRef.current);
       }
 
-      escapeCountRef.current =
-        now - lastEscapeAtRef.current <= 1800
-          ? escapeCountRef.current + 1
-          : 1;
-      lastEscapeAtRef.current = now;
+      const isDoubleEscape =
+        lastEscapeAtRef.current > 0 &&
+        now - lastEscapeAtRef.current <= DOUBLE_ESCAPE_WINDOW;
 
-      if (escapeCountRef.current === 1) {
-        toast.error("Warning: Escape detected. A second Escape will submit your assessment.");
-        void reportInfraction("FULLSCREEN_EXIT");
-        // Browsers exit fullscreen immediately after Escape. Mark this first
-        // Escape as intentional so fullscreenchange does not auto-submit.
+      if (isDoubleEscape) {
+        // Two quick Escape presses always submit immediately.
+        event.preventDefault();
+        event.stopPropagation();
+        escapeCountRef.current = 0;
+        lastEscapeAtRef.current = 0;
         intentionalFullscreenExitRef.current = true;
-        escapeWarningRef.current = true;
+        void reportInfraction("KEYBOARD_SHORTCUT");
+        toast.error("Double Escape detected. Submitting your assessment.");
+        void securitySubmitRef.current?.();
         escapeResetTimerRef.current = window.setTimeout(() => {
-          escapeCountRef.current = 0;
-          escapeWarningRef.current = false;
           intentionalFullscreenExitRef.current = false;
-          lastEscapeAtRef.current = 0;
-        }, 1800);
+          setFullscreenPrompt(false);
+        }, 700);
         return;
       }
 
-      // Second Escape inside the grace window submits the attempt. Prevent
-      // the browser fullscreenchange event from submitting a second time.
-      escapeCountRef.current = 0;
-      lastEscapeAtRef.current = 0;
+      escapeCountRef.current += 1;
+      lastEscapeAtRef.current = now;
+
+      if (escapeCountRef.current === 1) {
+        toast.error("Escape detected. You have 2 more chances. A third single Escape will submit the assessment.");
+      } else if (escapeCountRef.current === 2) {
+        toast.error("Second Escape detected. You have 1 more chance. The next single Escape will submit the assessment.");
+      } else {
+        event.preventDefault();
+        event.stopPropagation();
+        escapeCountRef.current = 0;
+        lastEscapeAtRef.current = 0;
+        intentionalFullscreenExitRef.current = true;
+        void reportInfraction("KEYBOARD_SHORTCUT");
+        toast.error("Third Escape detected. Submitting your assessment.");
+        void securitySubmitRef.current?.();
+        escapeResetTimerRef.current = window.setTimeout(() => {
+          intentionalFullscreenExitRef.current = false;
+        }, 700);
+        return;
+      }
+
+      // Escape normally exits browser fullscreen. Treat that exit as the
+      // warning/chance itself, not as an additional automatic submission.
       intentionalFullscreenExitRef.current = true;
-      void reportInfraction("FULLSCREEN_EXIT");
-      toast.error("Second Escape detected. Submitting your assessment.");
-      void securitySubmitRef.current?.();
+      void reportInfraction("KEYBOARD_SHORTCUT");
+      setFullscreenPrompt(true);
+
       escapeResetTimerRef.current = window.setTimeout(() => {
-        escapeWarningRef.current = false;
+        escapeCountRef.current = 0;
+        lastEscapeAtRef.current = 0;
         intentionalFullscreenExitRef.current = false;
-      }, 700);
+      }, DOUBLE_ESCAPE_WINDOW);
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
@@ -826,6 +850,8 @@ export default function StudentExam({
   }, [reportInfraction]);
 
   useEffect(() => {
+    // Try automatically first. Modern browsers may block this because the
+    // exam tab was opened by navigation rather than a direct gesture in that tab.
     const timer = window.setTimeout(() => {
       void enterFullscreen();
     }, 300);
@@ -1049,6 +1075,28 @@ export default function StudentExam({
             <p className="mt-4 text-sm font-semibold text-amber-600">
               Reconnecting...
             </p>
+          </div>
+        </div>
+      )}
+
+      {!isFullscreen && fullscreenPrompt && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/95 p-6 text-white">
+          <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-white p-8 text-center text-slate-900 shadow-2xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#00629B]/10 text-[#00629B]">
+              <Maximize size={30} />
+            </div>
+            <h2 className="mt-5 text-2xl font-bold">Enter Fullscreen to Continue</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-500">
+              The examination is designed to run in a dedicated fullscreen tab.
+              Click below if your browser did not enter fullscreen automatically.
+            </p>
+            <button
+              type="button"
+              onClick={() => void enterFullscreen()}
+              className="mt-6 w-full rounded-xl bg-[#00629B] px-5 py-3 font-semibold text-white hover:bg-[#00527f]"
+            >
+              Enter Fullscreen & Continue
+            </button>
           </div>
         </div>
       )}

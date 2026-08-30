@@ -73,15 +73,28 @@ class QuestionBank {
 
     if (bankError) return { error: bankError };
 
-    return {
-      data: (banks || []).map((bank) => {
+    const enriched = await Promise.all(
+      (banks || []).map(async (bank) => {
+        const { count, error: countError } = await supabase
+          .from("questions")
+          .select("id", { count: "exact", head: true })
+          .eq("bank_id", bank.id)
+          .eq("is_active", true);
+
+        if (countError) throw countError;
+
         const mapping = mappings.find((m) => m.question_bank_id === bank.id);
+
         return {
           ...bank,
+          // Always return the live count; never trust a stale cached total.
+          total_questions: Number(count || 0),
           questions_to_pick: Number(mapping?.questions_to_pick || 0),
         };
       }),
-    };
+    );
+
+    return { data: enriched };
   }
 
   static async get(id) {

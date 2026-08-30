@@ -331,7 +331,9 @@ exports.getAllowedStudents = async (req, res) => {
 
       return {
         ...student,
-        logged_in: student.has_logged_in,
+        // has_logged_in is a historical flag; first_login_at is the authoritative
+        // timestamp used by the admin UI to avoid contradictory login states.
+        logged_in: Boolean(student.first_login_at || student.has_logged_in),
         blocked: student.status === "blocked",
         attempt_started: !!attempt,
         submitted: attempt?.status === "SUBMITTED",
