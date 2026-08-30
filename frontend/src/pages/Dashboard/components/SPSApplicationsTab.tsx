@@ -69,7 +69,7 @@ const SPSApplicationsTab = () => {
       const token = localStorage.getItem("token");
 
       const res = await axios.get(  
-        "VITE_API_URL
+        "VITE_API_URL/api/sps-applications",  
         {  
           headers: {  
             Authorization: `Bearer ${token}`,  
