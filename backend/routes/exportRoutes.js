@@ -1,6 +1,11 @@
 const express = require("express");
+const router = express.Router();
+
 const verifyToken = require("../middleware/verifyToken");
 const controller = require("../controllers/exportController");
-const router = express.Router();
-router.get("/:assessmentId", verifyToken, controller.download);
+
+router.get("/excel/:assessmentId", verifyToken, controller.exportExcel);
+router.get("/pdf/:assessmentId", verifyToken, controller.exportPDF);
+router.get("/csv/:assessmentId", verifyToken, controller.exportCSV);
+
 module.exports = router;

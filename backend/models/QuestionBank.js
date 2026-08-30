@@ -5,21 +5,17 @@ const MAPPING_TABLE = "assessment_question_banks";
 
 class QuestionBank {
   static async getAll(assessmentId) {
-    // Get mappings
-    const { data: mappings, error } = await supabase
+    const { data: mappings, error: mappingError } = await supabase
       .from(MAPPING_TABLE)
       .select("question_bank_id, questions_to_pick")
       .eq("assessment_id", assessmentId);
 
-    if (error) return { error };
+    if (mappingError) return { error: mappingError };
 
-    if (!mappings || mappings.length === 0) {
-      return { data: [] };
-    }
+    if (!mappings?.length) return { data: [] };
 
     const ids = mappings.map((m) => m.question_bank_id);
 
-    // Fetch banks
     const { data: banks, error: bankError } = await supabase
       .from(TABLE)
       .select("*")
@@ -29,210 +25,135 @@ class QuestionBank {
 
     if (bankError) return { error: bankError };
 
-    const result = await Promise.all(banks.map(async (bank) => {
-      const mapping = mappings.find((m) => m.question_bank_id === bank.id);
-      const { count, error: countError } = await supabase
-        .from("questions")
-        .select("id", { count: "exact", head: true })
-        .eq("bank_id", bank.id)
-        .eq("is_active", true)
-        .in("question_type", ["MCQ", "MULTIPLE_CORRECT"]);
-      if (countError) throw countError;
-      return { ...bank, total_questions: count ?? 0, questions_to_pick: mapping?.questions_to_pick ?? 0 };
-    }));
+    const { data: questions, error: questionError } = await supabase
+      .from("questions")
+      .select("id, bank_id")
+      .in("bank_id", ids)
+      .eq("is_active", true);
 
-    return { data: result };
+    if (questionError) return { error: questionError };
+
+    const countByBank = new Map();
+    for (const q of questions || []) {
+      countByBank.set(q.bank_id, (countByBank.get(q.bank_id) || 0) + 1);
+    }
+
+    return {
+      data: (banks || []).map((bank) => {
+        const mapping = mappings.find((m) => m.question_bank_id === bank.id);
+        return {
+          ...bank,
+          total_questions: countByBank.get(bank.id) || 0,
+          questions_to_pick: Number(mapping?.questions_to_pick || 0),
+        };
+      }),
+    };
   }
 
   static async get(id) {
     return supabase.from(TABLE).select("*").eq("id", id).single();
   }
 
-  static async create(data) {
-    const { assessment_id, questions_to_pick, ...bankData } = data;
+  static async create(input) {
+    const {
+      assessment_id,
+      questions_to_pick,
+      ...rawBank
+    } = input || {};
 
     if (!assessment_id) {
+      return { error: new Error("Assessment ID is required.") };
+    }
+
+    const bankData = {
+      name: String(rawBank.name || "").trim(),
+      description: rawBank.description || null,
+      difficulty: rawBank.difficulty || "Medium",
+      estimated_minutes: Number(rawBank.estimated_minutes || 30),
+      is_active: rawBank.is_active !== false,
+      total_questions: 0,
+      version: Number(rawBank.version || 1),
+    };
+
+    if (!bankData.name) {
+      return { error: new Error("Question bank name is required.") };
+    }
+
+    // Verify assessment before creating a bank/mapping.
+    const { data: assessment, error: assessmentError } = await supabase
+      .from("assessments")
+      .select("id")
+      .eq("id", assessment_id)
+      .single();
+
+    if (assessmentError || !assessment) {
       return {
-        error: {
-          message: "Assessment ID is required.",
-        },
+        error: assessmentError || new Error("Assessment not found."),
       };
     }
 
-    if (!bankData.name?.trim()) {
-      return {
-        error: {
-          message: "Question bank name is required.",
-        },
-      };
-    }
-
-    // Question banks are intentionally independent of category/subject.
-    // Reusable banks are matched by name only.
-    bankData.name = bankData.name.trim();
-    delete bankData.description;
-    delete bankData.difficulty;
-    delete bankData.estimated_minutes;
-    bankData.subject_id = null;
-
-    // ---------------------------------------------------------
-    // 2. Check whether this reusable bank already exists
-    // ---------------------------------------------------------
-    const { data: existingBank, error: existingBankError } = await supabase
-      .from(TABLE)
-      .select("*")
-      .eq("name", bankData.name)
-      .maybeSingle();
-
-    if (existingBankError) {
-      return { error: existingBankError };
-    }
-
-    // ---------------------------------------------------------
-    // 3. Existing bank found
-    // ---------------------------------------------------------
-    if (existingBank) {
-      console.log(
-        "QUESTION BANK ALREADY EXISTS:",
-        existingBank.id,
-        existingBank.name,
-      );
-
-      // Reactivate if it was previously disabled
-      if (existingBank.is_active === false) {
-        const { data: activatedBank, error: activateError } = await supabase
-          .from(TABLE)
-          .update({
-            is_active: true,
-          })
-          .eq("id", existingBank.id)
-          .select()
-          .single();
-
-        if (activateError) {
-          return { error: activateError };
-        }
-
-        existingBank.is_active = activatedBank.is_active;
-      }
-
-      // -------------------------------------------------------
-      // 4. Check whether this bank is already mapped
-      //    to this assessment
-      // -------------------------------------------------------
-      const { data: existingMapping, error: mappingCheckError } = await supabase
-        .from(MAPPING_TABLE)
-        .select("assessment_id, question_bank_id, questions_to_pick")
-        .eq("assessment_id", assessment_id)
-        .eq("question_bank_id", existingBank.id)
-        .maybeSingle();
-
-      if (mappingCheckError) {
-        return { error: mappingCheckError };
-      }
-
-      // -------------------------------------------------------
-      // 5. Mapping already exists
-      // -------------------------------------------------------
-      if (existingMapping) {
-        const { data: updatedMapping, error: updateMappingError } =
-          await supabase
-            .from(MAPPING_TABLE)
-            .update({
-              questions_to_pick: Number(questions_to_pick),
-            })
-            .eq("assessment_id", assessment_id)
-            .eq("question_bank_id", existingBank.id)
-            .select()
-            .single();
-
-        if (updateMappingError) {
-          return { error: updateMappingError };
-        }
-
-        return {
-          data: {
-            ...existingBank,
-            questions_to_pick: updatedMapping.questions_to_pick,
-            reused: true,
-          },
-        };
-      }
-
-      // -------------------------------------------------------
-      // 6. Existing reusable bank, but new assessment
-      //    Create only the mapping
-      // -------------------------------------------------------
-      const { data: newMapping, error: newMappingError } = await supabase
-        .from(MAPPING_TABLE)
-        .insert({
-          assessment_id,
-          question_bank_id: existingBank.id,
-          questions_to_pick: Number(questions_to_pick),
-        })
-        .select()
-        .single();
-
-      if (newMappingError) {
-        return { error: newMappingError };
-      }
-
-      return {
-        data: {
-          ...existingBank,
-          questions_to_pick: newMapping.questions_to_pick,
-          reused: true,
-        },
-      };
-    }
-
-    // ---------------------------------------------------------
-    // 7. No existing bank → create a NEW reusable bank
-    // ---------------------------------------------------------
     const { data: bank, error: bankError } = await supabase
       .from(TABLE)
       .insert(bankData)
       .select()
       .single();
 
-    if (bankError) {
-      return { error: bankError };
+    if (bankError) return { error: bankError };
+
+    const pick = Number(questions_to_pick || 0);
+
+    // Avoid depending on a specific unique constraint for upsert.
+    const { data: existingMapping, error: lookupError } = await supabase
+      .from(MAPPING_TABLE)
+      .select("id")
+      .eq("assessment_id", assessment_id)
+      .eq("question_bank_id", bank.id)
+      .maybeSingle();
+
+    if (lookupError) {
+      await supabase.from(TABLE).delete().eq("id", bank.id);
+      return { error: lookupError };
     }
 
-    // ---------------------------------------------------------
-    // 8. Map the new bank to this assessment
-    // ---------------------------------------------------------
-    const { data: newMapping, error: mappingError } = await supabase
-      .from(MAPPING_TABLE)
-      .insert({
-        assessment_id,
-        question_bank_id: bank.id,
-        questions_to_pick: Number(questions_to_pick),
-      })
-      .select()
-      .single();
+    let mappingError = null;
 
-    // Rollback bank if mapping fails
+    if (existingMapping?.id) {
+      ({ error: mappingError } = await supabase
+        .from(MAPPING_TABLE)
+        .update({ questions_to_pick: pick })
+        .eq("id", existingMapping.id));
+    } else {
+      ({ error: mappingError } = await supabase
+        .from(MAPPING_TABLE)
+        .insert({
+          assessment_id,
+          question_bank_id: bank.id,
+          questions_to_pick: pick,
+        }));
+    }
+
     if (mappingError) {
       await supabase.from(TABLE).delete().eq("id", bank.id);
-
       return { error: mappingError };
     }
 
     return {
       data: {
         ...bank,
-        questions_to_pick: newMapping.questions_to_pick,
-        reused: false,
+        assessment_id,
+        questions_to_pick: pick,
+        total_questions: 0,
       },
     };
   }
 
-  static async update(id, data) {
-    const { questions_to_pick, assessment_id, ...bankData } = data;
+  static async update(id, input) {
+    const { questions_to_pick, assessment_id, ...rawBank } = input || {};
 
-    if (bankData.difficulty) {
-      bankData.difficulty = bankData.difficulty.toUpperCase();
+    const bankData = { ...rawBank };
+    if (bankData.name !== undefined) bankData.name = String(bankData.name).trim();
+    if (bankData.estimated_minutes !== undefined) {
+      bankData.estimated_minutes = Number(bankData.estimated_minutes);
     }
 
     const { data: bank, error } = await supabase
@@ -247,9 +168,7 @@ class QuestionBank {
     if (assessment_id && questions_to_pick !== undefined) {
       const { error: mappingError } = await supabase
         .from(MAPPING_TABLE)
-        .update({
-          questions_to_pick,
-        })
+        .update({ questions_to_pick: Number(questions_to_pick) })
         .eq("assessment_id", assessment_id)
         .eq("question_bank_id", id);
 
@@ -260,21 +179,18 @@ class QuestionBank {
   }
 
   static async delete(id) {
-    // Find the assessment mapping first
     const { data: mapping, error: mappingError } = await supabase
       .from(MAPPING_TABLE)
       .select("assessment_id")
       .eq("question_bank_id", id)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     if (mappingError) return { error: mappingError };
 
-    // Soft delete the question bank
     const { data: bank, error } = await supabase
       .from(TABLE)
-      .update({
-        is_active: false,
-      })
+      .update({ is_active: false })
       .eq("id", id)
       .select()
       .single();
@@ -283,79 +199,8 @@ class QuestionBank {
 
     return {
       data: {
-        assessmentId: mapping.assessment_id,
+        assessmentId: mapping?.assessment_id || null,
         questionBank: bank,
-      },
-    };
-  }
-
-  static async duplicate(id) {
-    // Get original question bank
-    const { data: originalBank, error: bankError } = await supabase
-      .from(TABLE)
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (bankError) return { error: bankError };
-
-    // Get assessment mapping
-    const { data: mapping, error: mappingError } = await supabase
-      .from(MAPPING_TABLE)
-      .select("assessment_id, questions_to_pick")
-      .eq("question_bank_id", id)
-      .single();
-
-    if (mappingError) return { error: mappingError };
-
-    // Remove database-generated fields
-    const {
-      id: originalId,
-      created_at,
-      updated_at,
-      ...bankData
-    } = originalBank;
-
-    // Create duplicate name
-    bankData.name = `${originalBank.name} Copy`;
-
-    bankData.version = (originalBank.version || 1) + 1;
-
-    bankData.created_at = new Date().toISOString();
-    bankData.updated_at = new Date().toISOString();
-
-    // Create duplicated bank
-    const { data: duplicatedBank, error: createError } = await supabase
-      .from(TABLE)
-      .insert(bankData)
-      .select()
-      .single();
-
-    if (createError) return { error: createError };
-
-    // Create assessment mapping for duplicated bank
-    const { error: newMappingError } = await supabase
-      .from(MAPPING_TABLE)
-      .insert({
-        assessment_id: mapping.assessment_id,
-        question_bank_id: duplicatedBank.id,
-        questions_to_pick: mapping.questions_to_pick,
-      });
-
-    if (newMappingError) {
-      // Roll back duplicated bank
-      await supabase.from(TABLE).delete().eq("id", duplicatedBank.id);
-
-      return { error: newMappingError };
-    }
-
-    return {
-      data: {
-        assessmentId: mapping.assessment_id,
-        questionBank: {
-          ...duplicatedBank,
-          questions_to_pick: mapping.questions_to_pick,
-        },
       },
     };
   }

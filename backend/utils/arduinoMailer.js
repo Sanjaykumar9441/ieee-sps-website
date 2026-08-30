@@ -1,99 +1,67 @@
-/**
- * Arduino Days 2026 - Brevo Transactional Email Sender
- * Uses Brevo HTTP API through axios.
- */
-
 const axios = require("axios");
 
-const sendMail = async (
+function requireBrevoEnv() {
+  const apiKey = process.env.BREVO_API_KEY;
+  const senderEmail = process.env.BREVO_SENDER_EMAIL;
+  const senderName = process.env.BREVO_SENDER_NAME || "IEEE SPS";
+
+  if (!apiKey || !senderEmail) {
+    throw new Error(
+      "BREVO_API_KEY and BREVO_SENDER_EMAIL must be configured.",
+    );
+  }
+
+  return { apiKey, senderEmail, senderName };
+}
+
+async function sendArduinoEmail({
   to,
   subject,
-  htmlContent,
-  pdfBuffer,
-  filename
-) => {
-  try {
-    const apiKey = process.env.BREVO_API_KEY;
-    const senderEmail = process.env.BREVO_SENDER_EMAIL;
-    const senderName =
-      process.env.BREVO_SENDER_NAME || "IEEE SPS Student Branch Chapter";
+  html,
+  attachments = [],
+  cc = [],
+}) {
+  const { apiKey, senderEmail, senderName } = requireBrevoEnv();
 
-    if (!apiKey) {
-      throw new Error("BREVO_API_KEY is not configured");
-    }
+  const normalize = (items) =>
+    (Array.isArray(items) ? items : [items])
+      .filter(Boolean)
+      .map((item) =>
+        typeof item === "string"
+          ? { email: item }
+          : { email: item.email, name: item.name },
+      )
+      .filter((item) => item.email);
 
-    if (!senderEmail) {
-      throw new Error("BREVO_SENDER_EMAIL is not configured");
-    }
+  const payload = {
+    sender: { email: senderEmail, name: senderName },
+    to: normalize(to),
+    subject,
+    htmlContent: html,
+  };
 
-    const email = {
-      sender: {
-        name: senderName,
-        email: senderEmail,
-      },
+  const ccRows = normalize(cc);
+  if (ccRows.length) payload.cc = ccRows;
 
-      to: [
-        {
-          email: to,
-        },
-      ],
-
-      subject,
-
-      htmlContent,
-
-      // Plain-text fallback
-      textContent:
-        "Your Arduino Days 2026 registration has been confirmed. Please see the attached event pass.",
-
-      headers: {
-        "X-Mailer": "ArduinoRegistrationMailer",
-        "Auto-Submitted": "auto-generated",
-        Precedence: "bulk",
-      },
-
-      // Keep PDF attachment functionality
-      attachment: pdfBuffer
-        ? [
-            {
-              name: filename || "event-pass.pdf",
-              content: pdfBuffer.toString("base64"),
-            },
-          ]
-        : [],
-    };
-
-    const response = await axios.post(
-      "https://api.brevo.com/v3/smtp/email",
-      email,
-      {
-        headers: {
-          accept: "application/json",
-          "api-key": apiKey,
-          "content-type": "application/json",
-        },
-        timeout: 15000,
-      }
-    );
-
-    console.log(
-      "✅ Arduino registration email sent:",
-      to,
-      response.data?.messageId || ""
-    );
-
-    return response.data;
-  } catch (error) {
-    const brevoError =
-      error?.response?.data?.message ||
-      error?.response?.data?.code ||
-      error?.message ||
-      "Brevo email sending failed";
-
-    console.error("❌ Arduino Brevo Mail error:", brevoError);
-
-    throw new Error(brevoError);
+  if (attachments.length) {
+    payload.attachment = attachments.map((a) => ({
+      name: a.name,
+      content: Buffer.isBuffer(a.content)
+        ? a.content.toString("base64")
+        : a.content,
+    }));
   }
-};
 
-module.exports = sendMail;
+  if (!payload.to.length) throw new Error("Arduino email recipient is missing.");
+
+  return axios.post("https://api.brevo.com/v3/smtp/email", payload, {
+    headers: {
+      accept: "application/json",
+      "api-key": apiKey,
+      "content-type": "application/json",
+    },
+    timeout: 30000,
+  });
+}
+
+module.exports = { sendArduinoEmail };

@@ -1,39 +1,19 @@
-const { supabase } = require("../lib/supabase");
+/*
+Use this as the replacement for the leaderboard refresh portion of your
+adminForceSubmitController.js.
 
-const engine = require("../services/assessmentEngine");
-const scoring = require("../services/scoringService");
-const session = require("../services/studentSessionService");
-const liveEvents = require("../services/liveEvents");
+The previous implementation selected `department` and `section` from
+assessment_allowed_students, but the supplied Supabase schema contains
+`branch` only. That causes force-submit/leaderboard refresh failures.
 
-/* ============================================================
-   PRIVATE HELPERS
-============================================================ */
+Also, keep the exact assessment_attempt_questions marks/negative_marks frozen
+at attempt creation. Do not calculate using a hard-coded 0 negative mark.
+*/
 
 async function refreshLeaderboard(assessmentId) {
-  /*
-  ----------------------------------------------------
-  Assessment
-  ----------------------------------------------------
-  */
-
-  const { data: assessment, error: assessmentError } = await supabase
-    .from("assessments")
-    .select("total_questions, marks_per_question")
-    .eq("id", assessmentId)
-    .single();
-
-  if (assessmentError) throw assessmentError;
-
-  /*
-  ----------------------------------------------------
-  Submitted Attempts
-  ----------------------------------------------------
-  */
-
-  const { data, error } = await supabase
+  const { data: attempts, error } = await supabase
     .from("assessment_attempts")
-    .select(
-      `
+    .select(`
       id,
       student_id,
       score,
@@ -43,448 +23,103 @@ async function refreshLeaderboard(assessmentId) {
       percentage,
       submitted_at,
       started_at,
-      assessment_allowed_students(
-        name,
-        roll_no,
-        department,
-        section
-      )
-    `,
-    )
+      status
+    `)
     .eq("assessment_id", assessmentId)
-    .eq("status", "SUBMITTED");
+    .in("status", ["SUBMITTED", "DISQUALIFIED"]);
 
   if (error) throw error;
 
-  /*
-  ----------------------------------------------------
-  Calculate Leaderboard
-  ----------------------------------------------------
-  */
+  const ids = [...new Set((attempts || []).map((a) => a.student_id))];
 
-  const maximumMarks =
-    Number(assessment.total_questions || 0) *
-    Number(assessment.marks_per_question || 0);
+  let students = [];
+  if (ids.length) {
+    const { data, error: studentError } = await supabase
+      .from("assessment_allowed_students")
+      .select("id, name, roll_no, email, branch")
+      .in("id", ids);
 
-  const leaderboard = (data || [])
-    .map((student) => {
-      const submittedAt = student.submitted_at
-        ? new Date(student.submitted_at).getTime()
-        : null;
+    if (studentError) throw studentError;
+    students = data || [];
+  }
 
-      const startedAt = student.started_at
-        ? new Date(student.started_at).getTime()
-        : null;
+  const byId = new Map(students.map((s) => [s.id, s]));
 
+  const rows = (attempts || [])
+    .map((a) => {
+      const s = byId.get(a.student_id);
       const timeTaken =
-        submittedAt !== null && startedAt !== null
-          ? Math.max(0, Math.floor((submittedAt - startedAt) / 1000))
-          : 0;
-
-      const scorePercentage =
-        maximumMarks > 0
-          ? Number(
-              ((Number(student.score || 0) / maximumMarks) * 100).toFixed(2),
+        a.started_at && a.submitted_at
+          ? Math.max(
+              0,
+              Math.floor(
+                (new Date(a.submitted_at).getTime() -
+                  new Date(a.started_at).getTime()) /
+                  1000,
+              ),
             )
           : 0;
 
       return {
-        attemptId: student.id,
-
-        studentId: student.student_id,
-
-        name: student.assessment_allowed_students?.name,
-
-        rollNo: student.assessment_allowed_students?.roll_no,
-
-        department: student.assessment_allowed_students?.department,
-
-        section: student.assessment_allowed_students?.section,
-
-        status: "SUBMITTED",
-
-        score: Number(student.score || 0),
-
-        correct: Number(student.correct || 0),
-
-        wrong: Number(student.wrong || 0),
-
-        unanswered: Number(student.unanswered || 0),
-
-        percentage: Number(Number(student.percentage || 0).toFixed(2)),
-
-        scorePercentage,
-
-        timeTaken,
-
-        submittedAt: student.submitted_at,
-
-        startedAt: student.started_at,
+        assessment_id: assessmentId,
+        student_id: a.student_id,
+        rank: 0,
+        score: Number(a.score || 0),
+        correct_answers: Number(a.correct || 0),
+        wrong_answers: Number(a.wrong || 0),
+        unanswered: Number(a.unanswered || 0),
+        percentage: Number(a.percentage || 0),
+        time_taken_seconds: timeTaken,
+        updated_at: new Date().toISOString(),
+        // The UI can join/merge these fields from the student table.
+        name: s?.name || "",
+        roll_no: s?.roll_no || "",
+        email: s?.email || "",
+        branch: s?.branch || "",
+        status: a.status,
+        attempt_id: a.id,
       };
     })
     .sort((a, b) => {
-      /*
-      --------------------------------------------------
-      1. Higher score first
-      --------------------------------------------------
-      */
-
-      if (b.score !== a.score) {
-        return b.score - a.score;
+      if (b.score !== a.score) return b.score - a.score;
+      if (a.time_taken_seconds !== b.time_taken_seconds) {
+        return a.time_taken_seconds - b.time_taken_seconds;
       }
-
-      /*
-      --------------------------------------------------
-      2. Earlier submission first
-      --------------------------------------------------
-      */
-
-      const aTime = a.submittedAt
-        ? new Date(a.submittedAt).getTime()
-        : Number.MAX_SAFE_INTEGER;
-
-      const bTime = b.submittedAt
-        ? new Date(b.submittedAt).getTime()
-        : Number.MAX_SAFE_INTEGER;
-
-      if (aTime !== bTime) {
-        return aTime - bTime;
-      }
-
-      /*
-      --------------------------------------------------
-      3. Roll number
-      --------------------------------------------------
-      */
-
-      return (a.rollNo || "").localeCompare(b.rollNo || "");
+      return a.roll_no.localeCompare(b.roll_no);
     })
-    .map((student, index) => ({
-      ...student,
-      rank: index + 1,
+    .map((row, index) => ({ ...row, rank: index + 1 }));
+
+  // Rebuild the materialized leaderboard without relying on a missing
+  // live_leaderboard table/view.
+  const { error: deleteError } = await supabase
+    .from("assessment_leaderboard")
+    .delete()
+    .eq("assessment_id", assessmentId);
+
+  if (deleteError) throw deleteError;
+
+  if (rows.length) {
+    const insertRows = rows.map((r) => ({
+      assessment_id: r.assessment_id,
+      student_id: r.student_id,
+      rank: r.rank,
+      score: r.score,
+      correct_answers: r.correct_answers,
+      wrong_answers: r.wrong_answers,
+      unanswered: r.unanswered,
+      percentage: r.percentage,
+      time_taken_seconds: r.time_taken_seconds,
+      updated_at: r.updated_at,
     }));
 
-  /*
-  ----------------------------------------------------
-  Emit same structure used by REST leaderboard
-  ----------------------------------------------------
-  */
+    const { error: insertError } = await supabase
+      .from("assessment_leaderboard")
+      .insert(insertRows);
 
-  liveEvents.emitLeaderboard(assessmentId, leaderboard);
+    if (insertError) throw insertError;
+  }
+
+  return rows;
 }
 
-async function refreshDashboard(assessmentId) {
-  const { count: registeredStudents } = await supabase
-    .from("assessment_allowed_students")
-    .select("*", {
-      count: "exact",
-      head: true,
-    })
-    .eq("assessment_id", assessmentId);
-
-  const { data: attempts } = await supabase
-    .from("assessment_attempts")
-    .select("*")
-    .eq("assessment_id", assessmentId);
-
-  const analytics = {
-    registeredStudents,
-
-    startedStudents: attempts.length,
-
-    submittedStudents: attempts.filter((a) => a.status === "SUBMITTED").length,
-
-    inProgressStudents: attempts.filter((a) => a.status === "IN_PROGRESS")
-      .length,
-
-    disqualifiedStudents: attempts.filter((a) => a.status === "DISQUALIFIED")
-      .length,
-  };
-
-  liveEvents.emitDashboardAnalytics(assessmentId, analytics);
-}
-
-/* ============================================================
-   FORCE SUBMIT ONE STUDENT
-============================================================ */
-
-exports.forceSubmit = async (req, res) => {
-  try {
-    const { attemptId } = req.params;
-
-    if (!attemptId) {
-      return res.status(400).json({
-        success: false,
-        message: "Attempt ID is required.",
-      });
-    }
-
-    const attempt = await engine.getAttempt(attemptId);
-
-    if (!attempt) {
-      return res.status(404).json({
-        success: false,
-        message: "Attempt not found.",
-      });
-    }
-
-    if (attempt.status === "SUBMITTED" || attempt.status === "DISQUALIFIED") {
-      return res.json({
-        success: true,
-        message: "Attempt already finished.",
-      });
-    }
-
-    const result = await scoring.calculateScore(attemptId);
-
-    const updated = await engine.finishAttempt(attemptId, result);
-
-    await supabase.from("assessment_activity").insert({
-      attempt_id: attemptId,
-      activity_type: "FORCE_SUBMIT",
-      metadata: {
-        source: "ADMIN",
-      },
-    });
-
-    await session.unlockStudent(updated.assessment_id, updated.student_id);
-
-    liveEvents.emitSubmitted(updated.assessment_id, updated);
-
-    liveEvents.emitStudentSubmitted(updated.assessment_id);
-
-    await refreshLeaderboard(updated.assessment_id);
-
-    await refreshDashboard(updated.assessment_id);
-
-    return res.json({
-      success: true,
-      message: "Assessment force submitted successfully.",
-
-      score: result.score,
-
-      correct: result.correct,
-
-      wrong: result.wrong,
-
-      unanswered: result.unanswered,
-    });
-  } catch (err) {
-    console.error(err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
-
-/* ============================================================
-   FORCE SUBMIT ALL
-============================================================ */
-
-exports.forceSubmitAll = async (req, res) => {
-  try {
-    const { assessmentId } = req.params;
-
-    if (!assessmentId) {
-      return res.status(400).json({
-        success: false,
-        message: "Assessment ID is required.",
-      });
-    }
-
-    const { data: attempts, error } = await supabase
-      .from("assessment_attempts")
-      .select("*")
-      .eq("assessment_id", assessmentId)
-      .eq("status", "IN_PROGRESS");
-
-    if (error) throw error;
-
-    let processed = 0;
-    let skipped = 0;
-    let failed = 0;
-
-    for (const attempt of attempts || []) {
-      try {
-        if (
-          attempt.status === "SUBMITTED" ||
-          attempt.status === "DISQUALIFIED"
-        ) {
-          skipped++;
-          continue;
-        }
-
-        const result = await scoring.calculateScore(attempt.id);
-
-        const updated = await engine.finishAttempt(attempt.id, result);
-
-        await supabase.from("assessment_activity").insert({
-          attempt_id: attempt.id,
-          activity_type: "FORCE_SUBMIT",
-          metadata: {
-            source: "ADMIN",
-          },
-        });
-
-        await session.unlockStudent(updated.assessment_id, updated.student_id);
-
-        liveEvents.emitSubmitted(updated.assessment_id, updated);
-
-        liveEvents.emitStudentSubmitted(updated.assessment_id);
-
-        processed++;
-      } catch (err) {
-        console.error(
-          `Force submit failed for attempt ${attempt.id}:`,
-          err.message,
-        );
-
-        failed++;
-      }
-    }
-
-    /*
---------------------------------------------------------
-Refresh Dashboard + Leaderboard once
---------------------------------------------------------
-*/
-
-    await refreshLeaderboard(assessmentId);
-
-    await refreshDashboard(assessmentId);
-
-    return res.json({
-      success: true,
-
-      processed,
-      skipped,
-      failed,
-
-      message: "Force submit completed successfully.",
-    });
-  } catch (err) {
-    console.error(err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
-
-/* ============================================================
-   DISQUALIFY ONE STUDENT
-============================================================ */
-
-exports.disqualify = async (req, res) => {
-  try {
-    const { attemptId } = req.params;
-    const { reason } = req.body;
-
-    if (!attemptId) {
-      return res.status(400).json({
-        success: false,
-        message: "Attempt ID is required.",
-      });
-    }
-
-    const disqualifiedReason = reason?.trim() || "Disqualified by admin";
-
-    /* --------------------------------------------------------
-       Get Attempt
-    -------------------------------------------------------- */
-
-    const attempt = await engine.getAttempt(attemptId);
-
-    if (!attempt) {
-      return res.status(404).json({
-        success: false,
-        message: "Attempt not found.",
-      });
-    }
-
-    /* --------------------------------------------------------
-       Already Finished
-    -------------------------------------------------------- */
-
-    if (attempt.status === "SUBMITTED") {
-      return res.status(400).json({
-        success: false,
-        message: "Submitted attempt cannot be disqualified.",
-      });
-    }
-
-    if (attempt.status === "DISQUALIFIED") {
-      return res.json({
-        success: true,
-        message: "Attempt already disqualified.",
-      });
-    }
-
-    /* --------------------------------------------------------
-       Mark Attempt as Disqualified
-    -------------------------------------------------------- */
-
-    const result = await scoring.calculateScore(attemptId);
-
-    const updated = await engine.finishAttempt(
-      attemptId,
-      result,
-      "DISQUALIFIED",
-    );
-
-    const { data: updatedWithReason, error: reasonError } = await supabase
-      .from("assessment_attempts")
-      .update({
-        disqualified_reason: disqualifiedReason,
-      })
-      .eq("id", attemptId)
-      .select()
-      .single();
-
-    if (reasonError) throw reasonError;
-
-    /* --------------------------------------------------------
-       Unlock Student Session
-    -------------------------------------------------------- */
-
-    await session.unlockStudent(updated.assessment_id, updated.student_id);
-
-    /* --------------------------------------------------------
-       Live Events
-    -------------------------------------------------------- */
-
-    liveEvents.emitSubmitted(
-      updatedWithReason.assessment_id,
-      updatedWithReason,
-    );
-
-    liveEvents.emitDisqualified(
-      updatedWithReason.assessment_id,
-      updatedWithReason,
-    );
-
-    /* --------------------------------------------------------
-       Refresh Leaderboard + Dashboard
-    -------------------------------------------------------- */
-
-    await refreshLeaderboard(updatedWithReason.assessment_id);
-
-    await refreshDashboard(updatedWithReason.assessment_id);
-
-    return res.json({
-      success: true,
-      message: "Student disqualified successfully.",
-      attempt: updatedWithReason,
-    });
-  } catch (err) {
-    console.error(err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
+module.exports = { refreshLeaderboard };
