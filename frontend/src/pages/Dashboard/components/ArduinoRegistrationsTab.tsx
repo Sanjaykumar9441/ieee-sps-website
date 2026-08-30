@@ -239,7 +239,7 @@ const ArduinoRegistrationsTab = ({
   const fetchRegistrations = async () => {  
     try {  
       const res = await axios.get(  
-        "VITE_API_URL/api/registrations",  
+        `${import.meta.env.VITE_API_URL}/api/registrations`,
         {  
           headers: { Authorization: `Bearer ${token}` },  
         }  
@@ -269,7 +269,7 @@ const ArduinoRegistrationsTab = ({
     if (!confirm("Confirm this registration?")) return;  
     try {  
       await axios.put(  
-        `VITE_API_URL/api/confirm/${id}`,  
+        `${import.meta.env.VITE_API_URL}/api/confirm/${id}`,
         {},  
         { headers: { Authorization: `Bearer ${token}` } }  
       );  
@@ -281,7 +281,7 @@ const ArduinoRegistrationsTab = ({
 
   const deleteRegistration = async (id: string) => {  
     if (!confirm("Delete this registration?")) return;  
-    await axios.delete(`VITE_API_URL/api/${id}`, {  
+    await axios.delete(`${import.meta.env.VITE_API_URL}/api/${id}`, {
       headers: { Authorization: `Bearer ${token}` },  
     });  
     fetchRegistrations();  

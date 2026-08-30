@@ -109,7 +109,7 @@ const JoinSPS = () => {
 
     try {
       setLoading(true);
-      await axios.post("VITE_API_URL/api/sps-applications", {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/sps-applications`, {
         ...formData,
         department: formData.department === "Other" ? formData.otherDepartment : formData.department,
       });

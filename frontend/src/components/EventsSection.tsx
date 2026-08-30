@@ -16,7 +16,7 @@ const EventsSection = () => {
   const fetchEvents = async () => {
     try {
       const res = await axios.get(
-        "VITE_API_URL/events",
+        `${import.meta.env.VITE_API_URL}/events`,
       );
 
       setEvents(Array.isArray(res.data) ? res.data : []);

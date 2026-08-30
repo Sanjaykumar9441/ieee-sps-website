@@ -47,35 +47,24 @@ export default function StudentExamPortal({
       return;
     }
 
-    // Open the exam tab synchronously from the user's click. Opening it
-    // before the async API request prevents popup blockers from treating
-    // the new tab as a non-user-initiated window.
-    const examWindow = window.open("about:blank", "_blank");
-
-    if (!examWindow) {
-      toast.error("Please allow pop-ups for this site to start the exam.");
-      return;
-    }
-
     try {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch (fullscreenError) {
+        console.warn("Fullscreen request was not allowed:", fullscreenError);
+      }
+
       const result = await startAssessment(assessmentId);
 
-      // The new tab shares localStorage with this tab. The exam page will
-      // resume this attempt using the attempt/session stored by startAssessment.
-      const examUrl = new URL(window.location.href);
-      examUrl.searchParams.set("exam", "1");
+      if (!result?.attemptId) {
+        throw new Error("Assessment started but no attempt was created.");
+      }
 
-      examWindow.location.replace(examUrl.toString());
-
-      // Keep the current tab on the instructions page rather than rendering
-      // the exam here. The new tab is the dedicated examination environment.
-      setExamData(null);
-      // The exam is intentionally rendered only in the newly opened tab.
-      // Keep the original instructions tab untouched.
-      void onStartExam;
-      void result;
+      setExamData(result);
+      onStartExam(assessmentId);
     } catch (err: any) {
-      examWindow.close();
       console.error("[EXAM] Unable to start:", err);
 
       toast.error(
@@ -96,7 +85,10 @@ export default function StudentExamPortal({
       const now = Date.now();
 
       if (now < startTime) {
-        const remaining = Math.max(0, Math.floor((startTime - now) / 1000));
+        const remaining = Math.max(
+          0,
+          Math.floor((startTime - now) / 1000),
+        );
 
         setCountdown(remaining);
         setExamStatus("NOT_STARTED");
@@ -125,7 +117,6 @@ export default function StudentExamPortal({
 
     const loadAssessment = async () => {
       try {
-        const isExamTab = new URLSearchParams(window.location.search).get("exam") === "1";
         const result = await checkAssessment(assessmentId);
 
         if (!mounted) return;
@@ -139,7 +130,9 @@ export default function StudentExamPortal({
 
         if (now < startTime) {
           setExamStatus("NOT_STARTED");
-          setCountdown(Math.max(0, Math.floor((startTime - now) / 1000)));
+          setCountdown(
+            Math.max(0, Math.floor((startTime - now) / 1000)),
+          );
         } else if (now < endTime) {
           setExamStatus("LIVE");
           setCountdown(0);
@@ -151,7 +144,7 @@ export default function StudentExamPortal({
         const savedAttemptId = localStorage.getItem("studentAttemptId");
 
         // Do not resume before the official exam start time.
-        if (isExamTab && savedAttemptId && now >= startTime && now < endTime) {
+        if (savedAttemptId && now >= startTime && now < endTime) {
           try {
             const resumed = await resumeAssessment(
               assessmentId,
@@ -166,7 +159,9 @@ export default function StudentExamPortal({
             console.log("[EXAM] No active attempt to resume.", resumeError);
 
             localStorage.removeItem("studentAttemptId");
-            localStorage.removeItem(`studentCurrentQuestion:${savedAttemptId}`);
+            localStorage.removeItem(
+              `studentCurrentQuestion:${savedAttemptId}`,
+            );
           }
         }
 
@@ -224,6 +219,9 @@ export default function StudentExamPortal({
       <StudentLogin
         assessmentId={assessmentId}
         assessmentTitle={assessment.title}
+        onLoggedIn={() => {
+          setStep("instructions");
+        }}
         onOtpSent={(studentEmail) => {
           setEmail(studentEmail);
           setStep("otp");

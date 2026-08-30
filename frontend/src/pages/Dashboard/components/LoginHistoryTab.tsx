@@ -21,7 +21,7 @@ const LoginHistoryTab = () => {
       setRefreshing(true);  
       const token = localStorage.getItem("token");  
       const res = await axios.get(  
-        "VITE_API_URL/api/admin-access",  
+        `${import.meta.env.VITE_API_URL}/api/admin-access`,
         { headers: { Authorization: `Bearer ${token}` } },  
       );  
       setAdmins(res.data);  
@@ -39,7 +39,7 @@ const LoginHistoryTab = () => {
       const token = localStorage.getItem("token");
 
       await axios.delete(  
-        "VITE_API_URL/api/admin-access/clear-all",  
+        `${import.meta.env.VITE_API_URL}/api/admin-access/clear-all`, 
         {  
           headers: {  
             Authorization: `Bearer ${token}`,  
@@ -60,7 +60,7 @@ const LoginHistoryTab = () => {
       const token = localStorage.getItem("token");
 
       await axios.delete(  
-        `VITE_API_URL/api/admin-access/${id}/login-history`,  
+        `${import.meta.env.VITE_API_URL}/api/admin-access/${id}/login-history`,
         {  
           headers: {  
             Authorization: `Bearer ${token}`,  

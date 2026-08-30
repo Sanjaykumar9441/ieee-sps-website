@@ -15,9 +15,9 @@ const TeamSection = () => {
 
   const fetchMembers = async () => {
     try {
-      const res = await axios.get("VITE_API_URL/team");
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/team`);
 
-      setMembers(res.data);
+      setMembers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.log(err);
     }

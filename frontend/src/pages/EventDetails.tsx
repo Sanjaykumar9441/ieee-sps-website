@@ -20,7 +20,7 @@ const EventDetails = () => {
   useEffect(() => { fetchEvent(); }, []);
 
   const fetchEvent = async () => {
-    const res = await axios.get(`VITE_API_URL/events/${id}`);
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/events/${id}`);
     setEvent(res.data);
   };
 

@@ -16,7 +16,7 @@ const TeamDetails = () => {
   const fetchMember = async () => {
     try {
       const res = await axios.get(
-        `VITE_API_URL/team/${id}`,
+        `${import.meta.env.VITE_API_URL}/team/${id}`,
       );
       setMember(res.data);
     } catch (err) {

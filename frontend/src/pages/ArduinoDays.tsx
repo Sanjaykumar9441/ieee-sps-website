@@ -53,7 +53,7 @@ const GalleryTabs = () => {
   const fetchImages = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`VITE_API_URL/api/gallery/${day}`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/gallery/${day}`);
       const data = await res.json();
       setImages(data);
     } catch (err) {

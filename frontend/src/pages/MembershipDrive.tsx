@@ -102,7 +102,7 @@ const MembershipDrive = () => {
   const fetchSettings = async () => {
     try {
       const res = await axios.get(
-        "VITE_API_URL/api/membership/settings",
+        `${import.meta.env.VITE_API_URL}/api/membership/settings`,
       );
 
       setSettings(res.data);
@@ -168,7 +168,7 @@ const MembershipDrive = () => {
     try {
       setSubmitting(true);
       await axios.post(
-        "VITE_API_URL/api/membership/register",
+        `${import.meta.env.VITE_API_URL}/api/membership/register`,
         {
           event: EVENT.title,
           ...formData,

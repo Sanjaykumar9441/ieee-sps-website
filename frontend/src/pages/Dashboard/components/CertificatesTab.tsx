@@ -15,7 +15,7 @@ import {
   Square,
 } from "lucide-react";
 
-const API = "VITE_API_URL";
+const API = import.meta.env.VITE_API_URL;
 
 const CERTIFICATE_TYPES = [
   { value: "PARTICIPATION", label: "Participation" },

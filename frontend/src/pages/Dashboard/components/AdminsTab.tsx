@@ -39,7 +39,7 @@ const AdminsTab = () => {
 
   const fetchMembers = async () => {
     try {
-      const res = await axios.get("VITE_API_URL/team");
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/team`);
       setMembers(res.data);
     } catch (err) {
       console.log(err);
@@ -50,7 +50,7 @@ const AdminsTab = () => {
     try {
       const token = localStorage.getItem("token");
       const res = await axios.get(
-        "VITE_API_URL/api/admin-access",
+        `${import.meta.env.VITE_API_URL}/api/admin-access`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       setAdmins(res.data);
@@ -63,7 +63,7 @@ const AdminsTab = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.delete(
-        `VITE_API_URL/api/admin-access/${id}`,
+        `${import.meta.env.VITE_API_URL}/api/admin-access/${id}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       fetchAdmins();
@@ -77,7 +77,7 @@ const AdminsTab = () => {
   const resetPassword = async (id: string) => {
     try {
       await axios.post(
-        `VITE_API_URL/api/admin-access/reset-password/${id}`,
+        `${import.meta.env.VITE_API_URL}/api/admin-access/reset-password/${id}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -104,7 +104,7 @@ const AdminsTab = () => {
       }
 
       await axios.put(
-        `VITE_API_URL/api/admin-access/toggle-status/${id}`,
+        `${import.meta.env.VITE_API_URL}/api/admin-access/toggle-status/${id}`,
         {
           reason,
         },
@@ -159,7 +159,7 @@ const AdminsTab = () => {
     try {
       if (editingAdminId) {
         await axios.put(
-          `VITE_API_URL/api/admin-access/${editingAdminId}`,
+          `${import.meta.env.VITE_API_URL}/api/admin-access/${editingAdminId}`,
           {
             permissions,
           },
@@ -178,7 +178,7 @@ const AdminsTab = () => {
         fetchAdmins();
       } else {
         await axios.post(
-          "VITE_API_URL/api/admin-access",
+          `${import.meta.env.VITE_API_URL}/api/admin-access`,
           {
             memberId: selectedMember._id,
             username: selectedMember.rollNumber,
@@ -222,7 +222,7 @@ const AdminsTab = () => {
   const saveExternalAdmin = async () => {
     try {
       await axios.post(
-        "VITE_API_URL/api/admin-access",
+        `${import.meta.env.VITE_API_URL}/api/admin-access`,
         {
           name: externalName,
           role: externalRole,
@@ -244,7 +244,7 @@ const AdminsTab = () => {
   const updateAccess = async () => {
     try {
       await axios.put(
-        `VITE_API_URL/api/admin-access/${editingAdminId}`,
+       `${import.meta.env.VITE_API_URL}/api/admin-access/${editingAdminId}`,
         { username, permissions, name: externalName, role: externalRole },
         { headers: { Authorization: `Bearer ${token}` } },
       );

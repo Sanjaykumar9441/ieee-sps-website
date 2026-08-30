@@ -19,7 +19,7 @@ const AdminLogin = () => {
 
       if (loginType === "superadmin") {
         res = await axios.post(
-          "VITE_API_URL/admin/login",
+          `${import.meta.env.VITE_API_URL}/admin/login`,
           {
             email,
             password,
@@ -51,7 +51,7 @@ const AdminLogin = () => {
         window.location.href = "/dashboard";
       } else {
         res = await axios.post(
-          "VITE_API_URL/api/admin-access/login",
+          `${import.meta.env.VITE_API_URL}/api/admin-access/login`,
           {
             username,
             password,
