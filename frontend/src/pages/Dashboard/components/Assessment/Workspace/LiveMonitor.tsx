@@ -40,6 +40,9 @@ export interface LiveStudent {
 
   remainingSeconds: number;
   isExpired: boolean;
+  autoSubmitted?: boolean;
+  forceSubmitted?: boolean;
+  disqualifiedByAdmin?: boolean;
 }
 
 export default function LiveMonitor({ assessment }: Props) {
@@ -432,6 +435,10 @@ export default function LiveMonitor({ assessment }: Props) {
                       >
                         {student.status}
                       </span>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {student.autoSubmitted && <span className="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-700">Auto submitted</span>}
+                        {student.forceSubmitted && <span className="rounded-full bg-purple-100 px-2 py-1 text-[11px] font-semibold text-purple-700">Force submitted</span>}
+                      </div>
                     </td>
 
                     {/* Actions */}

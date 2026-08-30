@@ -28,9 +28,10 @@ async function getExportData(assessmentId) {
 
   if (attemptError) throw attemptError;
 
-  const byStudent = new Map(
-    (attempts || []).map((a) => [a.student_id, a]),
-  );
+  const byStudent = new Map();
+  for (const attempt of [...(attempts || [])].sort((a,b) => new Date(b.started_at || 0) - new Date(a.started_at || 0))) {
+    if (!byStudent.has(attempt.student_id)) byStudent.set(attempt.student_id, attempt);
+  }
 
   const rows = (students || []).map((student) => {
     const attempt = byStudent.get(student.id);

@@ -429,6 +429,11 @@ exports.getStatus = async (req, res) => {
       const result = await scoring.calculateScore(attemptId);
 
       const updatedAttempt = await engine.finishAttempt(attemptId, result);
+      await supabase.from("assessment_activity").insert({
+        attempt_id: attemptId,
+        activity_type: "AUTO_SUBMIT",
+        metadata: { source: "timer" },
+      });
 
       await session.unlockStudent(
         updatedAttempt.assessment_id,
@@ -457,8 +462,7 @@ exports.getStatus = async (req, res) => {
             assessment_allowed_students(
               name,
               roll_no,
-              department,
-              section
+              branch
             )
           `,
         )
@@ -498,9 +502,7 @@ exports.getStatus = async (req, res) => {
 
           rollNo: student.assessment_allowed_students?.roll_no,
 
-          department: student.assessment_allowed_students?.department,
-
-          section: student.assessment_allowed_students?.section,
+          department: student.assessment_allowed_students?.branch,
 
           status: "SUBMITTED",
 
@@ -649,6 +651,12 @@ exports.submitAssessment = async (req, res) => {
     */
 
     const updatedAttempt = await engine.finishAttempt(attemptId, result);
+    const submissionReason = String(req.body?.reason || "STUDENT_SUBMIT");
+    await supabase.from("assessment_activity").insert({
+      attempt_id: attemptId,
+      activity_type: submissionReason === "SECURITY_AUTO_SUBMIT" ? "SECURITY_AUTO_SUBMIT" : "SUBMIT",
+      metadata: { source: "student", reason: submissionReason },
+    });
     /*
     ------------------------------------
     RELEASE REDIS LOCK
@@ -682,9 +690,8 @@ exports.submitAssessment = async (req, res) => {
           assessment_allowed_students(
             name,
             roll_no,
-            department,
-            section
-          )
+              branch
+)
         `,
       )
       .eq("assessment_id", updatedAttempt.assessment_id)
@@ -723,9 +730,7 @@ exports.submitAssessment = async (req, res) => {
 
         rollNo: student.assessment_allowed_students?.roll_no,
 
-        department: student.assessment_allowed_students?.department,
-
-        section: student.assessment_allowed_students?.section,
+        department: student.assessment_allowed_students?.branch,
 
         status: "SUBMITTED",
 

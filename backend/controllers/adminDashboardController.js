@@ -132,8 +132,7 @@ async function getTopStudents(assessmentId) {
       assessment_allowed_students(
         name,
         roll_no,
-        department,
-        section
+        branch
       )
     `,
     )
@@ -160,9 +159,7 @@ async function getTopStudents(assessmentId) {
 
       rollNo: student.assessment_allowed_students?.roll_no,
 
-      department: student.assessment_allowed_students?.department,
-
-      section: student.assessment_allowed_students?.section,
+      department: student.assessment_allowed_students?.branch,
 
       score: student.score,
 
@@ -238,8 +235,7 @@ async function getLiveStudents(assessmentId) {
       assessment_allowed_students(
         name,
         roll_no,
-        department,
-        section
+        branch
       )
     `,
     )
@@ -259,8 +255,6 @@ async function getLiveStudents(assessmentId) {
     rollNo: attempt.assessment_allowed_students?.roll_no,
 
     department: attempt.assessment_allowed_students?.department,
-
-    section: attempt.assessment_allowed_students?.section,
 
     status: attempt.status,
 

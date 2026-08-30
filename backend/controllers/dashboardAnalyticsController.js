@@ -193,7 +193,12 @@ Students whose attempt is currently IN_PROGRESS.
        ASSESSMENT SUMMARY
     ======================================================== */
 
-    const totalQuestions = Number(assessment.total_questions || 0);
+    const { data: questionMappings } = await supabase
+      .from("assessment_question_banks")
+      .select("questions_to_pick")
+      .eq("assessment_id", assessmentId);
+    const mappedQuestionCount = (questionMappings || []).reduce((sum, row) => sum + Number(row.questions_to_pick || 0), 0);
+    const totalQuestions = mappedQuestionCount || Number(assessment.total_questions || 0);
 
     const marksPerQuestion = Number(assessment.marks_per_question || 0);
 
@@ -414,19 +419,22 @@ Students whose attempt is currently IN_PROGRESS.
         continue;
       }
 
-      const selected = Array.isArray(answer.selected_answers)
-        ? [...answer.selected_answers].sort()
-        : [answer.selected_answers];
+      const normalizeAnswer = (value) => {
+        if (typeof value === "number") return String.fromCharCode(65 + value);
+        const text = String(value ?? "").trim().toUpperCase();
+        if (/^[A-D]$/.test(text)) return text;
+        if (/^\d+$/.test(text)) {
+          const n = Number(text);
+          return n >= 0 && n < 4 ? String.fromCharCode(65 + n) : text;
+        }
+        return text;
+      };
 
-      /*
-        `correct_answers` is stored in
-        assessment_attempt_questions because
-        the paper is frozen.
-      */
+      const selected = (Array.isArray(answer.selected_answers) ? answer.selected_answers : [answer.selected_answers])
+        .map(normalizeAnswer).sort();
 
-      const expected = Array.isArray(item.correct_answers)
-        ? [...item.correct_answers].sort()
-        : [item.correct_answers];
+      const expected = (Array.isArray(item.correct_answers) ? item.correct_answers : [item.correct_answers])
+        .map(normalizeAnswer).sort();
 
       const isCorrect = JSON.stringify(selected) === JSON.stringify(expected);
 

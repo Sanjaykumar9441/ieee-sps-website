@@ -53,7 +53,7 @@ export default function useAntiCheat({
       const token = getToken();
 
       const { data } = await axios.get(
-        `${API}/api/student-assessment/${attemptId}/infractions`,
+        `${API}/api/student-assessments/${attemptId}/infractions`,
         {
           headers: token
             ? {
@@ -93,7 +93,7 @@ export default function useAntiCheat({
         const token = getToken();
 
         const { data }: { data: InfractionResponse } = await axios.post(
-          `${API}/api/student-assessment/${attemptId}/infractions`,
+          `${API}/api/student-assessments/${attemptId}/infractions`,
           {
             type,
             details: {

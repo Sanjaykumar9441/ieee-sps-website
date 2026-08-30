@@ -3,6 +3,7 @@ const {
   releaseAttemptLock,
   verifyAttemptSession,
   refreshAttemptLock,
+  redis,
 } = require("../lib/redis");
 
 exports.lockStudent = async (

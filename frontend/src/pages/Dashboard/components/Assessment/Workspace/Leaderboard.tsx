@@ -46,7 +46,7 @@ export default function Leaderboard({ assessment }: Props) {
 
   const [sortBy, setSortBy] = useState("rank");
 
-  const [liveUpdates, setLiveUpdates] = useState(true);
+  const [liveUpdates, setLiveUpdates] = useState(() => localStorage.getItem(`assessment_live_updates:${assessment.id}`) !== "false");
 
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
@@ -63,6 +63,15 @@ export default function Leaderboard({ assessment }: Props) {
     } finally {
       setLoading(false);
     }
+  }, [assessment.id]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.assessmentId === assessment.id) setLiveUpdates(Boolean(detail.enabled));
+    };
+    window.addEventListener("assessment-live-updates-changed", handler);
+    return () => window.removeEventListener("assessment-live-updates-changed", handler);
   }, [assessment.id]);
 
   useEffect(() => {

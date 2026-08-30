@@ -93,6 +93,17 @@ exports.getLiveStudents = async (req, res) => {
 
       if (infractionError) throw infractionError;
 
+      const { data: activities, error: activityError } = await supabase
+        .from("assessment_activity")
+        .select("activity_type,metadata,created_at")
+        .eq("attempt_id", attempt.id)
+        .order("created_at", { ascending: false });
+      if (activityError) throw activityError;
+
+      const autoSubmitted = (activities || []).some(a => ["AUTO_SUBMIT", "SECURITY_AUTO_SUBMIT"].includes(a.activity_type));
+      const forceSubmitted = (activities || []).some(a => a.activity_type === "FORCE_SUBMIT");
+      const disqualifiedByAdmin = (activities || []).some(a => a.activity_type === "DISQUALIFY");
+
       const remainingSeconds = await safeRemainingSeconds(attempt);
 
       students.push({
@@ -113,6 +124,9 @@ exports.getLiveStudents = async (req, res) => {
         resumedCount: Number(attempt.resumed_count || 0),
         violations: Number(violations || 0),
         disqualifiedReason: attempt.disqualified_reason || null,
+        autoSubmitted,
+        forceSubmitted,
+        disqualifiedByAdmin,
         status:
           attempt.status === "IN_PROGRESS"
             ? "LIVE"

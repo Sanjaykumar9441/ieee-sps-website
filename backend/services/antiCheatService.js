@@ -219,8 +219,7 @@ exports.disqualifyAttempt = async (attempt) => {
         assessment_allowed_students(
           name,
           roll_no,
-          department,
-          section
+          branch
         )
       `,
     )
@@ -349,8 +348,7 @@ exports.getAssessmentInfractions = async (assessmentId) => {
         assessment_allowed_students(
           name,
           roll_no,
-          department,
-          section
+          branch
         )
       )
     `)

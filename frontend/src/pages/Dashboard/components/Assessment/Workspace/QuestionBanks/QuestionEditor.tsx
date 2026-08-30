@@ -96,6 +96,9 @@ export default function QuestionEditor({
     if (question.question_type === "MCQ" && question.correct_answers.length !== 1) {
       errors.push("MCQ requires exactly one correct answer.");
     }
+    if (question.question_type === "MULTIPLE_CORRECT" && question.correct_answers.length < 2) {
+      errors.push("Multiple Choice requires at least two correct answers.");
+    }
 
     const correctIndex = question.correct_answers[0];
     if (

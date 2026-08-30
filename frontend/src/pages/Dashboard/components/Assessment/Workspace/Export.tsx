@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { FileSpreadsheet, FileText, Download } from "lucide-react";
 import toast from "react-hot-toast";
-import { downloadAssessmentExport } from "./assessmentApi";
+import { downloadAssessmentExport } from "../assessmentApi";
+import { Assessment } from "../AssessmentCard";
 
-export default function ExportTab({ assessmentId }: { assessmentId: string }) {
+export default function ExportTab({ assessment }: { assessment: Assessment }) {\n  const assessmentId = assessment.id;
   const [busy, setBusy] = useState<string | null>(null);
 
   const download = async (format: "excel" | "pdf" | "csv") => {

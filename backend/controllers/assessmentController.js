@@ -1,4 +1,15 @@
 const Assessment = require("../models/Assessment");
+const { supabase } = require("../lib/supabase");
+
+async function enrichAssessmentQuestions(assessment) {
+  if (!assessment?.id) return assessment;
+  const { data: mappings } = await supabase
+    .from("assessment_question_banks")
+    .select("questions_to_pick")
+    .eq("assessment_id", assessment.id);
+  const selected = (mappings || []).reduce((sum, m) => sum + Number(m.questions_to_pick || 0), 0);
+  return { ...assessment, total_questions: selected || Number(assessment.total_questions || 0) };
+}
 
 exports.getAssessments = async (req, res) => {
   try {
@@ -6,11 +17,10 @@ exports.getAssessments = async (req, res) => {
 
     if (error) throw error;
 
-    const assessments = (data || []).map((assessment) => ({
-      ...assessment,
-      is_published:
-        assessment.is_published ?? assessment.status === "PUBLISHED",
-    }));
+    const assessments = await Promise.all((data || []).map(async (assessment) => ({
+      ...(await enrichAssessmentQuestions(assessment)),
+      is_published: assessment.is_published ?? assessment.status === "PUBLISHED",
+    })));
 
     return res.json({
       success: true,
@@ -83,7 +93,7 @@ exports.getAssessment = async (req, res) => {
 
     return res.json({
       success: true,
-      assessment: data,
+      assessment: await enrichAssessmentQuestions(data),
     });
   } catch (err) {
     return res.status(500).json({

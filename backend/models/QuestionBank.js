@@ -178,6 +178,71 @@ class QuestionBank {
     return { data: bank };
   }
 
+  static async duplicate(id) {
+    const { data: source, error } = await supabase.from(TABLE).select("*").eq("id", id).single();
+    if (error) return { error };
+
+    const { data: mapping, error: mappingError } = await supabase
+      .from(MAPPING_TABLE).select("assessment_id, questions_to_pick")
+      .eq("question_bank_id", id).limit(1).maybeSingle();
+    if (mappingError) return { error: mappingError };
+
+    const copy = { ...source };
+    delete copy.id;
+    delete copy.created_at;
+    delete copy.updated_at;
+    copy.name = `${source.name || "Question Bank"} (Copy)`;
+    copy.total_questions = 0;
+    copy.is_active = true;
+    copy.version = Number(source.version || 1) + 1;
+
+    const { data: bank, error: bankError } = await supabase.from(TABLE).insert(copy).select().single();
+    if (bankError) return { error: bankError };
+
+    const { data: questions, error: questionsError } = await supabase
+      .from("questions").select("*").eq("bank_id", id).eq("is_active", true);
+    if (questionsError) {
+      await supabase.from(TABLE).delete().eq("id", bank.id);
+      return { error: questionsError };
+    }
+
+    if (questions?.length) {
+      const copiedQuestions = questions.map(q => {
+        const row = { ...q, bank_id: bank.id };
+        delete row.id; delete row.created_at; delete row.updated_at;
+        row.version = Number(q.version || 1);
+        return row;
+      });
+      const { error } = await supabase.from("questions").insert(copiedQuestions);
+      if (error) {
+        await supabase.from(TABLE).delete().eq("id", bank.id);
+        return { error };
+      }
+    }
+
+    const total = questions?.length || 0;
+    await supabase.from(TABLE).update({ total_questions: total }).eq("id", bank.id);
+
+    if (mapping?.assessment_id) {
+      const { error } = await supabase.from(MAPPING_TABLE).insert({
+        assessment_id: mapping.assessment_id,
+        question_bank_id: bank.id,
+        questions_to_pick: Number(mapping.questions_to_pick || 0),
+      });
+      if (error) {
+        await supabase.from(TABLE).delete().eq("id", bank.id);
+        return { error };
+      }
+    }
+
+    return {
+      data: {
+        questionBank: { ...bank, total_questions: total, assessment_id: mapping?.assessment_id || null, questions_to_pick: Number(mapping?.questions_to_pick || 0) },
+        assessmentId: mapping?.assessment_id || null,
+      },
+    };
+  }
+
   static async delete(id) {
     const { data: mapping, error: mappingError } = await supabase
       .from(MAPPING_TABLE)

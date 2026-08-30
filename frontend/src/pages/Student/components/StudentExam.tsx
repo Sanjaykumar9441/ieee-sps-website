@@ -437,7 +437,7 @@ export default function StudentExam({
         }
       }
 
-      const result = await submitAssessment(attemptId);
+      const result = await submitAssessment(attemptId, "SECURITY_AUTO_SUBMIT");
       if (
         result?.success === true ||
         result?.expired === true ||

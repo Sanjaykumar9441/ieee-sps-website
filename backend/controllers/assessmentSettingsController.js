@@ -442,15 +442,27 @@ exports.updateSettings = async (req, res) => {
       updated_at: new Date().toISOString(),
     };
 
-    const { error: settingsError } = await supabase
+    const { data: existingSettings, error: existingSettingsError } = await supabase
       .from("assessment_settings")
-      .upsert(settingsUpdate, {
-        onConflict: "assessment_id",
-      });
+      .select("assessment_id")
+      .eq("assessment_id", id)
+      .maybeSingle();
 
-    if (settingsError) {
-      throw settingsError;
+    if (existingSettingsError) throw existingSettingsError;
+
+    let settingsError;
+    if (existingSettings) {
+      ({ error: settingsError } = await supabase
+        .from("assessment_settings")
+        .update(settingsUpdate)
+        .eq("assessment_id", id));
+    } else {
+      ({ error: settingsError } = await supabase
+        .from("assessment_settings")
+        .insert(settingsUpdate));
     }
+
+    if (settingsError) throw settingsError;
 
     return res.json({
       success: true,

@@ -155,7 +155,7 @@ export default function Analytics({ assessment }: Props) {
   });
 
   const [department, setDepartment] = useState("all");
-  const [liveUpdates, setLiveUpdates] = useState(true);
+  const [liveUpdates, setLiveUpdates] = useState(() => localStorage.getItem(`assessment_live_updates:${assessment.id}`) !== "false");
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
   const fetchAnalytics = async () => {
@@ -171,6 +171,15 @@ export default function Analytics({ assessment }: Props) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.assessmentId === assessment.id) setLiveUpdates(Boolean(detail.enabled));
+    };
+    window.addEventListener("assessment-live-updates-changed", handler);
+    return () => window.removeEventListener("assessment-live-updates-changed", handler);
+  }, [assessment.id]);
 
   useEffect(() => {
     void fetchAnalytics();

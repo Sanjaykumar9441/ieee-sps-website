@@ -247,10 +247,10 @@ export const resumeAssessment = async (
    SUBMIT
 ============================================================ */
 
-export const submitAssessment = async (attemptId: string) => {
+export const submitAssessment = async (attemptId: string, reason?: string) => {
   const { data } = await axios.post(
     `${API}/api/student-assessments/${attemptId}/submit`,
-    {},
+    reason ? { reason } : {},
     getSessionConfig(attemptId),
   );
 

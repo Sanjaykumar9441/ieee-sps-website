@@ -30,6 +30,21 @@ interface Settings {
   live: { enabled: boolean };
 }
 
+const toLocalDate = (value: string | null | undefined) => {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n:number) => String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+};
+const toLocalTime = (value: string | null | undefined) => {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n:number) => String(n).padStart(2,"0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 const defaults: Settings = {
   schedule: { startDate: "", startTime: "", endDate: "", endTime: "", duration: 30 },
   rules: { randomQuestions: true, randomOptions: true },
@@ -78,7 +93,7 @@ export default function Settings({ assessment }: Props) {
       await axios.put(`${API}/api/assessment-settings/${assessment.id}`, settings, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      localStorage.setItem(`assessment_live_updates:${assessment.id}`, String(settings.live.enabled));
+      localStorage.setItem(`assessment_live_updates:${assessment.id}`, String(settings.live.enabled));\n      window.dispatchEvent(new CustomEvent("assessment-live-updates-changed", { detail: { assessmentId: assessment.id, enabled: settings.live.enabled } }));
       toast.success("Settings saved successfully.");
       await fetchSettings();
     } catch (err: any) {

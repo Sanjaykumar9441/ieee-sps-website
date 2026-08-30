@@ -59,9 +59,11 @@ export default function AssessmentCard({ assessment, onDashboard, onEdit, onDupl
         <Info icon={<Clock size={18} />} label="Duration" value={`${assessment.duration_minutes} mins`} />
         <Info icon={<Activity size={18} />} label="Status" value={assessment.is_active ? "Running" : "Stopped"} />
         <Info icon={<Users size={18} />} label="Created" value={new Date(assessment.created_at).toLocaleString()} />
+        <Info icon={<Clock size={18} />} label="Starts" value={assessment.start_time ? new Date(assessment.start_time).toLocaleString() : "Not set"} />
+        <Info icon={<Clock size={18} />} label="Ends" value={assessment.end_time ? new Date(assessment.end_time).toLocaleString() : "Not set"} />
       </div>
 
-      <div className="mt-8 grid grid-cols-3 gap-3">
+      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Action onClick={() => onDashboard(assessment)} primary icon={<LayoutDashboard size={18} />}>Dashboard</Action>
         <Action onClick={() => onEdit(assessment)} icon={<Edit size={18} />}>Edit</Action>
         <Action onClick={() => onDuplicate(assessment.id)} icon={<Copy size={18} />}>Duplicate</Action>
