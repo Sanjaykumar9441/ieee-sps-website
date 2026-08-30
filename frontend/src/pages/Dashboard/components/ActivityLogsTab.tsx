@@ -13,7 +13,7 @@ const ActivityLogsTab = () => {
       const token = localStorage.getItem("token");
 
       const res = await axios.get(  
-        "VITE_API_URL
+        "VITE_API_URL/api/activity-logs",  
         {  
           headers: {  
             Authorization: `Bearer ${token}`,  
@@ -54,7 +54,7 @@ const ActivityLogsTab = () => {
       const token = localStorage.getItem("token");
 
       await axios.delete(  
-        "VITE_API_URL
+        "VITE_API_URL/api/activity-logs",  
         {  
           headers: {  
             Authorization: `Bearer ${token}`,  
