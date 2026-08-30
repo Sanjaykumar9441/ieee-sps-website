@@ -30,8 +30,17 @@ interface ExamData {
   question: any;
 }
 
+interface ExamLaunchData extends ExamData {
+  assessmentTitle: string;
+  sessionId?: string;
+}
+
 const isExamWindow = () =>
   new URLSearchParams(window.location.search).get("examWindow") === "1";
+
+const getLaunchAttemptId = () =>
+  new URLSearchParams(window.location.search).get("attemptId") ||
+  localStorage.getItem("studentAttemptId");
 
 export default function StudentExamPortal({
   assessmentId,
@@ -50,8 +59,8 @@ export default function StudentExamPortal({
       return;
     }
 
-    // Open synchronously from the user click so Edge treats it as a user-initiated
-    // popup instead of blocking it after the asynchronous API request.
+    // Open synchronously from the actual Start Exam click. This is required by
+    // Edge/Chrome popup protection and guarantees a dedicated exam window.
     const width = Math.max(1024, window.screen.availWidth || window.innerWidth);
     const height = Math.max(700, window.screen.availHeight || window.innerHeight);
     const examWindow = window.open(
@@ -59,6 +68,7 @@ export default function StudentExamPortal({
       "student-exam-window",
       [
         "popup=yes",
+        "fullscreen=yes",
         `width=${width}`,
         `height=${height}`,
         "left=0",
@@ -79,6 +89,17 @@ export default function StudentExamPortal({
       return;
     }
 
+    // Ask the browser for a screen-sized popup. Browsers may restrict resize,
+    // but when permitted this produces the same dedicated-window experience as
+    // the reference exam UI without putting the exam back in the original tab.
+    try {
+      examWindow.moveTo(0, 0);
+      examWindow.resizeTo(width, height);
+      examWindow.focus();
+    } catch {
+      // Browser may deny window management; the popup remains usable.
+    }
+
     examWindow.document.title = "Examination";
     examWindow.document.body.innerHTML =
       '<div style="font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#334155"><div style="text-align:center"><div style="font-size:18px;font-weight:600">Opening examination...</div><div style="margin-top:8px;color:#64748b">Please wait.</div></div></div>';
@@ -86,17 +107,55 @@ export default function StudentExamPortal({
     try {
       const result = await startAssessment(assessmentId);
 
-      if (!result?.attemptId) {
-        throw new Error("Assessment started but no attempt was created.");
+      if (!result?.attemptId || !result?.question) {
+        throw new Error("Assessment started but the first question was not created.");
       }
 
-      // The exam is intentionally rendered only in the dedicated window.
-      // The original instructions window must never render StudentExam.
-      onStartExam(assessmentId);
-      examWindow.location.replace(
-        `${window.location.origin}/student/exam/${assessmentId}?examWindow=1`,
+      // Put the complete first-question payload in shared storage before the
+      // popup navigates. The new tab can therefore render immediately without
+      // waiting for another checkAssessment request to finish.
+      const launchData: ExamLaunchData = {
+        attemptId: result.attemptId,
+        totalQuestions: Number(result.totalQuestions || 0),
+        currentQuestion: Number(result.currentQuestion || 1),
+        remainingSeconds: Number(result.remainingSeconds || 0),
+        question: result.question,
+        assessmentTitle: assessment.title,
+        sessionId: result.sessionId,
+      };
+
+      localStorage.setItem(
+        `studentExamLaunch:${result.attemptId}`,
+        JSON.stringify(launchData),
       );
+      localStorage.setItem(
+        `studentCurrentQuestion:${result.attemptId}`,
+        String(launchData.currentQuestion),
+      );
+
+      // The original instructions page is not changed into the exam. Only the
+      // dedicated popup receives the examWindow flag and attempt ID.
+      onStartExam(assessmentId);
+
+      const examUrl = new URL(
+        `${window.location.origin}/student/exam/${assessmentId}`,
+      );
+      examUrl.searchParams.set("examWindow", "1");
+      examUrl.searchParams.set("attemptId", result.attemptId);
+
+      examWindow.location.replace(examUrl.toString());
       examWindow.focus();
+
+      // Some Chromium/Edge versions permit resizing only after navigation.
+      window.setTimeout(() => {
+        try {
+          examWindow.moveTo(0, 0);
+          examWindow.resizeTo(width, height);
+          examWindow.focus();
+        } catch {
+          // Ignore browser window-management restrictions.
+        }
+      }, 300);
     } catch (err: any) {
       console.error("[EXAM] Unable to start:", err);
       try {
@@ -154,6 +213,82 @@ export default function StudentExamPortal({
     let mounted = true;
 
     const loadAssessment = async () => {
+      // IMPORTANT: the dedicated exam popup must not wait on the normal
+      // assessment-check/login flow. The opener has already authenticated the
+      // student and created the attempt. Render the first question immediately
+      // from the launch payload, then resync from the server in the background.
+      if (isExamWindow()) {
+        const attemptId = getLaunchAttemptId();
+
+        if (attemptId) {
+          const rawLaunch = localStorage.getItem(
+            `studentExamLaunch:${attemptId}`,
+          );
+
+          if (rawLaunch) {
+            try {
+              const launch = JSON.parse(rawLaunch) as ExamLaunchData;
+
+              if (launch.sessionId) {
+                sessionStorage.setItem(
+                  `quiz_session_${attemptId}`,
+                  launch.sessionId,
+                );
+                localStorage.setItem(
+                  `quiz_session_${attemptId}`,
+                  launch.sessionId,
+                );
+              }
+
+              if (launch.question) {
+                // StudentExam only needs the assessment fields shown below.
+                // Cast is intentional: all additional assessment data is not
+                // required once the attempt has already been created.
+                const launchAssessment = {
+                  title: launch.assessmentTitle,
+                  start_time: new Date().toISOString(),
+                  end_time: new Date(
+                    Date.now() + Number(launch.remainingSeconds || 0) * 1000,
+                  ).toISOString(),
+                  is_active: true,
+                } as Assessment;
+
+                setAssessment(launchAssessment);
+                setExamStatus("LIVE");
+                setExamData({
+                  attemptId: launch.attemptId,
+                  totalQuestions: launch.totalQuestions,
+                  currentQuestion: launch.currentQuestion,
+                  remainingSeconds: launch.remainingSeconds,
+                  question: launch.question,
+                });
+
+                setStep("instructions");
+
+                // Refresh the question/timer from the server after the UI is
+                // already visible. A temporary API problem can no longer leave
+                // the student staring at "Loading assessment...".
+                void resumeAssessment(assessmentId, attemptId)
+                  .then((resumed) => {
+                    if (!mounted) return;
+                    setExamData(resumed);
+                  })
+                  .catch((resumeError) => {
+                    console.warn(
+                      "[EXAM] Background resume failed; using launch payload.",
+                      resumeError,
+                    );
+                  });
+
+                return;
+              }
+            } catch (launchError) {
+              console.error("[EXAM] Invalid launch payload:", launchError);
+            }
+          }
+        }
+      }
+
       try {
         const result = await checkAssessment(assessmentId);
 
@@ -179,11 +314,10 @@ export default function StudentExamPortal({
           setCountdown(0);
         }
 
-        // Only the dedicated exam window may resume/render an active attempt.
-        // This prevents the original login/instructions tab from also opening
-        // the exam after Start Exam has created the attempt.
+        // Fallback for a manually refreshed exam popup after its launch payload
+        // has been removed. In that case resume the active attempt if possible.
         if (isExamWindow()) {
-          const savedAttemptId = localStorage.getItem("studentAttemptId");
+          const savedAttemptId = getLaunchAttemptId();
 
           if (savedAttemptId && now >= startTime && now < endTime) {
             try {
@@ -223,14 +357,14 @@ export default function StudentExamPortal({
       }
     };
 
-    loadAssessment();
+    void loadAssessment();
 
     return () => {
       mounted = false;
     };
   }, [assessmentId]);
 
-  if (step === "loading") {
+  if (step === "loading" && !examData) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
@@ -300,6 +434,7 @@ export default function StudentExamPortal({
 
           localStorage.removeItem("studentAttemptId");
           localStorage.removeItem(`studentCurrentQuestion:${attemptId}`);
+          localStorage.removeItem(`studentExamLaunch:${attemptId}`);
 
           window.location.href = "/student/exam/completed";
         }}
