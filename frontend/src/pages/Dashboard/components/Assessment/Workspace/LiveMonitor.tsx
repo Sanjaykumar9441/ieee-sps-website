@@ -11,7 +11,7 @@ export interface LiveStudent {
   violations:number; status:string; isExpired?:boolean; lastActivity?:string;
 }
 
-const normalizeStatus=(value:string)=>String(value||"").toUpperCase()==="DISQUALIFIED"?"SUBMITTED":String(value||"NOT_STARTED").toUpperCase();
+const normalizeStatus=(value:string)=>String(value||"NOT_STARTED").toUpperCase();
 const isSubmitted=(s:LiveStudent)=>normalizeStatus(s.status)==="SUBMITTED" || Boolean(s.isExpired);
 const isLive=(s:LiveStudent)=>!isSubmitted(s) && ["IN_PROGRESS","LIVE","STARTED"].includes(normalizeStatus(s.status));
 

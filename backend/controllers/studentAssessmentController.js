@@ -97,7 +97,6 @@ exports.checkAssessment = async (req, res) => {
 
 exports.startAssessment = async (req, res) => {
   let lockAcquired = false;
-  let createdAttemptId = null;
 
   try {
     const { assessmentId } = req.params;
@@ -215,9 +214,7 @@ exports.startAssessment = async (req, res) => {
       assessment,
       student,
       frozenQuestions,
-      actualDurationSeconds,
     );
-    createdAttemptId = attempt.id;
 
     // --------------------------------
     // Redis Timer
@@ -239,13 +236,6 @@ exports.startAssessment = async (req, res) => {
       question: firstQuestion,
     });
   } catch (err) {
-    if (createdAttemptId) {
-      try {
-        await supabase.from("assessment_attempts").delete().eq("id", createdAttemptId);
-      } catch (cleanupError) {
-        console.error("FAILED TO CLEAN UP ASSESSMENT ATTEMPT:", cleanupError);
-      }
-    }
     if (lockAcquired) {
       try {
         await session.unlockStudent(req.params.assessmentId, req.student.id);
@@ -433,7 +423,7 @@ exports.getStatus = async (req, res) => {
 
     if (
       remainingSeconds <= 0 &&
-      attempt.status === "IN_PROGRESS"
+      attempt.status !== "SUBMITTED"
     ) {
       const result = await scoring.calculateScore(attemptId);
 
@@ -603,7 +593,6 @@ exports.getStatus = async (req, res) => {
 
     return res.json({
       success: true,
-      status: attempt.status,
       remainingSeconds,
       answered,
       totalQuestions: palette.length,
@@ -1013,26 +1002,16 @@ exports.heartbeat = async (req, res) => {
 
     if (
       remainingSeconds <= 0 &&
-      attempt.status === "IN_PROGRESS"
+      attempt.status !== "SUBMITTED"
     ) {
       const result = await scoring.calculateScore(attemptId);
 
       const updatedAttempt = await engine.finishAttempt(attemptId, result);
 
-      await supabase.from("assessment_activity").insert({
-        attempt_id: attemptId,
-        activity_type: "AUTO_SUBMIT",
-        metadata: { source: "heartbeat" },
-      });
-
       await session.unlockStudent(
         updatedAttempt.assessment_id,
         updatedAttempt.student_id,
       );
-
-      liveEvents.emitSubmitted(updatedAttempt.assessment_id, updatedAttempt);
-      liveEvents.emitStudentSubmitted(updatedAttempt.assessment_id);
-      liveEvents.emitDashboardRefresh(updatedAttempt.assessment_id);
 
       return res.json({
         success: false,

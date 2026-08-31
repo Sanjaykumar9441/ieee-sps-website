@@ -609,8 +609,11 @@ Students whose attempt is currently IN_PROGRESS.
 
         integrity: {
           warnings,
+
           forceSubmitted,
+
           tabSwitches,
+
           windowBlur,
         },
 

@@ -108,7 +108,7 @@ export interface AnalyticsData {
   integrity: {
     warnings: number;
     forceSubmitted: number;
-    tabSwitches: number;
+      tabSwitches: number;
     windowBlur: number;
   };
   liveActivity: {

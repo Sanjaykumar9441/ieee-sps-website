@@ -4,6 +4,7 @@ import {
   Users,
   UserCheck,
   Trophy,
+  AlertTriangle,
   BarChart3,
   Activity,
 } from "lucide-react";
