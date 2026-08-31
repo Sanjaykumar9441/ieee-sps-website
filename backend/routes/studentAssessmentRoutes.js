@@ -14,7 +14,7 @@ PUBLIC / PRE-LOGIN
 
 router.get(
   "/:assessmentId/check",
-  controller.checkAssessment
+  controller.checkAssessment,
 );
 
 /*
@@ -79,7 +79,7 @@ router.post(
 
 /*
 ============================================================
-ANTI CHEAT
+ANTI-CHEAT
 ============================================================
 */
 
@@ -89,21 +89,28 @@ router.get(
   controller.getAntiCheatConfig,
 );
 
+/*
+ * Anti-cheat endpoints MUST use the same assessment-session
+ * ownership check as the normal exam endpoints.
+ */
 router.post(
   "/:attemptId/infractions",
   verifyStudentToken,
+  verifyAssessmentSession,
   controller.reportInfraction,
 );
 
 router.get(
   "/:attemptId/infractions",
   verifyStudentToken,
+  verifyAssessmentSession,
   controller.getInfractions,
 );
 
 router.delete(
   "/:attemptId/infractions",
   verifyStudentToken,
+  verifyAssessmentSession,
   controller.resetInfractions,
 );
 

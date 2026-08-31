@@ -5,7 +5,6 @@ import {
   FileQuestion,
   ShieldCheck,
 } from "lucide-react";
-
 import type { Assessment } from "../types";
 
 interface ExamInstructionsProps {
@@ -25,11 +24,10 @@ export default function ExamInstructions({
   const questions = Number(assessment.total_questions || 0);
 
   const formatCountdown = (seconds: number) => {
-    const safeSeconds = Math.max(0, Number(seconds) || 0);
-    const hours = Math.floor(safeSeconds / 3600);
-    const minutes = Math.floor((safeSeconds % 3600) / 60);
-    const secs = safeSeconds % 60;
-
+    const safe = Math.max(0, Number(seconds) || 0);
+    const hours = Math.floor(safe / 3600);
+    const minutes = Math.floor((safe % 3600) / 60);
+    const secs = safe % 60;
     return [hours, minutes, secs]
       .map((value) => String(value).padStart(2, "0"))
       .join(":");
@@ -47,12 +45,11 @@ export default function ExamInstructions({
     <div className="min-h-screen bg-slate-50 px-4 py-8">
       <div className="mx-auto max-w-3xl">
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 bg-white px-6 py-6 sm:px-8">
+          <div className="border-b border-slate-200 px-6 py-6 sm:px-8">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#00629B]/10">
                 <FileQuestion className="h-6 w-6 text-[#00629B]" />
               </div>
-
               <div className="min-w-0">
                 <p className="text-sm font-medium uppercase tracking-wider text-slate-500">
                   Examination
@@ -61,8 +58,7 @@ export default function ExamInstructions({
                   {assessment.title}
                 </h1>
                 <p className="mt-2 text-sm text-slate-500">
-                  Your identity has been verified. Please follow the
-                  instructions below.
+                  Your identity has been verified. Please follow the instructions below.
                 </p>
               </div>
             </div>
@@ -94,9 +90,7 @@ export default function ExamInstructions({
                 </div>
 
                 <div className="mb-6">
-                  <p className="text-sm font-medium text-slate-500">
-                    Time Remaining
-                  </p>
+                  <p className="text-sm font-medium text-slate-500">Time Remaining</p>
                   <p className="mt-2 font-mono text-5xl font-bold tracking-wider text-[#00629B] sm:text-6xl">
                     {formatCountdown(countdown)}
                   </p>
@@ -107,8 +101,7 @@ export default function ExamInstructions({
                   <div>
                     <p className="font-semibold text-slate-800">Please wait</p>
                     <p className="mt-1 text-sm leading-6 text-slate-600">
-                      Your identity has been verified. The examination will open
-                      automatically at the scheduled start time.
+                      The examination will open automatically at the scheduled start time.
                     </p>
                   </div>
                 </div>
@@ -134,8 +127,7 @@ export default function ExamInstructions({
                     EXAM IS LIVE
                   </h2>
                   <p className="mt-2 text-slate-500">
-                    Your identity has been verified. You may now begin the
-                    examination.
+                    Your identity has been verified. You may now begin the examination.
                   </p>
                 </div>
 
@@ -155,37 +147,21 @@ export default function ExamInstructions({
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
                   <AlertTriangle className="h-8 w-8 text-red-600" />
                 </div>
-                <h2 className="mt-5 text-2xl font-bold text-red-600">
-                  EXAM CLOSED
-                </h2>
+                <h2 className="mt-5 text-2xl font-bold text-red-600">EXAM CLOSED</h2>
                 <p className="mx-auto mt-2 max-w-lg text-slate-500">
-                  The examination window has ended. You can no longer start this
-                  examination.
+                  The examination window has ended. You can no longer start this examination.
                 </p>
               </div>
             )}
           </div>
 
           <div className="border-t border-slate-200 px-6 py-6 sm:px-8">
-            <h2 className="text-lg font-bold text-slate-900">
-              Before You Start
-            </h2>
+            <h2 className="text-lg font-bold text-slate-900">Before You Start</h2>
             <div className="mt-5 space-y-4">
-              <Instruction>
-                Make sure you have a stable internet connection before starting
-                the examination.
-              </Instruction>
-              <Instruction>
-                Do not close or refresh the examination page while the exam is
-                in progress.
-              </Instruction>
-              <Instruction>
-                The examination timer starts when your attempt is created.
-              </Instruction>
-              <Instruction>
-                Follow all examination and anti-cheating rules displayed by the
-                examination system.
-              </Instruction>
+              <Instruction>Make sure you have a stable internet connection before starting the examination.</Instruction>
+              <Instruction>Do not close or refresh the examination page while the exam is in progress.</Instruction>
+              <Instruction>The examination timer starts when your attempt is created.</Instruction>
+              <Instruction>Follow all examination and anti-cheating rules displayed by the examination system.</Instruction>
             </div>
           </div>
         </div>
@@ -209,9 +185,7 @@ function InfoCard({
         {icon}
       </div>
       <div>
-        <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-          {label}
-        </p>
+        <p className="text-xs font-medium uppercase tracking-wider text-slate-500">{label}</p>
         <p className="mt-1 font-semibold text-slate-900">{value}</p>
       </div>
     </div>
