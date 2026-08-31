@@ -3,25 +3,156 @@ import { Activity, BarChart3, Clock, User, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { socket } from "../../../../../lib/socket";
 import type { LiveStudent } from "./LiveMonitor";
-import { getLiveStudentDetails, blockStudents, unblockStudents, deleteStudents, forceSubmitAttempt } from "../../Assessment/assessmentApi";
+import { getLiveStudentDetails, blockStudents, unblockStudents, deleteStudents, forceSubmitAttempt } from "../assessmentApi";
 
-interface Props { open:boolean; student:LiveStudent|null; assessmentId:string; onClose:()=>void; onRefresh:()=>Promise<void>; }
+interface Props {
+ open:boolean;
+ student:LiveStudent|null;
+ assessmentId:string;
+ onClose:()=>void;
+ onRefresh:()=>Promise<void>;
+}
 
 export default function LiveStudentDetailsDrawer({open,student,assessmentId,onClose,onRefresh}:Props){
-  const [loading,setLoading]=useState(false); const [processing,setProcessing]=useState(false); const [details,setDetails]=useState<any>(null);
-  const fetchDetails=useCallback(async()=>{if(!student)return;try{setLoading(true);setDetails(await getLiveStudentDetails(student.attemptId));}catch(error:any){console.error(error);toast.error(error?.response?.data?.message||"Unable to load student details.");}finally{setLoading(false);}},[student]);
-  useEffect(()=>{if(open)void fetchDetails();},[open,fetchDetails]);
-  useEffect(()=>{if(!open)return;socket.on("dashboardRefresh",fetchDetails);socket.on("forceSubmitted",fetchDetails);return()=>{socket.off("dashboardRefresh",fetchDetails);socket.off("forceSubmitted",fetchDetails);};},[open,fetchDetails]);
-  if(!open||!student)return null;
-  const attempt=details?.attempt; const stats=details?.statistics||{}; const timeline=details?.timeline||{}; const blocked=details?.student?.status==="blocked"; const finished=attempt?.status==="SUBMITTED";
-  const handleForceSubmit=async()=>{if(!attempt?.id||finished)return;if(!window.confirm(`Force submit ${student.studentName}'s assessment?`))return;try{setProcessing(true);const result=await forceSubmitAttempt(attempt.id);toast.success(result?.message||"Assessment force submitted.");await fetchDetails();await onRefresh();}catch(error:any){toast.error(error?.response?.data?.message||"Unable to force submit.");}finally{setProcessing(false);}};
-  const handleBlockToggle=async()=>{try{setProcessing(true);if(blocked)await unblockStudents(assessmentId,[student.studentId]);else await blockStudents(assessmentId,[student.studentId]);toast.success(blocked?"Student unblocked.":"Student blocked.");await fetchDetails();await onRefresh();}catch(error:any){toast.error(error?.response?.data?.message||"Unable to update student access.");}finally{setProcessing(false);}};
-  const handleDelete=async()=>{if(!window.confirm(`Delete ${student.studentName} from this assessment?`))return;try{setProcessing(true);await deleteStudents(assessmentId,[student.studentId]);toast.success("Student deleted.");await onRefresh();onClose();}catch(error:any){toast.error(error?.response?.data?.message||"Unable to delete student.");}finally{setProcessing(false);}};
-  return <><div className="fixed inset-0 z-40 bg-black/40" onClick={onClose}/><div className="fixed right-0 top-0 z-50 h-screen w-full max-w-2xl overflow-y-auto bg-white shadow-2xl"><div className="sticky top-0 flex items-center justify-between border-b bg-white px-8 py-6"><div><h2 className="text-2xl font-bold">Student Details</h2><p className="mt-1 text-gray-500">Assessment information</p></div><button type="button" onClick={onClose} className="rounded-xl border p-2 hover:bg-gray-100"><X size={20}/></button></div>{loading?<div className="py-20 text-center text-slate-500">Loading Student Details...</div>:<div className="space-y-6 p-8">
-    <section className="rounded-2xl border p-6"><div className="mb-5 flex items-center gap-3"><User className="text-[#00629B]"/><h3 className="text-xl font-bold">Personal Information</h3></div><div className="grid grid-cols-2 gap-5"><div><p className="text-sm text-gray-500">Name</p><p className="font-semibold">{student.studentName}</p></div><div><p className="text-sm text-gray-500">Roll Number</p><p className="font-semibold">{student.rollNo}</p></div><div><p className="text-sm text-gray-500">Email</p><p className="font-semibold break-all">{student.email}</p></div><div><p className="text-sm text-gray-500">Department</p><p className="font-semibold">{student.department||"-"}</p></div></div></section>
-    <section className="rounded-2xl border p-6"><div className="mb-5 flex items-center gap-3"><Activity className="text-green-600"/><h3 className="text-xl font-bold">Assessment Status</h3></div><div className="grid grid-cols-2 gap-4 md:grid-cols-3">{[["Status",attempt?.status||"NOT STARTED"],["Current",`${student.currentQuestion} / ${student.totalQuestions}`],["Time",student.isExpired?"Expired":`${String(Math.floor(student.remainingSeconds/60)).padStart(2,"0")}:${String(student.remainingSeconds%60).padStart(2,"0")}`],["Answered",`${stats.questionsAnswered??student.answeredQuestions} / ${student.totalQuestions}`],["Violations",String(stats.violations??student.violations)],["Score",String(stats.score??"-")]].map(([label,value])=><div key={label} className="rounded-xl border p-4"><p className="text-sm text-gray-500">{label}</p><p className="mt-2 font-semibold">{value}</p></div>)}</div></section>
-    <section className="rounded-2xl border p-6"><div className="mb-5 flex items-center gap-3"><Clock className="text-[#00629B]"/><h3 className="text-xl font-bold">Timeline</h3></div><div className="space-y-3 text-sm"><div className="flex justify-between border-b pb-3"><span className="text-gray-500">Started</span><span>{timeline.assessmentStartedAt?new Date(timeline.assessmentStartedAt).toLocaleString():"-"}</span></div><div className="flex justify-between"><span className="text-gray-500">Submitted</span><span>{timeline.submittedAt?new Date(timeline.submittedAt).toLocaleString():"Not submitted"}</span></div></div></section>
-    <section className="rounded-2xl border p-6"><div className="mb-5 flex items-center gap-3"><BarChart3 className="text-[#00629B]"/><h3 className="text-xl font-bold">Progress</h3></div><div className="flex justify-between text-sm"><span>Answered</span><span className="font-semibold">{student.answeredQuestions} / {student.totalQuestions}</span></div><div className="mt-3 h-3 overflow-hidden rounded-full bg-gray-200"><div className="h-full rounded-full bg-[#00629B]" style={{width:`${student.totalQuestions?Math.min(100,(student.answeredQuestions/student.totalQuestions)*100):0}%`}}/></div></section>
-    <div className="flex flex-wrap gap-3 border-t pt-6"><button type="button" disabled={processing||finished} onClick={()=>void handleForceSubmit()} className="rounded-xl border border-amber-400 px-4 py-3 font-semibold text-amber-700 disabled:opacity-50">Force Submit</button><button type="button" disabled={processing} onClick={()=>void handleBlockToggle()} className="rounded-xl border px-4 py-3 font-semibold disabled:opacity-50">{blocked?"Unblock Student":"Block Student"}</button><button type="button" disabled={processing} onClick={()=>void handleDelete()} className="rounded-xl border border-red-300 px-4 py-3 font-semibold text-red-600 disabled:opacity-50">Delete Student</button></div>
-  </div>}</div></>;
+ const [loading,setLoading]=useState(false);
+ const [processing,setProcessing]=useState(false);
+ const [details,setDetails]=useState<any>(null);
+
+ const fetchDetails=useCallback(async()=>{
+  if(!student?.attemptId)return;
+  try{
+   setLoading(true);
+   const result=await getLiveStudentDetails(student.attemptId);
+   setDetails(result);
+  }catch(error:any){
+   console.error("[LIVE STUDENT DETAILS]",error);
+   toast.error(error?.response?.data?.message||"Unable to load student details.");
+  }finally{
+   setLoading(false);
+  }
+ },[student?.attemptId]);
+
+ useEffect(()=>{
+  if(open)void fetchDetails();
+ },[open,fetchDetails]);
+
+ useEffect(()=>{
+  if(!open)return;
+  socket.on("dashboardRefresh",fetchDetails);
+  socket.on("forceSubmitted",fetchDetails);
+  socket.on("studentSubmitted",fetchDetails);
+  return()=>{
+   socket.off("dashboardRefresh",fetchDetails);
+   socket.off("forceSubmitted",fetchDetails);
+   socket.off("studentSubmitted",fetchDetails);
+  };
+ },[open,fetchDetails]);
+
+ if(!open||!student)return null;
+
+ const attempt=details?.attempt;
+ const stats=details?.statistics||{};
+ const timeline=details?.timeline||{};
+ const blocked=details?.student?.status==="blocked";
+ const finished=attempt?.status==="SUBMITTED";
+
+ const handleForceSubmit=async()=>{
+  if(!attempt?.id||finished)return;
+  if(!window.confirm(`Force submit ${student.studentName}'s assessment?`))return;
+  try{
+   setProcessing(true);
+   const result=await forceSubmitAttempt(attempt.id);
+   toast.success(result?.message||"Assessment force submitted.");
+   await fetchDetails();
+   await onRefresh();
+  }catch(error:any){
+   console.error("[LIVE STUDENT DETAILS FORCE SUBMIT]",error);
+   toast.error(error?.response?.data?.message||"Unable to force submit.");
+  }finally{
+   setProcessing(false);
+  }
+ };
+
+ const handleBlockToggle=async()=>{
+  if(!assessmentId)return;
+  try{
+   setProcessing(true);
+   if(blocked)await unblockStudents(assessmentId,[student.studentId]);
+   else await blockStudents(assessmentId,[student.studentId]);
+   toast.success(blocked?"Student unblocked.":"Student blocked.");
+   await fetchDetails();
+   await onRefresh();
+  }catch(error:any){
+   toast.error(error?.response?.data?.message||"Unable to update student access.");
+  }finally{
+   setProcessing(false);
+  }
+ };
+
+ const handleDelete=async()=>{
+  if(!assessmentId)return;
+  if(!window.confirm(`Delete ${student.studentName} from this assessment?`))return;
+  try{
+   setProcessing(true);
+   await deleteStudents(assessmentId,[student.studentId]);
+   toast.success("Student deleted.");
+   await onRefresh();
+   onClose();
+  }catch(error:any){
+   toast.error(error?.response?.data?.message||"Unable to delete student.");
+  }finally{
+   setProcessing(false);
+  }
+ };
+
+ return <><div className="fixed inset-0 z-40 bg-black/40" onClick={onClose}/>
+  <div className="fixed right-0 top-0 z-50 h-screen w-full max-w-2xl overflow-y-auto bg-white shadow-2xl">
+   <div className="sticky top-0 flex items-center justify-between border-b bg-white px-8 py-6">
+    <div><h2 className="text-2xl font-bold">Student Details</h2><p className="mt-1 text-gray-500">Assessment information</p></div>
+    <button type="button" onClick={onClose} className="rounded-xl border p-2 hover:bg-gray-100"><X size={20}/></button>
+   </div>
+
+   {loading?<div className="py-20 text-center text-slate-500">Loading Student Details...</div>:<div className="space-y-6 p-8">
+    <section className="rounded-2xl border p-6"><div className="mb-5 flex items-center gap-3"><User className="text-[#00629B]"/><h3 className="text-xl font-bold">Personal Information</h3></div>
+     <div className="grid grid-cols-2 gap-5">
+      <div><p className="text-sm text-gray-500">Name</p><p className="font-semibold">{student.studentName}</p></div>
+      <div><p className="text-sm text-gray-500">Roll Number</p><p className="font-semibold">{student.rollNo}</p></div>
+      <div><p className="text-sm text-gray-500">Email</p><p className="font-semibold break-all">{student.email}</p></div>
+      <div><p className="text-sm text-gray-500">Department</p><p className="font-semibold">{student.department||"-"}</p></div>
+     </div>
+    </section>
+
+    <section className="rounded-2xl border p-6"><div className="mb-5 flex items-center gap-3"><Activity className="text-green-600"/><h3 className="text-xl font-bold">Assessment Status</h3></div>
+     <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+      {[
+       ["Status",attempt?.status||"NOT STARTED"],
+       ["Current",`${student.currentQuestion} / ${student.totalQuestions}`],
+       ["Time",student.isExpired?"Expired":`${String(Math.floor(student.remainingSeconds/60)).padStart(2,"0")}:${String(student.remainingSeconds%60).padStart(2,"0")}`],
+       ["Answered",`${stats.questionsAnswered??student.answeredQuestions} / ${student.totalQuestions}`],
+       ["Violations",String(stats.violations??student.violations)],
+       ["Score",String(stats.score??"-")]
+      ].map(([label,value])=><div key={label} className="rounded-xl border p-4"><p className="text-sm text-gray-500">{label}</p><p className="mt-2 font-semibold">{value}</p></div>)}
+     </div>
+    </section>
+
+    <section className="rounded-2xl border p-6"><div className="mb-5 flex items-center gap-3"><Clock className="text-[#00629B]"/><h3 className="text-xl font-bold">Timeline</h3></div>
+     <div className="space-y-3 text-sm">
+      <div className="flex justify-between border-b pb-3"><span className="text-gray-500">Started</span><span>{timeline.assessmentStartedAt?new Date(timeline.assessmentStartedAt).toLocaleString():"-"}</span></div>
+      <div className="flex justify-between"><span className="text-gray-500">Submitted</span><span>{timeline.submittedAt?new Date(timeline.submittedAt).toLocaleString():"Not submitted"}</span></div>
+     </div>
+    </section>
+
+    <section className="rounded-2xl border p-6"><div className="mb-5 flex items-center gap-3"><BarChart3 className="text-[#00629B]"/><h3 className="text-xl font-bold">Progress</h3></div>
+     <div className="flex justify-between text-sm"><span>Answered</span><span className="font-semibold">{student.answeredQuestions} / {student.totalQuestions}</span></div>
+     <div className="mt-3 h-3 overflow-hidden rounded-full bg-gray-200"><div className="h-full rounded-full bg-[#00629B]" style={{width:`${student.totalQuestions?Math.min(100,(student.answeredQuestions/student.totalQuestions)*100):0}%`}}/></div>
+    </section>
+
+    <div className="flex flex-wrap gap-3 border-t pt-6">
+     <button type="button" disabled={processing||finished} onClick={()=>void handleForceSubmit()} className="rounded-xl border border-amber-400 px-4 py-3 font-semibold text-amber-700 disabled:opacity-50">Force Submit</button>
+     <button type="button" disabled={processing||!assessmentId} onClick={()=>void handleBlockToggle()} className="rounded-xl border px-4 py-3 font-semibold disabled:opacity-50">{blocked?"Unblock Student":"Block Student"}</button>
+     <button type="button" disabled={processing||!assessmentId} onClick={()=>void handleDelete()} className="rounded-xl border border-red-300 px-4 py-3 font-semibold text-red-600 disabled:opacity-50">Delete Student</button>
+    </div>
+   </div>}
+  </div>
+ </>;
 }

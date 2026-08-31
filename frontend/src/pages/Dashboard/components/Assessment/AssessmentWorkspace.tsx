@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   X, LayoutDashboard, Database, Users, Radio, Trophy, BarChart3,
-  Download, Settings2, Clock3
+  Download, Settings2
 } from "lucide-react";
 import { Assessment } from "./AssessmentCard";
 import Overview from "./Workspace/Overview";
@@ -29,21 +29,25 @@ const tabs:{id:WorkspaceTab;label:string;icon:any}[]=[
 
 function formatDate(value?:string|null){
  if(!value)return "Not scheduled";
- const d=new Date(value); return Number.isNaN(d.getTime())?"Not scheduled":d.toLocaleString();
+ const d=new Date(value);
+ return Number.isNaN(d.getTime())?"Not scheduled":d.toLocaleString();
 }
 
 export default function AssessmentWorkspace({assessment,onClose}:Props){
- const storageKey = `assessment-workspace-tab:${assessment.id}`;
+ const storageKey=`assessment-workspace-tab:${assessment.id}`;
  const [activeTab,setActiveTab]=useState<WorkspaceTab>(()=>{
-  try {
-   const saved = sessionStorage.getItem(storageKey) as WorkspaceTab | null;
-   return saved && tabs.some((tab)=>tab.id===saved) ? saved : "overview";
-  } catch { return "overview"; }
+  try{
+   const saved=sessionStorage.getItem(storageKey) as WorkspaceTab|null;
+   return saved&&tabs.some(tab=>tab.id===saved)?saved:"overview";
+  }catch{return "overview";}
  });
+
  useEffect(()=>{
-  try { sessionStorage.setItem(storageKey, activeTab); } catch {}
+  try{sessionStorage.setItem(storageKey,activeTab);}catch{}
  },[storageKey,activeTab]);
+
  const status=assessment.is_published?"Published":"Draft";
+
  return (
   <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl">
    <header className="bg-slate-950 px-6 py-6 text-white md:px-8">
@@ -66,6 +70,7 @@ export default function AssessmentWorkspace({assessment,onClose}:Props){
      <MiniStat label="Ends" value={formatDate(assessment.end_time)}/>
     </div>
    </header>
+
    <nav className="border-b border-slate-200 bg-white px-3 md:px-5">
     <div className="flex gap-1 overflow-x-auto py-2">
      {tabs.map(({id,label,icon:Icon})=>(
@@ -76,6 +81,7 @@ export default function AssessmentWorkspace({assessment,onClose}:Props){
      ))}
     </div>
    </nav>
+
    <main className="bg-slate-50/70 p-4 md:p-7">
     {activeTab==="overview"&&<Overview assessment={assessment} onNavigate={setActiveTab}/>}
     {activeTab==="questionBanks"&&<QuestionBanks assessment={assessment}/>}
@@ -89,6 +95,7 @@ export default function AssessmentWorkspace({assessment,onClose}:Props){
   </div>
  );
 }
+
 function MiniStat({label,value}:{label:string;value:string}){
  return <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3"><p className="text-xs text-slate-400">{label}</p><p className="mt-1 truncate text-sm font-semibold text-white">{value}</p></div>;
 }
