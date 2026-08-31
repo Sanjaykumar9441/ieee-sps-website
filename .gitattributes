@@ -1,0 +1,36 @@
+# Enforce LF endings for all text files
+* text=auto eol=lf
+
+# Backend (Node.js)
+*.js     text eol=lf
+*.json   text eol=lf
+*.ejs    text eol=lf
+*.css    text eol=lf
+*.html   text eol=lf
+
+# Frontend (React/TypeScript)
+*.ts     text eol=lf
+*.tsx    text eol=lf
+*.css    text eol=lf
+*.html   text eol=lf
+*.json   text eol=lf
+
+# Config files
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.md     text eol=lf
+*.lock   text eol=lf
+
+# Scripts
+*.sh     text eol=lf
+*.bat    text eol=crlf
+
+# Binary files (no conversion)
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.pdf    binary
+*.zip    binary
+*.exe    binary
