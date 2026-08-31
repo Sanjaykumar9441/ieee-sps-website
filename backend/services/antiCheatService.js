@@ -7,40 +7,91 @@ const liveEvents = require("./liveEvents");
 const MAX_INFRACTIONS = 5;
 
 async function autoSubmitAttempt(attempt, reason = "ANTI_CHEAT_AUTO_SUBMIT") {
-  if (!attempt) throw new Error("Attempt not found.");
-
-  if (attempt.status === "SUBMITTED") {
-    return { success: true, alreadyFinished: true, autoSubmitted: true, status: "SUBMITTED" };
+  if (!attempt?.id) {
+    throw new Error("Attempt ID is required.");
   }
 
-  const result = await scoring.calculateScore(attempt.id);
-
-  // A visibility change and blur can arrive together. Re-read the attempt
-  // after scoring so the second request does not emit a second submission.
+  /*
+   * Re-read the attempt immediately before submitting.
+   *
+   * A TAB_SWITCH and WINDOW_BLUR event can arrive almost
+   * at the same time. The first request may already have
+   * submitted the attempt while the second request is still
+   * running.
+   *
+   * Therefore NEVER submit the stale attempt object directly.
+   */
   const latestAttempt = await engine.getAttempt(attempt.id);
-  if (!latestAttempt) throw new Error("Attempt not found.");
-  if (latestAttempt.status === "SUBMITTED") {
-    return { success: true, alreadyFinished: true, autoSubmitted: true, status: "SUBMITTED" };
+
+  if (!latestAttempt) {
+    throw new Error("Attempt not found.");
   }
 
-  const updatedAttempt = await engine.finishAttempt(latestAttempt.id, result, "SUBMITTED");
+  /*
+   * Already submitted?
+   * Do nothing and report success.
+   *
+   * There is NO DISQUALIFIED state here.
+   */
+  if (
+    latestAttempt.status === "SUBMITTED" ||
+    latestAttempt.status === "COMPLETED" ||
+    latestAttempt.status === "EXPIRED"
+  ) {
+    return {
+      success: true,
+      alreadyFinished: true,
+      autoSubmitted: true,
+      status: latestAttempt.status,
+    };
+  }
 
-  await supabase.from("assessment_activity").insert({
-    attempt_id: latestAttempt.id,
-    activity_type: "AUTO_SUBMIT",
-    metadata: { source: "anti_cheat", reason },
-  });
+  /*
+   * Calculate the final score only once.
+   */
+  const result = await scoring.calculateScore(latestAttempt.id);
 
-  await session.unlockStudent(updatedAttempt.assessment_id, updatedAttempt.student_id);
-  liveEvents.emitForceSubmitted(updatedAttempt.assessment_id, updatedAttempt);
-  liveEvents.emitStudentSubmitted(updatedAttempt.assessment_id);
-  liveEvents.emitDashboardRefresh(updatedAttempt.assessment_id);
+  /*
+   * Automatically submit the assessment.
+   */
+  const updatedAttempt = await engine.finishAttempt(
+    latestAttempt.id,
+    result,
+    "SUBMITTED",
+  );
+
+  /*
+   * Record the automatic submission.
+   *
+   * IMPORTANT:
+   * Use only ONE attempt_id property.
+   */
+  try {
+    await supabase.from("assessment_activity").insert({
+      attempt_id: latestAttempt.id,
+      activity_type: "AUTO_SUBMIT",
+      metadata: {
+        source: "anti_cheat",
+        reason,
+      },
+    });
+  } catch (activityError) {
+    /*
+     * Activity logging must not make an already
+     * successfully submitted exam fail.
+     */
+    console.error(
+      "[ANTI-CHEAT] Failed to record AUTO_SUBMIT activity:",
+      activityError,
+    );
+  }
 
   return {
     success: true,
+    alreadyFinished: false,
     autoSubmitted: true,
-    status: "SUBMITTED",
-    score: result.score,
+    status: updatedAttempt?.status || "SUBMITTED",
+    attempt: updatedAttempt,
   };
 }
 
@@ -133,7 +184,8 @@ exports.resetInfractions = async (attemptId) => {
 exports.getAssessmentInfractions = async (assessmentId) => {
   const { data, error } = await supabase
     .from("assessment_infractions")
-    .select(`
+    .select(
+      `
       id,
       attempt_id,
       type,
@@ -144,7 +196,8 @@ exports.getAssessmentInfractions = async (assessmentId) => {
         student_id,
         assessment_allowed_students(name, roll_no, branch)
       )
-    `)
+    `,
+    )
     .eq("assessment_attempts.assessment_id", assessmentId)
     .order("occurred_at", { ascending: false });
   if (error) throw error;
