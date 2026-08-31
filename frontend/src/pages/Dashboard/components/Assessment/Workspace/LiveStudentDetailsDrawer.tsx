@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Activity, BarChart3, Clock, User, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { socket } from "../../../../../lib/socket";
-import { LiveStudent } from "./LiveMonitor";
+import type { LiveStudent } from "./LiveMonitor";
 import { getLiveStudentDetails, blockStudents, unblockStudents, deleteStudents, forceSubmitAttempt } from "../../Assessment/assessmentApi";
 
 interface Props { open:boolean; student:LiveStudent|null; assessmentId:string; onClose:()=>void; onRefresh:()=>Promise<void>; }
