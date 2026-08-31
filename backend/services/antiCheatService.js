@@ -7,16 +7,14 @@ const liveEvents = require("./liveEvents");
 const MAX_INFRACTIONS = 5;
 
 async function autoSubmitAttempt(attempt, reason = "ANTI_CHEAT_AUTO_SUBMIT") {
-  if (!attempt || attempt.status === "SUBMITTED") {
-    return { success: true, alreadyFinished: true, status: "SUBMITTED" };
+  if (!attempt) throw new Error("Attempt not found.");
+
+  if (attempt.status === "SUBMITTED") {
+    return { success: true, alreadyFinished: true, autoSubmitted: true, status: "SUBMITTED" };
   }
 
   const result = await scoring.calculateScore(attempt.id);
-  const updatedAttempt = await engine.finishAttempt(
-    attempt.id,
-    result,
-    "SUBMITTED",
-  );
+  const updatedAttempt = await engine.finishAttempt(attempt.id, result, "SUBMITTED");
 
   await supabase.from("assessment_activity").insert({
     attempt_id: attempt.id,
@@ -24,11 +22,7 @@ async function autoSubmitAttempt(attempt, reason = "ANTI_CHEAT_AUTO_SUBMIT") {
     metadata: { source: "anti_cheat", reason },
   });
 
-  await session.unlockStudent(
-    updatedAttempt.assessment_id,
-    updatedAttempt.student_id,
-  );
-
+  await session.unlockStudent(updatedAttempt.assessment_id, updatedAttempt.student_id);
   liveEvents.emitForceSubmitted(updatedAttempt.assessment_id, updatedAttempt);
   liveEvents.emitStudentSubmitted(updatedAttempt.assessment_id);
   liveEvents.emitDashboardRefresh(updatedAttempt.assessment_id);
@@ -44,11 +38,8 @@ async function autoSubmitAttempt(attempt, reason = "ANTI_CHEAT_AUTO_SUBMIT") {
 exports.reportInfraction = async (attemptId, type, metadata = {}) => {
   const attempt = await engine.getAttempt(attemptId);
 
-  if (!attempt) {
-    throw new Error("Attempt not found.");
-  }
+  if (!attempt) throw new Error("Attempt not found.");
 
-  // Completed attempts cannot generate new infractions.
   if (attempt.status === "SUBMITTED") {
     return { ignored: true, status: "SUBMITTED" };
   }
@@ -73,28 +64,31 @@ exports.reportInfraction = async (attemptId, type, metadata = {}) => {
 
   if (countError) throw countError;
 
+  const count = Number(totalInfractions || 0);
+
   liveEvents.emitInfraction(attempt.assessment_id, {
     attemptId: attempt.id,
     studentId: attempt.student_id,
     infractionType: type,
-    totalInfractions: totalInfractions || 0,
+    totalInfractions: count,
   });
 
-  // Leaving the exam window is an immediate automatic submission.
+  // Any deliberate loss of the exam window automatically submits the attempt.
+  // There is no DISQUALIFIED state in the active assessment flow.
   if (type === "TAB_SWITCH" || type === "WINDOW_BLUR") {
-    return await autoSubmitAttempt(attempt, type);
+    return autoSubmitAttempt(attempt, type);
   }
 
-  // The fifth violation also submits automatically. There is no disqualification
-  // state or disqualification UI in the assessment system anymore.
-  if (Number(totalInfractions || 0) >= MAX_INFRACTIONS) {
-    return await autoSubmitAttempt(attempt, "MAX_INFRACTIONS");
+  if (count >= MAX_INFRACTIONS) {
+    return autoSubmitAttempt(attempt, "MAX_INFRACTIONS");
   }
 
   return {
     success: true,
     autoSubmitted: false,
-    totalInfractions: totalInfractions || 0,
+    count,
+    totalInfractions: count,
+    maxInfractions: MAX_INFRACTIONS,
     infraction,
   };
 };
@@ -105,7 +99,6 @@ exports.getAttemptInfractions = async (attemptId) => {
     .select("*")
     .eq("attempt_id", attemptId)
     .order("occurred_at", { ascending: false });
-
   if (error) throw error;
   return data || [];
 };
@@ -115,7 +108,6 @@ exports.getInfractionCount = async (attemptId) => {
     .from("assessment_infractions")
     .select("*", { count: "exact", head: true })
     .eq("attempt_id", attemptId);
-
   if (error) throw error;
   return count || 0;
 };
@@ -125,7 +117,6 @@ exports.resetInfractions = async (attemptId) => {
     .from("assessment_infractions")
     .delete()
     .eq("attempt_id", attemptId);
-
   if (error) throw error;
   return { success: true };
 };
@@ -142,20 +133,13 @@ exports.getAssessmentInfractions = async (assessmentId) => {
       assessment_attempts(
         assessment_id,
         student_id,
-        assessment_allowed_students(
-          name,
-          roll_no,
-          branch
-        )
+        assessment_allowed_students(name, roll_no, branch)
       )
     `)
     .eq("assessment_attempts.assessment_id", assessmentId)
     .order("occurred_at", { ascending: false });
-
   if (error) throw error;
   return data || [];
 };
 
-exports.getConfiguration = () => ({
-  MAX_INFRACTIONS,
-});
+exports.getConfiguration = () => ({ MAX_INFRACTIONS });
