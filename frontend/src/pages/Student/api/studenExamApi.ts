@@ -119,12 +119,21 @@ export const resumeAssessment = async (assessmentId: string, attemptId: string) 
 };
 
 export const submitAssessment = async (attemptId: string, reason = "STUDENT_SUBMIT") => {
-  const { data } = await axios.post(
-    `${API}/api/student-assessments/${attemptId}/submit`,
-    { reason },
-    getSessionConfig(attemptId),
-  );
-  return data;
+  try {
+    const { data } = await axios.post(
+      `${API}/api/student-assessments/${attemptId}/submit`,
+      { reason },
+      getSessionConfig(attemptId),
+    );
+    return data;
+  } catch (error: any) {
+    // Anti-cheat/timer may have already completed the attempt before the
+    // browser receives its response. Treat that idempotent case as success.
+    if (error?.response?.status === 400 && /already submitted/i.test(String(error?.response?.data?.message || ""))) {
+      return { success: true, alreadySubmitted: true, status: "SUBMITTED" };
+    }
+    throw error;
+  }
 };
 
 export const assessmentHeartbeat = async (attemptId: string) =>
