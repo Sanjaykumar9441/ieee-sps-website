@@ -14,10 +14,19 @@ async function autoSubmitAttempt(attempt, reason = "ANTI_CHEAT_AUTO_SUBMIT") {
   }
 
   const result = await scoring.calculateScore(attempt.id);
-  const updatedAttempt = await engine.finishAttempt(attempt.id, result, "SUBMITTED");
+
+  // A visibility change and blur can arrive together. Re-read the attempt
+  // after scoring so the second request does not emit a second submission.
+  const latestAttempt = await engine.getAttempt(attempt.id);
+  if (!latestAttempt) throw new Error("Attempt not found.");
+  if (latestAttempt.status === "SUBMITTED") {
+    return { success: true, alreadyFinished: true, autoSubmitted: true, status: "SUBMITTED" };
+  }
+
+  const updatedAttempt = await engine.finishAttempt(latestAttempt.id, result, "SUBMITTED");
 
   await supabase.from("assessment_activity").insert({
-    attempt_id: attempt.id,
+    attempt_id: latestAttempt.id,
     activity_type: "AUTO_SUBMIT",
     metadata: { source: "anti_cheat", reason },
   });
@@ -73,8 +82,8 @@ exports.reportInfraction = async (attemptId, type, metadata = {}) => {
     totalInfractions: count,
   });
 
-  // Any deliberate loss of the exam window automatically submits the attempt.
-  // There is no DISQUALIFIED state in the active assessment flow.
+  // There is no disqualification flow. Leaving the exam window submits the
+  // attempt automatically, and other violations auto-submit at the limit.
   if (type === "TAB_SWITCH" || type === "WINDOW_BLUR") {
     return autoSubmitAttempt(attempt, type);
   }
