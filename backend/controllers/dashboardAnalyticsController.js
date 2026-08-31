@@ -146,11 +146,7 @@ Students whose attempt is currently IN_PROGRESS.
       (attempt) => attempt.status === "IN_PROGRESS",
     ).length;
 
-    const disqualified = filteredAttempts.filter(
-      (attempt) => attempt.status === "DISQUALIFIED",
-    ).length;
-
-    const pending = Math.max(participants - submitted - disqualified, 0);
+    const pending = Math.max(participants - submitted, 0);
 
     /* ========================================================
        SCORE ANALYTICS
@@ -613,13 +609,8 @@ Students whose attempt is currently IN_PROGRESS.
 
         integrity: {
           warnings,
-
           forceSubmitted,
-
-          disqualified,
-
           tabSwitches,
-
           windowBlur,
         },
 

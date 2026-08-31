@@ -97,6 +97,7 @@ exports.checkAssessment = async (req, res) => {
 
 exports.startAssessment = async (req, res) => {
   let lockAcquired = false;
+  let createdAttemptId = null;
 
   try {
     const { assessmentId } = req.params;
@@ -214,7 +215,9 @@ exports.startAssessment = async (req, res) => {
       assessment,
       student,
       frozenQuestions,
+      actualDurationSeconds,
     );
+    createdAttemptId = attempt.id;
 
     // --------------------------------
     // Redis Timer
@@ -236,6 +239,13 @@ exports.startAssessment = async (req, res) => {
       question: firstQuestion,
     });
   } catch (err) {
+    if (createdAttemptId) {
+      try {
+        await supabase.from("assessment_attempts").delete().eq("id", createdAttemptId);
+      } catch (cleanupError) {
+        console.error("FAILED TO CLEAN UP ASSESSMENT ATTEMPT:", cleanupError);
+      }
+    }
     if (lockAcquired) {
       try {
         await session.unlockStudent(req.params.assessmentId, req.student.id);
@@ -423,8 +433,7 @@ exports.getStatus = async (req, res) => {
 
     if (
       remainingSeconds <= 0 &&
-      attempt.status !== "SUBMITTED" &&
-      attempt.status !== "DISQUALIFIED"
+      attempt.status === "IN_PROGRESS"
     ) {
       const result = await scoring.calculateScore(attemptId);
 
@@ -570,9 +579,6 @@ exports.getStatus = async (req, res) => {
           (a) => a.status === "IN_PROGRESS",
         ).length,
 
-        disqualifiedStudents: (attempts || []).filter(
-          (a) => a.status === "DISQUALIFIED",
-        ).length,
       };
 
       liveEvents.emitDashboardAnalytics(
@@ -597,6 +603,7 @@ exports.getStatus = async (req, res) => {
 
     return res.json({
       success: true,
+      status: attempt.status,
       remainingSeconds,
       answered,
       totalQuestions: palette.length,
@@ -633,13 +640,6 @@ exports.submitAssessment = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Assessment already submitted.",
-      });
-    }
-
-    if (attempt.status === "DISQUALIFIED") {
-      return res.status(400).json({
-        success: false,
-        message: "This assessment attempt has been disqualified.",
       });
     }
 
@@ -813,9 +813,6 @@ exports.submitAssessment = async (req, res) => {
         (a) => a.status === "IN_PROGRESS",
       ).length,
 
-      disqualifiedStudents: (attempts || []).filter(
-        (a) => a.status === "DISQUALIFIED",
-      ).length,
     };
 
     liveEvents.emitDashboardAnalytics(updatedAttempt.assessment_id, dashboard);
@@ -1016,17 +1013,26 @@ exports.heartbeat = async (req, res) => {
 
     if (
       remainingSeconds <= 0 &&
-      attempt.status !== "SUBMITTED" &&
-      attempt.status !== "DISQUALIFIED"
+      attempt.status === "IN_PROGRESS"
     ) {
       const result = await scoring.calculateScore(attemptId);
 
       const updatedAttempt = await engine.finishAttempt(attemptId, result);
 
+      await supabase.from("assessment_activity").insert({
+        attempt_id: attemptId,
+        activity_type: "AUTO_SUBMIT",
+        metadata: { source: "heartbeat" },
+      });
+
       await session.unlockStudent(
         updatedAttempt.assessment_id,
         updatedAttempt.student_id,
       );
+
+      liveEvents.emitSubmitted(updatedAttempt.assessment_id, updatedAttempt);
+      liveEvents.emitStudentSubmitted(updatedAttempt.assessment_id);
+      liveEvents.emitDashboardRefresh(updatedAttempt.assessment_id);
 
       return res.json({
         success: false,

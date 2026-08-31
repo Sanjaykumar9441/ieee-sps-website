@@ -17,13 +17,15 @@ interface UseAntiCheatProps {
   attemptId: string | null;
   enabled?: boolean;
   observeBrowserEvents?: boolean;
+  onAutoSubmit?: (reason: string) => void;
 }
 
 interface InfractionResponse {
   success: boolean;
   count?: number;
   maxInfractions?: number;
-  disqualified?: boolean;
+  autoSubmitted?: boolean;
+  status?: string;
   message?: string;
 }
 
@@ -33,43 +35,29 @@ export default function useAntiCheat({
   attemptId,
   enabled = true,
   observeBrowserEvents = true,
+  onAutoSubmit,
 }: UseAntiCheatProps) {
   const [infractionCount, setInfractionCount] = useState(0);
   const [warning, setWarning] = useState<string | null>(null);
-  const [disqualified, setDisqualified] = useState(false);
-
+  const autoSubmitRef = useRef(false);
   const lastReportedRef = useRef<Record<string, number>>({});
 
-  const getToken = () => {
-    return (
-      localStorage.getItem("studentToken") || localStorage.getItem("token")
-    );
-  };
+  const getToken = () =>
+    localStorage.getItem("studentToken") || localStorage.getItem("token");
 
   const loadInfractions = useCallback(async () => {
     if (!attemptId || !enabled) return;
 
     try {
       const token = getToken();
-
       const { data } = await axios.get(
         `${API}/api/student-assessments/${attemptId}/infractions`,
         {
-          headers: token
-            ? {
-                Authorization: `Bearer ${token}`,
-              }
-            : undefined,
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         },
       );
 
-      const count = data?.count ?? data?.infractions?.length ?? 0;
-
-      setInfractionCount(count);
-
-      if (data?.disqualified) {
-        setDisqualified(true);
-      }
+      setInfractionCount(data?.count ?? data?.infractions?.length ?? 0);
     } catch (error) {
       console.error("[ANTI-CHEAT] Failed to load infractions", error);
     }
@@ -77,52 +65,42 @@ export default function useAntiCheat({
 
   const reportInfraction = useCallback(
     async (type: InfractionType) => {
-      if (!attemptId || !enabled || disqualified) return;
+      if (!attemptId || !enabled || autoSubmitRef.current) return;
 
       const now = Date.now();
       const lastReported = lastReportedRef.current[type] || 0;
-
-      // Prevent duplicate browser events within 2 seconds.
-      if (now - lastReported < 2000) {
-        return;
-      }
-
+      if (now - lastReported < 2000) return;
       lastReportedRef.current[type] = now;
 
       try {
         const token = getToken();
-
         const { data }: { data: InfractionResponse } = await axios.post(
           `${API}/api/student-assessments/${attemptId}/infractions`,
           {
             type,
-            details: {
+            metadata: {
               timestamp: new Date().toISOString(),
               page: window.location.pathname,
             },
           },
           {
-            headers: token
-              ? {
-                  Authorization: `Bearer ${token}`,
-                }
-              : undefined,
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           },
         );
 
-        const count = data?.count ?? infractionCount + 1;
-
+        const count = Number(data?.count ?? infractionCount + 1);
         setInfractionCount(count);
 
-        if (data?.disqualified || count >= MAX_INFRACTIONS) {
-          setDisqualified(true);
-          setWarning("You have been disqualified from this assessment.");
+        if (data?.autoSubmitted || data?.status === "SUBMITTED") {
+          autoSubmitRef.current = true;
+          setWarning(null);
+          onAutoSubmit?.(type);
           return;
         }
 
         if (count === MAX_INFRACTIONS - 1) {
           setWarning(
-            `Final warning: this is violation ${count} of ${MAX_INFRACTIONS}. One more violation may disqualify you.`,
+            `Final warning: violation ${count} of ${MAX_INFRACTIONS}. One more violation will automatically submit your assessment.`,
           );
         } else {
           setWarning(
@@ -133,11 +111,11 @@ export default function useAntiCheat({
         console.error(`[ANTI-CHEAT] Failed to report ${type}`, error);
       }
     },
-    [attemptId, enabled, disqualified, infractionCount],
+    [attemptId, enabled, infractionCount, onAutoSubmit],
   );
 
   useEffect(() => {
-    loadInfractions();
+    void loadInfractions();
   }, [loadInfractions]);
 
   useEffect(() => {
@@ -145,44 +123,37 @@ export default function useAntiCheat({
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
-        reportInfraction("TAB_SWITCH");
+        void reportInfraction("TAB_SWITCH");
       }
     };
 
     const handleBlur = () => {
-      reportInfraction("WINDOW_BLUR");
+      void reportInfraction("WINDOW_BLUR");
     };
 
     const handleFullscreenChange = () => {
       if (!document.fullscreenElement) {
-        reportInfraction("FULLSCREEN_EXIT");
+        void reportInfraction("FULLSCREEN_EXIT");
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-
     window.addEventListener("blur", handleBlur);
-
     document.addEventListener("fullscreenchange", handleFullscreenChange);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-
       window.removeEventListener("blur", handleBlur);
-
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
   }, [attemptId, enabled, observeBrowserEvents, reportInfraction]);
 
-  const dismissWarning = () => {
-    setWarning(null);
-  };
+  const dismissWarning = () => setWarning(null);
 
   return {
     infractionCount,
     maxInfractions: MAX_INFRACTIONS,
     warning,
-    disqualified,
     dismissWarning,
     reportInfraction,
     refreshInfractions: loadInfractions,

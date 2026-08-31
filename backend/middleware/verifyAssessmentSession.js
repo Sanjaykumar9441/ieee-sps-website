@@ -57,11 +57,28 @@ module.exports = async (req, res, next) => {
     );
 
     if (!valid) {
-      return res.status(409).json({
-        success: false,
-        code: "SESSION_NOT_OWNER",
-        message: "This assessment is active in another session.",
-      });
+      // Redis can expire at the same moment as the exam timer. Allow only
+      // status/submit to finalize an already-expired attempt.
+      const { supabase } = require("../lib/supabase");
+      const { data: assessment } = await supabase
+        .from("assessments")
+        .select("end_time")
+        .eq("id", attempt.assessment_id)
+        .maybeSingle();
+      const deadlines = [attempt.expires_at, assessment?.end_time]
+        .filter(Boolean)
+        .map((value) => new Date(value).getTime())
+        .filter(Number.isFinite);
+      const expired = deadlines.length > 0 && Date.now() >= Math.min(...deadlines);
+      const routePath = String(req.route?.path || "");
+      const canFinalizeExpired = expired && (routePath.endsWith("/status") || routePath.endsWith("/submit"));
+      if (!canFinalizeExpired) {
+        return res.status(409).json({
+          success: false,
+          code: "SESSION_NOT_OWNER",
+          message: "This assessment is active in another session.",
+        });
+      }
     }
 
     req.assessmentSessionId = sessionId;

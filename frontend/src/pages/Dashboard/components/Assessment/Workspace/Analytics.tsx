@@ -108,7 +108,6 @@ export interface AnalyticsData {
   integrity: {
     warnings: number;
     forceSubmitted: number;
-    disqualified: number;
     tabSwitches: number;
     windowBlur: number;
   };
@@ -150,7 +149,7 @@ export default function Analytics({ assessment }: Props) {
     fastestSubmissions: [],
     slowestSubmissions: [],
     completion: { allowed: 0, loggedIn: 0, started: 0, submitted: 0, pending: 0 },
-    integrity: { warnings: 0, forceSubmitted: 0, disqualified: 0, tabSwitches: 0, windowBlur: 0 },
+    integrity: { warnings: 0, forceSubmitted: 0, tabSwitches: 0, windowBlur: 0 },
     liveActivity: { online: 0, taking: 0 },
     assessmentStatus: { status: "Inactive", duration: 0, questions: 0, studentsOnline: 0, lastSubmission: "-" },
   });
@@ -707,14 +706,6 @@ export default function Analytics({ assessment }: Props) {
 
             <h3 className="mt-2 text-3xl font-bold text-red-600">
               {analytics.integrity.forceSubmitted}
-            </h3>
-          </div>
-
-          <div className="rounded-xl border p-5 text-center">
-            <p className="text-sm text-gray-500">Disqualified</p>
-
-            <h3 className="mt-2 text-3xl font-bold text-red-700">
-              {analytics.integrity.disqualified}
             </h3>
           </div>
 

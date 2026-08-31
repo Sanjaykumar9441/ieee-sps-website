@@ -56,16 +56,16 @@ const AllMembers = () => {
             </h1>
 
             <p className="hidden md:block mt-6 text-lg text-slate-600">
-  Meet the dedicated leaders, innovators and volunteers driving IEEE
-  SPS Student Branch Chapter at Aditya University.
-</p>
+              Meet the dedicated leaders, innovators and volunteers driving IEEE
+              SPS Student Branch Chapter at Aditya University.
+            </p>
             <p className="mt-4 text-[#00629B] font-semibold">
               Total Members: {members.length}
             </p>
           </motion.div>
 
           {/* Members Grid */}
-         <div className="mt-16 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-6">
+          <div className="mt-16 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-6">
             {members.map((member, index) => (
               <motion.div
                 key={member._id}

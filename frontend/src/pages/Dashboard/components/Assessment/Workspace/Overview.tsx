@@ -4,7 +4,6 @@ import {
   Users,
   UserCheck,
   Trophy,
-  AlertTriangle,
   BarChart3,
   Activity,
 } from "lucide-react";
@@ -34,7 +33,6 @@ interface AnalyticsData {
   started: number;
   submitted: number;
   running: number;
-  disqualified: number;
   averageScore: number;
   highestScore: number;
   lowestScore: number;
@@ -49,7 +47,6 @@ export default function Overview({ assessment, onNavigate }: Props) {
     started: 0,
     submitted: 0,
     running: 0,
-    disqualified: 0,
     averageScore: 0,
     highestScore: 0,
     lowestScore: 0,
@@ -117,11 +114,6 @@ export default function Overview({ assessment, onNavigate }: Props) {
       title: "Submitted",
       value: analytics.submitted,
       icon: Trophy,
-    },
-    {
-      title: "Disqualified",
-      value: analytics.disqualified,
-      icon: AlertTriangle,
     },
     {
       title: "Average Score",

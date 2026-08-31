@@ -73,6 +73,10 @@ function normalizeQuestionType(value) {
     .toUpperCase()
     .replace(/[- ]/g, "_");
 
+  if (["TRUE_FALSE", "TRUEFALSE", "TRUE_OR_FALSE", "TRUE_FALSE_QUESTION"].includes(type)) {
+    return "TRUE_FALSE";
+  }
+
   return ["MULTIPLE_CORRECT", "MULTIPLE_CHOICE", "MULTIPLE"].includes(type)
     ? "MULTIPLE_CORRECT"
     : "MCQ";
@@ -128,14 +132,23 @@ async function buildQuestionPaper(assessment) {
 ============================================================ */
 
 function normalizeQuestion(question, assessment) {
+  const rawType = String(question.question_type || "MCQ")
+    .trim()
+    .toUpperCase()
+    .replace(/[- ]/g, "_");
+  const questionType = ["TRUE_FALSE", "TRUEFALSE", "TRUE_OR_FALSE", "TRUE_FALSE_QUESTION"].includes(rawType)
+    ? "TRUE_FALSE"
+    : ["MULTIPLE_CORRECT", "MULTIPLE_CHOICE", "MULTIPLE"].includes(rawType)
+      ? "MULTIPLE_CORRECT"
+      : "MCQ";
+
   return {
     id: question.id,
     bank_id: question.bank_id,
     question_text: question.question_text,
-    question_type: String(question.question_type || "MCQ").toUpperCase() === "MULTIPLE_CORRECT" ? "MULTIPLE_CORRECT" : "MCQ",
-    options: question.options || {},
+    question_type: questionType,
+    options: questionType === "TRUE_FALSE" ? { A: "True", B: "False" } : (question.options || {}),
     correct_answers: Array.isArray(question.correct_answers) ? [...question.correct_answers] : [],
-    // Freeze assessment-level marking into the attempt.
     marks: Math.max(0, Number(assessment?.marks_per_question ?? 1)),
     negative_marks: Math.max(0, Number(assessment?.negative_marks || 0)),
   };
@@ -165,7 +178,7 @@ exports.generateAttempt = async (assessment) => {
    CREATE ATTEMPT
 ============================================================ */
 
-exports.createAttempt = async (assessment, student, questions) => {
+exports.createAttempt = async (assessment, student, questions, durationSecondsOverride = null) => {
   if (!assessment.duration_minutes) {
     throw new Error("Assessment duration missing.");
   }
@@ -174,7 +187,10 @@ exports.createAttempt = async (assessment, student, questions) => {
     throw new Error("No questions generated for this attempt.");
   }
 
-  const durationSeconds = Number(assessment.duration_minutes) * 60;
+  const configuredDurationSeconds = Number(assessment.duration_minutes) * 60;
+  const durationSeconds = Number.isFinite(Number(durationSecondsOverride)) && Number(durationSecondsOverride) > 0
+    ? Math.min(configuredDurationSeconds, Number(durationSecondsOverride))
+    : configuredDurationSeconds;
 
   const startedAt = new Date();
 
@@ -316,7 +332,7 @@ exports.getQuestion = async (attemptId, questionNumber) => {
     question_order: data.question_order,
 
     question_text: source.question_text,
-    question_type: source.question_type === "MULTIPLE_CORRECT" ? "MULTIPLE_CORRECT" : "MCQ",
+    question_type: normalizeQuestionType(source.question_type),
 
     options: data.shuffled_options || {},
 
@@ -512,23 +528,33 @@ exports.finishAttempt = async (attemptId, result, status = "SUBMITTED") => {
     .from("assessment_attempts")
     .update({
       status,
-
       score: Number(result?.score || 0),
       correct: Number(result?.correct || 0),
       wrong: Number(result?.wrong || 0),
       unanswered: Number(result?.unanswered || 0),
       percentage: Number(result?.percentage || 0),
-
       submitted_at: now,
       completed_at: now,
     })
     .eq("id", attemptId)
+    .eq("status", "IN_PROGRESS")
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
 
-  return data;
+  // Idempotent completion: another request may have finished the attempt
+  // milliseconds earlier (timer, heartbeat, anti-cheat, or manual submit).
+  if (data) return data;
+
+  const { data: existing, error: existingError } = await supabase
+    .from("assessment_attempts")
+    .select("*")
+    .eq("id", attemptId)
+    .maybeSingle();
+  if (existingError) throw existingError;
+  if (!existing) throw new Error("Assessment attempt not found.");
+  return existing;
 };
 
 /* ============================================================

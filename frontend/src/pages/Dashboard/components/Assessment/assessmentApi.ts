@@ -10,8 +10,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-const unwrap = (data:any, key:string) => data?.[key] ?? [];
-
 export const getAssessments = async () => (await api.get("/assessments")).data.assessments || [];
 export const createAssessment = async (payload:any) => (await api.post("/assessments",payload)).data;
 export const updateAssessment = async (id:string,payload:any) => (await api.put(`/assessments/${id}`,payload)).data;
@@ -43,7 +41,6 @@ export const unblockStudents = async (assessmentId:string,studentIds:string[]) =
 export const getLiveStudents = async (assessmentId:string) => (await api.get(`/admin/live-monitor/${assessmentId}`)).data.students || [];
 export const getLiveStudentDetails = async (attemptId:string) => (await api.get(`/admin/live-monitor/attempt/${attemptId}`)).data;
 export const forceSubmitAttempt = async (attemptId:string) => (await api.post(`/admin/force-submit/${attemptId}`)).data;
-export const disqualifyAttempt = async (attemptId:string,reason?:string) => (await api.post(`/admin/force-submit/${attemptId}/disqualify`,{reason})).data;
 export const getLeaderboard = async (assessmentId:string) => (await api.get(`/admin/leaderboard/${assessmentId}`)).data.leaderboard || [];
 export const getDashboardAnalytics = async (assessmentId:string,params?:any) => (await api.get(`/admin/dashboard-analytics/${assessmentId}`,{params})).data.analytics || {};
 export const getAssessmentSettings = async (assessmentId:string) => (await api.get(`/assessment-settings/${assessmentId}`)).data.settings;

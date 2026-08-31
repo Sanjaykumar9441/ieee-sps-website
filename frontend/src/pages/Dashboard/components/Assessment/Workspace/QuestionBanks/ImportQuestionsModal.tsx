@@ -24,7 +24,7 @@ interface Props {
 
 interface PreviewQuestion {
   question_text: string;
-  question_type: "MCQ" | "MULTIPLE_CORRECT";
+  question_type: "MCQ" | "MULTIPLE_CORRECT" | "TRUE_FALSE";
   options: string[];
   correct_answers: string[];
 }
@@ -86,28 +86,31 @@ export default function ImportQuestionsModal({
       }
 
       const questions: PreviewQuestion[] = rows.map((row) => {
-        const options = [
-          row["Option A"],
-          row["Option B"],
-          row["Option C"],
-          row["Option D"],
-        ]
-          .map((value) => String(value || "").trim())
-          .filter(Boolean);
-
+        const rawType = String(row["Question Type"] || "MCQ").trim().toUpperCase().replace(/[ -]+/g, "_");
+        const questionType: PreviewQuestion["question_type"] =
+          ["TRUE_FALSE", "TRUEFALSE", "TRUE_OR_FALSE"].includes(rawType)
+            ? "TRUE_FALSE"
+            : ["MULTIPLE_CORRECT", "MULTIPLE_CHOICE", "MULTIPLE"].includes(rawType)
+              ? "MULTIPLE_CORRECT"
+              : "MCQ";
+        const options = questionType === "TRUE_FALSE"
+          ? ["True", "False"]
+          : [row["Option A"], row["Option B"], row["Option C"], row["Option D"]]
+              .map((value) => String(value || "").trim())
+              .filter(Boolean);
         const correctAnswer = String(row["Correct Answer"] || "").trim();
-
+        const correctAnswers = correctAnswer ? correctAnswer.split(/[|,;]/).map((answer: string) => answer.trim()) : [];
         return {
           question_text: String(row["Question"] || "").trim(),
-          question_type: String(row["Question Type"] || "MCQ").toUpperCase() === "MULTIPLE_CORRECT" ? "MULTIPLE_CORRECT" : "MCQ",
+          question_type: questionType,
           options,
-          correct_answers: correctAnswer
-            ? correctAnswer
-                .split(",")
-                .map((answer: string) => answer.trim().toUpperCase())
-                .filter((answer: string) => /^[A-D]$/.test(answer))
-                .map((answer: string) => "ABCD".indexOf(answer))
-            : [],
+          correct_answers: correctAnswers.map((answer: string) => {
+            const normalized = answer.toUpperCase();
+            if (questionType === "TRUE_FALSE") return normalized === "TRUE" ? 0 : normalized === "FALSE" ? 1 : -1;
+            if (/^[A-D]$/.test(normalized)) return "ABCD".indexOf(normalized);
+            if (/^[1-4]$/.test(normalized)) return Number(normalized) - 1;
+            return -1;
+          }).filter((index: number) => index >= 0),
         };
       });
 
