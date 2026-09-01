@@ -353,14 +353,22 @@ async function exportAdminCertificates(req, res) {
 }
 
 // ============================================================
-// ADMIN - EXPORT GENERATED PDF CERTIFICATES AS ZIP
+// ADMIN - EXPORT GENERATED CERTIFICATES AS ZIP
+// ============================================================
 //
 // IMPORTANT:
-// Uses the SAME certificate services as individual downloads.
-// Therefore the PDF alignment/template should remain identical.
+// Every PDF is generated through the SAME certificate services
+// used by the normal individual Download button.
+//
+// PARTICIPATION -> participationCertificateService
+// MERIT        -> meritCertificateService
+//
+// This keeps template, fonts and alignment identical.
 // ============================================================
 
 async function exportAdminCertificatePdfs(req, res) {
+  let archive = null;
+
   try {
     const eventCode = String(req.query.eventCode || "")
       .trim()
@@ -373,7 +381,7 @@ async function exportAdminCertificatePdfs(req, res) {
     const certificateIdsRaw = String(req.query.certificateIds || "").trim();
 
     // ----------------------------------------------------------
-    // Event is required
+    // EVENT REQUIRED
     // ----------------------------------------------------------
 
     if (!eventCode) {
@@ -384,7 +392,7 @@ async function exportAdminCertificatePdfs(req, res) {
     }
 
     // ----------------------------------------------------------
-    // Build filter
+    // BUILD DATABASE FILTER
     // ----------------------------------------------------------
 
     const filter = {
@@ -396,7 +404,9 @@ async function exportAdminCertificatePdfs(req, res) {
     }
 
     // ----------------------------------------------------------
-    // Optional selected certificate IDs
+    // SELECTED CERTIFICATES
+    // If IDs are supplied -> export only those.
+    // If not supplied -> export all certificates of event/type.
     // ----------------------------------------------------------
 
     if (certificateIdsRaw) {
@@ -405,7 +415,7 @@ async function exportAdminCertificatePdfs(req, res) {
         .map((id) => id.trim())
         .filter(Boolean);
 
-      if (certificateIds.length === 0) {
+      if (!certificateIds.length) {
         return res.status(400).json({
           success: false,
           message: "No valid certificate IDs supplied",
@@ -418,7 +428,7 @@ async function exportAdminCertificatePdfs(req, res) {
     }
 
     // ----------------------------------------------------------
-    // Get certificates
+    // GET CERTIFICATES
     // ----------------------------------------------------------
 
     const certificates = await Certificate.find(filter)
@@ -436,27 +446,47 @@ async function exportAdminCertificatePdfs(req, res) {
     }
 
     // ----------------------------------------------------------
-    // ARCHIVER v8
-    //
-    // DO NOT use:
-    // const archiver = require("archiver");
-    // archiver("zip")
-    //
-    // Archiver v8 requires ZipArchive.
+    // LOAD ARCHIVER
     // ----------------------------------------------------------
 
-    const archive = new ZipArchive({
+    let archiver;
+
+    try {
+      archiver = require("archiver");
+    } catch (error) {
+      console.error("Unable to load archiver:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "ZIP export dependency is not available",
+      });
+    }
+
+    if (typeof archiver !== "function") {
+      return res.status(500).json({
+        success: false,
+        message: "Invalid archiver package installation",
+      });
+    }
+
+    // ----------------------------------------------------------
+    // CREATE ZIP
+    // ----------------------------------------------------------
+
+    archive = archiver("zip", {
       zlib: {
         level: 9,
       },
     });
 
-    let archiveError = null;
+    archive.on("warning", (error) => {
+      if (error.code !== "ENOENT") {
+        console.error("Certificate ZIP warning:", error);
+      }
+    });
 
     archive.on("error", (error) => {
-      archiveError = error;
-
-      console.error("Certificate ZIP archive error:", error);
+      console.error("Certificate ZIP error:", error);
 
       if (!res.headersSent) {
         res.status(500).json({
@@ -470,7 +500,7 @@ async function exportAdminCertificatePdfs(req, res) {
     });
 
     // ----------------------------------------------------------
-    // Safe ZIP filename
+    // FILE NAME
     // ----------------------------------------------------------
 
     const safeEventCode = eventCode.replace(/[^A-Z0-9_-]/gi, "_");
@@ -488,7 +518,7 @@ async function exportAdminCertificatePdfs(req, res) {
     const zipFileName = `${safeEventCode}_Certificates_${safeType}.zip`;
 
     // ----------------------------------------------------------
-    // ZIP response headers
+    // RESPONSE HEADERS
     // ----------------------------------------------------------
 
     res.statusCode = 200;
@@ -502,24 +532,29 @@ async function exportAdminCertificatePdfs(req, res) {
 
     res.setHeader("Cache-Control", "no-store");
 
-    // Start streaming ZIP to browser.
+    // ----------------------------------------------------------
+    // START ZIP STREAM
+    // ----------------------------------------------------------
+
     archive.pipe(res);
 
     // ----------------------------------------------------------
-    // Generate every PDF
+    // GENERATE EACH PDF USING THE SAME SERVICES
     // ----------------------------------------------------------
 
-    for (const certificate of certificates) {
-      if (archiveError) {
-        break;
-      }
+    let generatedCount = 0;
+    let failedCount = 0;
 
+    for (const certificate of certificates) {
       try {
+        // A temporary in-memory stream.
+        const { PassThrough } = require("stream");
+
         const output = new PassThrough();
 
         const chunks = [];
 
-        const pdfBufferPromise = new Promise((resolve, reject) => {
+        const pdfFinished = new Promise((resolve, reject) => {
           output.on("data", (chunk) => {
             chunks.push(chunk);
           });
@@ -532,7 +567,7 @@ async function exportAdminCertificatePdfs(req, res) {
         });
 
         // ------------------------------------------------------
-        // USE SAME SERVICES AS NORMAL DOWNLOAD
+        // SAME SERVICE AS INDIVIDUAL DOWNLOAD
         // ------------------------------------------------------
 
         if (certificate.certificateType === "MERIT") {
@@ -546,51 +581,98 @@ async function exportAdminCertificatePdfs(req, res) {
 
           output.end();
 
-          await pdfBufferPromise;
-
-          continue;
-        }
-
-        const pdfBuffer = await pdfBufferPromise;
-
-        if (!pdfBuffer || pdfBuffer.length === 0) {
-          console.warn(`Empty PDF generated: ${certificate.certificateId}`);
-
+          failedCount++;
           continue;
         }
 
         // ------------------------------------------------------
-        // Folder inside ZIP
+        // WAIT UNTIL COMPLETE PDF IS AVAILABLE
         // ------------------------------------------------------
 
-        let folder = "Participation";
+        const pdfBuffer = await pdfFinished;
 
-        if (certificate.certificateType === "MERIT") {
-          folder = "Merit";
+        if (
+          !pdfBuffer ||
+          !Buffer.isBuffer(pdfBuffer) ||
+          pdfBuffer.length === 0
+        ) {
+          console.error(`Empty PDF generated: ${certificate.certificateId}`);
+
+          failedCount++;
+          continue;
         }
+
+        // ------------------------------------------------------
+        // ZIP FOLDER
+        // ------------------------------------------------------
+
+        const folder =
+          certificate.certificateType === "MERIT" ? "Merit" : "Participation";
 
         const fileName = `${certificate.certificateId}.pdf`;
+
+        // ------------------------------------------------------
+        // ADD GENERATED PDF TO ZIP
+        // ------------------------------------------------------
 
         archive.append(pdfBuffer, {
           name: `${folder}/${fileName}`,
         });
+
+        generatedCount++;
       } catch (certificateError) {
+        failedCount++;
+
         console.error(
-          `Failed to generate ${certificate.certificateId}:`,
+          `Failed to generate certificate ${certificate.certificateId}:`,
           certificateError,
         );
-
-        // Continue with remaining certificates.
       }
     }
 
     // ----------------------------------------------------------
-    // Finish ZIP
+    // NOTHING GENERATED
     // ----------------------------------------------------------
 
-    if (!archiveError) {
-      await archive.finalize();
+    if (generatedCount === 0) {
+      await archive.abort();
+
+      if (!res.headersSent) {
+        return res.status(500).json({
+          success: false,
+          message: "No certificate PDFs could be generated",
+        });
+      }
+
+      return;
     }
+
+    // ----------------------------------------------------------
+    // ADD EXPORT INFORMATION
+    // ----------------------------------------------------------
+
+    archive.append(
+      [
+        `Event: ${eventCode}`,
+        `Certificate Type: ${safeType}`,
+        `Total selected: ${certificates.length}`,
+        `PDFs generated: ${generatedCount}`,
+        `PDFs failed: ${failedCount}`,
+      ].join("\n"),
+      {
+        name: "export-info.txt",
+      },
+    );
+
+    // ----------------------------------------------------------
+    // FINALIZE ZIP
+    // ----------------------------------------------------------
+
+    await archive.finalize();
+
+    console.log(
+      `Certificate ZIP created: ${zipFileName} | Generated: ${generatedCount} | Failed: ${failedCount}`,
+    );
   } catch (error) {
     console.error("Certificate PDF ZIP export error:", error);
 
@@ -600,6 +682,12 @@ async function exportAdminCertificatePdfs(req, res) {
         message: "Failed to export certificates",
         error: error.message,
       });
+    }
+
+    if (archive) {
+      try {
+        await archive.abort();
+      } catch (_) {}
     }
 
     res.destroy(error);
