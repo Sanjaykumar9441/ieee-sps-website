@@ -2,27 +2,37 @@ const XLSX = require("xlsx");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const archiver = require("archiver");
+const { ZipArchive } = require("archiver");
 const { PassThrough } = require("stream");
 
 const Certificate = require("../models/Certificate");
+
 const { importRows } = require("../services/certificateImportService");
+
 const {
   generateParticipationCertificate,
 } = require("../services/participationCertificateService");
+
 const {
   generateMeritCertificate,
 } = require("../services/meritCertificateService");
 
+// ============================================================
+// IMPORT CERTIFICATES
+// ============================================================
+
 async function importCertificates(req, res) {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: "Excel file is required" });
+      return res.status(400).json({
+        message: "Excel file is required",
+      });
     }
 
     const eventCode = String(req.body.eventCode || "")
       .trim()
       .toUpperCase();
+
     const certificateType = String(req.body.certificateType || "")
       .trim()
       .toUpperCase();
@@ -39,10 +49,13 @@ async function importCertificates(req, res) {
     });
 
     if (!workbook.SheetNames.length) {
-      return res.status(400).json({ message: "Excel file has no worksheet" });
+      return res.status(400).json({
+        message: "Excel file has no worksheet",
+      });
     }
 
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
     const rows = XLSX.utils.sheet_to_json(sheet, {
       defval: "",
       raw: true,
@@ -64,6 +77,7 @@ async function importCertificates(req, res) {
     }
 
     const headers = Object.keys(rows[0] || {});
+
     const missing = requiredColumns.filter(
       (column) => !headers.includes(column),
     );
@@ -89,6 +103,7 @@ async function importCertificates(req, res) {
     });
   } catch (error) {
     console.error("Certificate import error:", error);
+
     return res.status(500).json({
       message: "Certificate import failed",
       error: error.message,
@@ -147,22 +162,29 @@ async function getAdminCertificates(req, res) {
 async function updateAdminCertificate(req, res) {
   try {
     const certificateId = String(req.params.certificateId || "").trim();
+
     if (!certificateId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Certificate ID is required" });
+      return res.status(400).json({
+        success: false,
+        message: "Certificate ID is required",
+      });
     }
 
-    const existing = await Certificate.findOne({ certificateId });
+    const existing = await Certificate.findOne({
+      certificateId,
+    });
+
     if (!existing) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Certificate not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Certificate not found",
+      });
     }
 
     const normalizedRollNo = String(req.body.rollNo || "")
       .trim()
       .toUpperCase();
+
     const name = String(req.body.name || "").trim();
 
     if (!name || !normalizedRollNo) {
@@ -173,7 +195,9 @@ async function updateAdminCertificate(req, res) {
     }
 
     const duplicate = await Certificate.findOne({
-      _id: { $ne: existing._id },
+      _id: {
+        $ne: existing._id,
+      },
       eventCode: existing.eventCode,
       certificateType: existing.certificateType,
       rollNo: normalizedRollNo,
@@ -192,8 +216,11 @@ async function updateAdminCertificate(req, res) {
 
     if (existing.certificateType === "MERIT") {
       existing.team = String(req.body.team || "").trim();
+
       existing.college = String(req.body.college || "").trim();
+
       existing.position = String(req.body.position || "").trim();
+
       existing.event = String(req.body.event || "").trim();
 
       if (
@@ -210,7 +237,9 @@ async function updateAdminCertificate(req, res) {
       }
     } else {
       existing.branch = String(req.body.branch || "").trim();
+
       existing.college = String(req.body.college || "").trim();
+
       existing.city = String(req.body.city || "").trim();
     }
 
@@ -224,6 +253,7 @@ async function updateAdminCertificate(req, res) {
     });
   } catch (error) {
     console.error("Update certificate error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to update certificate",
@@ -324,6 +354,10 @@ async function exportAdminCertificates(req, res) {
 
 // ============================================================
 // ADMIN - EXPORT GENERATED PDF CERTIFICATES AS ZIP
+//
+// IMPORTANT:
+// Uses the SAME certificate services as individual downloads.
+// Therefore the PDF alignment/template should remain identical.
 // ============================================================
 
 async function exportAdminCertificatePdfs(req, res) {
@@ -339,7 +373,7 @@ async function exportAdminCertificatePdfs(req, res) {
     const certificateIdsRaw = String(req.query.certificateIds || "").trim();
 
     // ----------------------------------------------------------
-    // Event is required for safe export
+    // Event is required
     // ----------------------------------------------------------
 
     if (!eventCode) {
@@ -388,7 +422,10 @@ async function exportAdminCertificatePdfs(req, res) {
     // ----------------------------------------------------------
 
     const certificates = await Certificate.find(filter)
-      .sort({ certificateType: 1, createdAt: 1 })
+      .sort({
+        certificateType: 1,
+        createdAt: 1,
+      })
       .lean();
 
     if (!certificates.length) {
@@ -399,16 +436,26 @@ async function exportAdminCertificatePdfs(req, res) {
     }
 
     // ----------------------------------------------------------
-    // ZIP response
+    // ARCHIVER v8
+    //
+    // DO NOT use:
+    // const archiver = require("archiver");
+    // archiver("zip")
+    //
+    // Archiver v8 requires ZipArchive.
     // ----------------------------------------------------------
 
-    const archive = archiver("zip", {
+    const archive = new ZipArchive({
       zlib: {
         level: 9,
       },
     });
 
+    let archiveError = null;
+
     archive.on("error", (error) => {
+      archiveError = error;
+
       console.error("Certificate ZIP archive error:", error);
 
       if (!res.headersSent) {
@@ -421,6 +468,10 @@ async function exportAdminCertificatePdfs(req, res) {
         res.destroy(error);
       }
     });
+
+    // ----------------------------------------------------------
+    // Safe ZIP filename
+    // ----------------------------------------------------------
 
     const safeEventCode = eventCode.replace(/[^A-Z0-9_-]/gi, "_");
 
@@ -436,6 +487,10 @@ async function exportAdminCertificatePdfs(req, res) {
 
     const zipFileName = `${safeEventCode}_Certificates_${safeType}.zip`;
 
+    // ----------------------------------------------------------
+    // ZIP response headers
+    // ----------------------------------------------------------
+
     res.statusCode = 200;
 
     res.setHeader("Content-Type", "application/zip");
@@ -447,15 +502,21 @@ async function exportAdminCertificatePdfs(req, res) {
 
     res.setHeader("Cache-Control", "no-store");
 
+    // Start streaming ZIP to browser.
     archive.pipe(res);
 
     // ----------------------------------------------------------
-    // Generate every PDF and append it to ZIP
+    // Generate every PDF
     // ----------------------------------------------------------
 
     for (const certificate of certificates) {
+      if (archiveError) {
+        break;
+      }
+
       try {
         const output = new PassThrough();
+
         const chunks = [];
 
         const pdfBufferPromise = new Promise((resolve, reject) => {
@@ -471,7 +532,7 @@ async function exportAdminCertificatePdfs(req, res) {
         });
 
         // ------------------------------------------------------
-        // Generate correct certificate type
+        // USE SAME SERVICES AS NORMAL DOWNLOAD
         // ------------------------------------------------------
 
         if (certificate.certificateType === "MERIT") {
@@ -494,6 +555,7 @@ async function exportAdminCertificatePdfs(req, res) {
 
         if (!pdfBuffer || pdfBuffer.length === 0) {
           console.warn(`Empty PDF generated: ${certificate.certificateId}`);
+
           continue;
         }
 
@@ -501,8 +563,11 @@ async function exportAdminCertificatePdfs(req, res) {
         // Folder inside ZIP
         // ------------------------------------------------------
 
-        const folder =
-          certificate.certificateType === "MERIT" ? "Merit" : "Participation";
+        let folder = "Participation";
+
+        if (certificate.certificateType === "MERIT") {
+          folder = "Merit";
+        }
 
         const fileName = `${certificate.certificateId}.pdf`;
 
@@ -515,7 +580,7 @@ async function exportAdminCertificatePdfs(req, res) {
           certificateError,
         );
 
-        // Continue generating the remaining certificates.
+        // Continue with remaining certificates.
       }
     }
 
@@ -523,7 +588,9 @@ async function exportAdminCertificatePdfs(req, res) {
     // Finish ZIP
     // ----------------------------------------------------------
 
-    await archive.finalize();
+    if (!archiveError) {
+      await archive.finalize();
+    }
   } catch (error) {
     console.error("Certificate PDF ZIP export error:", error);
 
@@ -539,14 +606,20 @@ async function exportAdminCertificatePdfs(req, res) {
   }
 }
 
+// ============================================================
+// PUBLIC - GET CERTIFICATE
+// ============================================================
+
 async function getCertificate(req, res) {
   try {
     const rollNo = String(req.params.rollNo || "")
       .trim()
       .toUpperCase();
+
     const eventCode = String(req.query.eventCode || "")
       .trim()
       .toUpperCase();
+
     const certificateType = String(req.query.certificateType || "PARTICIPATION")
       .trim()
       .toUpperCase();
@@ -571,22 +644,34 @@ async function getCertificate(req, res) {
 
     return res.json({
       success: true,
+
       certificate: {
         certificateId: certificate.certificateId,
+
         name: certificate.name,
+
         rollNo: certificate.rollNo,
+
         branch: certificate.branch,
+
         college: certificate.college,
+
         city: certificate.city,
+
         team: certificate.team,
+
         position: certificate.position,
+
         event: certificate.event,
+
         eventDate: certificate.eventDate,
+
         certificateType: certificate.certificateType,
       },
     });
   } catch (error) {
     console.error("Certificate lookup error:", error);
+
     return res.status(500).json({
       message: "Certificate lookup failed",
       error: error.message,
@@ -594,14 +679,20 @@ async function getCertificate(req, res) {
   }
 }
 
+// ============================================================
+// PUBLIC - DOWNLOAD CERTIFICATE
+// ============================================================
+
 async function downloadCertificate(req, res) {
   try {
     const rollNo = String(req.params.rollNo || "")
       .trim()
       .toUpperCase();
+
     const eventCode = String(req.query.eventCode || "")
       .trim()
       .toUpperCase();
+
     const certificateType = String(req.query.certificateType || "PARTICIPATION")
       .trim()
       .toUpperCase();
@@ -627,7 +718,9 @@ async function downloadCertificate(req, res) {
     const fileName = `${certificate.certificateId}.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");
+
     res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+
     res.setHeader("Cache-Control", "no-store");
 
     const tempPath = path.join(
@@ -637,15 +730,29 @@ async function downloadCertificate(req, res) {
 
     const output = fs.createWriteStream(tempPath);
 
+    // ----------------------------------------------------------
+    // USE THE SAME SERVICE
+    // ----------------------------------------------------------
+
     if (certificate.certificateType === "MERIT") {
       await generateMeritCertificate(certificate, output);
     } else {
       await generateParticipationCertificate(certificate, output);
     }
 
+    // ----------------------------------------------------------
+    // Update download statistics
+    // ----------------------------------------------------------
+
     certificate.downloadCount += 1;
+
     certificate.lastDownloadedAt = new Date();
+
     await certificate.save();
+
+    // ----------------------------------------------------------
+    // Send PDF
+    // ----------------------------------------------------------
 
     res.download(tempPath, fileName, (error) => {
       fs.unlink(tempPath, () => {});
@@ -669,14 +776,23 @@ async function downloadCertificate(req, res) {
   }
 }
 
+// ============================================================
+// EXPORTS
+// ============================================================
+
 module.exports = {
   importCertificates,
+
   getCertificate,
+
   downloadCertificate,
 
   // Admin
   getAdminCertificates,
+
   updateAdminCertificate,
+
   exportAdminCertificates,
+
   exportAdminCertificatePdfs,
 };
