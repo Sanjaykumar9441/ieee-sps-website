@@ -91,13 +91,12 @@ export default function CertificatesTab() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [bulkDownloading, setBulkDownloading] = useState(false);
 
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [editing, setEditing] = useState<Certificate | null>(null);
   const [memberForm, setMemberForm] = useState<MemberForm>(emptyMemberForm);
   const [saving, setSaving] = useState(false);
+  const [pdfDownloading, setPdfDownloading] = useState(false);
 
   const token = localStorage.getItem("token");
 
@@ -204,9 +203,7 @@ export default function CertificatesTab() {
 
   const allVisibleSelected =
     filteredCertificates.length > 0 &&
-    filteredCertificates.every((certificate) =>
-      selectedIds.includes(certificate._id),
-    );
+    filteredCertificates.every((certificate) => selectedIds.includes(certificate._id));
 
   const toggleSelect = (id: string) => {
     setSelectedIds((current) =>
@@ -250,10 +247,9 @@ export default function CertificatesTab() {
       const created: CertificateEvent = response.data.event;
 
       setEvents((current) =>
-        [
-          ...current.filter((event) => event.eventCode !== created.eventCode),
-          created,
-        ].sort((a, b) => a.eventCode.localeCompare(b.eventCode)),
+        [...current.filter((event) => event.eventCode !== created.eventCode), created].sort(
+          (a, b) => a.eventCode.localeCompare(b.eventCode),
+        ),
       );
 
       setSelectedEventCode(created.eventCode);
@@ -349,11 +345,22 @@ export default function CertificatesTab() {
     }
   };
 
+  const saveBlobAsFile = (blob: Blob, fileName: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+  };
+
   const handleDownload = async (certificate: Certificate) => {
-    if (downloadingId || bulkDownloading) return;
+    if (pdfDownloading) return;
 
     try {
-      setDownloadingId(certificate._id);
+      setPdfDownloading(true);
       const response = await axios.get(
         `${API}/api/certificates/download/${encodeURIComponent(certificate.rollNo)}`,
         {
@@ -366,72 +373,86 @@ export default function CertificatesTab() {
         },
       );
 
-      const blob = new Blob([response.data], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${certificate.certificateId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      saveBlobAsFile(
+        new Blob([response.data], { type: "application/pdf" }),
+        `${certificate.certificateId}.pdf`,
+      );
     } catch (error) {
       console.error("Certificate download error:", error);
       alert("Unable to download certificate.");
     } finally {
-      setDownloadingId(null);
+      setPdfDownloading(false);
     }
   };
 
-  const handleBulkDownload = async (downloadSelected: boolean) => {
-    if (bulkDownloading || downloadingId || !selectedEventCode) return;
-
-    const certificateIds = downloadSelected
-      ? selectedIds
-          .map(
-            (id) =>
-              certificates.find((certificate) => certificate._id === id)
-                ?.certificateId,
-          )
-          .filter((id): id is string => Boolean(id))
-      : [];
-
-    if (downloadSelected && certificateIds.length === 0) {
-      alert("Select at least one certificate.");
-      return;
-    }
+  const handleDownloadAll = async () => {
+    if (!selectedEventCode || !certificates.length || pdfDownloading) return;
 
     try {
-      setBulkDownloading(true);
+      setPdfDownloading(true);
+
       const response = await axios.get(
         `${API}/api/certificates/admin/export-pdfs`,
         {
           params: {
             eventCode: selectedEventCode,
             certificateType,
-            ...(downloadSelected
-              ? { certificateIds: certificateIds.join(",") }
-              : {}),
           },
           ...authConfig,
           responseType: "blob",
         },
       );
 
-      const blob = new Blob([response.data], { type: "application/zip" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${selectedEventCode}_Certificates_${certificateType}_${downloadSelected ? "Selected" : "All"}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Certificate ZIP download error:", error);
-      alert("Unable to create the certificate ZIP. Please try again.");
+      saveBlobAsFile(
+        new Blob([response.data], { type: "application/pdf" }),
+        `${selectedEventCode}_Certificates_${certificateType}.pdf`,
+      );
+    } catch (error: any) {
+      console.error("Combined certificate PDF download error:", error);
+      alert("Unable to create the certificate PDF. Please try again.");
     } finally {
-      setBulkDownloading(false);
+      setPdfDownloading(false);
+    }
+  };
+
+  const handleDownloadSelected = async () => {
+    if (!selectedEventCode || !selectedIds.length || pdfDownloading) return;
+
+    const certificateIds = certificates
+      .filter((certificate) => selectedIds.includes(certificate._id))
+      .map((certificate) => certificate.certificateId)
+      .filter(Boolean);
+
+    if (!certificateIds.length) {
+      alert("Select at least one member.");
+      return;
+    }
+
+    try {
+      setPdfDownloading(true);
+
+      const response = await axios.get(
+        `${API}/api/certificates/admin/export-pdfs`,
+        {
+          params: {
+            eventCode: selectedEventCode,
+            certificateType,
+            certificateIds: certificateIds.join(","),
+          },
+          ...authConfig,
+          responseType: "blob",
+        },
+      );
+
+      saveBlobAsFile(
+        new Blob([response.data], { type: "application/pdf" }),
+        `${selectedEventCode}_Selected_${certificateType}.pdf`,
+      );
+    } catch (error: any) {
+      console.error("Selected certificate PDF download error:", error);
+      alert("Unable to create the selected certificate PDF. Please try again.");
+    } finally {
+      setPdfDownloading(false);
     }
   };
 
@@ -581,9 +602,7 @@ export default function CertificatesTab() {
       await fetchCertificates();
     } catch (error: any) {
       console.error("Bulk delete error:", error);
-      alert(
-        error?.response?.data?.message || "Failed to delete selected members.",
-      );
+      alert(error?.response?.data?.message || "Failed to delete selected members.");
     } finally {
       setBulkDeleting(false);
     }
@@ -722,8 +741,7 @@ export default function CertificatesTab() {
           </div>
           <p className="mt-2 text-xs text-gray-500">{requiredColumns}</p>
           <p className="mt-1 text-xs text-gray-500">
-            Certificate date is not entered here when it is already part of the
-            certificate template.
+            Certificate date is not entered here when it is already part of the certificate template.
           </p>
         </div>
 
@@ -739,15 +757,11 @@ export default function CertificatesTab() {
 
         {importResult && (
           <div className="mt-5 rounded-xl bg-green-50 p-5 text-green-700">
-            <p className="font-semibold">
-              Certificate data imported successfully.
-            </p>
+            <p className="font-semibold">Certificate data imported successfully.</p>
             <div className="mt-3 grid grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-gray-500">Imported</p>
-                <p className="text-xl font-bold">
-                  {importResult.imported || 0}
-                </p>
+                <p className="text-xl font-bold">{importResult.imported || 0}</p>
               </div>
               <div>
                 <p className="text-gray-500">Skipped</p>
@@ -755,9 +769,7 @@ export default function CertificatesTab() {
               </div>
               <div>
                 <p className="text-gray-500">Total Rows</p>
-                <p className="text-xl font-bold">
-                  {importResult.totalRows || 0}
-                </p>
+                <p className="text-xl font-bold">{importResult.totalRows || 0}</p>
               </div>
             </div>
           </div>
@@ -771,10 +783,7 @@ export default function CertificatesTab() {
             <div>
               <h2 className="text-xl font-bold">Certificate Records</h2>
               <p className="mt-1 text-sm text-gray-500">
-                {selectedEventCode || "No event"} ·{" "}
-                {CERTIFICATE_TYPES.find((t) => t.value === certificateType)
-                  ?.label || certificateType}{" "}
-                · {certificates.length} records
+                {selectedEventCode || "No event"} · {CERTIFICATE_TYPES.find((t) => t.value === certificateType)?.label || certificateType} · {certificates.length} records
               </p>
             </div>
 
@@ -804,17 +813,12 @@ export default function CertificatesTab() {
 
               <button
                 type="button"
-                onClick={() => handleBulkDownload(false)}
-                disabled={
-                  !selectedEventCode ||
-                  certificates.length === 0 ||
-                  bulkDownloading ||
-                  !!downloadingId
-                }
+                onClick={handleDownloadAll}
+                disabled={!certificates.length || pdfDownloading}
                 className="flex items-center justify-center gap-2 rounded-xl border px-4 py-3 font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Download size={18} />
-                {bulkDownloading ? "Preparing ZIP..." : "Download All"}
+                {pdfDownloading ? "Preparing PDF..." : "Download All"}
               </button>
             </div>
           </div>
@@ -822,24 +826,24 @@ export default function CertificatesTab() {
           {selectedIds.length > 0 && (
             <div className="mt-4 flex flex-col gap-3 rounded-xl bg-red-50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-sm font-semibold text-red-700">
-                {selectedIds.length} member{selectedIds.length === 1 ? "" : "s"}{" "}
-                selected
+                {selectedIds.length} member{selectedIds.length === 1 ? "" : "s"} selected
               </span>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => handleBulkDownload(true)}
-                  disabled={bulkDownloading || bulkDeleting || !!downloadingId}
-                  className="flex items-center justify-center gap-2 rounded-lg bg-[#006A9E] px-4 py-2 font-semibold text-white hover:bg-[#00527F] disabled:opacity-50"
+                  onClick={handleDownloadSelected}
+                  disabled={pdfDownloading || bulkDeleting}
+                  className="flex items-center justify-center gap-2 rounded-lg bg-[#006A9E] px-4 py-2 font-semibold text-white hover:bg-[#00527F] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Download size={16} />
-                  {bulkDownloading ? "Preparing ZIP..." : "Download Selected"}
+                  {pdfDownloading ? "Preparing PDF..." : "Download Selected"}
                 </button>
+
                 <button
                   type="button"
                   onClick={handleDeleteSelected}
-                  disabled={bulkDeleting || bulkDownloading}
-                  className="flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                  disabled={bulkDeleting || pdfDownloading}
+                  className="flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Trash2 size={16} />
                   {bulkDeleting ? "Deleting..." : "Delete Selected"}
@@ -851,32 +855,18 @@ export default function CertificatesTab() {
 
         <div className="overflow-x-auto">
           {loadingCertificates ? (
-            <div className="p-10 text-center text-gray-500">
-              Loading certificate records...
-            </div>
+            <div className="p-10 text-center text-gray-500">Loading certificate records...</div>
           ) : !selectedEventCode ? (
-            <div className="p-10 text-center text-gray-500">
-              Create or select an event first.
-            </div>
+            <div className="p-10 text-center text-gray-500">Create or select an event first.</div>
           ) : filteredCertificates.length === 0 ? (
-            <div className="p-10 text-center text-gray-500">
-              No certificate records found.
-            </div>
+            <div className="p-10 text-center text-gray-500">No certificate records found.</div>
           ) : (
-            <table className="min-w-[1100px] text-sm">
+            <table className="min-w-full text-sm">
               <thead className="bg-gray-50 text-left">
                 <tr>
                   <th className="px-4 py-4">
-                    <button
-                      type="button"
-                      onClick={toggleSelectAll}
-                      title="Select all visible"
-                    >
-                      {allVisibleSelected ? (
-                        <CheckSquare size={20} className="text-[#6C5FE0]" />
-                      ) : (
-                        <Square size={20} />
-                      )}
+                    <button type="button" onClick={toggleSelectAll} title="Select all visible">
+                      {allVisibleSelected ? <CheckSquare size={20} className="text-[#6C5FE0]" /> : <Square size={20} />}
                     </button>
                   </th>
                   <th className="px-4 py-4 font-semibold">Name</th>
@@ -895,65 +885,33 @@ export default function CertificatesTab() {
                       <th className="px-4 py-4 font-semibold">City</th>
                     </>
                   )}
-                  <th className="px-4 py-4 text-right font-semibold">
-                    Actions
-                  </th>
+                  <th className="px-4 py-4 text-right font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {filteredCertificates.map((certificate) => {
                   const selected = selectedIds.includes(certificate._id);
                   return (
-                    <tr
-                      key={certificate._id}
-                      className={
-                        selected ? "bg-purple-50/50" : "hover:bg-gray-50"
-                      }
-                    >
+                    <tr key={certificate._id} className={selected ? "bg-purple-50/50" : "hover:bg-gray-50"}>
                       <td className="px-4 py-4">
-                        <button
-                          type="button"
-                          onClick={() => toggleSelect(certificate._id)}
-                        >
-                          {selected ? (
-                            <CheckSquare size={20} className="text-[#6C5FE0]" />
-                          ) : (
-                            <Square size={20} />
-                          )}
+                        <button type="button" onClick={() => toggleSelect(certificate._id)}>
+                          {selected ? <CheckSquare size={20} className="text-[#6C5FE0]" /> : <Square size={20} />}
                         </button>
                       </td>
-                      <td className="px-4 py-4 font-medium">
-                        {certificate.name}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        {certificate.rollNo}
-                      </td>
+                      <td className="px-4 py-4 font-medium">{certificate.name}</td>
+                      <td className="px-4 py-4 whitespace-nowrap">{certificate.rollNo}</td>
                       {certificateType === "MERIT" ? (
                         <>
-                          <td className="px-4 py-4">
-                            {certificate.team || "—"}
-                          </td>
-                          <td className="px-4 py-4">
-                            {certificate.college || "—"}
-                          </td>
-                          <td className="px-4 py-4">
-                            {certificate.position || "—"}
-                          </td>
-                          <td className="px-4 py-4">
-                            {certificate.event || "—"}
-                          </td>
+                          <td className="px-4 py-4">{certificate.team || "—"}</td>
+                          <td className="px-4 py-4">{certificate.college || "—"}</td>
+                          <td className="px-4 py-4">{certificate.position || "—"}</td>
+                          <td className="px-4 py-4">{certificate.event || "—"}</td>
                         </>
                       ) : (
                         <>
-                          <td className="px-4 py-4">
-                            {certificate.branch || "—"}
-                          </td>
-                          <td className="px-4 py-4">
-                            {certificate.college || "—"}
-                          </td>
-                          <td className="px-4 py-4">
-                            {certificate.city || "—"}
-                          </td>
+                          <td className="px-4 py-4">{certificate.branch || "—"}</td>
+                          <td className="px-4 py-4">{certificate.college || "—"}</td>
+                          <td className="px-4 py-4">{certificate.city || "—"}</td>
                         </>
                       )}
                       <td className="px-4 py-4">
@@ -978,15 +936,10 @@ export default function CertificatesTab() {
                           <button
                             type="button"
                             onClick={() => handleDownload(certificate)}
-                            disabled={!!downloadingId || bulkDownloading}
-                            className="rounded-lg bg-[#006A9E] px-3 py-2 text-white hover:bg-[#00527F] disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-lg bg-[#006A9E] px-3 py-2 text-white hover:bg-[#00527F]"
                             title="Download certificate"
                           >
-                            {downloadingId === certificate._id ? (
-                              "Downloading..."
-                            ) : (
-                              <Download size={16} />
-                            )}
+                            <Download size={16} />
                           </button>
                         </div>
                       </td>
@@ -1006,22 +959,14 @@ export default function CertificatesTab() {
             <div className="flex items-center justify-between border-b p-6">
               <div>
                 <h2 className="text-xl font-bold">Create Event</h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  Enter a unique event code.
-                </p>
+                <p className="mt-1 text-sm text-gray-500">Enter a unique event code.</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowCreateEvent(false)}
-                className="rounded-lg p-2 hover:bg-gray-100"
-              >
+              <button type="button" onClick={() => setShowCreateEvent(false)} className="rounded-lg p-2 hover:bg-gray-100">
                 <X size={20} />
               </button>
             </div>
             <div className="p-6">
-              <label className="mb-2 block text-sm font-medium">
-                Event Code
-              </label>
+              <label className="mb-2 block text-sm font-medium">Event Code</label>
               <input
                 autoFocus
                 value={newEventCode}
@@ -1033,19 +978,8 @@ export default function CertificatesTab() {
                 className="w-full rounded-xl border px-4 py-3 outline-none focus:border-[#6C5FE0]"
               />
               <div className="mt-5 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateEvent(false)}
-                  className="rounded-xl border px-4 py-3 font-medium hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCreateEvent}
-                  disabled={creatingEvent}
-                  className="rounded-xl bg-[#6C5FE0] px-5 py-3 font-semibold text-white disabled:opacity-50"
-                >
+                <button type="button" onClick={() => setShowCreateEvent(false)} className="rounded-xl border px-4 py-3 font-medium hover:bg-gray-50">Cancel</button>
+                <button type="button" onClick={handleCreateEvent} disabled={creatingEvent} className="rounded-xl bg-[#6C5FE0] px-5 py-3 font-semibold text-white disabled:opacity-50">
                   {creatingEvent ? "Creating..." : "Create Event"}
                 </button>
               </div>
@@ -1060,22 +994,12 @@ export default function CertificatesTab() {
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b p-6">
               <div>
-                <h2 className="text-xl font-bold">
-                  {editing ? "Edit Member" : "Add Member"}
-                </h2>
+                <h2 className="text-xl font-bold">{editing ? "Edit Member" : "Add Member"}</h2>
                 <p className="mt-1 text-sm text-gray-500">
-                  {selectedEventCode} ·{" "}
-                  {
-                    CERTIFICATE_TYPES.find((t) => t.value === certificateType)
-                      ?.label
-                  }
+                  {selectedEventCode} · {CERTIFICATE_TYPES.find((t) => t.value === certificateType)?.label}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowMemberModal(false)}
-                className="rounded-lg p-2 hover:bg-gray-100"
-              >
+              <button type="button" onClick={() => setShowMemberModal(false)} className="rounded-lg p-2 hover:bg-gray-100">
                 <X size={20} />
               </button>
             </div>
@@ -1083,118 +1007,53 @@ export default function CertificatesTab() {
             <div className="grid gap-4 p-6 md:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm font-medium">Name</label>
-                <input
-                  value={memberForm.name}
-                  onChange={(e) => updateForm("name", e.target.value)}
-                  className="w-full rounded-xl border px-4 py-3 outline-none"
-                />
+                <input value={memberForm.name} onChange={(e) => updateForm("name", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium">
-                  Roll No
-                </label>
-                <input
-                  value={memberForm.rollNo}
-                  onChange={(e) =>
-                    updateForm("rollNo", e.target.value.toUpperCase())
-                  }
-                  className="w-full rounded-xl border px-4 py-3 outline-none"
-                />
+                <label className="mb-2 block text-sm font-medium">Roll No</label>
+                <input value={memberForm.rollNo} onChange={(e) => updateForm("rollNo", e.target.value.toUpperCase())} className="w-full rounded-xl border px-4 py-3 outline-none" />
               </div>
 
               {certificateType === "MERIT" ? (
                 <>
                   <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      Team
-                    </label>
-                    <input
-                      value={memberForm.team}
-                      onChange={(e) => updateForm("team", e.target.value)}
-                      className="w-full rounded-xl border px-4 py-3 outline-none"
-                    />
+                    <label className="mb-2 block text-sm font-medium">Team</label>
+                    <input value={memberForm.team} onChange={(e) => updateForm("team", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      College
-                    </label>
-                    <input
-                      value={memberForm.college}
-                      onChange={(e) => updateForm("college", e.target.value)}
-                      className="w-full rounded-xl border px-4 py-3 outline-none"
-                    />
+                    <label className="mb-2 block text-sm font-medium">College</label>
+                    <input value={memberForm.college} onChange={(e) => updateForm("college", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      Position
-                    </label>
-                    <input
-                      value={memberForm.position}
-                      onChange={(e) => updateForm("position", e.target.value)}
-                      className="w-full rounded-xl border px-4 py-3 outline-none"
-                    />
+                    <label className="mb-2 block text-sm font-medium">Position</label>
+                    <input value={memberForm.position} onChange={(e) => updateForm("position", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      Event
-                    </label>
-                    <input
-                      value={memberForm.event}
-                      onChange={(e) => updateForm("event", e.target.value)}
-                      className="w-full rounded-xl border px-4 py-3 outline-none"
-                    />
+                    <label className="mb-2 block text-sm font-medium">Event</label>
+                    <input value={memberForm.event} onChange={(e) => updateForm("event", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
                 </>
               ) : (
                 <>
                   <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      Branch
-                    </label>
-                    <input
-                      value={memberForm.branch}
-                      onChange={(e) => updateForm("branch", e.target.value)}
-                      className="w-full rounded-xl border px-4 py-3 outline-none"
-                    />
+                    <label className="mb-2 block text-sm font-medium">Branch</label>
+                    <input value={memberForm.branch} onChange={(e) => updateForm("branch", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      College
-                    </label>
-                    <input
-                      value={memberForm.college}
-                      onChange={(e) => updateForm("college", e.target.value)}
-                      className="w-full rounded-xl border px-4 py-3 outline-none"
-                    />
+                    <label className="mb-2 block text-sm font-medium">College</label>
+                    <input value={memberForm.college} onChange={(e) => updateForm("college", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      College City
-                    </label>
-                    <input
-                      value={memberForm.city}
-                      onChange={(e) => updateForm("city", e.target.value)}
-                      className="w-full rounded-xl border px-4 py-3 outline-none"
-                    />
+                    <label className="mb-2 block text-sm font-medium">College City</label>
+                    <input value={memberForm.city} onChange={(e) => updateForm("city", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
                 </>
               )}
             </div>
 
             <div className="flex justify-end gap-3 border-t p-6">
-              <button
-                type="button"
-                onClick={() => setShowMemberModal(false)}
-                className="rounded-xl border px-4 py-3 font-medium hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveMember}
-                disabled={saving}
-                className="flex items-center gap-2 rounded-xl bg-[#6C5FE0] px-5 py-3 font-semibold text-white disabled:opacity-50"
-              >
+              <button type="button" onClick={() => setShowMemberModal(false)} className="rounded-xl border px-4 py-3 font-medium hover:bg-gray-50">Cancel</button>
+              <button type="button" onClick={handleSaveMember} disabled={saving} className="flex items-center gap-2 rounded-xl bg-[#6C5FE0] px-5 py-3 font-semibold text-white disabled:opacity-50">
                 <Save size={17} />
                 {saving ? "Saving..." : editing ? "Save Changes" : "Add Member"}
               </button>
