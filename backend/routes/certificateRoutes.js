@@ -8,6 +8,7 @@ const {
   getAdminCertificates,
   updateAdminCertificate,
   exportAdminCertificates,
+  exportAdminCertificatePdfs,
 } = require("../controllers/certificateController");
 
 const {
@@ -73,6 +74,8 @@ router.put("/admin/:certificateId", updateAdminCertificate);
 
 // Export
 router.get("/admin/export", exportAdminCertificates);
+
+router.get("/admin/export-pdfs", exportAdminCertificatePdfs);
 
 // ============================================================
 // PUBLIC CERTIFICATE
