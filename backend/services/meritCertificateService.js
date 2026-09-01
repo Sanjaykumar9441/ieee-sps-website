@@ -215,8 +215,6 @@ function generateMeritCertificate(certificate, output) {
       // BACKGROUND TEMPLATE
       // --------------------------------------------------------
 
-      doc.pipe(output);
-      
       doc.image(TEMPLATE, 0, 0, {
         width: PAGE_WIDTH,
         height: PAGE_HEIGHT,
@@ -363,6 +361,7 @@ function generateMeritCertificate(certificate, output) {
       // OUTPUT
       // --------------------------------------------------------
 
+      doc.pipe(output);
       output.on("finish", resolve);
       output.on("error", reject);
       doc.on("error", reject);

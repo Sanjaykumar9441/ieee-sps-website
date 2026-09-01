@@ -70,60 +70,32 @@ const emptyMemberForm: MemberForm = {
 };
 
 export default function CertificatesTab() {
-  // ==========================================================
-  // STATE
-  // ==========================================================
-
   const [events, setEvents] = useState<CertificateEvent[]>([]);
   const [selectedEventCode, setSelectedEventCode] = useState("");
-
   const [certificateType, setCertificateType] = useState("PARTICIPATION");
 
   const [certificates, setCertificates] = useState<Certificate[]>([]);
-
   const [loadingEvents, setLoadingEvents] = useState(true);
-
   const [loadingCertificates, setLoadingCertificates] = useState(false);
 
   const [search, setSearch] = useState("");
-
   const [file, setFile] = useState<File | null>(null);
-
   const [importing, setImporting] = useState(false);
-
   const [importResult, setImportResult] = useState<any>(null);
 
-  // Event
   const [showCreateEvent, setShowCreateEvent] = useState(false);
-
   const [newEventCode, setNewEventCode] = useState("");
-
   const [creatingEvent, setCreatingEvent] = useState(false);
-
   const [deletingEvent, setDeletingEvent] = useState(false);
 
-  // Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
   const [bulkDeleting, setBulkDeleting] = useState(false);
-
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Member
   const [showMemberModal, setShowMemberModal] = useState(false);
-
   const [editing, setEditing] = useState<Certificate | null>(null);
-
   const [memberForm, setMemberForm] = useState<MemberForm>(emptyMemberForm);
-
   const [saving, setSaving] = useState(false);
-
-  // PDF
-  const [pdfDownloading, setPdfDownloading] = useState(false);
-
-  // ==========================================================
-  // AUTH
-  // ==========================================================
 
   const token = localStorage.getItem("token");
 
@@ -132,10 +104,6 @@ export default function CertificatesTab() {
       Authorization: `Bearer ${token}`,
     },
   };
-
-  // ==========================================================
-  // FETCH EVENTS
-  // ==========================================================
 
   const fetchEvents = async () => {
     try {
@@ -147,38 +115,27 @@ export default function CertificatesTab() {
       );
 
       const nextEvents: CertificateEvent[] = response.data.events || [];
-
       setEvents(nextEvents);
 
       if (nextEvents.length === 0) {
         setSelectedEventCode("");
-
         localStorage.removeItem("certificateEventCode");
-
         return;
       }
 
       const saved = localStorage.getItem("certificateEventCode");
-
       const exists = nextEvents.some((event) => event.eventCode === saved);
-
       const nextCode = exists ? saved! : nextEvents[0].eventCode;
 
       setSelectedEventCode(nextCode);
-
       localStorage.setItem("certificateEventCode", nextCode);
     } catch (error) {
       console.error("Certificate events fetch error:", error);
-
       alert("Unable to load certificate events.");
     } finally {
       setLoadingEvents(false);
     }
   };
-
-  // ==========================================================
-  // FETCH CERTIFICATES
-  // ==========================================================
 
   const fetchCertificates = async () => {
     if (!selectedEventCode) {
@@ -199,48 +156,30 @@ export default function CertificatesTab() {
       });
 
       setCertificates(response.data.certificates || []);
-
       setSelectedIds([]);
     } catch (error) {
       console.error("Certificate fetch error:", error);
-
       alert("Unable to load certificate records.");
     } finally {
       setLoadingCertificates(false);
     }
   };
 
-  // ==========================================================
-  // INITIAL LOAD
-  // ==========================================================
-
   useEffect(() => {
     fetchEvents();
   }, []);
-
-  // ==========================================================
-  // EVENT / TYPE CHANGE
-  // ==========================================================
 
   useEffect(() => {
     setFile(null);
     setImportResult(null);
     setSearch("");
     setSelectedIds([]);
-
     fetchCertificates();
   }, [selectedEventCode, certificateType]);
 
-  // ==========================================================
-  // SEARCH
-  // ==========================================================
-
   const filteredCertificates = useMemo(() => {
     const value = search.trim().toLowerCase();
-
-    if (!value) {
-      return certificates;
-    }
+    if (!value) return certificates;
 
     return certificates.filter((certificate) =>
       [
@@ -261,15 +200,9 @@ export default function CertificatesTab() {
     );
   }, [certificates, search]);
 
-  // ==========================================================
-  // SELECT ALL
-  // ==========================================================
-
   const allVisibleSelected =
     filteredCertificates.length > 0 &&
-    filteredCertificates.every((certificate) =>
-      selectedIds.includes(certificate._id),
-    );
+    filteredCertificates.every((certificate) => selectedIds.includes(certificate._id));
 
   const toggleSelect = (id: string) => {
     setSelectedIds((current) =>
@@ -282,24 +215,16 @@ export default function CertificatesTab() {
   const toggleSelectAll = () => {
     if (allVisibleSelected) {
       const visibleIds = new Set(filteredCertificates.map((item) => item._id));
-
       setSelectedIds((current) => current.filter((id) => !visibleIds.has(id)));
-
       return;
     }
 
     setSelectedIds((current) => {
       const next = new Set(current);
-
       filteredCertificates.forEach((item) => next.add(item._id));
-
       return Array.from(next);
     });
   };
-
-  // ==========================================================
-  // CREATE EVENT
-  // ==========================================================
 
   const handleCreateEvent = async () => {
     const eventCode = newEventCode.trim().toUpperCase();
@@ -314,42 +239,30 @@ export default function CertificatesTab() {
 
       const response = await axios.post(
         `${API}/api/certificates/events`,
-        {
-          eventCode,
-          eventName: eventCode,
-        },
+        { eventCode },
         authConfig,
       );
 
       const created: CertificateEvent = response.data.event;
 
       setEvents((current) =>
-        [
-          ...current.filter((event) => event.eventCode !== created.eventCode),
-          created,
-        ].sort((a, b) => a.eventCode.localeCompare(b.eventCode)),
+        [...current.filter((event) => event.eventCode !== created.eventCode), created].sort(
+          (a, b) => a.eventCode.localeCompare(b.eventCode),
+        ),
       );
 
       setSelectedEventCode(created.eventCode);
-
       localStorage.setItem("certificateEventCode", created.eventCode);
-
       setCertificateType("PARTICIPATION");
-
       setNewEventCode("");
       setShowCreateEvent(false);
     } catch (error: any) {
       console.error("Create event error:", error);
-
       alert(error?.response?.data?.message || "Failed to create event.");
     } finally {
       setCreatingEvent(false);
     }
   };
-
-  // ==========================================================
-  // DELETE EVENT
-  // ==========================================================
 
   const handleDeleteEvent = async () => {
     if (!selectedEventCode) return;
@@ -364,9 +277,7 @@ export default function CertificatesTab() {
       setDeletingEvent(true);
 
       await axios.delete(
-        `${API}/api/certificates/events/${encodeURIComponent(
-          selectedEventCode,
-        )}`,
+        `${API}/api/certificates/events/${encodeURIComponent(selectedEventCode)}`,
         authConfig,
       );
 
@@ -379,26 +290,17 @@ export default function CertificatesTab() {
       setSelectedIds([]);
 
       const nextCode = remaining[0]?.eventCode || "";
-
       setSelectedEventCode(nextCode);
 
-      if (nextCode) {
-        localStorage.setItem("certificateEventCode", nextCode);
-      } else {
-        localStorage.removeItem("certificateEventCode");
-      }
+      if (nextCode) localStorage.setItem("certificateEventCode", nextCode);
+      else localStorage.removeItem("certificateEventCode");
     } catch (error: any) {
       console.error("Delete event error:", error);
-
       alert(error?.response?.data?.message || "Failed to delete event.");
     } finally {
       setDeletingEvent(false);
     }
   };
-
-  // ==========================================================
-  // IMPORT EXCEL
-  // ==========================================================
 
   const handleImport = async () => {
     if (!selectedEventCode) {
@@ -416,11 +318,8 @@ export default function CertificatesTab() {
       setImportResult(null);
 
       const formData = new FormData();
-
       formData.append("file", file);
-
       formData.append("eventCode", selectedEventCode);
-
       formData.append("certificateType", certificateType);
 
       const response = await axios.post(
@@ -435,188 +334,45 @@ export default function CertificatesTab() {
       );
 
       setImportResult(response.data);
-
       setFile(null);
-
       await fetchCertificates();
     } catch (error: any) {
       console.error("Certificate import error:", error);
-
       alert(error?.response?.data?.message || "Certificate import failed.");
     } finally {
       setImporting(false);
     }
   };
 
-  // ==========================================================
-  // SAVE BLOB
-  // ==========================================================
-
-  const saveBlobAsFile = (blob: Blob, fileName: string) => {
-    const url = window.URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = fileName;
-
-    document.body.appendChild(link);
-
-    link.click();
-
-    link.remove();
-
-    window.setTimeout(() => {
-      window.URL.revokeObjectURL(url);
-    }, 1000);
-  };
-
-  // ==========================================================
-  // INDIVIDUAL PDF DOWNLOAD
-  // ==========================================================
-
   const handleDownload = async (certificate: Certificate) => {
-    if (pdfDownloading) return;
-
     try {
-      setPdfDownloading(true);
-
       const response = await axios.get(
-        `${API}/api/certificates/download/${encodeURIComponent(
-          certificate.rollNo,
-        )}`,
+        `${API}/api/certificates/download/${encodeURIComponent(certificate.rollNo)}`,
         {
           params: {
             eventCode: certificate.eventCode,
-
             certificateType: certificate.certificateType,
           },
-
           ...authConfig,
-
           responseType: "blob",
         },
       );
 
-      saveBlobAsFile(
-        new Blob([response.data], {
-          type: "application/pdf",
-        }),
-        `${certificate.certificateId}.pdf`,
-      );
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `${certificate.certificateId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Certificate download error:", error);
-
       alert("Unable to download certificate.");
-    } finally {
-      setPdfDownloading(false);
     }
   };
-
-  // ==========================================================
-  // DOWNLOAD ALL
-  // ==========================================================
-  //
-  // Backend returns a ZIP.
-  //
-  // DO NOT use application/pdf here.
-  // ==========================================================
-
-  const handleDownloadAll = async () => {
-    if (!selectedEventCode || !certificates.length || pdfDownloading) {
-      return;
-    }
-
-    try {
-      setPdfDownloading(true);
-
-      const response = await axios.get(
-        `${API}/api/certificates/admin/export-pdfs`,
-        {
-          params: {
-            eventCode: selectedEventCode,
-
-            certificateType,
-          },
-
-          ...authConfig,
-
-          responseType: "blob",
-        },
-      );
-
-      saveBlobAsFile(
-        new Blob([response.data], {
-          type: "application/zip",
-        }),
-        `${selectedEventCode}_Certificates_${certificateType}.zip`,
-      );
-    } catch (error: any) {
-      console.error("Certificate ZIP download error:", error);
-
-      alert("Unable to download certificates. Please try again.");
-    } finally {
-      setPdfDownloading(false);
-    }
-  };
-
-  // ==========================================================
-  // DOWNLOAD SELECTED
-  // ==========================================================
-
-  const handleDownloadSelected = async () => {
-    if (!selectedEventCode || !selectedIds.length || pdfDownloading) {
-      return;
-    }
-
-    const certificateIds = certificates
-      .filter((certificate) => selectedIds.includes(certificate._id))
-      .map((certificate) => certificate.certificateId)
-      .filter(Boolean);
-
-    if (!certificateIds.length) {
-      alert("Select at least one member.");
-      return;
-    }
-
-    try {
-      setPdfDownloading(true);
-
-      const response = await axios.get(
-        `${API}/api/certificates/admin/export-pdfs`,
-        {
-          params: {
-            eventCode: selectedEventCode,
-
-            certificateType,
-
-            certificateIds: certificateIds.join(","),
-          },
-
-          ...authConfig,
-
-          responseType: "blob",
-        },
-      );
-
-      saveBlobAsFile(
-        new Blob([response.data], {
-          type: "application/zip",
-        }),
-        `${selectedEventCode}_Selected_${certificateType}.zip`,
-      );
-    } catch (error: any) {
-      console.error("Selected certificate ZIP download error:", error);
-
-      alert("Unable to download selected certificates. Please try again.");
-    } finally {
-      setPdfDownloading(false);
-    }
-  };
-
-  // ==========================================================
-  // ADD MEMBER
-  // ==========================================================
 
   const openAddMember = () => {
     setEditing(null);
@@ -624,48 +380,24 @@ export default function CertificatesTab() {
     setShowMemberModal(true);
   };
 
-  // ==========================================================
-  // EDIT MEMBER
-  // ==========================================================
-
   const openEditMember = (certificate: Certificate) => {
     setEditing(certificate);
-
     setMemberForm({
       name: certificate.name || "",
-
       rollNo: certificate.rollNo || "",
-
       branch: certificate.branch || "",
-
       college: certificate.college || "",
-
       city: certificate.city || "",
-
       team: certificate.team || "",
-
       position: certificate.position || "",
-
       event: certificate.event || "",
     });
-
     setShowMemberModal(true);
   };
 
-  // ==========================================================
-  // UPDATE FORM
-  // ==========================================================
-
   const updateForm = (key: keyof MemberForm, value: string) => {
-    setMemberForm((current) => ({
-      ...current,
-      [key]: value,
-    }));
+    setMemberForm((current) => ({ ...current, [key]: value }));
   };
-
-  // ==========================================================
-  // ADD / EDIT MEMBER
-  // ==========================================================
 
   const handleSaveMember = async () => {
     if (!selectedEventCode) {
@@ -686,12 +418,10 @@ export default function CertificatesTab() {
         !memberForm.event.trim()
       ) {
         alert("Team, College, Position and Event are required for Merit.");
-
         return;
       }
     } else if (!memberForm.college.trim()) {
       alert("College is required.");
-
       return;
     }
 
@@ -700,23 +430,14 @@ export default function CertificatesTab() {
 
       const payload = {
         eventCode: selectedEventCode,
-
         certificateType,
-
         name: memberForm.name.trim(),
-
         rollNo: memberForm.rollNo.trim().toUpperCase(),
-
         branch: memberForm.branch.trim(),
-
         college: memberForm.college.trim(),
-
         city: memberForm.city.trim(),
-
         team: memberForm.team.trim(),
-
         position: memberForm.position.trim(),
-
         event: memberForm.event.trim(),
       };
 
@@ -737,20 +458,14 @@ export default function CertificatesTab() {
       setShowMemberModal(false);
       setEditing(null);
       setMemberForm(emptyMemberForm);
-
       await fetchCertificates();
     } catch (error: any) {
       console.error("Save member error:", error);
-
       alert(error?.response?.data?.message || "Failed to save member.");
     } finally {
       setSaving(false);
     }
   };
-
-  // ==========================================================
-  // DELETE ONE MEMBER
-  // ==========================================================
 
   const handleDeleteMember = async (certificate: Certificate) => {
     const confirmed = window.confirm(
@@ -770,21 +485,15 @@ export default function CertificatesTab() {
       await fetchCertificates();
     } catch (error: any) {
       console.error("Delete member error:", error);
-
       alert(error?.response?.data?.message || "Failed to delete member.");
     } finally {
       setDeletingId(null);
     }
   };
 
-  // ==========================================================
-  // DELETE SELECTED
-  // ==========================================================
-
   const handleDeleteSelected = async () => {
     if (!selectedIds.length) {
       alert("Select at least one member.");
-
       return;
     }
 
@@ -801,68 +510,45 @@ export default function CertificatesTab() {
         `${API}/api/certificates/admin/members/delete`,
         {
           ids: selectedIds,
-
           eventCode: selectedEventCode,
-
           certificateType,
         },
         authConfig,
       );
 
       setSelectedIds([]);
-
       await fetchCertificates();
     } catch (error: any) {
       console.error("Bulk delete error:", error);
-
-      alert(
-        error?.response?.data?.message || "Failed to delete selected members.",
-      );
+      alert(error?.response?.data?.message || "Failed to delete selected members.");
     } finally {
       setBulkDeleting(false);
     }
   };
-
-  // ==========================================================
-  // REQUIRED EXCEL COLUMNS
-  // ==========================================================
 
   const requiredColumns =
     certificateType === "MERIT"
       ? "Required columns: Name, RollNo, Team, College, Position, Event"
       : "Required columns: Name, RollNo, Branch, College, City, Date";
 
-  // ==========================================================
-  // UI
-  // ==========================================================
-
   return (
     <div className="space-y-6">
-      {/* ======================================================
-          HEADER
-      ====================================================== */}
-
+      {/* HEADER */}
       <div>
         <div className="flex items-center gap-3">
           <Award size={28} className="text-[#6C5FE0]" />
-
           <h1 className="text-2xl font-bold">Certificates</h1>
         </div>
-
         <p className="mt-2 text-gray-500">
           Create or select an event, then manage its certificate data.
         </p>
       </div>
 
-      {/* ======================================================
-          EVENT
-      ====================================================== */}
-
+      {/* EVENT */}
       <div className="rounded-2xl border bg-white p-6 shadow-sm">
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-bold">Certificate Event</h2>
-
             <p className="mt-1 text-sm text-gray-500">
               Select an event or create a new event code.
             </p>
@@ -881,17 +567,12 @@ export default function CertificatesTab() {
         <div className="grid gap-4 md:grid-cols-[1fr_auto]">
           <div>
             <label className="mb-2 block text-sm font-medium">Event</label>
-
             <select
               value={selectedEventCode}
               onChange={(e) => {
                 const value = e.target.value;
-
                 setSelectedEventCode(value);
-
-                if (value) {
-                  localStorage.setItem("certificateEventCode", value);
-                }
+                if (value) localStorage.setItem("certificateEventCode", value);
               }}
               disabled={loadingEvents || events.length === 0}
               className="w-full rounded-xl border px-4 py-3 outline-none focus:border-[#6C5FE0] disabled:bg-gray-50"
@@ -916,24 +597,18 @@ export default function CertificatesTab() {
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-3 font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto"
             >
               <Trash2 size={18} />
-
               {deletingEvent ? "Deleting..." : "Delete Event"}
             </button>
           </div>
         </div>
       </div>
 
-      {/* ======================================================
-          IMPORT
-      ====================================================== */}
-
+      {/* IMPORT */}
       <div className="rounded-2xl border bg-white p-6 shadow-sm">
         <div className="mb-6 flex items-center gap-3">
           <FileSpreadsheet className="text-[#6C5FE0]" />
-
           <div>
             <h2 className="text-xl font-bold">Import Certificate Data</h2>
-
             <p className="text-sm text-gray-500">
               Upload the Excel file for the selected event.
             </p>
@@ -945,7 +620,6 @@ export default function CertificatesTab() {
             <label className="mb-2 block text-sm font-medium">
               Certificate Type
             </label>
-
             <select
               value={certificateType}
               onChange={(e) => setCertificateType(e.target.value)}
@@ -969,7 +643,6 @@ export default function CertificatesTab() {
 
         <div className="mt-5">
           <label className="mb-2 block text-sm font-medium">Excel File</label>
-
           <div className="rounded-xl border-2 border-dashed p-5">
             <input
               type="file"
@@ -978,19 +651,15 @@ export default function CertificatesTab() {
               className="w-full"
               disabled={!selectedEventCode}
             />
-
             {file && (
               <p className="mt-3 text-sm text-gray-600">
                 Selected: <strong>{file.name}</strong>
               </p>
             )}
           </div>
-
           <p className="mt-2 text-xs text-gray-500">{requiredColumns}</p>
-
           <p className="mt-1 text-xs text-gray-500">
-            Certificate date is not entered here when it is already part of the
-            certificate template.
+            Certificate date is not entered here when it is already part of the certificate template.
           </p>
         </div>
 
@@ -1001,70 +670,47 @@ export default function CertificatesTab() {
           className="mt-5 flex items-center gap-2 rounded-xl bg-[#6C5FE0] px-5 py-3 font-semibold text-white transition hover:bg-[#594BD0] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Upload size={18} />
-
           {importing ? "Importing..." : "Import Certificate Data"}
         </button>
 
         {importResult && (
           <div className="mt-5 rounded-xl bg-green-50 p-5 text-green-700">
-            <p className="font-semibold">
-              Certificate data imported successfully.
-            </p>
-
+            <p className="font-semibold">Certificate data imported successfully.</p>
             <div className="mt-3 grid grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-gray-500">Imported</p>
-
-                <p className="text-xl font-bold">
-                  {importResult.imported || 0}
-                </p>
+                <p className="text-xl font-bold">{importResult.imported || 0}</p>
               </div>
-
               <div>
                 <p className="text-gray-500">Skipped</p>
-
                 <p className="text-xl font-bold">{importResult.skipped || 0}</p>
               </div>
-
               <div>
                 <p className="text-gray-500">Total Rows</p>
-
-                <p className="text-xl font-bold">
-                  {importResult.totalRows || 0}
-                </p>
+                <p className="text-xl font-bold">{importResult.totalRows || 0}</p>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* ======================================================
-          RECORDS
-      ====================================================== */}
-
+      {/* RECORDS */}
       <div className="rounded-2xl border bg-white shadow-sm">
         <div className="border-b p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-xl font-bold">Certificate Records</h2>
-
               <p className="mt-1 text-sm text-gray-500">
-                {selectedEventCode || "No event"} ·{" "}
-                {CERTIFICATE_TYPES.find((t) => t.value === certificateType)
-                  ?.label || certificateType}{" "}
-                · {certificates.length} records
+                {selectedEventCode || "No event"} · {CERTIFICATE_TYPES.find((t) => t.value === certificateType)?.label || certificateType} · {certificates.length} records
               </p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              {/* SEARCH */}
-
               <div className="relative">
                 <Search
                   size={18}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
                 />
-
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -1072,8 +718,6 @@ export default function CertificatesTab() {
                   className="w-full rounded-xl border py-3 pl-10 pr-4 outline-none focus:border-[#6C5FE0] sm:w-80"
                 />
               </div>
-
-              {/* ADD MEMBER */}
 
               <button
                 type="button"
@@ -1084,197 +728,90 @@ export default function CertificatesTab() {
                 <Plus size={18} />
                 Add Member
               </button>
-
-              {/* DOWNLOAD ALL */}
-
-              <button
-                type="button"
-                onClick={handleDownloadAll}
-                disabled={!certificates.length || pdfDownloading}
-                className="flex items-center justify-center gap-2 rounded-xl border px-4 py-3 font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Download size={18} />
-
-                {pdfDownloading ? "Preparing ZIP..." : "Download All"}
-              </button>
             </div>
           </div>
-
-          {/* SELECTED ACTIONS */}
 
           {selectedIds.length > 0 && (
             <div className="mt-4 flex flex-col gap-3 rounded-xl bg-red-50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-sm font-semibold text-red-700">
-                {selectedIds.length} member
-                {selectedIds.length === 1 ? "" : "s"} selected
+                {selectedIds.length} member{selectedIds.length === 1 ? "" : "s"} selected
               </span>
-
-              <div className="flex flex-wrap gap-2">
-                {/* DOWNLOAD SELECTED */}
-
-                <button
-                  type="button"
-                  onClick={handleDownloadSelected}
-                  disabled={pdfDownloading || bulkDeleting}
-                  className="flex items-center justify-center gap-2 rounded-lg bg-[#006A9E] px-4 py-2 font-semibold text-white hover:bg-[#00527F] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Download size={16} />
-
-                  {pdfDownloading ? "Preparing ZIP..." : "Download Selected"}
-                </button>
-
-                {/* DELETE SELECTED */}
-
-                <button
-                  type="button"
-                  onClick={handleDeleteSelected}
-                  disabled={bulkDeleting || pdfDownloading}
-                  className="flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Trash2 size={16} />
-
-                  {bulkDeleting ? "Deleting..." : "Delete Selected"}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleDeleteSelected}
+                disabled={bulkDeleting}
+                className="flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                <Trash2 size={16} />
+                {bulkDeleting ? "Deleting..." : "Delete Selected"}
+              </button>
             </div>
           )}
         </div>
 
-        {/* ====================================================
-            TABLE
-        ==================================================== */}
-
         <div className="overflow-x-auto">
           {loadingCertificates ? (
-            <div className="p-10 text-center text-gray-500">
-              Loading certificate records...
-            </div>
+            <div className="p-10 text-center text-gray-500">Loading certificate records...</div>
           ) : !selectedEventCode ? (
-            <div className="p-10 text-center text-gray-500">
-              Create or select an event first.
-            </div>
+            <div className="p-10 text-center text-gray-500">Create or select an event first.</div>
           ) : filteredCertificates.length === 0 ? (
-            <div className="p-10 text-center text-gray-500">
-              No certificate records found.
-            </div>
+            <div className="p-10 text-center text-gray-500">No certificate records found.</div>
           ) : (
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 text-left">
                 <tr>
                   <th className="px-4 py-4">
-                    <button
-                      type="button"
-                      onClick={toggleSelectAll}
-                      title="Select all visible"
-                    >
-                      {allVisibleSelected ? (
-                        <CheckSquare size={20} className="text-[#6C5FE0]" />
-                      ) : (
-                        <Square size={20} />
-                      )}
+                    <button type="button" onClick={toggleSelectAll} title="Select all visible">
+                      {allVisibleSelected ? <CheckSquare size={20} className="text-[#6C5FE0]" /> : <Square size={20} />}
                     </button>
                   </th>
-
                   <th className="px-4 py-4 font-semibold">Name</th>
-
                   <th className="px-4 py-4 font-semibold">Roll No</th>
-
                   {certificateType === "MERIT" ? (
                     <>
                       <th className="px-4 py-4 font-semibold">Team</th>
-
                       <th className="px-4 py-4 font-semibold">College</th>
-
                       <th className="px-4 py-4 font-semibold">Position</th>
-
                       <th className="px-4 py-4 font-semibold">Event</th>
                     </>
                   ) : (
                     <>
                       <th className="px-4 py-4 font-semibold">Branch</th>
-
                       <th className="px-4 py-4 font-semibold">College</th>
-
                       <th className="px-4 py-4 font-semibold">City</th>
                     </>
                   )}
-
-                  <th className="px-4 py-4 text-right font-semibold">
-                    Actions
-                  </th>
+                  <th className="px-4 py-4 text-right font-semibold">Actions</th>
                 </tr>
               </thead>
-
               <tbody className="divide-y">
                 {filteredCertificates.map((certificate) => {
                   const selected = selectedIds.includes(certificate._id);
-
                   return (
-                    <tr
-                      key={certificate._id}
-                      className={
-                        selected ? "bg-purple-50/50" : "hover:bg-gray-50"
-                      }
-                    >
+                    <tr key={certificate._id} className={selected ? "bg-purple-50/50" : "hover:bg-gray-50"}>
                       <td className="px-4 py-4">
-                        <button
-                          type="button"
-                          onClick={() => toggleSelect(certificate._id)}
-                        >
-                          {selected ? (
-                            <CheckSquare size={20} className="text-[#6C5FE0]" />
-                          ) : (
-                            <Square size={20} />
-                          )}
+                        <button type="button" onClick={() => toggleSelect(certificate._id)}>
+                          {selected ? <CheckSquare size={20} className="text-[#6C5FE0]" /> : <Square size={20} />}
                         </button>
                       </td>
-
-                      <td className="px-4 py-4 font-medium">
-                        {certificate.name}
-                      </td>
-
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        {certificate.rollNo}
-                      </td>
-
+                      <td className="px-4 py-4 font-medium">{certificate.name}</td>
+                      <td className="px-4 py-4 whitespace-nowrap">{certificate.rollNo}</td>
                       {certificateType === "MERIT" ? (
                         <>
-                          <td className="px-4 py-4">
-                            {certificate.team || "—"}
-                          </td>
-
-                          <td className="px-4 py-4">
-                            {certificate.college || "—"}
-                          </td>
-
-                          <td className="px-4 py-4">
-                            {certificate.position || "—"}
-                          </td>
-
-                          <td className="px-4 py-4">
-                            {certificate.event || "—"}
-                          </td>
+                          <td className="px-4 py-4">{certificate.team || "—"}</td>
+                          <td className="px-4 py-4">{certificate.college || "—"}</td>
+                          <td className="px-4 py-4">{certificate.position || "—"}</td>
+                          <td className="px-4 py-4">{certificate.event || "—"}</td>
                         </>
                       ) : (
                         <>
-                          <td className="px-4 py-4">
-                            {certificate.branch || "—"}
-                          </td>
-
-                          <td className="px-4 py-4">
-                            {certificate.college || "—"}
-                          </td>
-
-                          <td className="px-4 py-4">
-                            {certificate.city || "—"}
-                          </td>
+                          <td className="px-4 py-4">{certificate.branch || "—"}</td>
+                          <td className="px-4 py-4">{certificate.college || "—"}</td>
+                          <td className="px-4 py-4">{certificate.city || "—"}</td>
                         </>
                       )}
-
                       <td className="px-4 py-4">
                         <div className="flex justify-end gap-2">
-                          {/* EDIT */}
-
                           <button
                             type="button"
                             onClick={() => openEditMember(certificate)}
@@ -1283,9 +820,6 @@ export default function CertificatesTab() {
                           >
                             <Edit size={16} />
                           </button>
-
-                          {/* DELETE */}
-
                           <button
                             type="button"
                             onClick={() => handleDeleteMember(certificate)}
@@ -1295,14 +829,10 @@ export default function CertificatesTab() {
                           >
                             <Trash2 size={16} />
                           </button>
-
-                          {/* INDIVIDUAL DOWNLOAD */}
-
                           <button
                             type="button"
                             onClick={() => handleDownload(certificate)}
-                            disabled={pdfDownloading}
-                            className="rounded-lg bg-[#006A9E] px-3 py-2 text-white hover:bg-[#00527F] disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-lg bg-[#006A9E] px-3 py-2 text-white hover:bg-[#00527F]"
                             title="Download certificate"
                           >
                             <Download size={16} />
@@ -1318,64 +848,34 @@ export default function CertificatesTab() {
         </div>
       </div>
 
-      {/* ======================================================
-          CREATE EVENT MODAL
-      ====================================================== */}
-
+      {/* CREATE EVENT MODAL */}
       {showCreateEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b p-6">
               <div>
                 <h2 className="text-xl font-bold">Create Event</h2>
-
-                <p className="mt-1 text-sm text-gray-500">
-                  Enter a unique event code.
-                </p>
+                <p className="mt-1 text-sm text-gray-500">Enter a unique event code.</p>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setShowCreateEvent(false)}
-                className="rounded-lg p-2 hover:bg-gray-100"
-              >
+              <button type="button" onClick={() => setShowCreateEvent(false)} className="rounded-lg p-2 hover:bg-gray-100">
                 <X size={20} />
               </button>
             </div>
-
             <div className="p-6">
-              <label className="mb-2 block text-sm font-medium">
-                Event Code
-              </label>
-
+              <label className="mb-2 block text-sm font-medium">Event Code</label>
               <input
                 autoFocus
                 value={newEventCode}
                 onChange={(e) => setNewEventCode(e.target.value.toUpperCase())}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleCreateEvent();
-                  }
+                  if (e.key === "Enter") handleCreateEvent();
                 }}
                 placeholder="NSD2027"
                 className="w-full rounded-xl border px-4 py-3 outline-none focus:border-[#6C5FE0]"
               />
-
               <div className="mt-5 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateEvent(false)}
-                  className="rounded-xl border px-4 py-3 font-medium hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleCreateEvent}
-                  disabled={creatingEvent}
-                  className="rounded-xl bg-[#6C5FE0] px-5 py-3 font-semibold text-white disabled:opacity-50"
-                >
+                <button type="button" onClick={() => setShowCreateEvent(false)} className="rounded-xl border px-4 py-3 font-medium hover:bg-gray-50">Cancel</button>
+                <button type="button" onClick={handleCreateEvent} disabled={creatingEvent} className="rounded-xl bg-[#6C5FE0] px-5 py-3 font-semibold text-white disabled:opacity-50">
                   {creatingEvent ? "Creating..." : "Create Event"}
                 </button>
               </div>
@@ -1384,182 +884,73 @@ export default function CertificatesTab() {
         </div>
       )}
 
-      {/* ======================================================
-          ADD / EDIT MEMBER MODAL
-      ====================================================== */}
-
+      {/* ADD / EDIT MEMBER MODAL */}
       {showMemberModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b p-6">
               <div>
-                <h2 className="text-xl font-bold">
-                  {editing ? "Edit Member" : "Add Member"}
-                </h2>
-
+                <h2 className="text-xl font-bold">{editing ? "Edit Member" : "Add Member"}</h2>
                 <p className="mt-1 text-sm text-gray-500">
-                  {selectedEventCode} ·{" "}
-                  {
-                    CERTIFICATE_TYPES.find((t) => t.value === certificateType)
-                      ?.label
-                  }
+                  {selectedEventCode} · {CERTIFICATE_TYPES.find((t) => t.value === certificateType)?.label}
                 </p>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setShowMemberModal(false)}
-                className="rounded-lg p-2 hover:bg-gray-100"
-              >
+              <button type="button" onClick={() => setShowMemberModal(false)} className="rounded-lg p-2 hover:bg-gray-100">
                 <X size={20} />
               </button>
             </div>
 
             <div className="grid gap-4 p-6 md:grid-cols-2">
-              {/* NAME */}
-
               <div>
                 <label className="mb-2 block text-sm font-medium">Name</label>
-
-                <input
-                  value={memberForm.name}
-                  onChange={(e) => updateForm("name", e.target.value)}
-                  className="w-full rounded-xl border px-4 py-3 outline-none"
-                />
+                <input value={memberForm.name} onChange={(e) => updateForm("name", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
               </div>
-
-              {/* ROLL NO */}
-
               <div>
-                <label className="mb-2 block text-sm font-medium">
-                  Roll No
-                </label>
-
-                <input
-                  value={memberForm.rollNo}
-                  onChange={(e) =>
-                    updateForm("rollNo", e.target.value.toUpperCase())
-                  }
-                  className="w-full rounded-xl border px-4 py-3 outline-none"
-                />
+                <label className="mb-2 block text-sm font-medium">Roll No</label>
+                <input value={memberForm.rollNo} onChange={(e) => updateForm("rollNo", e.target.value.toUpperCase())} className="w-full rounded-xl border px-4 py-3 outline-none" />
               </div>
-
-              {/* MERIT */}
 
               {certificateType === "MERIT" ? (
                 <>
                   <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      Team
-                    </label>
-
-                    <input
-                      value={memberForm.team}
-                      onChange={(e) => updateForm("team", e.target.value)}
-                      className="w-full rounded-xl border px-4 py-3 outline-none"
-                    />
+                    <label className="mb-2 block text-sm font-medium">Team</label>
+                    <input value={memberForm.team} onChange={(e) => updateForm("team", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
-
                   <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      College
-                    </label>
-
-                    <input
-                      value={memberForm.college}
-                      onChange={(e) => updateForm("college", e.target.value)}
-                      className="w-full rounded-xl border px-4 py-3 outline-none"
-                    />
+                    <label className="mb-2 block text-sm font-medium">College</label>
+                    <input value={memberForm.college} onChange={(e) => updateForm("college", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
-
                   <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      Position
-                    </label>
-
-                    <input
-                      value={memberForm.position}
-                      onChange={(e) => updateForm("position", e.target.value)}
-                      className="w-full rounded-xl border px-4 py-3 outline-none"
-                    />
+                    <label className="mb-2 block text-sm font-medium">Position</label>
+                    <input value={memberForm.position} onChange={(e) => updateForm("position", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
-
                   <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      Event
-                    </label>
-
-                    <input
-                      value={memberForm.event}
-                      onChange={(e) => updateForm("event", e.target.value)}
-                      className="w-full rounded-xl border px-4 py-3 outline-none"
-                    />
+                    <label className="mb-2 block text-sm font-medium">Event</label>
+                    <input value={memberForm.event} onChange={(e) => updateForm("event", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
                 </>
               ) : (
                 <>
-                  {/* BRANCH */}
-
                   <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      Branch
-                    </label>
-
-                    <input
-                      value={memberForm.branch}
-                      onChange={(e) => updateForm("branch", e.target.value)}
-                      className="w-full rounded-xl border px-4 py-3 outline-none"
-                    />
+                    <label className="mb-2 block text-sm font-medium">Branch</label>
+                    <input value={memberForm.branch} onChange={(e) => updateForm("branch", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
-
-                  {/* COLLEGE */}
-
                   <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      College
-                    </label>
-
-                    <input
-                      value={memberForm.college}
-                      onChange={(e) => updateForm("college", e.target.value)}
-                      className="w-full rounded-xl border px-4 py-3 outline-none"
-                    />
+                    <label className="mb-2 block text-sm font-medium">College</label>
+                    <input value={memberForm.college} onChange={(e) => updateForm("college", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
-
-                  {/* CITY */}
-
                   <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      College City
-                    </label>
-
-                    <input
-                      value={memberForm.city}
-                      onChange={(e) => updateForm("city", e.target.value)}
-                      className="w-full rounded-xl border px-4 py-3 outline-none"
-                    />
+                    <label className="mb-2 block text-sm font-medium">College City</label>
+                    <input value={memberForm.city} onChange={(e) => updateForm("city", e.target.value)} className="w-full rounded-xl border px-4 py-3 outline-none" />
                   </div>
                 </>
               )}
             </div>
 
             <div className="flex justify-end gap-3 border-t p-6">
-              <button
-                type="button"
-                onClick={() => setShowMemberModal(false)}
-                className="rounded-xl border px-4 py-3 font-medium hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSaveMember}
-                disabled={saving}
-                className="flex items-center gap-2 rounded-xl bg-[#6C5FE0] px-5 py-3 font-semibold text-white disabled:opacity-50"
-              >
+              <button type="button" onClick={() => setShowMemberModal(false)} className="rounded-xl border px-4 py-3 font-medium hover:bg-gray-50">Cancel</button>
+              <button type="button" onClick={handleSaveMember} disabled={saving} className="flex items-center gap-2 rounded-xl bg-[#6C5FE0] px-5 py-3 font-semibold text-white disabled:opacity-50">
                 <Save size={17} />
-
                 {saving ? "Saving..." : editing ? "Save Changes" : "Add Member"}
               </button>
             </div>
