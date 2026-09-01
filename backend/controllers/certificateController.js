@@ -2,7 +2,11 @@ const XLSX = require("xlsx");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const archiver = require("archiver");
+const archiverModule = require("archiver");
+const archiver =
+  typeof archiverModule === "function"
+    ? archiverModule
+    : archiverModule?.default;
 const { PassThrough } = require("stream");
 
 const Certificate = require("../models/Certificate");
@@ -401,6 +405,12 @@ async function exportAdminCertificatePdfs(req, res) {
     // ----------------------------------------------------------
     // ZIP response
     // ----------------------------------------------------------
+
+    if (typeof archiver !== "function") {
+      throw new Error(
+        'Archiver package could not be loaded. Ensure "archiver" is installed in backend dependencies.',
+      );
+    }
 
     const archive = archiver("zip", {
       zlib: {
