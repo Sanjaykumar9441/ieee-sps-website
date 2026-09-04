@@ -6,9 +6,24 @@ import {
   updateQuestion,
 } from "../../../Assessment/assessmentApi";
 
+interface InitialQuestion {
+  id?: string;
+  bank_id?: string;
+  question_text: string;
+  question_type:
+    | "MCQ"
+    | "MULTIPLE_CORRECT"
+    | "TRUE_FALSE"
+    | "FILL_IN_THE_BLANK";
+  options: string[];
+  correct_answers: number[];
+  marks?: number;
+  negative_marks?: number;
+}
+
 interface Props {
   bankId: string;
-  initialQuestion?: Question | null;
+  initialQuestion?: InitialQuestion | null;
   onBack: () => void;
   onSaved: () => void;
 }
@@ -24,6 +39,8 @@ interface Question {
     | "FILL_IN_THE_BLANK";
   options: string[];
   correct_answers: number[];
+  marks: number;
+  negative_marks: number;
 }
 
 const blankQuestion: Question = {
@@ -31,6 +48,8 @@ const blankQuestion: Question = {
   question_type: "MCQ",
   options: ["", "", "", ""],
   correct_answers: [],
+  marks: 1,
+  negative_marks: 0,
 };
 
 function normalizeOptions(value: unknown): string[] {
@@ -131,6 +150,11 @@ export default function QuestionEditor({
               (index) => index === 0 || index === 1,
             )
           : normalizeCorrect(initialQuestion.correct_answers),
+      marks: Math.max(0, Number((initialQuestion as any).marks ?? 1)),
+      negative_marks: Math.max(
+        0,
+        Number((initialQuestion as any).negative_marks ?? 0),
+      ),
     });
 
     setValidation([]);
@@ -143,6 +167,19 @@ export default function QuestionEditor({
 
     if (!question.question_text.trim()) {
       errors.push("Question text is required.");
+    }
+
+    if (
+      !Number.isFinite(Number(question.marks)) ||
+      Number(question.marks) <= 0
+    ) {
+      errors.push("Correct answer marks must be greater than 0.");
+    }
+    if (
+      !Number.isFinite(Number(question.negative_marks)) ||
+      Number(question.negative_marks) < 0
+    ) {
+      errors.push("Negative marks cannot be negative.");
     }
 
     if (question.question_type === "TRUE_FALSE") {
@@ -251,6 +288,8 @@ export default function QuestionEditor({
         options: normalizedOptions,
 
         correct_answers: [...new Set(normalizedCorrectAnswers)],
+        marks: Number(question.marks),
+        negative_marks: Number(question.negative_marks),
       };
 
       if (question.id) {
@@ -291,7 +330,7 @@ export default function QuestionEditor({
             ? current.options.slice(0, 4)
             : ["", "", "", ""],
         correct_answers:
-          type === "MCQ"
+          type === "MCQ" || type === "FILL_IN_THE_BLANK"
             ? current.correct_answers.slice(0, 1)
             : current.correct_answers,
       }));
@@ -339,7 +378,11 @@ export default function QuestionEditor({
 
   const setCorrectAnswer = (index: number) => {
     setQuestion((current) => {
-      if (current.question_type === "MCQ") {
+      if (
+        current.question_type === "MCQ" ||
+        current.question_type === "FILL_IN_THE_BLANK" ||
+        current.question_type === "TRUE_FALSE"
+      ) {
         return {
           ...current,
           correct_answers: [index],
@@ -375,7 +418,8 @@ export default function QuestionEditor({
           <h1 className="mt-3 text-3xl font-bold">Question Editor</h1>
 
           <p className="mt-1 text-sm text-gray-500">
-            Create an MCQ, Multiple Correct or True/False question.
+            Create an MCQ, Multiple Correct, True/False or Fill in the Blank
+            question.
           </p>
         </div>
 
@@ -463,6 +507,41 @@ export default function QuestionEditor({
       </section>
 
       <section className="mt-8 rounded-2xl border bg-white p-6">
+        <h2 className="text-xl font-semibold">Scoring</h2>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 max-w-xl">
+          <label className="text-sm font-medium">
+            Correct Answer Marks
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={question.marks}
+              onChange={(e) =>
+                setQuestion({ ...question, marks: Number(e.target.value) })
+              }
+              className="mt-2 w-full rounded-xl border p-3"
+            />
+          </label>
+          <label className="text-sm font-medium">
+            Negative Marks
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={question.negative_marks}
+              onChange={(e) =>
+                setQuestion({
+                  ...question,
+                  negative_marks: Number(e.target.value),
+                })
+              }
+              className="mt-2 w-full rounded-xl border p-3"
+            />
+          </label>
+        </div>
+      </section>
+
+      <section className="mt-8 rounded-2xl border bg-white p-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-semibold">Answer Options</h2>
@@ -472,7 +551,9 @@ export default function QuestionEditor({
                 ? "Choose True or False."
                 : question.question_type === "MCQ"
                   ? "Select exactly one correct option."
-                  : "Select all correct options."}
+                  : question.question_type === "FILL_IN_THE_BLANK"
+                    ? "Enter the sentence with a blank (___) and select exactly one correct option."
+                    : "Select all correct options."}
             </p>
           </div>
 
@@ -551,7 +632,10 @@ export default function QuestionEditor({
             <div className="flex items-center justify-between border-b px-6 py-5">
               <div>
                 <h2 className="text-xl font-bold">Student Preview</h2>
-                <p className="text-sm text-gray-500">1 mark</p>
+                <p className="text-sm text-gray-500">
+                  {question.marks} mark{question.marks === 1 ? "" : "s"} ·{" "}
+                  {question.negative_marks} negative
+                </p>
               </div>
 
               <button
@@ -573,7 +657,9 @@ export default function QuestionEditor({
                   ? "MCQ — Select one answer"
                   : question.question_type === "MULTIPLE_CORRECT"
                     ? "Multiple Correct — Select all applicable answers"
-                    : "True / False — Select one answer"}
+                    : question.question_type === "TRUE_FALSE"
+                      ? "True / False — Select one answer"
+                      : "Fill in the Blank — Select one answer"}
               </p>
 
               <div className="mt-6 space-y-3">

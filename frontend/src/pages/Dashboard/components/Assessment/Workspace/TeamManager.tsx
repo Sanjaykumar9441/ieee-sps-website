@@ -15,6 +15,10 @@ type Member = {
   rollNo: string;
   email: string;
   branch: string;
+  status?: string;
+  attempt_started?: boolean;
+  submitted?: boolean;
+  first_login_at?: string | null;
 };
 type Team = {
   id: string;
@@ -46,7 +50,18 @@ export default function TeamManager({
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      setTeams(await getAssessmentTeams(assessment.id));
+      const rows = await getAssessmentTeams(assessment.id);
+      setTeams(
+        (rows || []).map((t: any) => ({
+          ...t,
+          members: (t.members || []).map((m: any) => ({
+            ...m,
+            rollNo: m.rollNo ?? m.roll_no ?? "",
+            email: m.email ?? "",
+            branch: m.branch ?? "",
+          })),
+        })),
+      );
     } catch (e: any) {
       toast.error(e?.response?.data?.message || "Unable to load teams.");
     } finally {
@@ -136,59 +151,136 @@ export default function TeamManager({
       </div>
       <div className="overflow-hidden rounded-2xl border bg-white">
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="p-4 text-left">Team</th>
-                <th className="p-4 text-left">Email</th>
-                <th className="p-4 text-left">Branch</th>
-                <th className="p-4 text-left">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {teams.length ? (
-                teams.map((t) => (
-                  <tr key={t.id} className="border-t align-top">
-                    <td className="p-4 font-semibold">{t.team_name}</td>
-                    <td className="p-4">{t.contact_email}</td>
-                    <td className="p-4">{t.branch || "-"}</td>
-                    <td className="p-4">
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={async () => {
-                          if (!confirm(`Delete ${t.team_name}?`)) return;
-                          try {
-                            setBusy(true);
-                            await deleteAssessmentTeam(assessment.id, t.id);
-                            await load();
-                            toast.success("Team deleted.");
-                          } catch (e: any) {
-                            toast.error(
-                              e?.response?.data?.message ||
-                                "Unable to delete team.",
-                            );
-                          } finally {
-                            setBusy(false);
-                          }
-                        }}
-                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-red-600"
-                      >
-                        <Trash2 size={15} />
-                        Delete
-                      </button>
+          {mode === "STUDENT_TEAMS" ? (
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="p-4 text-left">Team</th>
+                  <th className="p-4 text-left">Roll No</th>
+                  <th className="p-4 text-left">Name</th>
+                  <th className="p-4 text-left">Email</th>
+                  <th className="p-4 text-left">Branch</th>
+                  <th className="p-4 text-left">Status</th>
+                  <th className="p-4 text-left">Attempt</th>
+                  <th className="p-4 text-left">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teams.flatMap((t) =>
+                  t.members.map((m, i) => (
+                    <tr key={`${t.id}-${m.id || i}`} className="border-t">
+                      <td className="p-4 font-semibold">{t.team_name}</td>
+                      <td className="p-4">{m.rollNo}</td>
+                      <td className="p-4">{m.name}</td>
+                      <td className="p-4">{m.email}</td>
+                      <td className="p-4">{m.branch || t.branch || "-"}</td>
+                      <td className="p-4">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${m.status === "blocked" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}
+                        >
+                          {m.status || "allowed"}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        {m.submitted
+                          ? "Submitted"
+                          : m.attempt_started
+                            ? "In Progress"
+                            : "Not Started"}
+                      </td>
+                      <td className="p-4">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={async () => {
+                            if (!confirm(`Delete ${t.team_name}?`)) return;
+                            try {
+                              setBusy(true);
+                              await deleteAssessmentTeam(assessment.id, t.id);
+                              await load();
+                              toast.success("Team deleted.");
+                            } catch (e: any) {
+                              toast.error(
+                                e?.response?.data?.message ||
+                                  "Unable to delete team.",
+                              );
+                            } finally {
+                              setBusy(false);
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-red-600"
+                        >
+                          <Trash2 size={15} />
+                          Delete Team
+                        </button>
+                      </td>
+                    </tr>
+                  )),
+                )}
+                {!teams.some((t) => t.members.length > 0) && (
+                  <tr>
+                    <td colSpan={8} className="p-12 text-center text-slate-500">
+                      No team members added yet.
                     </td>
                   </tr>
-                ))
-              ) : (
+                )}
+              </tbody>
+            </table>
+          ) : (
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50">
                 <tr>
-                  <td colSpan={4} className="p-12 text-center text-slate-500">
-                    No teams added yet.
-                  </td>
+                  <th className="p-4 text-left">Team</th>
+                  <th className="p-4 text-left">Email</th>
+                  <th className="p-4 text-left">Branch</th>
+                  <th className="p-4 text-left">Action</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {teams.length ? (
+                  teams.map((t) => (
+                    <tr key={t.id} className="border-t">
+                      <td className="p-4 font-semibold">{t.team_name}</td>
+                      <td className="p-4">{t.contact_email}</td>
+                      <td className="p-4">{t.branch || "-"}</td>
+                      <td className="p-4">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={async () => {
+                            if (!confirm(`Delete ${t.team_name}?`)) return;
+                            try {
+                              setBusy(true);
+                              await deleteAssessmentTeam(assessment.id, t.id);
+                              await load();
+                              toast.success("Team deleted.");
+                            } catch (e: any) {
+                              toast.error(
+                                e?.response?.data?.message ||
+                                  "Unable to delete team.",
+                              );
+                            } finally {
+                              setBusy(false);
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-red-600"
+                        >
+                          <Trash2 size={15} />
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="p-12 text-center text-slate-500">
+                      No teams added yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
       {showAdd && (

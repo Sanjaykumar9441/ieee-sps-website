@@ -126,8 +126,10 @@ function normalizeQuestionPayload(input, bankId) {
       options,
       questionType,
     ),
-    marks: 1,
-    negative_marks: 0,
+    marks: Number.isFinite(Number(input.marks)) ? Number(input.marks) : 1,
+    negative_marks: Number.isFinite(Number(input.negative_marks))
+      ? Number(input.negative_marks)
+      : 0,
     // Kept for compatibility with the existing schema; not exposed in the UI.
     difficulty: "MEDIUM",
     estimated_seconds: 60,
@@ -142,6 +144,16 @@ function validateQuestion(question, rowLabel = "Question") {
 
   if (!question.question_text) {
     errors.push(`${rowLabel}: Question text is required.`);
+  }
+
+  if (!Number.isFinite(Number(question.marks)) || Number(question.marks) <= 0) {
+    errors.push(`${rowLabel}: Correct answer marks must be greater than 0.`);
+  }
+  if (
+    !Number.isFinite(Number(question.negative_marks)) ||
+    Number(question.negative_marks) < 0
+  ) {
+    errors.push(`${rowLabel}: Negative marks cannot be negative.`);
   }
 
   if (!QUESTION_TYPES.includes(question.question_type)) {

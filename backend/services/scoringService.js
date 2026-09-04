@@ -88,8 +88,11 @@ exports.calculateScore = async (attemptId) => {
   let correct = 0;
   let wrong = 0;
   let unanswered = 0;
+  let maximumMarks = 0;
 
   for (const question of questions || []) {
+    const questionMarks = Math.max(0, Number(question.marks ?? fallbackMarks));
+    maximumMarks += questionMarks;
     const selectedAnswers = answerMap.get(question.id);
 
     // No answer
@@ -165,8 +168,7 @@ exports.calculateScore = async (attemptId) => {
     if (isCorrect) {
       correct++;
 
-      const marks = Math.max(0, Number(question.marks ?? fallbackMarks));
-      score += marks;
+      score += questionMarks;
     } else {
       wrong++;
 
@@ -185,9 +187,9 @@ exports.calculateScore = async (attemptId) => {
   const totalQuestions = (questions || []).length;
 
   const percentage =
-    totalQuestions === 0
+    maximumMarks <= 0
       ? 0
-      : Number(((correct / totalQuestions) * 100).toFixed(2));
+      : Number(Math.max(0, (score / maximumMarks) * 100).toFixed(2));
 
   const result = {
     score,
@@ -196,6 +198,7 @@ exports.calculateScore = async (attemptId) => {
     unanswered,
     percentage,
     totalQuestions,
+    maximumMarks,
   };
 
   return result;

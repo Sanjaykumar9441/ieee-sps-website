@@ -13,6 +13,7 @@ import type { Assessment } from "../AssessmentCard";
 
 const csvCell = (value: unknown): string =>
   `"${String(value ?? "").replace(/"/g, '""')}"`;
+
 const downloadText = (filename: string, text: string) => {
   const url = URL.createObjectURL(
     new Blob([text], { type: "text/csv;charset=utf-8;" }),
@@ -26,8 +27,36 @@ const downloadText = (filename: string, text: string) => {
   URL.revokeObjectURL(url);
 };
 
+type Mode = "INDIVIDUAL_STUDENTS" | "STUDENT_TEAMS" | "TEAM";
+
+type LeaderboardRow = {
+  rank: number;
+  name?: string;
+  rollNo?: string | null;
+  email?: string;
+  department?: string;
+  branch?: string;
+  teamId?: string | null;
+  teamName?: string | null;
+  members?: Array<{
+    name: string;
+    roll_no: string;
+    email: string;
+    branch?: string | null;
+  }>;
+};
+
 export default function ExportTab({ assessment }: { assessment: Assessment }) {
   const [busy, setBusy] = useState<string | null>(null);
+  const mode = (assessment.participation_mode || "INDIVIDUAL_STUDENTS") as Mode;
+
+  const modeLabel =
+    mode === "STUDENT_TEAMS"
+      ? "Student Teams"
+      : mode === "TEAM"
+        ? "Team"
+        : "Individual Students";
+
   const download = async (format: "excel" | "pdf" | "csv") => {
     try {
       setBusy(format);
@@ -43,81 +72,117 @@ export default function ExportTab({ assessment }: { assessment: Assessment }) {
       setBusy(null);
     }
   };
+
   const downloadRound2 = async () => {
     try {
       setBusy("round2");
-      type Round2Row = {
-        rank: unknown;
-        name: string;
-        rollNo: string;
-        email: string;
-        department: string;
-      };
+      const leaderboard: LeaderboardRow[] = await getLeaderboard(assessment.id);
 
-      const leaderboard: any[] = await getLeaderboard(assessment.id);
-      const rows: Round2Row[] = (leaderboard || []).map(
-        (s: any): Round2Row => ({
-          rank: s.rank,
-          name: String(s.teamName || s.name || ""),
-          rollNo: s.teamName ? "" : String(s.rollNo || ""),
-          email: String(s.email || ""),
-          department: String(s.department || s.branch || ""),
-        }),
-      );
-      if (!rows.length) {
-        toast.error("No submitted students are available.");
+      if (!leaderboard.length) {
+        toast.error("No submitted participants are available.");
         return;
       }
-      const isIndividual =
-        assessment.participation_mode === "INDIVIDUAL_STUDENTS";
 
-      const csvRows: unknown[][] = [
-        isIndividual
-          ? ["Rank", "Name", "Roll No", "Email", "Department"]
-          : ["Rank", "Team Name", "Email", "Branch"],
-        ...rows.map((row: Round2Row) =>
-          isIndividual
-            ? [row.rank, row.name, row.rollNo, row.email, row.department]
-            : [row.rank, row.name, row.email, row.department],
-        ),
-      ];
+      let headers: string[];
+      let rows: unknown[][];
 
-      const csv = csvRows.map((row) => row.map(csvCell).join(",")).join("\n");
+      if (mode === "STUDENT_TEAMS") {
+        headers = [
+          "Team Name",
+          "Member Name",
+          "Roll Number",
+          "Email",
+          "Branch",
+        ];
+        rows = leaderboard.flatMap((team) =>
+          (team.members || []).map((member) => [
+            team.teamName || "",
+            member.name,
+            member.roll_no,
+            member.email,
+            member.branch || team.department || team.branch || "",
+          ]),
+        );
+      } else if (mode === "TEAM") {
+        headers = ["Team Name", "Email", "Branch"];
+        rows = leaderboard.map((team) => [
+          team.teamName || team.name || "",
+          team.email || "",
+          team.department || team.branch || "",
+        ]);
+      } else {
+        headers = ["Name", "Roll No", "Email", "Department"];
+        rows = leaderboard.map((student) => [
+          student.name || "",
+          student.rollNo || "",
+          student.email || "",
+          student.department || student.branch || "",
+        ]);
+      }
+
+      if (!rows.length) {
+        toast.error(
+          mode === "STUDENT_TEAMS"
+            ? "No team members are available for export."
+            : "No participants are available for export.",
+        );
+        return;
+      }
+
+      const csv = [
+        headers.map(csvCell).join(","),
+        ...rows.map((row) => row.map(csvCell).join(",")),
+      ].join("\n");
+
       downloadText(
-        `${(assessment.title || "assessment").replace(/[^a-z0-9_-]+/gi, "_")}-round2-students.csv`,
+        `${(assessment.title || "assessment").replace(/[^a-z0-9_-]+/gi, "_")}-round2-${mode.toLowerCase()}.csv`,
         csv,
       );
-      toast.success(`${rows.length} students exported in leaderboard order.`);
+
+      toast.success(
+        mode === "STUDENT_TEAMS"
+          ? `${rows.length} team members exported in leaderboard order.`
+          : `${rows.length} ${mode === "TEAM" ? "teams" : "students"} exported in leaderboard order.`,
+      );
     } catch (error: any) {
       console.error(error);
       toast.error(
         error?.response?.data?.message ||
-          "Unable to export Round 2 student CSV.",
+          "Unable to export Round 2 participant CSV.",
       );
     } finally {
       setBusy(null);
     }
   };
+
   const cards = [
     {
       format: "excel" as const,
       title: "Premium Excel Workbook",
-      text: "Results, summary, leaderboard and detailed performance data.",
+      text: `Results, summary, leaderboard and ${modeLabel.toLowerCase()} details.`,
       icon: FileSpreadsheet,
     },
     {
       format: "pdf" as const,
       title: "Premium PDF Report",
-      text: "Branded summary, performance statistics and results.",
+      text: `Branded ${modeLabel.toLowerCase()} summary, performance statistics and results.`,
       icon: FileText,
     },
     {
       format: "csv" as const,
       title: "Raw CSV Data",
-      text: "Flat result data for spreadsheet processing.",
+      text: `Flat ${modeLabel.toLowerCase()} result data for spreadsheet processing.`,
       icon: Table2,
     },
   ];
+
+  const round2Text =
+    mode === "STUDENT_TEAMS"
+      ? "Exports every team member with Team Name, Name, Roll No, Email and Branch."
+      : mode === "TEAM"
+        ? "Exports Team Name, Email and Branch for each team."
+        : "Exports Name, Roll No, Email and Department for each student.";
+
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border bg-white p-6 shadow-sm">
@@ -128,12 +193,17 @@ export default function ExportTab({ assessment }: { assessment: Assessment }) {
           <div>
             <h2 className="text-2xl font-bold text-slate-900">Export Centre</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Download assessment reports or prepare a student list for the next
-              quiz round.
+              {modeLabel} assessment exports. The downloaded reports use the
+              correct participant structure for this assessment.
             </p>
           </div>
         </div>
       </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+        <strong>Participation mode:</strong> {modeLabel}
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-4">
         {cards.map(({ format, title, text, icon: Icon }) => (
           <button
@@ -155,6 +225,7 @@ export default function ExportTab({ assessment }: { assessment: Assessment }) {
             <p className="mt-2 text-sm leading-6 text-slate-500">{text}</p>
           </button>
         ))}
+
         <button
           type="button"
           disabled={busy !== null}
@@ -171,16 +242,15 @@ export default function ExportTab({ assessment }: { assessment: Assessment }) {
             {busy === "round2" ? "Preparing..." : "Round 2 Student CSV"}
           </h3>
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            For individual assessments: Name, Roll No, Email and Department. For
-            team assessments: Team Name, Email and Branch. Ordered from rank 1
-            downward.
+            {round2Text} The file is ordered by leaderboard rank.
           </p>
         </button>
       </div>
+
       <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-sm text-blue-900">
-        <strong>Round 2:</strong> The downloaded student CSV uses the same
-        columns accepted by the student importer, so it can be uploaded directly
-        to another assessment.
+        <strong>Round 2:</strong> The downloaded file matches the importer
+        structure for the selected participation mode, so it can be uploaded
+        directly to another assessment configured with the same mode.
       </div>
     </div>
   );

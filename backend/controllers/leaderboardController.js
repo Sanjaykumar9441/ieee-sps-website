@@ -96,6 +96,25 @@ exports.getLeaderboard = async (req, res) => {
       );
     }
 
+    // Use the frozen question marks for the actual maximum score. This keeps
+    // leaderboard percentages correct when different questions have different marks.
+    const attemptIds = (data || []).map((row) => row.id);
+    const maximumMarksByAttempt = new Map();
+    if (attemptIds.length) {
+      const { data: attemptQuestions, error: aqError } = await supabase
+        .from("assessment_attempt_questions")
+        .select("attempt_id,marks")
+        .in("attempt_id", attemptIds);
+      if (aqError) throw aqError;
+      for (const row of attemptQuestions || []) {
+        maximumMarksByAttempt.set(
+          row.attempt_id,
+          (maximumMarksByAttempt.get(row.attempt_id) || 0) +
+            Math.max(0, Number(row.marks || 0)),
+        );
+      }
+    }
+
     // ---------------------------------------------------------
     // Build leaderboard
     // ---------------------------------------------------------
@@ -116,8 +135,9 @@ exports.getLeaderboard = async (req, res) => {
             : 0;
 
         const maximumMarks =
+          maximumMarksByAttempt.get(student.id) ||
           Number(assessment.total_questions || 0) *
-          Number(assessment.marks_per_question || 0);
+            Number(assessment.marks_per_question || 0);
 
         const scorePercentage =
           maximumMarks > 0
@@ -139,7 +159,7 @@ exports.getLeaderboard = async (req, res) => {
 
           name: student.assessment_allowed_students?.name,
 
-          rollNo: student.assessment_allowed_students?.roll_no,
+          rollNo: team ? null : student.assessment_allowed_students?.roll_no,
 
           email: student.assessment_allowed_students?.email,
 
@@ -280,7 +300,9 @@ exports.getTopThree = async (req, res) => {
           ? topTeamMap.get(student.team_id)?.team_name || "Team"
           : student.assessment_allowed_students?.name,
 
-        rollNo: student.assessment_allowed_students?.roll_no,
+        rollNo: student.team_id
+          ? null
+          : student.assessment_allowed_students?.roll_no,
 
         score: Number(student.score || 0),
 

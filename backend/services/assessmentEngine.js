@@ -182,8 +182,14 @@ function normalizeQuestion(question, assessment) {
     correct_answers: Array.isArray(question.correct_answers)
       ? [...question.correct_answers]
       : [],
-    marks: Math.max(0, Number(assessment?.marks_per_question ?? 1)),
-    negative_marks: Math.max(0, Number(assessment?.negative_marks || 0)),
+    marks: Math.max(
+      0.01,
+      Number(question.marks ?? assessment?.marks_per_question ?? 1),
+    ),
+    negative_marks: Math.max(
+      0,
+      Number(question.negative_marks ?? assessment?.negative_marks ?? 0),
+    ),
   };
 }
 

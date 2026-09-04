@@ -39,6 +39,8 @@ interface Question {
   question_type: QuestionType;
   options: string[];
   correct_answers: number[];
+  marks?: number;
+  negative_marks?: number;
   is_active?: boolean;
 }
 interface ImportQuestion {
@@ -46,6 +48,8 @@ interface ImportQuestion {
   question_type: QuestionType;
   options: string[];
   correct_answers: number[];
+  marks?: number;
+  negative_marks?: number;
 }
 
 const parseCSV = (text: string) => {
@@ -301,6 +305,8 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
         "option_c",
         "option_d",
         "correct_answers",
+        "marks",
+        "negative_marks",
       ],
       [
         "What is a multiplexer?",
@@ -310,6 +316,8 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
         "Decoder",
         "Register",
         "A",
+        "1",
+        "0",
       ],
       [
         "Which are programming languages?",
@@ -319,6 +327,8 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
         "HTML",
         "JavaScript",
         "A|B|D",
+        "2",
+        "0.5",
       ],
       [
         "The Earth is the third planet from the Sun.",
@@ -328,6 +338,8 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
         "",
         "",
         "A",
+        "1",
+        "0",
       ],
     ];
     const csv = rows

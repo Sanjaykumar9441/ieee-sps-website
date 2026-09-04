@@ -106,9 +106,41 @@ exports.list = async (req, res) => {
       if (memberError) throw memberError;
       members = data || [];
     }
+    let allowedByEmail = new Map();
+    if (ids.length) {
+      const { data: allowed, error: allowedError } = await supabase
+        .from("assessment_allowed_students")
+        .select(
+          "id,name,roll_no,email,branch,status,first_login_at,assessment_attempts(id,status,started_at,submitted_at)",
+        )
+        .eq("assessment_id", assessmentId)
+        .in("team_id", ids);
+      if (allowedError) throw allowedError;
+      allowedByEmail = new Map(
+        (allowed || []).map((row) => [String(row.email).toLowerCase(), row]),
+      );
+    }
     const grouped = (teams || []).map((team) => ({
       ...team,
-      members: members.filter((m) => m.team_id === team.id),
+      members: members
+        .filter((m) => m.team_id === team.id)
+        .map((member) => {
+          const allowed = allowedByEmail.get(
+            String(member.email).toLowerCase(),
+          );
+          const attempt = [...(allowed?.assessment_attempts || [])].sort(
+            (a, b) =>
+              new Date(b.started_at || 0).getTime() -
+              new Date(a.started_at || 0).getTime(),
+          )[0];
+          return {
+            ...member,
+            status: allowed?.status || "allowed",
+            first_login_at: allowed?.first_login_at || null,
+            attempt_started: Boolean(attempt),
+            submitted: attempt?.status === "SUBMITTED",
+          };
+        }),
     }));
     return res.json({
       success: true,
@@ -126,17 +158,14 @@ exports.create = async (req, res) => {
     const mode = String(req.body.mode || "").toUpperCase();
     await ensureMode(assessmentId, mode);
     const teamName = String(req.body.teamName || "").trim();
-    const contactEmail = String(req.body.contactEmail || "")
+    let contactEmail = String(req.body.contactEmail || "")
       .trim()
       .toLowerCase();
     const branch = String(req.body.branch || "").trim() || null;
-    if (!teamName || !contactEmail || !emailOk(contactEmail))
+    if (!teamName)
       return res
         .status(400)
-        .json({
-          success: false,
-          message: "Team name and a valid member email are required.",
-        });
+        .json({ success: false, message: "Team name is required." });
     if (mode === "STUDENT_TEAMS") {
       if (!Array.isArray(req.body.members) || req.body.members.length < 2)
         return res
@@ -155,6 +184,16 @@ exports.create = async (req, res) => {
           branch: String(m.branch || m.department || "").trim() || branch,
         }))
         .filter((m) => m.name || m.roll_no || m.email);
+      // For Student Teams the contact email is simply the first member's email.
+      // The UI should not ask for a second, duplicate email field.
+      contactEmail = contactEmail || members[0]?.email || "";
+      if (!emailOk(contactEmail))
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "At least one team member must have a valid email.",
+          });
       for (const m of members)
         if (!m.name || !m.roll_no || !emailOk(m.email))
           return res
@@ -211,6 +250,17 @@ exports.create = async (req, res) => {
         .status(201)
         .json({ success: true, team: { ...team, members: insertedMembers } });
     }
+    if (!contactEmail || !emailOk(contactEmail))
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Team name and a valid member email are required.",
+        });
+    if (!branch)
+      return res
+        .status(400)
+        .json({ success: false, message: "Branch is required." });
     const { data: team, error } = await supabase
       .from("assessment_teams")
       .insert({
@@ -265,20 +315,7 @@ exports.importTeams = async (req, res) => {
       const branch =
         String(item.branch || item.department || "").trim() || null;
       try {
-        if (!teamName || !emailOk(email))
-          throw new Error("Team name and valid email are required.");
-        const { data: team, error } = await supabase
-          .from("assessment_teams")
-          .insert({
-            assessment_id: assessmentId,
-            team_name: teamName,
-            contact_email: email,
-            branch,
-            mode: String(mode).toUpperCase(),
-          })
-          .select()
-          .single();
-        if (error) throw error;
+        if (!teamName) throw new Error("Team name is required.");
         if (String(mode).toUpperCase() === "STUDENT_TEAMS") {
           const members = Array.isArray(item.members) ? item.members : [];
           if (members.length < 2)
@@ -286,7 +323,7 @@ exports.importTeams = async (req, res) => {
               "Student Teams import requires at least two members.",
             );
           const normalized = members.map((m) => ({
-            team_id: team.id,
+            team_id: "",
             name: String(m.name || "").trim(),
             roll_no: String(m.rollNo || m.roll_no || "").trim(),
             email: String(m.email || "")
@@ -301,6 +338,22 @@ exports.importTeams = async (req, res) => {
             throw new Error(
               "Every member needs name, roll number and valid email.",
             );
+          const teamContactEmail = emailOk(email) ? email : normalized[0].email;
+          const { data: team, error } = await supabase
+            .from("assessment_teams")
+            .insert({
+              assessment_id: assessmentId,
+              team_name: teamName,
+              contact_email: teamContactEmail,
+              branch,
+              mode: String(mode).toUpperCase(),
+            })
+            .select()
+            .single();
+          if (error) throw error;
+          normalized.forEach((m) => {
+            m.team_id = team.id;
+          });
           const { data: inserted, error: me } = await supabase
             .from("assessment_team_members")
             .insert(normalized)
@@ -323,7 +376,22 @@ exports.importTeams = async (req, res) => {
             );
           if (ae) throw ae;
           await syncMemberCount(team.id);
-        } else
+        } else {
+          if (!emailOk(email))
+            throw new Error("Team name and a valid member email are required.");
+          const { data: team, error: teamError } = await supabase
+            .from("assessment_teams")
+            .insert({
+              assessment_id: assessmentId,
+              team_name: teamName,
+              contact_email: email,
+              branch,
+              member_count: 0,
+              mode: String(mode).toUpperCase(),
+            })
+            .select()
+            .single();
+          if (teamError) throw teamError;
           await createRepresentativeStudent(
             assessmentId,
             team.id,
@@ -331,6 +399,7 @@ exports.importTeams = async (req, res) => {
             email,
             branch,
           );
+        }
         imported++;
       } catch (e) {
         errors.push({ row: i + 2, message: e.message });

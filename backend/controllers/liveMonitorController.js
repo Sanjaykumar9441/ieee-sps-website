@@ -129,7 +129,26 @@ exports.getLiveStudents = async (req, res) => {
       .eq("assessment_id", assessmentId);
     if (teamError && assessment.participation_mode !== "INDIVIDUAL_STUDENTS")
       throw teamError;
-    const teamMap = new Map((teamRows || []).map((t) => [t.id, t]));
+    const teamIds = (teamRows || []).map((t) => t.id);
+    let teamMembers = [];
+    if (
+      teamIds.length &&
+      assessment.participation_mode !== "INDIVIDUAL_STUDENTS"
+    ) {
+      const { data: members, error: memberError } = await supabase
+        .from("assessment_team_members")
+        .select("team_id,name,roll_no,email,branch")
+        .in("team_id", teamIds)
+        .order("created_at");
+      if (memberError) throw memberError;
+      teamMembers = members || [];
+    }
+    const teamMap = new Map(
+      (teamRows || []).map((t) => [
+        t.id,
+        { ...t, members: teamMembers.filter((m) => m.team_id === t.id) },
+      ]),
+    );
     const students = [];
     for (const attempt of refreshedAttempts || []) {
       const student = studentMap.get(attempt.student_id);
@@ -172,20 +191,19 @@ exports.getLiveStudents = async (req, res) => {
         (a) => a.activity_type === "FORCE_SUBMIT",
       );
       const status = attempt.status === "IN_PROGRESS" ? "LIVE" : "SUBMITTED";
+      const resolvedTeamId = attempt.team_id || student?.team_id || null;
+      const team = resolvedTeamId ? teamMap.get(resolvedTeamId) : null;
       students.push({
         attemptId: attempt.id,
         studentId: attempt.student_id,
-        teamId: attempt.team_id || student?.team_id || null,
-        teamName: attempt.team_id
-          ? teamMap.get(attempt.team_id)?.team_name || null
-          : null,
-        teamMemberCount: Number(
-          attempt.team_id ? teamMap.get(attempt.team_id)?.member_count || 0 : 0,
-        ),
+        teamId: resolvedTeamId,
+        teamName: team?.team_name || null,
+        teamMemberCount: Number(team?.member_count || 0),
+        members: team?.members || [],
         studentName: student?.name || team?.team_name || "Unknown Student",
         rollNo: student?.roll_no || "",
-        email: student?.email || "",
-        department: student?.branch || "",
+        email: student?.email || team?.contact_email || "",
+        department: student?.branch || team?.branch || "",
         currentQuestion: Number(attempt.current_question || 0),
         answeredQuestions: Number(attempt.answered_questions || 0),
         totalQuestions: Number(totalQuestions || 0),

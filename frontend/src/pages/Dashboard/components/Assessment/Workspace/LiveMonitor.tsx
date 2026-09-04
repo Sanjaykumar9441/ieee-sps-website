@@ -260,12 +260,13 @@ export default function LiveMonitor({
           <table className="min-w-[1050px] w-full">
             <thead className="bg-slate-50">
               <tr className="text-left text-sm text-slate-600">
-                <th className="px-4 py-4">
-                  {assessment.participation_mode === "INDIVIDUAL_STUDENTS"
-                    ? "Student"
-                    : "Team"}
-                </th>
-                <th className="px-4 py-4">Roll No</th>
+                <th className="px-4 py-4">Student / Participant</th>
+                {assessment.participation_mode !== "INDIVIDUAL_STUDENTS" && (
+                  <th className="px-4 py-4">Team</th>
+                )}
+                {assessment.participation_mode !== "TEAM" && (
+                  <th className="px-4 py-4">Roll No</th>
+                )}
                 <th className="px-4 py-4">Current</th>
                 <th className="px-4 py-4">Answered</th>
                 <th className="px-4 py-4">Timer</th>
@@ -278,7 +279,13 @@ export default function LiveMonitor({
               {filtered.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={
+                      assessment.participation_mode === "INDIVIDUAL_STUDENTS"
+                        ? 8
+                        : assessment.participation_mode === "STUDENT_TEAMS"
+                          ? 9
+                          : 8
+                    }
                     className="px-6 py-16 text-center text-slate-500"
                   >
                     {loading ? "Loading students..." : "No students found."}
@@ -302,19 +309,41 @@ export default function LiveMonitor({
                           </div>
                           <div>
                             <p className="font-semibold text-slate-900">
-                              {student.teamName || student.studentName}
+                              {student.teamName &&
+                              assessment.participation_mode === "TEAM"
+                                ? student.teamName
+                                : student.studentName}
                             </p>
                             <p className="text-xs text-slate-500">
-                              {student.teamName
-                                ? `Contact: ${student.email}`
-                                : student.email}
+                              {student.email}
                             </p>
+                            {student.teamName &&
+                              assessment.participation_mode ===
+                                "STUDENT_TEAMS" && (
+                                <div className="mt-1 space-y-0.5 text-xs text-slate-500">
+                                  {(student.members || []).map(
+                                    (m: any, i: number) => (
+                                      <div key={`${m.email}-${i}`}>
+                                        {m.name} · {m.roll_no}
+                                      </div>
+                                    ),
+                                  )}
+                                </div>
+                              )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 font-medium">
-                        {student.teamName ? "—" : student.rollNo}
-                      </td>
+                      {assessment.participation_mode !==
+                        "INDIVIDUAL_STUDENTS" && (
+                        <td className="px-4 py-4 font-semibold">
+                          {student.teamName || "—"}
+                        </td>
+                      )}
+                      {assessment.participation_mode !== "TEAM" && (
+                        <td className="px-4 py-4 font-medium">
+                          {student.rollNo || "—"}
+                        </td>
+                      )}
                       <td className="px-4 py-4">
                         {student.currentQuestion} / {student.totalQuestions}
                       </td>

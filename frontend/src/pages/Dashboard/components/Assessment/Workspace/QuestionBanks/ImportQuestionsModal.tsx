@@ -24,6 +24,8 @@ type ImportQuestion = {
   question_type: QuestionType;
   options: string[];
   correct_answers: number[];
+  marks: number;
+  negative_marks: number;
 };
 
 const cleanHeader = (v: any) =>
@@ -41,6 +43,8 @@ const aliases: Record<string, string[]> = {
   option_c: ["option_c", "option_c_text", "c"],
   option_d: ["option_d", "option_d_text", "d"],
   correct_answers: ["correct_answers", "correct_answer", "correct", "answer"],
+  marks: ["marks", "mark", "correct_marks"],
+  negative_marks: ["negative_marks", "negative_mark", "negative"],
 };
 const get = (row: Record<string, any>, key: string) => {
   for (const a of aliases[key] || [key])
@@ -101,6 +105,8 @@ const downloadTemplate = () => {
       "option_c",
       "option_d",
       "correct_answers",
+      "marks",
+      "negative_marks",
     ],
     [
       "What is a multiplexer?",
@@ -110,6 +116,8 @@ const downloadTemplate = () => {
       "Decoder",
       "Register",
       "A",
+      "1",
+      "0",
     ],
     [
       "Which are programming languages?",
@@ -119,6 +127,8 @@ const downloadTemplate = () => {
       "HTML",
       "JavaScript",
       "A|B|D",
+      "2",
+      "0.5",
     ],
     [
       "The Earth is the third planet from the Sun.",
@@ -128,6 +138,8 @@ const downloadTemplate = () => {
       "",
       "",
       "True",
+      "1",
+      "0",
     ],
     [
       "The output of an AND gate with all inputs HIGH is ___.",
@@ -137,6 +149,8 @@ const downloadTemplate = () => {
       "Z",
       "X",
       "A",
+      "1",
+      "0",
     ],
   ];
   const csv = rows
@@ -217,6 +231,11 @@ export default function ImportQuestionsModal({
               get(record, "correct_answers"),
               type,
               options,
+            ),
+            marks: Math.max(0.01, Number(get(record, "marks") || 1)),
+            negative_marks: Math.max(
+              0,
+              Number(get(record, "negative_marks") || 0),
             ),
           };
         })
@@ -320,7 +339,7 @@ export default function ImportQuestionsModal({
               <p className="font-semibold">Required columns</p>
               <p className="mt-1 font-mono text-xs leading-6">
                 question_text, question_type, option_a, option_b, option_c,
-                option_d, correct_answers
+                option_d, correct_answers, marks, negative_marks
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 MCQ: one answer (A). Multiple Correct: two or more (A|C|D).
@@ -373,6 +392,8 @@ export default function ImportQuestionsModal({
                       <th className="p-3 text-left">Type</th>
                       <th className="p-3 text-left">Question</th>
                       <th className="p-3 text-left">Correct</th>
+                      <th className="p-3 text-left">Marks</th>
+                      <th className="p-3 text-left">Negative</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -384,7 +405,9 @@ export default function ImportQuestionsModal({
                             ? "Multiple Correct"
                             : q.question_type === "TRUE_FALSE"
                               ? "True / False"
-                              : "MCQ"}
+                              : q.question_type === "FILL_IN_THE_BLANK"
+                                ? "Fill in the Blank"
+                                : "MCQ"}
                         </td>
                         <td className="p-3">{q.question_text}</td>
                         <td className="p-3">
@@ -392,6 +415,8 @@ export default function ImportQuestionsModal({
                             .map((i) => String.fromCharCode(65 + i))
                             .join(", ")}
                         </td>
+                        <td className="p-3">{q.marks}</td>
+                        <td className="p-3">{q.negative_marks}</td>
                       </tr>
                     ))}
                   </tbody>

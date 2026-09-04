@@ -427,13 +427,15 @@ export default function Leaderboard({ assessment }: Props) {
             <tr>
               <th className="p-4 text-left">Rank</th>
 
-              <th className="p-4 text-left">
-                {assessment.participation_mode === "INDIVIDUAL_STUDENTS"
-                  ? "Student"
-                  : "Team"}
-              </th>
+              <th className="p-4 text-left">Student</th>
 
-              <th className="p-4 text-left">Roll No</th>
+              {assessment.participation_mode !== "INDIVIDUAL_STUDENTS" && (
+                <th className="p-4 text-left">Team</th>
+              )}
+
+              {assessment.participation_mode !== "TEAM" && (
+                <th className="p-4 text-left">Roll No</th>
+              )}
 
               <th className="p-4 text-left">Department</th>
 
@@ -456,7 +458,16 @@ export default function Leaderboard({ assessment }: Props) {
           <tbody>
             {filteredStudents.length === 0 ? (
               <tr>
-                <td colSpan={11} className="py-16 text-center">
+                <td
+                  colSpan={
+                    assessment.participation_mode === "INDIVIDUAL_STUDENTS"
+                      ? 11
+                      : assessment.participation_mode === "STUDENT_TEAMS"
+                        ? 12
+                        : 11
+                  }
+                  className="py-16 text-center"
+                >
                   {students.length === 0 ? (
                     <>
                       <div className="text-6xl">🏆</div>
@@ -519,35 +530,33 @@ export default function Leaderboard({ assessment }: Props) {
 
                     <td className="p-4">
                       <div>
-                        <p className="font-semibold">
-                          {student.teamName || student.name}
-                        </p>
+                        <p className="font-semibold">{student.name}</p>
+                        <p className="text-xs text-gray-500">{student.email}</p>
                         {student.teamName && (
-                          <>
-                            <p className="text-xs text-gray-500">
-                              Contact: {student.email}
-                            </p>
-                            <div className="mt-1 space-y-0.5 text-xs text-slate-500">
-                              {(student.members || []).map((m, i) => (
-                                <div key={`${m.email}-${i}`}>
-                                  {m.name} · {m.roll_no}
-                                </div>
-                              ))}
-                            </div>
-                          </>
+                          <div className="mt-1 space-y-0.5 text-xs text-slate-500">
+                            {(student.members || []).map((m, i) => (
+                              <div key={`${m.email}-${i}`}>
+                                {m.name} · {m.roll_no}
+                              </div>
+                            ))}
+                          </div>
                         )}
-
                         <p className="text-xs text-gray-500">
                           {student.department}
                         </p>
                       </div>
                     </td>
 
-                    {/* Roll */}
+                    {assessment.participation_mode !==
+                      "INDIVIDUAL_STUDENTS" && (
+                      <td className="p-4 font-semibold">
+                        {student.teamName || "—"}
+                      </td>
+                    )}
 
-                    <td className="p-4">
-                      {student.teamName ? "—" : student.rollNo}
-                    </td>
+                    {assessment.participation_mode !== "TEAM" && (
+                      <td className="p-4">{student.rollNo || "—"}</td>
+                    )}
 
                     {/* Department */}
 
