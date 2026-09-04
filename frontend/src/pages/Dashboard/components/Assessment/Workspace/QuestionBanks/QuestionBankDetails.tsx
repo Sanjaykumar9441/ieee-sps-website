@@ -27,7 +27,11 @@ interface Props {
   bank: QuestionBank;
   onBack: () => void;
 }
-type QuestionType = "MCQ" | "MULTIPLE_CORRECT" | "TRUE_FALSE";
+type QuestionType =
+  | "MCQ"
+  | "MULTIPLE_CORRECT"
+  | "TRUE_FALSE"
+  | "FILL_IN_THE_BLANK";
 interface Question {
   id: string;
   bank_id: string;
@@ -35,6 +39,8 @@ interface Question {
   question_type: QuestionType;
   options: string[];
   correct_answers: number[];
+  marks: number;
+  negative_marks: number;
   is_active?: boolean;
 }
 interface ImportQuestion {
@@ -101,6 +107,15 @@ const normalizeType = (value: string): QuestionType => {
     return "MULTIPLE_CORRECT";
   if (
     [
+      "fill_in_the_blank",
+      "fill_in_blank",
+      "fill_blank",
+      "fill_in_the_blank_with_options",
+    ].includes(type)
+  )
+    return "FILL_IN_THE_BLANK";
+  if (
+    [
       "true_false",
       "truefalse",
       "true_or_false",
@@ -145,19 +160,11 @@ const normalizeOptions = (options: any): string[] =>
         String(options?.[k] ?? options?.[k.toLowerCase()] ?? "").trim(),
       );
 const fieldAliases: Record<string, string[]> = {
-  question_text: [
-    "question_text",
-    "question",
-    "question_statement",
-    "question_description",
-  ],
-  question_type: [
-    "question_type",
-    "questiontype",
-    "type",
-  ],
+  question_text: ["question_text", "question", "question_text_"],
+  question_type: ["question_type", "question_type_", "type"],
   option_a: [
     "option_a",
+    "option_a_",
     "option_a_text",
     "a",
     "option1",
@@ -165,6 +172,7 @@ const fieldAliases: Record<string, string[]> = {
   ],
   option_b: [
     "option_b",
+    "option_b_",
     "option_b_text",
     "b",
     "option2",
@@ -172,6 +180,7 @@ const fieldAliases: Record<string, string[]> = {
   ],
   option_c: [
     "option_c",
+    "option_c_",
     "option_c_text",
     "c",
     "option3",
@@ -179,6 +188,7 @@ const fieldAliases: Record<string, string[]> = {
   ],
   option_d: [
     "option_d",
+    "option_d_",
     "option_d_text",
     "d",
     "option4",
@@ -190,10 +200,6 @@ const fieldAliases: Record<string, string[]> = {
     "correct",
     "answer",
     "answers",
-    "correct_option",
-    "correct_options",
-    "answer_key",
-    "correct_answer_s",
   ],
 };
 const getField = (record: Record<string, string>, name: string) => {
@@ -225,6 +231,8 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
           .filter((q: any) => q?.is_active !== false)
           .map((q: any) => ({
             ...q,
+            marks: Number(q.marks ?? 1),
+            negative_marks: Number(q.negative_marks ?? 0),
             options: normalizeOptions(q.options),
             correct_answers: (Array.isArray(q.correct_answers)
               ? q.correct_answers
@@ -394,12 +402,7 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
               ),
             };
           })
-          .filter(
-            (q) =>
-              Boolean(q.question_text?.trim()) ||
-              q.options.some((option) => Boolean(option?.trim())) ||
-              q.correct_answers.length > 0,
-          );
+          .filter((q) => q.question_text || q.options.some(Boolean));
         if (!parsed.length) throw new Error("No question rows were found.");
         setImportQuestions(parsed);
         setImportErrors([]);
@@ -598,7 +601,9 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
                           ? "Multiple Correct"
                           : q.question_type === "TRUE_FALSE"
                             ? "True / False"
-                            : "MCQ"}
+                            : q.question_type === "FILL_IN_THE_BLANK"
+                              ? "Fill in the Blank"
+                              : "MCQ"}
                       </span>
                       <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
                         1 mark

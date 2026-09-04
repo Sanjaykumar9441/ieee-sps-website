@@ -15,43 +15,122 @@ const StudentAuth = require("../models/StudentAuth");
 exports.login = async (req, res) => {
   try {
     const assessmentId = String(req.body.assessmentId || "").trim();
-    const email = String(req.body.email || "").trim().toLowerCase();
+    const email = String(req.body.email || "")
+      .trim()
+      .toLowerCase();
     const password = String(req.body.password || "");
     const otp = String(req.body.otp || "").trim();
 
-    if (!assessmentId || !email) return res.status(400).json({ success: false, message: "Assessment ID and email are required." });
+    if (!assessmentId || !email)
+      return res.status(400).json({
+        success: false,
+        message: "Assessment ID and email are required.",
+      });
 
-    const { data: assessment, error: assessmentError } = await assessmentService.getAssessment(assessmentId);
-    if (assessmentError || !assessment) return res.status(404).json({ success: false, message: "Assessment not found." });
-    if (assessment.status !== "PUBLISHED" || !assessment.is_active) return res.status(403).json({ success: false, message: "Assessment is not available for login." });
+    const { data: assessment, error: assessmentError } =
+      await assessmentService.getAssessment(assessmentId);
+    if (assessmentError || !assessment)
+      return res
+        .status(404)
+        .json({ success: false, message: "Assessment not found." });
+    if (assessment.status !== "PUBLISHED" || !assessment.is_active)
+      return res.status(403).json({
+        success: false,
+        message: "Assessment is not available for login.",
+      });
 
-    const { data: student, error: studentError } = await assessmentService.getAllowedStudent(assessmentId, email);
-    if (studentError || !student) return res.status(401).json({ success: false, message: "This email is not registered for the assessment." });
-    if (student.status === "blocked") return res.status(403).json({ success: false, message: "Your access has been blocked." });
+    const { data: student, error: studentError } =
+      await assessmentService.getAllowedStudent(assessmentId, email);
+    if (studentError || !student)
+      return res.status(401).json({
+        success: false,
+        message: "This email is not registered for the assessment.",
+      });
+    if (student.status === "blocked")
+      return res
+        .status(403)
+        .json({ success: false, message: "Your access has been blocked." });
 
     const method = String(assessment.login_method || "PASSWORD").toUpperCase();
     if (method === "OTP") {
-      if (!otp) return res.status(400).json({ success: false, message: "OTP is required." });
-      if (!student.otp_hash || !student.otp_expires_at || new Date(student.otp_expires_at).getTime() < Date.now()) return res.status(401).json({ success: false, message: "OTP has expired. Request a new OTP." });
+      if (!otp)
+        return res
+          .status(400)
+          .json({ success: false, message: "OTP is required." });
+      if (
+        !student.otp_hash ||
+        !student.otp_expires_at ||
+        new Date(student.otp_expires_at).getTime() < Date.now()
+      )
+        return res.status(401).json({
+          success: false,
+          message: "OTP has expired. Request a new OTP.",
+        });
       const validOtp = await bcrypt.compare(otp, student.otp_hash);
-      if (!validOtp) return res.status(401).json({ success: false, message: "Invalid OTP." });
+      if (!validOtp)
+        return res
+          .status(401)
+          .json({ success: false, message: "Invalid OTP." });
     } else {
       const passwordHash = process.env.ASSESSMENT_COMMON_PASSWORD_HASH;
-      if (!passwordHash) return res.status(500).json({ success: false, message: "Assessment password login is not configured on the server." });
-      if (!password) return res.status(400).json({ success: false, message: "Password is required." });
-      if (!(await bcrypt.compare(password, passwordHash))) return res.status(401).json({ success: false, message: "Invalid email or password." });
+      if (!passwordHash)
+        return res.status(500).json({
+          success: false,
+          message: "Assessment password login is not configured on the server.",
+        });
+      if (!password)
+        return res
+          .status(400)
+          .json({ success: false, message: "Password is required." });
+      if (!(await bcrypt.compare(password, passwordHash)))
+        return res
+          .status(401)
+          .json({ success: false, message: "Invalid email or password." });
     }
 
-    const update = { has_logged_in: true, first_login_at: student.first_login_at || new Date().toISOString() };
-    if (method === "OTP") { update.otp_hash = null; update.otp_expires_at = null; }
-    const { data: updatedStudent, error: updateError } = await supabase.from("assessment_allowed_students").update(update).eq("id", student.id).select().single();
+    const update = {
+      has_logged_in: true,
+      first_login_at: student.first_login_at || new Date().toISOString(),
+    };
+    if (method === "OTP") {
+      update.otp_hash = null;
+      update.otp_expires_at = null;
+    }
+    const { data: updatedStudent, error: updateError } = await supabase
+      .from("assessment_allowed_students")
+      .update(update)
+      .eq("id", student.id)
+      .select()
+      .single();
     if (updateError) throw updateError;
 
-    const token = jwt.sign({ id: updatedStudent.id, assessmentId, email: updatedStudent.email, rollNo: updatedStudent.roll_no, name: updatedStudent.name, role: "student" }, process.env.JWT_SECRET, { expiresIn: "8h" });
+    const token = jwt.sign(
+      {
+        id: updatedStudent.id,
+        assessmentId,
+        email: updatedStudent.email,
+        rollNo: updatedStudent.roll_no,
+        name: updatedStudent.name,
+        teamId: updatedStudent.team_id || null,
+        role: "student",
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "8h" },
+    );
     liveEvents.emitStudentLoggedIn(assessmentId);
     liveEvents.emitStudentStatusChanged(assessmentId);
     liveEvents.emitDashboardRefresh(assessmentId);
-    return res.json({ success: true, token, student: { id: updatedStudent.id, name: updatedStudent.name, email: updatedStudent.email, rollNo: updatedStudent.roll_no } });
+    return res.json({
+      success: true,
+      token,
+      student: {
+        id: updatedStudent.id,
+        name: updatedStudent.name,
+        email: updatedStudent.email,
+        rollNo: updatedStudent.roll_no,
+        teamId: updatedStudent.team_id || null,
+      },
+    });
   } catch (err) {
     console.error("STUDENT LOGIN ERROR:", err);
     return res.status(500).json({ success: false, message: err.message });
@@ -61,13 +140,38 @@ exports.login = async (req, res) => {
 exports.sendOtp = async (req, res) => {
   try {
     const assessmentId = String(req.body.assessmentId || "").trim();
-    const email = String(req.body.email || "").trim().toLowerCase();
-    if (!assessmentId || !email) return res.status(400).json({ success: false, message: "Assessment ID and email are required." });
-    const { data: assessment } = await assessmentService.getAssessment(assessmentId);
-    if (!assessment || assessment.status !== "PUBLISHED" || !assessment.is_active) return res.status(403).json({ success: false, message: "Assessment is not available." });
-    if (String(assessment.login_method || "PASSWORD").toUpperCase() !== "OTP") return res.status(400).json({ success: false, message: "OTP login is not enabled for this assessment." });
-    const { data: student } = await assessmentService.getAllowedStudent(assessmentId, email);
-    if (!student || student.status === "blocked") return res.status(401).json({ success: false, message: "This email is not registered for the assessment." });
+    const email = String(req.body.email || "")
+      .trim()
+      .toLowerCase();
+    if (!assessmentId || !email)
+      return res.status(400).json({
+        success: false,
+        message: "Assessment ID and email are required.",
+      });
+    const { data: assessment } =
+      await assessmentService.getAssessment(assessmentId);
+    if (
+      !assessment ||
+      assessment.status !== "PUBLISHED" ||
+      !assessment.is_active
+    )
+      return res
+        .status(403)
+        .json({ success: false, message: "Assessment is not available." });
+    if (String(assessment.login_method || "PASSWORD").toUpperCase() !== "OTP")
+      return res.status(400).json({
+        success: false,
+        message: "OTP login is not enabled for this assessment.",
+      });
+    const { data: student } = await assessmentService.getAllowedStudent(
+      assessmentId,
+      email,
+    );
+    if (!student || student.status === "blocked")
+      return res.status(401).json({
+        success: false,
+        message: "This email is not registered for the assessment.",
+      });
     const brevoApiKey = process.env.BREVO_API_KEY;
     const senderEmail = process.env.BREVO_SENDER_EMAIL;
     const senderName = process.env.BREVO_SENDER_NAME || "IEEE SPS";
@@ -134,7 +238,10 @@ exports.sendOtp = async (req, res) => {
 
     if (error) throw error;
 
-    return res.json({ success: true, message: "OTP sent to your registered email." });
+    return res.json({
+      success: true,
+      message: "OTP sent to your registered email.",
+    });
   } catch (err) {
     console.error("SEND OTP ERROR:", err);
     return res.status(500).json({ success: false, message: err.message });
@@ -326,8 +433,12 @@ exports.getAllowedStudents = async (req, res) => {
     if (error) throw error;
 
     const students = (data || []).map((student) => {
-      const attempt = [...(student.assessment_attempts || [])]
-        .sort((a, b) => new Date(b.started_at || 0).getTime() - new Date(a.started_at || 0).getTime())[0] || null;
+      const attempt =
+        [...(student.assessment_attempts || [])].sort(
+          (a, b) =>
+            new Date(b.started_at || 0).getTime() -
+            new Date(a.started_at || 0).getTime(),
+        )[0] || null;
 
       return {
         ...student,
@@ -366,11 +477,17 @@ exports.getStudentDetails = async (req, res) => {
       });
     }
 
-    const { data, error } = await StudentAuth.getStudentDetails(studentId, assessmentId);
+    const { data, error } = await StudentAuth.getStudentDetails(
+      studentId,
+      assessmentId,
+    );
 
     if (error) {
       if (error.code === "PGRST116") {
-        return res.status(404).json({ success: false, message: "Student not found for this assessment." });
+        return res.status(404).json({
+          success: false,
+          message: "Student not found for this assessment.",
+        });
       }
       throw error;
     }
@@ -648,7 +765,6 @@ exports.importStudents = async (req, res) => {
 
         return;
       }
-
 
       /* Duplicate in database */
 

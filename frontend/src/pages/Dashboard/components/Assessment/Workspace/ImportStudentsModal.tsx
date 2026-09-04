@@ -2,13 +2,7 @@ import { useState } from "react";
 import * as XLSX from "xlsx";
 import axios from "axios";
 import toast from "react-hot-toast";
-import {
-  AlertTriangle,
-  CheckCircle,
-  Download,
-  FileUp,
-  X,
-} from "lucide-react";
+import { AlertTriangle, CheckCircle, Download, FileUp, X } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL;
 interface Props {
@@ -73,7 +67,6 @@ export default function ImportStudentsModal({
   const [file, setFile] = useState<File | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [errors, setErrors] = useState<RowError[]>([]);
-  const [duplicates, setDuplicates] = useState(0);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<any>(null);
   if (!open) return null;
@@ -81,7 +74,6 @@ export default function ImportStudentsModal({
     setFile(null);
     setStudents([]);
     setErrors([]);
-    setDuplicates(0);
     setBusy(false);
     setDone(null);
   };
@@ -138,10 +130,6 @@ export default function ImportStudentsModal({
       });
       setStudents(parsed);
       setErrors(rowErrors);
-      setDuplicates(
-        rowErrors.filter((e) => e.reason.toLowerCase().includes("duplicate"))
-          .length,
-      );
       toast.success(`${parsed.length} student row(s) loaded.`);
     } catch (e: any) {
       console.error(e);

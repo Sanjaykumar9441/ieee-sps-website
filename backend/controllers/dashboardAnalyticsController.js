@@ -34,6 +34,18 @@ exports.getDashboardAnalytics = async (req, res) => {
       });
     }
 
+    const isTeamAssessment =
+      assessment.participation_mode !== "INDIVIDUAL_STUDENTS";
+    let teamMap = new Map();
+    if (isTeamAssessment) {
+      const { data: teams, error: teamError } = await supabase
+        .from("assessment_teams")
+        .select("id,team_name,branch,member_count")
+        .eq("assessment_id", assessmentId);
+      if (teamError) throw teamError;
+      teamMap = new Map((teams || []).map((t) => [t.id, t]));
+    }
+
     /* ========================================================
        ALLOWED STUDENTS
     ======================================================== */
@@ -66,7 +78,9 @@ exports.getDashboardAnalytics = async (req, res) => {
       filteredAllowedStudents.map((student) => [student.id, student]),
     );
 
-    const participants = filteredAllowedStudents.length;
+    const participants = isTeamAssessment
+      ? teamMap.size
+      : filteredAllowedStudents.length;
 
     const loggedIn = filteredAllowedStudents.filter(
       (student) => student.has_logged_in === true,
@@ -83,9 +97,13 @@ exports.getDashboardAnalytics = async (req, res) => {
 
     if (attemptError) throw attemptError;
 
-    let filteredAttempts = (attempts || []).filter((attempt) =>
-      allowedStudentIds.has(attempt.student_id),
-    );
+    let filteredAttempts = isTeamAssessment
+      ? (attempts || []).filter(
+          (attempt) => attempt.team_id && teamMap.has(attempt.team_id),
+        )
+      : (attempts || []).filter((attempt) =>
+          allowedStudentIds.has(attempt.student_id),
+        );
 
     /* ========================================================
        BASIC COUNTS
@@ -193,8 +211,12 @@ Students whose attempt is currently IN_PROGRESS.
       .from("assessment_question_banks")
       .select("questions_to_pick")
       .eq("assessment_id", assessmentId);
-    const mappedQuestionCount = (questionMappings || []).reduce((sum, row) => sum + Number(row.questions_to_pick || 0), 0);
-    const totalQuestions = mappedQuestionCount || Number(assessment.total_questions || 0);
+    const mappedQuestionCount = (questionMappings || []).reduce(
+      (sum, row) => sum + Number(row.questions_to_pick || 0),
+      0,
+    );
+    const totalQuestions =
+      mappedQuestionCount || Number(assessment.total_questions || 0);
 
     const marksPerQuestion = Number(assessment.marks_per_question || 0);
 
@@ -219,7 +241,6 @@ Students whose attempt is currently IN_PROGRESS.
         ? Number(((passedStudents / submitted) * 100).toFixed(2))
         : 0;
 
-
     /* ========================================================
        DEPARTMENT PERFORMANCE
     ======================================================== */
@@ -228,8 +249,8 @@ Students whose attempt is currently IN_PROGRESS.
 
     for (const attempt of submittedAttempts) {
       const student = allowedStudentMap.get(attempt.student_id);
-
-      const branch = student?.branch || "Unknown";
+      const team = attempt.team_id ? teamMap.get(attempt.team_id) : null;
+      const branch = team?.branch || student?.branch || "Unknown";
 
       if (!departmentMap[branch]) {
         departmentMap[branch] = {
@@ -288,14 +309,14 @@ Students whose attempt is currently IN_PROGRESS.
         );
       }
 
+      const team = attempt.team_id ? teamMap.get(attempt.team_id) : null;
       return {
         studentId: attempt.student_id,
-
-        name: student?.name || "-",
-
-        rollNo: student?.roll_no || "-",
-
-        department: student?.branch || "-",
+        teamId: attempt.team_id || null,
+        teamName: team?.team_name || null,
+        name: team?.team_name || student?.name || "-",
+        rollNo: team ? "" : student?.roll_no || "-",
+        department: team?.branch || student?.branch || "-",
 
         score: Number(attempt.score || 0),
 
@@ -410,14 +431,20 @@ Students whose attempt is currently IN_PROGRESS.
 
       const answer = item.assessment_answers?.[0];
 
-      if (!answer || !Array.isArray(answer.selected_answers) || answer.selected_answers.length === 0) {
+      if (
+        !answer ||
+        !Array.isArray(answer.selected_answers) ||
+        answer.selected_answers.length === 0
+      ) {
         stats.skipped++;
         continue;
       }
 
       const normalizeAnswer = (value) => {
         if (typeof value === "number") return String.fromCharCode(65 + value);
-        const text = String(value ?? "").trim().toUpperCase();
+        const text = String(value ?? "")
+          .trim()
+          .toUpperCase();
         if (/^[A-D]$/.test(text)) return text;
         if (/^\d+$/.test(text)) {
           const n = Number(text);
@@ -426,11 +453,21 @@ Students whose attempt is currently IN_PROGRESS.
         return text;
       };
 
-      const selected = (Array.isArray(answer.selected_answers) ? answer.selected_answers : [answer.selected_answers])
-        .map(normalizeAnswer).sort();
+      const selected = (
+        Array.isArray(answer.selected_answers)
+          ? answer.selected_answers
+          : [answer.selected_answers]
+      )
+        .map(normalizeAnswer)
+        .sort();
 
-      const expected = (Array.isArray(item.correct_answers) ? item.correct_answers : [item.correct_answers])
-        .map(normalizeAnswer).sort();
+      const expected = (
+        Array.isArray(item.correct_answers)
+          ? item.correct_answers
+          : [item.correct_answers]
+      )
+        .map(normalizeAnswer)
+        .sort();
 
       const isCorrect = JSON.stringify(selected) === JSON.stringify(expected);
 
@@ -446,7 +483,6 @@ Students whose attempt is currently IN_PROGRESS.
 
       questionText: question.questionText,
 
-
       correctPercentage:
         question.total > 0
           ? Number(((question.correct / question.total) * 100).toFixed(2))
@@ -461,7 +497,6 @@ Students whose attempt is currently IN_PROGRESS.
         question.total > 0
           ? Number(((question.skipped / question.total) * 100).toFixed(2))
           : 0,
-
     }));
 
     /* ========================================================
@@ -580,7 +615,6 @@ Students whose attempt is currently IN_PROGRESS.
           maximumMarks,
 
           passingMarks,
-
         },
 
         departmentPerformance,

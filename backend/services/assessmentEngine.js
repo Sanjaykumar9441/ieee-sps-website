@@ -73,13 +73,29 @@ function normalizeQuestionType(value) {
     .toUpperCase()
     .replace(/[- ]/g, "_");
 
-  if (["TRUE_FALSE", "TRUEFALSE", "TRUE_OR_FALSE", "TRUE_FALSE_QUESTION"].includes(type)) {
+  if (
+    [
+      "TRUE_FALSE",
+      "TRUEFALSE",
+      "TRUE_OR_FALSE",
+      "TRUE_FALSE_QUESTION",
+    ].includes(type)
+  ) {
     return "TRUE_FALSE";
   }
 
-  return ["MULTIPLE_CORRECT", "MULTIPLE_CHOICE", "MULTIPLE"].includes(type)
-    ? "MULTIPLE_CORRECT"
-    : "MCQ";
+  if (["MULTIPLE_CORRECT", "MULTIPLE_CHOICE", "MULTIPLE"].includes(type))
+    return "MULTIPLE_CORRECT";
+  if (
+    [
+      "FILL_IN_THE_BLANK",
+      "FILL_IN_BLANK",
+      "FILL_BLANK",
+      "FILL_IN_THE_BLANK_WITH_OPTIONS",
+    ].includes(type)
+  )
+    return "FILL_IN_THE_BLANK";
+  return "MCQ";
 }
 
 async function buildQuestionPaper(assessment) {
@@ -136,21 +152,42 @@ function normalizeQuestion(question, assessment) {
     .trim()
     .toUpperCase()
     .replace(/[- ]/g, "_");
-  const questionType = ["TRUE_FALSE", "TRUEFALSE", "TRUE_OR_FALSE", "TRUE_FALSE_QUESTION"].includes(rawType)
+  const questionType = [
+    "TRUE_FALSE",
+    "TRUEFALSE",
+    "TRUE_OR_FALSE",
+    "TRUE_FALSE_QUESTION",
+  ].includes(rawType)
     ? "TRUE_FALSE"
     : ["MULTIPLE_CORRECT", "MULTIPLE_CHOICE", "MULTIPLE"].includes(rawType)
       ? "MULTIPLE_CORRECT"
-      : "MCQ";
+      : [
+            "FILL_IN_THE_BLANK",
+            "FILL_IN_BLANK",
+            "FILL_BLANK",
+            "FILL_IN_THE_BLANK_WITH_OPTIONS",
+          ].includes(rawType)
+        ? "FILL_IN_THE_BLANK"
+        : "MCQ";
 
   return {
     id: question.id,
     bank_id: question.bank_id,
     question_text: question.question_text,
     question_type: questionType,
-    options: questionType === "TRUE_FALSE" ? { A: "True", B: "False" } : (question.options || {}),
-    correct_answers: Array.isArray(question.correct_answers) ? [...question.correct_answers] : [],
-    marks: Math.max(0, Number(assessment?.marks_per_question ?? 1)),
-    negative_marks: Math.max(0, Number(assessment?.negative_marks || 0)),
+    options:
+      questionType === "TRUE_FALSE"
+        ? { A: "True", B: "False" }
+        : question.options || {},
+    correct_answers: Array.isArray(question.correct_answers)
+      ? [...question.correct_answers]
+      : [],
+    marks: Number.isFinite(Number(question.marks))
+      ? Math.max(0, Number(question.marks))
+      : Math.max(0, Number(assessment?.marks_per_question ?? 1)),
+    negative_marks: Number.isFinite(Number(question.negative_marks))
+      ? Math.max(0, Number(question.negative_marks))
+      : Math.max(0, Number(assessment?.negative_marks || 0)),
   };
 }
 
@@ -165,7 +202,9 @@ exports.generateAttempt = async (assessment) => {
     throw new Error("No active questions are available for this assessment.");
   }
 
-  const normalized = paper.map((question) => normalizeQuestion(question, assessment));
+  const normalized = paper.map((question) =>
+    normalizeQuestion(question, assessment),
+  );
 
   return buildAttemptQuestions(null, normalized, normalized.length, {
     selectRandom: false,
@@ -178,7 +217,13 @@ exports.generateAttempt = async (assessment) => {
    CREATE ATTEMPT
 ============================================================ */
 
-exports.createAttempt = async (assessment, student, questions, durationSecondsOverride = null) => {
+exports.createAttempt = async (
+  assessment,
+  student,
+  questions,
+  durationSecondsOverride = null,
+  teamId = null,
+) => {
   if (!assessment.duration_minutes) {
     throw new Error("Assessment duration missing.");
   }
@@ -188,9 +233,11 @@ exports.createAttempt = async (assessment, student, questions, durationSecondsOv
   }
 
   const configuredDurationSeconds = Number(assessment.duration_minutes) * 60;
-  const durationSeconds = Number.isFinite(Number(durationSecondsOverride)) && Number(durationSecondsOverride) > 0
-    ? Math.min(configuredDurationSeconds, Number(durationSecondsOverride))
-    : configuredDurationSeconds;
+  const durationSeconds =
+    Number.isFinite(Number(durationSecondsOverride)) &&
+    Number(durationSecondsOverride) > 0
+      ? Math.min(configuredDurationSeconds, Number(durationSecondsOverride))
+      : configuredDurationSeconds;
 
   const startedAt = new Date();
 
@@ -201,6 +248,7 @@ exports.createAttempt = async (assessment, student, questions, durationSecondsOv
     .insert({
       assessment_id: assessment.id,
       student_id: student.id,
+      ...(teamId ? { team_id: teamId } : {}),
 
       started_at: startedAt.toISOString(),
       expires_at: expiresAt.toISOString(),
@@ -349,7 +397,6 @@ exports.getQuestion = async (attemptId, questionNumber) => {
 ============================================================ */
 
 exports.saveAnswer = async (attemptId, attemptQuestionId, selectedAnswers) => {
-
   if (!attemptQuestionId) {
     throw new Error("Attempt question ID is required.");
   }
@@ -410,18 +457,19 @@ exports.getPalette = async (attemptId) => {
     // ------------------------------------------------------------
     // 1. Get all questions belonging to this attempt
     // ------------------------------------------------------------
-    const { data: questions, error: questionsError } =
-      await supabase
-        .from("assessment_attempt_questions")
-        .select(`
+    const { data: questions, error: questionsError } = await supabase
+      .from("assessment_attempt_questions")
+      .select(
+        `
           id,
           question_order,
           assessment_question_flags(
             marked_for_review
           )
-        `)
-        .eq("attempt_id", attemptId)
-        .order("question_order");
+        `,
+      )
+      .eq("attempt_id", attemptId)
+      .order("question_order");
 
     if (questionsError) {
       throw questionsError;
@@ -430,24 +478,22 @@ exports.getPalette = async (attemptId) => {
     // ------------------------------------------------------------
     // 2. Get ALL saved answers for this attempt
     // ------------------------------------------------------------
-    const questionIds =
-      (questions || []).map((q) => q.id);
+    const questionIds = (questions || []).map((q) => q.id);
 
     let answers = [];
 
     if (questionIds.length > 0) {
-      const {
-        data: answerRows,
-        error: answersError,
-      } = await supabase
+      const { data: answerRows, error: answersError } = await supabase
         .from("assessment_answers")
-        .select(`
+        .select(
+          `
           attempt_question_id,
           selected_answers,
           subjective_answer,
           coding_answer,
           answered_at
-        `)
+        `,
+        )
         .in("attempt_question_id", questionIds);
 
       if (answersError) {
@@ -489,7 +535,7 @@ exports.getPalette = async (attemptId) => {
 
           return false;
         })
-        .map((answer) => answer.attempt_question_id)
+        .map((answer) => answer.attempt_question_id),
     );
 
     // ------------------------------------------------------------
@@ -502,16 +548,12 @@ exports.getPalette = async (attemptId) => {
 
       answered: answeredQuestionIds.has(q.id),
 
-      markedForReview:
-        q.assessment_question_flags?.marked_for_review ?? false,
+      markedForReview: q.assessment_question_flags?.marked_for_review ?? false,
     }));
 
     return palette;
   } catch (error) {
-    console.error(
-      "[EXAM] getPalette error:",
-      error
-    );
+    console.error("[EXAM] getPalette error:", error);
 
     throw error;
   }

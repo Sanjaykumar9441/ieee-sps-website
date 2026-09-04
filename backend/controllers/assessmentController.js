@@ -7,8 +7,14 @@ async function enrichAssessmentQuestions(assessment) {
     .from("assessment_question_banks")
     .select("questions_to_pick")
     .eq("assessment_id", assessment.id);
-  const selected = (mappings || []).reduce((sum, m) => sum + Number(m.questions_to_pick || 0), 0);
-  return { ...assessment, total_questions: selected || Number(assessment.total_questions || 0) };
+  const selected = (mappings || []).reduce(
+    (sum, m) => sum + Number(m.questions_to_pick || 0),
+    0,
+  );
+  return {
+    ...assessment,
+    total_questions: selected || Number(assessment.total_questions || 0),
+  };
 }
 
 exports.getAssessments = async (req, res) => {
@@ -17,10 +23,13 @@ exports.getAssessments = async (req, res) => {
 
     if (error) throw error;
 
-    const assessments = await Promise.all((data || []).map(async (assessment) => ({
-      ...(await enrichAssessmentQuestions(assessment)),
-      is_published: assessment.is_published ?? assessment.status === "PUBLISHED",
-    })));
+    const assessments = await Promise.all(
+      (data || []).map(async (assessment) => ({
+        ...(await enrichAssessmentQuestions(assessment)),
+        is_published:
+          assessment.is_published ?? assessment.status === "PUBLISHED",
+      })),
+    );
 
     return res.json({
       success: true,
@@ -113,9 +122,21 @@ exports.createAssessment = async (req, res) => {
       end_time: req.body.end_time || null,
       duration_minutes: Number(req.body.duration_minutes || 30),
       total_questions: Number(req.body.total_questions || 0),
+      participation_mode: [
+        "INDIVIDUAL_STUDENTS",
+        "STUDENT_TEAMS",
+        "TEAM",
+      ].includes(
+        String(
+          req.body.participation_mode || "INDIVIDUAL_STUDENTS",
+        ).toUpperCase(),
+      )
+        ? String(
+            req.body.participation_mode || "INDIVIDUAL_STUDENTS",
+          ).toUpperCase()
+        : "INDIVIDUAL_STUDENTS",
       pass_percentage: Number(req.body.pass_percentage ?? 40),
-      // MCQ format: 1 mark per question; negative marking is assessment-level.
-      marks_per_question: 1,
+      marks_per_question: Math.max(0, Number(req.body.marks_per_question ?? 1)),
       negative_marks: Math.max(0, Number(req.body.negative_marks ?? 0)),
       auto_submit: true,
       show_leaderboard: true,
@@ -126,9 +147,26 @@ exports.createAssessment = async (req, res) => {
       random_questions: req.body.random_questions !== false,
       status: req.body.status || "DRAFT",
       is_active: Boolean(req.body.is_active),
-      login_method: ["PASSWORD", "OTP"].includes(String(req.body.login_method || "PASSWORD").toUpperCase()) ? String(req.body.login_method || "PASSWORD").toUpperCase() : "PASSWORD",
+      login_method: ["PASSWORD", "OTP"].includes(
+        String(req.body.login_method || "PASSWORD").toUpperCase(),
+      )
+        ? String(req.body.login_method || "PASSWORD").toUpperCase()
+        : "PASSWORD",
       live_updates_enabled: req.body.live_updates_enabled !== false,
     };
+
+    if (
+      !Number.isFinite(body.marks_per_question) ||
+      body.marks_per_question < 0
+    ) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message:
+            "Correct-answer marks must be a valid number greater than or equal to 0.",
+        });
+    }
 
     if (!body.title) {
       return res.status(400).json({
@@ -183,38 +221,100 @@ exports.updateAssessment = async (req, res) => {
 
     if (input.title !== undefined) update.title = String(input.title).trim();
     if (input.slug !== undefined) update.slug = String(input.slug).trim();
-    if (input.description !== undefined) update.description = input.description?.trim() || null;
+    if (input.description !== undefined)
+      update.description = input.description?.trim() || null;
     if (input.start_time !== undefined) update.start_time = input.start_time;
     if (input.end_time !== undefined) update.end_time = input.end_time;
-    if (input.duration_minutes !== undefined) update.duration_minutes = Number(input.duration_minutes);
-    if (input.total_questions !== undefined) update.total_questions = Number(input.total_questions);
-    if (input.pass_percentage !== undefined) update.pass_percentage = Number(input.pass_percentage);
-    if (input.shuffle_questions !== undefined) update.shuffle_questions = Boolean(input.shuffle_questions);
-    if (input.shuffle_options !== undefined) update.shuffle_options = Boolean(input.shuffle_options);
-    if (input.random_questions !== undefined) update.random_questions = Boolean(input.random_questions);
+    if (input.duration_minutes !== undefined)
+      update.duration_minutes = Number(input.duration_minutes);
+    if (input.total_questions !== undefined)
+      update.total_questions = Number(input.total_questions);
+    if (input.participation_mode !== undefined) {
+      const mode = String(input.participation_mode).toUpperCase();
+      if (!["INDIVIDUAL_STUDENTS", "STUDENT_TEAMS", "TEAM"].includes(mode))
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid participation mode." });
+      update.participation_mode = mode;
+    }
+    if (input.marks_per_question !== undefined) {
+      const marks = Number(input.marks_per_question);
+      if (!Number.isFinite(marks) || marks < 0)
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Correct-answer marks must be a valid number greater than or equal to 0.",
+          });
+      update.marks_per_question = marks;
+    }
+    if (input.pass_percentage !== undefined)
+      update.pass_percentage = Number(input.pass_percentage);
+    if (input.shuffle_questions !== undefined)
+      update.shuffle_questions = Boolean(input.shuffle_questions);
+    if (input.shuffle_options !== undefined)
+      update.shuffle_options = Boolean(input.shuffle_options);
+    if (input.random_questions !== undefined)
+      update.random_questions = Boolean(input.random_questions);
     if (input.login_method !== undefined) {
       const method = String(input.login_method).toUpperCase();
-      if (!["PASSWORD", "OTP"].includes(method)) return res.status(400).json({ success: false, message: "Login method must be PASSWORD or OTP." });
+      if (!["PASSWORD", "OTP"].includes(method))
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "Login method must be PASSWORD or OTP.",
+          });
       update.login_method = method;
     }
-    if (input.live_updates_enabled !== undefined) update.live_updates_enabled = Boolean(input.live_updates_enabled);
+    if (input.live_updates_enabled !== undefined)
+      update.live_updates_enabled = Boolean(input.live_updates_enabled);
     if (input.negative_marks !== undefined) {
       const negativeMarks = Number(input.negative_marks);
       if (!Number.isFinite(negativeMarks) || negativeMarks < 0) {
-        return res.status(400).json({ success: false, message: "Negative marks must be a valid number greater than or equal to 0." });
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Negative marks must be a valid number greater than or equal to 0.",
+          });
       }
       update.negative_marks = negativeMarks;
     }
 
-    // Marks per MCQ are fixed; negative marking is assessment-level.
-    update.marks_per_question = 1;
     update.auto_submit = true;
     update.show_leaderboard = true;
     update.anti_cheat_enabled = true;
     update.socket_monitoring = true;
 
+    if (
+      update.marks_per_question !== undefined ||
+      update.total_questions !== undefined ||
+      update.pass_percentage !== undefined
+    ) {
+      const total = Number(update.total_questions ?? 0);
+      const marks = Number(update.marks_per_question ?? 1);
+      const pass = Number(update.pass_percentage ?? 40);
+      if (!Number.isFinite(marks) || marks < 0)
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Correct-answer marks must be a valid number greater than or equal to 0.",
+          });
+      if (Number.isFinite(total) && total >= 0)
+        update.passing_score = Number(
+          ((total * marks * pass) / 100).toFixed(2),
+        );
+    }
+
     if (!update.title && input.title !== undefined) {
-      return res.status(400).json({ success: false, message: "Assessment title is required." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Assessment title is required." });
     }
 
     const { data, error } = await Assessment.update(id, update);
@@ -251,7 +351,8 @@ exports.deleteAssessment = async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Assessment and its exclusive question banks/questions deleted successfully.",
+      message:
+        "Assessment and its exclusive question banks/questions deleted successfully.",
       data: data || null,
     });
   } catch (err) {

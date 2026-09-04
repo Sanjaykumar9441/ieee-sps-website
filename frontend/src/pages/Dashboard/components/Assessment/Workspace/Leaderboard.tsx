@@ -17,6 +17,7 @@ export interface LeaderboardStudent {
   attemptId: string;
   studentId: string;
   name: string;
+  email?: string;
   rollNo: string;
   department: string;
   status: "SUBMITTED";
@@ -29,6 +30,16 @@ export interface LeaderboardStudent {
   timeTaken: number;
   submittedAt: string | null;
   startedAt: string | null;
+  participantType?: "INDIVIDUAL" | "TEAM";
+  teamId?: string | null;
+  teamName?: string | null;
+  teamMemberCount?: number;
+  members?: {
+    name: string;
+    roll_no: string;
+    email: string;
+    branch?: string | null;
+  }[];
 }
 
 export default function Leaderboard({ assessment }: Props) {
@@ -47,7 +58,9 @@ export default function Leaderboard({ assessment }: Props) {
 
   const [sortBy, setSortBy] = useState("rank");
 
-  const [liveUpdates, setLiveUpdates] = useState(assessment.live_updates_enabled !== false);
+  const [liveUpdates, setLiveUpdates] = useState(
+    assessment.live_updates_enabled !== false,
+  );
 
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
@@ -69,10 +82,12 @@ export default function Leaderboard({ assessment }: Props) {
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent).detail;
-      if (detail?.assessmentId === assessment.id) setLiveUpdates(Boolean(detail.enabled));
+      if (detail?.assessmentId === assessment.id)
+        setLiveUpdates(Boolean(detail.enabled));
     };
     window.addEventListener("assessment-live-updates-changed", handler);
-    return () => window.removeEventListener("assessment-live-updates-changed", handler);
+    return () =>
+      window.removeEventListener("assessment-live-updates-changed", handler);
   }, [assessment.id]);
 
   useEffect(() => {
@@ -115,7 +130,8 @@ export default function Leaderboard({ assessment }: Props) {
       data = data.filter(
         (student) =>
           student.name.toLowerCase().includes(keyword) ||
-          student.rollNo.toLowerCase().includes(keyword),
+          student.rollNo.toLowerCase().includes(keyword) ||
+          (student.teamName || "").toLowerCase().includes(keyword),
       );
     }
 
@@ -201,11 +217,16 @@ export default function Leaderboard({ assessment }: Props) {
     );
   }
 
-
   return (
     <div className="space-y-8">
-      <LiveUpdatesToggle assessment={assessment} value={liveUpdates} onChange={setLiveUpdates} />
-      <p className="text-xs text-slate-500">Last updated {lastUpdated.toLocaleTimeString()}</p>
+      <LiveUpdatesToggle
+        assessment={assessment}
+        value={liveUpdates}
+        onChange={setLiveUpdates}
+      />
+      <p className="text-xs text-slate-500">
+        Last updated {lastUpdated.toLocaleTimeString()}
+      </p>
       {/* Header */}
 
       <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
@@ -396,7 +417,6 @@ export default function Leaderboard({ assessment }: Props) {
           >
             Reset Filters
           </button>
-
         </div>
       </div>
 
@@ -408,9 +428,17 @@ export default function Leaderboard({ assessment }: Props) {
             <tr>
               <th className="p-4 text-left">Rank</th>
 
-              <th className="p-4 text-left">Student</th>
+              <th className="p-4 text-left">
+                {assessment.participation_mode === "INDIVIDUAL_STUDENTS"
+                  ? "Student"
+                  : "Team"}
+              </th>
 
-              <th className="p-4 text-left">Roll No</th>
+              <th className="p-4 text-left">
+                {assessment.participation_mode === "INDIVIDUAL_STUDENTS"
+                  ? "Roll No"
+                  : "Members"}
+              </th>
 
               <th className="p-4 text-left">Department</th>
 
@@ -496,7 +524,26 @@ export default function Leaderboard({ assessment }: Props) {
 
                     <td className="p-4">
                       <div>
-                        <p className="font-semibold">{student.name}</p>
+                        <p className="font-semibold">
+                          {student.teamName || student.name}
+                        </p>
+                        {student.teamName && (
+                          <>
+                            <p className="text-xs text-gray-500">
+                              {student.teamMemberCount || 0} member(s) ·
+                              Contact: {student.email}
+                            </p>
+                            <div className="mt-1 space-y-0.5 text-xs text-slate-500">
+                              {(student.members || [])
+                                .slice(0, 5)
+                                .map((m, i) => (
+                                  <div key={`${m.email}-${i}`}>
+                                    {m.name} · {m.roll_no}
+                                  </div>
+                                ))}
+                            </div>
+                          </>
+                        )}
 
                         <p className="text-xs text-gray-500">
                           {student.department}
@@ -506,7 +553,11 @@ export default function Leaderboard({ assessment }: Props) {
 
                     {/* Roll */}
 
-                    <td className="p-4">{student.rollNo}</td>
+                    <td className="p-4">
+                      {student.teamName
+                        ? `${student.teamMemberCount || 0} member(s)`
+                        : student.rollNo}
+                    </td>
 
                     {/* Department */}
 

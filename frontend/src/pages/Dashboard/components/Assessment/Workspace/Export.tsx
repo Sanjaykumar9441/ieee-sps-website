@@ -46,10 +46,10 @@ export default function ExportTab({ assessment }: { assessment: Assessment }) {
     try {
       setBusy("round2");
       const leaderboard = await getLeaderboard(assessment.id);
-      const rows = [...(leaderboard || [])].sort((a: any, b: any) => Number(a.rank || 0) - Number(b.rank || 0)).map((s: any) => ({
+      const rows = (leaderboard || []).map((s: any) => ({
         rank: s.rank,
-        name: s.name || "",
-        rollNo: s.rollNo || "",
+        name: s.teamName || s.name || "",
+        rollNo: s.teamName ? "" : s.rollNo || "",
         email: s.email || "",
         department: s.department || s.branch || "",
       }));
@@ -57,10 +57,17 @@ export default function ExportTab({ assessment }: { assessment: Assessment }) {
         toast.error("No submitted students are available.");
         return;
       }
-      const headers = ["Rank", "Name", "Roll No", "Email", "Department"];
+      const headers =
+        assessment.participation_mode === "INDIVIDUAL_STUDENTS"
+          ? ["Rank", "Name", "Roll No", "Email", "Department"]
+          : ["Rank", "Team Name", "Email", "Branch", "Members"];
       const csv = [
         headers,
-        ...rows.map((r: { rank: number; name: string; rollNo: string; email: string; department: string }) => [r.rank, r.name, r.rollNo, r.email, r.department]),
+        ...rows.map((r) =>
+          assessment.participation_mode === "INDIVIDUAL_STUDENTS"
+            ? [r.rank, r.name, r.rollNo, r.email, r.department]
+            : [r.rank, r.name, r.email, r.department, ""],
+        ),
       ]
         .map((r) => r.map(csvCell).join(","))
         .join("\n");
@@ -152,8 +159,9 @@ export default function ExportTab({ assessment }: { assessment: Assessment }) {
             {busy === "round2" ? "Preparing..." : "Round 2 Student CSV"}
           </h3>
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            Name, Roll No, Email and Department ordered from rank 1 downward.
-            Ready for student import.
+            For individual assessments: Name, Roll No, Email and Department. For
+            team assessments: Team Name, Email and Branch. Ordered from rank 1
+            downward.
           </p>
         </button>
       </div>

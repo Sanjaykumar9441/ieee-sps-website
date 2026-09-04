@@ -5,6 +5,7 @@ import { Assessment } from "../../Assessment/AssessmentCard";
 import StudentDetailsDrawer from "./StudentDetailsDrawer";
 import AddStudentModal from "./AddStudentModal";
 import ImportStudentsModal from "./ImportStudentsModal";
+import TeamManager from "./TeamManager";
 import {
   getAllowedStudents,
   blockStudents,
@@ -38,6 +39,10 @@ interface Props {
 }
 
 export default function Students({ assessment }: Props) {
+  const isTeamMode =
+    assessment.participation_mode === "STUDENT_TEAMS" ||
+    assessment.participation_mode === "TEAM";
+
   const [loading, setLoading] = useState(true);
 
   const [students, setStudents] = useState<AllowedStudent[]>([]);
@@ -211,6 +216,10 @@ export default function Students({ assessment }: Props) {
     }
   };
 
+  if (isTeamMode) {
+    return <TeamManager assessment={assessment} />;
+  }
+
   if (loading) {
     return <div className="py-20 text-center">Loading Students...</div>;
   }
@@ -226,90 +235,91 @@ export default function Students({ assessment }: Props) {
           </p>
         </div>
 
-      <div className="flex gap-3">
-  {/* Import CSV */}
-  <button
-    type="button"
-    onClick={() => setImportStudentsOpen(true)}
-    className="rounded-xl border px-5 py-3 transition hover:bg-gray-50"
-  >
-    Import CSV
-  </button>
+        <div className="flex gap-3">
+          {/* Import CSV */}
+          <button
+            type="button"
+            onClick={() => setImportStudentsOpen(true)}
+            className="rounded-xl border px-5 py-3 transition hover:bg-gray-50"
+          >
+            Import CSV
+          </button>
 
-  {/* Export */}
-  <button
-    type="button"
-    onClick={() => {
-      if (students.length === 0) {
-        toast.error("No students to export.");
-        return;
-      }
+          {/* Export */}
+          <button
+            type="button"
+            onClick={() => {
+              if (students.length === 0) {
+                toast.error("No students to export.");
+                return;
+              }
 
-      const headers = [
-        "Roll No",
-        "Name",
-        "Email",
-        "Branch",
-        "Status",
-        "First Login",
-        "Attempt",
-        "Submitted",
-      ];
+              const headers = [
+                "Roll No",
+                "Name",
+                "Email",
+                "Branch",
+                "Status",
+                "First Login",
+                "Attempt",
+                "Submitted",
+              ];
 
-      const rows = students.map((student) => [
-        student.roll_no,
-        student.name,
-        student.email,
-        student.branch || "",
-        student.status,
-        student.first_login_at ? new Date(student.first_login_at).toLocaleString() : "Not yet",
-        student.attempt_started ? "Started" : "Not Started",
-        student.submitted ? "Submitted" : "Not Submitted",
-      ]);
+              const rows = students.map((student) => [
+                student.roll_no,
+                student.name,
+                student.email,
+                student.branch || "",
+                student.status,
+                student.first_login_at
+                  ? new Date(student.first_login_at).toLocaleString()
+                  : "Not yet",
+                student.attempt_started ? "Started" : "Not Started",
+                student.submitted ? "Submitted" : "Not Submitted",
+              ]);
 
-      const csv = [headers, ...rows]
-        .map((row) =>
-          row
-            .map(
-              (value) =>
-                `"${String(value ?? "").replace(/"/g, '""')}"`
-            )
-            .join(",")
-        )
-        .join("\n");
+              const csv = [headers, ...rows]
+                .map((row) =>
+                  row
+                    .map(
+                      (value) => `"${String(value ?? "").replace(/"/g, '""')}"`,
+                    )
+                    .join(","),
+                )
+                .join("\n");
 
-      const blob = new Blob([csv], {
-        type: "text/csv;charset=utf-8;",
-      });
+              const blob = new Blob([csv], {
+                type: "text/csv;charset=utf-8;",
+              });
 
-      const url = URL.createObjectURL(blob);
+              const url = URL.createObjectURL(blob);
 
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${assessment.title || "assessment"}-students.csv`;
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = `${assessment.title || "assessment"}-students.csv`;
 
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
 
-      URL.revokeObjectURL(url);
+              URL.revokeObjectURL(url);
 
-      toast.success("Students exported successfully.");
-    }}
-    className="rounded-xl border px-5 py-3 transition hover:bg-gray-50"
-  >
-    Export
-  </button>
+              toast.success("Students exported successfully.");
+            }}
+            className="rounded-xl border px-5 py-3 transition hover:bg-gray-50"
+          >
+            Export
+          </button>
 
-  {/* Add Student */}
-  <button
-    type="button"
-    onClick={() => setAddStudentOpen(true)}
-    className="rounded-xl bg-[#00629B] px-5 py-3 text-white transition hover:bg-[#005080]"
-  >
-    + Add Student
-  </button>
-</div>
+          {/* Add Student */}
+          <button
+            type="button"
+            onClick={() => setAddStudentOpen(true)}
+            className="rounded-xl bg-[#00629B] px-5 py-3 text-white transition hover:bg-[#005080]"
+          >
+            + Add Student
+          </button>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-5 md:grid-cols-3 xl:grid-cols-5">
         <div className="rounded-xl border p-5">
@@ -372,7 +382,6 @@ export default function Students({ assessment }: Props) {
           </div>
 
           <div className="flex flex-wrap gap-3">
-
             <button
               disabled={processing}
               onClick={handleBlock}
@@ -612,11 +621,11 @@ export default function Students({ assessment }: Props) {
       />
 
       <AddStudentModal
-  open={addStudentOpen}
-  assessmentId={assessment.id}
-  onClose={() => setAddStudentOpen(false)}
-  onSuccess={fetchStudents}
-/>
+        open={addStudentOpen}
+        assessmentId={assessment.id}
+        onClose={() => setAddStudentOpen(false)}
+        onSuccess={fetchStudents}
+      />
 
       <ImportStudentsModal
         open={importStudentsOpen}

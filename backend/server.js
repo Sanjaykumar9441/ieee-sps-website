@@ -54,6 +54,7 @@ const adminForceSubmitRoutes = require("./routes/adminForceSubmitRoutes");
 const dashboardAnalyticsRoutes = require("./routes/dashboardAnalyticsRoutes");
 const exportRoutes = require("./routes/exportRoutes");
 const studentAuthRoutes = require("./routes/studentAuthRoutes");
+const assessmentTeamRoutes = require("./routes/assessmentTeamRoutes");
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
@@ -128,6 +129,7 @@ app.use("/api/admin/force-submit", adminForceSubmitRoutes);
 app.use("/api/admin/dashboard-analytics", dashboardAnalyticsRoutes);
 app.use("/api/admin/export", exportRoutes);
 app.use("/api/student-auth", studentAuthRoutes);
+app.use("/api/assessment-teams", assessmentTeamRoutes);
 
 /* ===============================
    ✅ MongoDB Connection

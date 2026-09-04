@@ -1,10 +1,200 @@
 const { supabase } = require("../lib/supabase");
 
-async function getAssessment(assessmentId){const {data,error}=await supabase.from("assessments").select("*").eq("id",assessmentId).single();if(error)throw error;return data;}
-async function getAnalytics(assessmentId){const {count:registeredStudents}=await supabase.from("assessment_allowed_students").select("*",{count:"exact",head:true}).eq("assessment_id",assessmentId);const {data:attempts}=await supabase.from("assessment_attempts").select("*").eq("assessment_id",assessmentId);const rows=attempts||[],submitted=rows.filter(a=>a.status==="SUBMITTED");const averageScore=submitted.length?submitted.reduce((sum,row)=>sum+Number(row.score||0),0)/submitted.length:0;return {registeredStudents,startedStudents:rows.length,submittedStudents:submitted.length,inProgressStudents:rows.filter(a=>a.status==="IN_PROGRESS").length,averageScore:Number(averageScore.toFixed(2)),highestScore:submitted.length?Math.max(...submitted.map(a=>Number(a.score||0))):0,lowestScore:submitted.length?Math.min(...submitted.map(a=>Number(a.score||0))):0};}
-function getAssessmentStatus(assessment){const now=new Date();if(!assessment.is_active)return {status:"INACTIVE",timeRemaining:0};const start=new Date(assessment.start_time),end=new Date(assessment.end_time);if(now<start)return {status:"UPCOMING",timeRemaining:Math.floor((start-now)/1000)};if(now>end)return {status:"ENDED",timeRemaining:0};return {status:"LIVE",timeRemaining:Math.floor((end-now)/1000)};}
-async function getTopStudents(assessmentId){const {data,error}=await supabase.from("assessment_attempts").select(`id,score,submitted_at,student_id,assessment_allowed_students(name,roll_no,branch)`).eq("assessment_id",assessmentId).eq("status","SUBMITTED");if(error)throw error;return (data||[]).sort((a,b)=>Number(b.score)-Number(a.score)||new Date(a.submitted_at)-new Date(b.submitted_at)).slice(0,5).map((student,index)=>({rank:index+1,studentId:student.student_id,name:student.assessment_allowed_students?.name,rollNo:student.assessment_allowed_students?.roll_no,department:student.assessment_allowed_students?.branch,score:student.score,submittedAt:student.submitted_at}));}
-async function getRecentActivity(assessmentId){const {data,error}=await supabase.from("assessment_attempts").select(`id,status,score,started_at,submitted_at,student_id,assessment_allowed_students(name,roll_no)`).eq("assessment_id",assessmentId).order("updated_at",{ascending:false}).limit(15);if(error)throw error;return (data||[]).map(attempt=>({attemptId:attempt.id,studentId:attempt.student_id,name:attempt.assessment_allowed_students?.name,rollNo:attempt.assessment_allowed_students?.roll_no,status:attempt.status,score:attempt.score,startedAt:attempt.started_at,submittedAt:attempt.submitted_at}));}
-async function getLiveStudents(assessmentId){const {data,error}=await supabase.from("assessment_attempts").select(`id,current_question,answered_questions,resumed_count,status,started_at,expires_at,student_id,assessment_allowed_students(name,roll_no,branch)`).eq("assessment_id",assessmentId).in("status",["IN_PROGRESS","SUBMITTED"]).order("started_at");if(error)throw error;return (data||[]).map(attempt=>({attemptId:attempt.id,studentId:attempt.student_id,name:attempt.assessment_allowed_students?.name,rollNo:attempt.assessment_allowed_students?.roll_no,department:attempt.assessment_allowed_students?.branch,status:attempt.status,currentQuestion:attempt.current_question,answeredQuestions:attempt.answered_questions,resumedCount:attempt.resumed_count,startedAt:attempt.started_at,expiresAt:attempt.expires_at}));}
+async function getAssessment(assessmentId) {
+  const { data, error } = await supabase
+    .from("assessments")
+    .select("*")
+    .eq("id", assessmentId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+async function getAnalytics(assessmentId) {
+  const { data: assessment } = await supabase
+    .from("assessments")
+    .select("participation_mode")
+    .eq("id", assessmentId)
+    .single();
+  const { count: registeredStudents } = await supabase
+    .from("assessment_allowed_students")
+    .select("*", { count: "exact", head: true })
+    .eq("assessment_id", assessmentId);
+  const { data: attempts } = await supabase
+    .from("assessment_attempts")
+    .select("*")
+    .eq("assessment_id", assessmentId);
+  const rows = attempts || [],
+    submitted = rows.filter((a) => a.status === "SUBMITTED");
+  const averageScore = submitted.length
+    ? submitted.reduce((sum, row) => sum + Number(row.score || 0), 0) /
+      submitted.length
+    : 0;
+  return {
+    registeredStudents:
+      assessment?.participation_mode === "INDIVIDUAL_STUDENTS"
+        ? registeredStudents
+        : new Set(rows.map((a) => a.team_id).filter(Boolean)).size,
+    startedStudents: rows.length,
+    submittedStudents: submitted.length,
+    inProgressStudents: rows.filter((a) => a.status === "IN_PROGRESS").length,
+    averageScore: Number(averageScore.toFixed(2)),
+    highestScore: submitted.length
+      ? Math.max(...submitted.map((a) => Number(a.score || 0)))
+      : 0,
+    lowestScore: submitted.length
+      ? Math.min(...submitted.map((a) => Number(a.score || 0)))
+      : 0,
+  };
+}
+function getAssessmentStatus(assessment) {
+  const now = new Date();
+  if (!assessment.is_active) return { status: "INACTIVE", timeRemaining: 0 };
+  const start = new Date(assessment.start_time),
+    end = new Date(assessment.end_time);
+  if (now < start)
+    return {
+      status: "UPCOMING",
+      timeRemaining: Math.floor((start - now) / 1000),
+    };
+  if (now > end) return { status: "ENDED", timeRemaining: 0 };
+  return { status: "LIVE", timeRemaining: Math.floor((end - now) / 1000) };
+}
+async function getTopStudents(assessmentId) {
+  const { data: assessment } = await supabase
+    .from("assessments")
+    .select("participation_mode")
+    .eq("id", assessmentId)
+    .single();
+  const { data, error } = await supabase
+    .from("assessment_attempts")
+    .select(
+      `id,score,submitted_at,student_id,team_id,assessment_allowed_students(name,roll_no,branch)`,
+    )
+    .eq("assessment_id", assessmentId)
+    .eq("status", "SUBMITTED");
+  if (error) throw error;
+  let teamMap = new Map();
+  if (assessment?.participation_mode !== "INDIVIDUAL_STUDENTS") {
+    const { data: teams } = await supabase
+      .from("assessment_teams")
+      .select("id,team_name,member_count")
+      .eq("assessment_id", assessmentId);
+    teamMap = new Map((teams || []).map((t) => [t.id, t]));
+  }
+  return (data || [])
+    .sort(
+      (a, b) =>
+        Number(b.score) - Number(a.score) ||
+        new Date(a.submitted_at) - new Date(b.submitted_at),
+    )
+    .slice(0, 5)
+    .map((student, index) => ({
+      rank: index + 1,
+      studentId: student.student_id,
+      name: student.team_id
+        ? teamMap.get(student.team_id)?.team_name || "Team"
+        : student.assessment_allowed_students?.name,
+      rollNo: student.assessment_allowed_students?.roll_no,
+      department: student.assessment_allowed_students?.branch,
+      teamName: student.team_id
+        ? teamMap.get(student.team_id)?.team_name || null
+        : null,
+      teamMemberCount: Number(
+        student.team_id ? teamMap.get(student.team_id)?.member_count || 0 : 0,
+      ),
+      score: student.score,
+      submittedAt: student.submitted_at,
+    }));
+}
+async function getRecentActivity(assessmentId) {
+  const { data, error } = await supabase
+    .from("assessment_attempts")
+    .select(
+      `id,status,score,started_at,submitted_at,student_id,assessment_allowed_students(name,roll_no)`,
+    )
+    .eq("assessment_id", assessmentId)
+    .order("updated_at", { ascending: false })
+    .limit(15);
+  if (error) throw error;
+  return (data || []).map((attempt) => ({
+    attemptId: attempt.id,
+    studentId: attempt.student_id,
+    name: attempt.assessment_allowed_students?.name,
+    rollNo: attempt.assessment_allowed_students?.roll_no,
+    status: attempt.status,
+    score: attempt.score,
+    startedAt: attempt.started_at,
+    submittedAt: attempt.submitted_at,
+  }));
+}
+async function getLiveStudents(assessmentId) {
+  const { data, error } = await supabase
+    .from("assessment_attempts")
+    .select(
+      `id,current_question,answered_questions,resumed_count,status,started_at,expires_at,student_id,assessment_allowed_students(name,roll_no,branch)`,
+    )
+    .eq("assessment_id", assessmentId)
+    .in("status", ["IN_PROGRESS", "SUBMITTED"])
+    .order("started_at");
+  if (error) throw error;
+  return (data || []).map((attempt) => ({
+    attemptId: attempt.id,
+    studentId: attempt.student_id,
+    name: attempt.assessment_allowed_students?.name,
+    rollNo: attempt.assessment_allowed_students?.roll_no,
+    department: attempt.assessment_allowed_students?.branch,
+    status: attempt.status,
+    currentQuestion: attempt.current_question,
+    answeredQuestions: attempt.answered_questions,
+    resumedCount: attempt.resumed_count,
+    startedAt: attempt.started_at,
+    expiresAt: attempt.expires_at,
+  }));
+}
 
-exports.getLiveDashboard=async(req,res)=>{try{const {assessmentId}=req.params;if(!assessmentId)return res.status(400).json({success:false,message:"Assessment ID is required."});const assessment=await getAssessment(assessmentId);if(!assessment)return res.status(404).json({success:false,message:"Assessment not found."});const [analytics,topStudents,recentActivity,liveStudents]=await Promise.all([getAnalytics(assessmentId),getTopStudents(assessmentId),getRecentActivity(assessmentId),getLiveStudents(assessmentId)]);return res.json({success:true,dashboard:{assessment:{id:assessment.id,title:assessment.title,slug:assessment.slug,status:assessment.status,isActive:assessment.is_active,startTime:assessment.start_time,endTime:assessment.end_time,durationMinutes:assessment.duration_minutes,totalQuestions:assessment.total_questions},assessmentStatus:getAssessmentStatus(assessment),analytics,topStudents,recentActivity,liveStudents,serverTime:new Date().toISOString()}});}catch(err){console.error(err);return res.status(500).json({success:false,message:err.message});}};
+exports.getLiveDashboard = async (req, res) => {
+  try {
+    const { assessmentId } = req.params;
+    if (!assessmentId)
+      return res
+        .status(400)
+        .json({ success: false, message: "Assessment ID is required." });
+    const assessment = await getAssessment(assessmentId);
+    if (!assessment)
+      return res
+        .status(404)
+        .json({ success: false, message: "Assessment not found." });
+    const [analytics, topStudents, recentActivity, liveStudents] =
+      await Promise.all([
+        getAnalytics(assessmentId),
+        getTopStudents(assessmentId),
+        getRecentActivity(assessmentId),
+        getLiveStudents(assessmentId),
+      ]);
+    return res.json({
+      success: true,
+      dashboard: {
+        assessment: {
+          id: assessment.id,
+          title: assessment.title,
+          slug: assessment.slug,
+          status: assessment.status,
+          isActive: assessment.is_active,
+          startTime: assessment.start_time,
+          endTime: assessment.end_time,
+          durationMinutes: assessment.duration_minutes,
+          totalQuestions: assessment.total_questions,
+        },
+        assessmentStatus: getAssessmentStatus(assessment),
+        analytics,
+        topStudents,
+        recentActivity,
+        liveStudents,
+        serverTime: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};

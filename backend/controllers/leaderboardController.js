@@ -24,7 +24,7 @@ exports.getLeaderboard = async (req, res) => {
     const { data: assessment, error: assessmentError } = await supabase
       .from("assessments")
       .select(
-        "total_questions, marks_per_question, pass_percentage, passing_score",
+        "total_questions, marks_per_question, pass_percentage, passing_score, participation_mode",
       )
       .eq("id", assessmentId)
       .single();
@@ -46,6 +46,7 @@ exports.getLeaderboard = async (req, res) => {
         `
         id,
         student_id,
+        team_id,
         score,
         correct,
         wrong,
@@ -57,7 +58,8 @@ exports.getLeaderboard = async (req, res) => {
           name,
           roll_no,
           email,
-          branch
+          branch,
+          team_id
         )
         `,
       )
@@ -66,6 +68,32 @@ exports.getLeaderboard = async (req, res) => {
 
     if (error) {
       throw error;
+    }
+
+    let teamMap = new Map();
+    if (assessment.participation_mode !== "INDIVIDUAL_STUDENTS") {
+      const { data: teams, error: teamError } = await supabase
+        .from("assessment_teams")
+        .select("id,team_name,contact_email,branch,member_count")
+        .eq("assessment_id", assessmentId);
+      if (teamError) throw teamError;
+      const ids = (teams || []).map((t) => t.id);
+      let members = [];
+      if (ids.length) {
+        const { data: m, error: me } = await supabase
+          .from("assessment_team_members")
+          .select("team_id,name,roll_no,email,branch")
+          .in("team_id", ids)
+          .order("created_at");
+        if (me) throw me;
+        members = m || [];
+      }
+      teamMap = new Map(
+        (teams || []).map((t) => [
+          t.id,
+          { ...t, members: members.filter((m) => m.team_id === t.id) },
+        ]),
+      );
     }
 
     // ---------------------------------------------------------
@@ -98,8 +126,14 @@ exports.getLeaderboard = async (req, res) => {
               )
             : 0;
 
+        const team = student.team_id ? teamMap.get(student.team_id) : null;
         return {
           attemptId: student.id,
+          participantType: team ? "TEAM" : "INDIVIDUAL",
+          teamId: student.team_id || null,
+          teamName: team?.team_name || null,
+          teamMemberCount: Number(team?.member_count || 0),
+          members: team?.members || [],
 
           studentId: student.student_id,
 
@@ -202,6 +236,7 @@ exports.getTopThree = async (req, res) => {
       .select(
         `
         id,
+        team_id,
         score,
         submitted_at,
         assessment_allowed_students(
@@ -215,6 +250,12 @@ exports.getTopThree = async (req, res) => {
 
     if (error) throw error;
 
+    let topTeamMap = new Map();
+    const { data: topTeams } = await supabase
+      .from("assessment_teams")
+      .select("id,team_name")
+      .eq("assessment_id", assessmentId);
+    topTeamMap = new Map((topTeams || []).map((t) => [t.id, t]));
     const topThree = (data || [])
       .sort((a, b) => {
         if (Number(b.score) !== Number(a.score)) {
@@ -235,7 +276,9 @@ exports.getTopThree = async (req, res) => {
       .map((student, index) => ({
         rank: index + 1,
 
-        name: student.assessment_allowed_students?.name,
+        name: student.team_id
+          ? topTeamMap.get(student.team_id)?.team_name || "Team"
+          : student.assessment_allowed_students?.name,
 
         rollNo: student.assessment_allowed_students?.roll_no,
 

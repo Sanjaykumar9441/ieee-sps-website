@@ -5,10 +5,23 @@ const { supabase } = require("../lib/supabase");
 ============================================================ */
 
 exports.calculateScore = async (attemptId) => {
-  const { data: attempt } = await supabase.from("assessment_attempts").select("assessment_id").eq("id", attemptId).single();
-  const { data: assessment } = attempt?.assessment_id ? await supabase.from("assessments").select("marks_per_question,negative_marks").eq("id", attempt.assessment_id).single() : { data: null };
+  const { data: attempt } = await supabase
+    .from("assessment_attempts")
+    .select("assessment_id")
+    .eq("id", attemptId)
+    .single();
+  const { data: assessment } = attempt?.assessment_id
+    ? await supabase
+        .from("assessments")
+        .select("marks_per_question,negative_marks")
+        .eq("id", attempt.assessment_id)
+        .single()
+    : { data: null };
   const configuredMarks = Number(assessment?.marks_per_question ?? 1);
-  const configuredNegative = Math.max(0, Number(assessment?.negative_marks ?? 0));
+  const configuredNegative = Math.max(
+    0,
+    Number(assessment?.negative_marks ?? 0),
+  );
   // ------------------------------------------------------------
   // 1. Get frozen attempt questions
   // ------------------------------------------------------------
@@ -155,7 +168,9 @@ exports.calculateScore = async (attemptId) => {
     if (isCorrect) {
       correct++;
 
-      score += Number(question.marks) > 0 ? Number(question.marks) : configuredMarks;
+      score += Number.isFinite(Number(question.marks))
+        ? Number(question.marks)
+        : configuredMarks;
     } else {
       wrong++;
 

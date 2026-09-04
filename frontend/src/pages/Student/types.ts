@@ -33,6 +33,7 @@ export interface Assessment {
   login_method?: "PASSWORD" | "OTP";
 
   live_updates_enabled?: boolean;
+  participation_mode?: "INDIVIDUAL_STUDENTS" | "STUDENT_TEAMS" | "TEAM";
 }
 
 export interface AssessmentResponse {
@@ -51,11 +52,15 @@ export interface AttemptQuestion {
   question_id: string;
   question_order: number;
   question_text: string;
-  question_type: "MCQ" | "MULTIPLE_CORRECT" | "TRUE_FALSE";
+  question_type:
+    | "MCQ"
+    | "MULTIPLE_CORRECT"
+    | "TRUE_FALSE"
+    | "FILL_IN_THE_BLANK";
   question_image_id?: string | null;
   options: Record<string, string>;
-  marks: 1;
-  negative_marks: 0;
+  marks: number;
+  negative_marks: number;
   assessment_answers?: {
     id: string;
     selected_answers: string[] | null;

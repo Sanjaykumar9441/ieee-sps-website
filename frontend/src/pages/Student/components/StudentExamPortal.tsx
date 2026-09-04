@@ -180,9 +180,12 @@ function FullscreenStartGate({
           <div className="flex items-start gap-3">
             <Maximize className="mt-0.5 h-5 w-5 shrink-0 text-[#00629B]" />
             <div>
-              <p className="font-semibold text-slate-800">Enter fullscreen to begin</p>
+              <p className="font-semibold text-slate-800">
+                Enter fullscreen to begin
+              </p>
               <p className="mt-1 text-sm leading-5 text-slate-600">
-                The examination timer and secure monitoring begin only after you click the button below.
+                The examination timer and secure monitoring begin only after you
+                click the button below.
               </p>
             </div>
           </div>
@@ -257,7 +260,6 @@ export default function StudentExamPortal({
 
   const [examData, setExamData] = useState<ExamData | null>(null);
 
-  // Prevent double-clicks while fullscreen/start is being processed.
   const [startingExam, setStartingExam] = useState(false);
 
   /* ------------------------------------------------------------------------ */
@@ -376,8 +378,14 @@ export default function StudentExamPortal({
      * the real exam timer) is created only after the student clicks
      * "Enter Fullscreen & Start" inside the exam window.
      */
-    const width = Math.max(1024, window.screen.availWidth || window.innerWidth || 1024);
-    const height = Math.max(700, window.screen.availHeight || window.innerHeight || 700);
+    const width = Math.max(
+      1024,
+      window.screen.availWidth || window.innerWidth || 1024,
+    );
+    const height = Math.max(
+      700,
+      window.screen.availHeight || window.innerHeight || 700,
+    );
 
     const examPopup = window.open(
       "about:blank",
@@ -398,7 +406,9 @@ export default function StudentExamPortal({
     );
 
     if (!examPopup) {
-      toast.error("Please allow pop-ups for this website and click Start Exam again.");
+      toast.error(
+        "Please allow pop-ups for this website and click Start Exam again.",
+      );
       return;
     }
 
@@ -422,10 +432,15 @@ export default function StudentExamPortal({
       // Ignore popup document access errors.
     }
 
-    const examUrl = new URL(`${window.location.origin}/student/exam/${assessmentId}`);
+    const examUrl = new URL(
+      `${window.location.origin}/student/exam/${assessmentId}`,
+    );
     examUrl.searchParams.set("examWindow", "1");
     examUrl.searchParams.set("launchGate", "1");
-    examUrl.searchParams.set("assessmentTitle", assessment?.title || "Assessment");
+    examUrl.searchParams.set(
+      "assessmentTitle",
+      assessment?.title || "Assessment",
+    );
 
     /*
      * Navigate the already-open popup. The popup now contains only the
@@ -452,7 +467,9 @@ export default function StudentExamPortal({
        */
       if (!document.fullscreenElement) {
         if (!document.fullscreenEnabled) {
-          throw new Error("Fullscreen is not available in this browser window.");
+          throw new Error(
+            "Fullscreen is not available in this browser window.",
+          );
         }
 
         await document.documentElement.requestFullscreen();
@@ -466,7 +483,9 @@ export default function StudentExamPortal({
         : await startAssessment(assessmentId);
 
       if (!result?.attemptId || !result?.question) {
-        throw new Error("Assessment started but the first question could not be loaded.");
+        throw new Error(
+          "Assessment started but the first question could not be loaded.",
+        );
       }
 
       const attemptId = String(result.attemptId);
@@ -484,13 +503,25 @@ export default function StudentExamPortal({
         sessionId: (result as any).sessionId,
       };
 
-      localStorage.setItem(`studentExamLaunch:${attemptId}`, JSON.stringify(launchData));
+      localStorage.setItem(
+        `studentExamLaunch:${attemptId}`,
+        JSON.stringify(launchData),
+      );
       localStorage.setItem("studentAttemptId", attemptId);
-      localStorage.setItem(`studentCurrentQuestion:${attemptId}`, String(currentQuestion));
+      localStorage.setItem(
+        `studentCurrentQuestion:${attemptId}`,
+        String(currentQuestion),
+      );
 
       if ((result as any).sessionId) {
-        sessionStorage.setItem(`quiz_session_${attemptId}`, String((result as any).sessionId));
-        localStorage.setItem(`quiz_session_${attemptId}`, String((result as any).sessionId));
+        sessionStorage.setItem(
+          `quiz_session_${attemptId}`,
+          String((result as any).sessionId),
+        );
+        localStorage.setItem(
+          `quiz_session_${attemptId}`,
+          String((result as any).sessionId),
+        );
       }
 
       onStartExam(assessmentId);
@@ -500,15 +531,16 @@ export default function StudentExamPortal({
       cleanUrl.searchParams.set("attemptId", attemptId);
       window.history.replaceState({}, "", cleanUrl.toString());
 
-      setAssessment((current) =>
-        current || {
-          id: assessmentId,
-          title: getLaunchTitle(),
-          total_questions: totalQuestions,
-          duration_minutes: Math.ceil(remaining / 60),
-          is_active: true,
-          is_published: true,
-        },
+      setAssessment(
+        (current) =>
+          current || {
+            id: assessmentId,
+            title: getLaunchTitle(),
+            total_questions: totalQuestions,
+            duration_minutes: Math.ceil(remaining / 60),
+            is_active: true,
+            is_published: true,
+          },
       );
 
       setExamData({
@@ -571,15 +603,16 @@ export default function StudentExamPortal({
          */
         if (launchGate || currentAttemptId) {
           if (!mounted) return;
-          setAssessment((current) =>
-            current || {
-              id: assessmentId,
-              title: getLaunchTitle(),
-              total_questions: 0,
-              duration_minutes: 0,
-              is_active: true,
-              is_published: true,
-            },
+          setAssessment(
+            (current) =>
+              current || {
+                id: assessmentId,
+                title: getLaunchTitle(),
+                total_questions: 0,
+                duration_minutes: 0,
+                is_active: true,
+                is_published: true,
+              },
           );
           setExamStatus("LIVE");
           setStep("launch-gate");
@@ -595,22 +628,25 @@ export default function StudentExamPortal({
           return;
         }
 
-        const rawLaunch = localStorage.getItem(`studentExamLaunch:${attemptId}`);
+        const rawLaunch = localStorage.getItem(
+          `studentExamLaunch:${attemptId}`,
+        );
 
         if (!rawLaunch) {
           /* A refresh can lose in-memory React state. Put the window back on
            * the fullscreen gate so the user can explicitly re-establish
            * fullscreen before we resume the server-side attempt. */
           if (!mounted) return;
-          setAssessment((current) =>
-            current || {
-              id: assessmentId,
-              title: getLaunchTitle(),
-              total_questions: 0,
-              duration_minutes: 0,
-              is_active: true,
-              is_published: true,
-            },
+          setAssessment(
+            (current) =>
+              current || {
+                id: assessmentId,
+                title: getLaunchTitle(),
+                total_questions: 0,
+                duration_minutes: 0,
+                is_active: true,
+                is_published: true,
+              },
           );
           setExamStatus("LIVE");
           setStep("launch-gate");
@@ -621,7 +657,10 @@ export default function StudentExamPortal({
           const launch = JSON.parse(rawLaunch) as ExamLaunchData;
 
           if (launch.sessionId) {
-            sessionStorage.setItem(`quiz_session_${attemptId}`, launch.sessionId);
+            sessionStorage.setItem(
+              `quiz_session_${attemptId}`,
+              launch.sessionId,
+            );
             localStorage.setItem(`quiz_session_${attemptId}`, launch.sessionId);
           }
 
@@ -633,7 +672,9 @@ export default function StudentExamPortal({
             is_active: true,
             is_published: true,
             start_time: new Date().toISOString(),
-            end_time: new Date(Date.now() + launch.remainingSeconds * 1000).toISOString(),
+            end_time: new Date(
+              Date.now() + launch.remainingSeconds * 1000,
+            ).toISOString(),
           };
 
           if (!mounted) return;

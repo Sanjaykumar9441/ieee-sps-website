@@ -101,6 +101,7 @@ exports.startAssessment = async (req, res) => {
   try {
     const { assessmentId } = req.params;
     const student = req.student;
+    const teamId = student.team_id || null;
 
     // Generate unique session ID
     const sessionId = crypto.randomUUID();
@@ -160,7 +161,11 @@ exports.startAssessment = async (req, res) => {
     // Already Submitted?
     // --------------------------------
     const { data: submittedAttempt } =
-      await assessmentService.getSubmittedAttempt(assessment.id, student.id);
+      await assessmentService.getSubmittedAttempt(
+        assessment.id,
+        student.id,
+        teamId,
+      );
 
     if (submittedAttempt) {
       return res.status(400).json({
@@ -175,6 +180,7 @@ exports.startAssessment = async (req, res) => {
     const { data: runningAttempt } = await assessmentService.hasRunningAttempt(
       assessment.id,
       student.id,
+      teamId,
     );
 
     if (runningAttempt) {
@@ -189,7 +195,7 @@ exports.startAssessment = async (req, res) => {
     // --------------------------------
     lockAcquired = await session.lockStudent(
       assessment.id,
-      student.id,
+      teamId || student.id,
       sessionId,
       actualDurationSeconds,
     );
@@ -214,6 +220,8 @@ exports.startAssessment = async (req, res) => {
       assessment,
       student,
       frozenQuestions,
+      null,
+      teamId,
     );
 
     // --------------------------------
@@ -238,7 +246,10 @@ exports.startAssessment = async (req, res) => {
   } catch (err) {
     if (lockAcquired) {
       try {
-        await session.unlockStudent(req.params.assessmentId, req.student.id);
+        await session.unlockStudent(
+          req.params.assessmentId,
+          req.student.team_id || req.student.id,
+        );
       } catch (unlockError) {
         console.error("FAILED TO RELEASE ASSESSMENT LOCK:", unlockError);
       }
@@ -421,10 +432,7 @@ exports.getStatus = async (req, res) => {
     ------------------------------------
     */
 
-    if (
-      remainingSeconds <= 0 &&
-      attempt.status !== "SUBMITTED"
-    ) {
+    if (remainingSeconds <= 0 && attempt.status !== "SUBMITTED") {
       const result = await scoring.calculateScore(attemptId);
 
       const updatedAttempt = await engine.finishAttempt(attemptId, result);
@@ -436,7 +444,7 @@ exports.getStatus = async (req, res) => {
 
       await session.unlockStudent(
         updatedAttempt.assessment_id,
-        updatedAttempt.student_id,
+        updatedAttempt.team_id || updatedAttempt.student_id,
       );
 
       /*
@@ -568,7 +576,6 @@ exports.getStatus = async (req, res) => {
         inProgressStudents: (attempts || []).filter(
           (a) => a.status === "IN_PROGRESS",
         ).length,
-
       };
 
       liveEvents.emitDashboardAnalytics(
@@ -632,9 +639,16 @@ exports.submitAssessment = async (req, res) => {
       });
     }
 
-    const { data: assessment } = await assessmentService.getAssessment(attempt.assessment_id);
-    const deadlineCandidates = [attempt.expires_at, assessment?.end_time].filter(Boolean).map((value) => new Date(value).getTime()).filter(Number.isFinite);
-    const deadline = deadlineCandidates.length ? Math.min(...deadlineCandidates) : Number.MAX_SAFE_INTEGER;
+    const { data: assessment } = await assessmentService.getAssessment(
+      attempt.assessment_id,
+    );
+    const deadlineCandidates = [attempt.expires_at, assessment?.end_time]
+      .filter(Boolean)
+      .map((value) => new Date(value).getTime())
+      .filter(Number.isFinite);
+    const deadline = deadlineCandidates.length
+      ? Math.min(...deadlineCandidates)
+      : Number.MAX_SAFE_INTEGER;
     const expired = Date.now() >= deadline;
 
     /*
@@ -654,11 +668,12 @@ exports.submitAssessment = async (req, res) => {
     const updatedAttempt = await engine.finishAttempt(attemptId, result);
     const requestedReason = String(req.body?.reason || "STUDENT_SUBMIT");
     const submissionReason = expired ? "AUTO_SUBMIT" : requestedReason;
-    const activityType = submissionReason === "SECURITY_AUTO_SUBMIT"
-      ? "SECURITY_AUTO_SUBMIT"
-      : submissionReason === "AUTO_SUBMIT"
-        ? "AUTO_SUBMIT"
-        : "SUBMIT";
+    const activityType =
+      submissionReason === "SECURITY_AUTO_SUBMIT"
+        ? "SECURITY_AUTO_SUBMIT"
+        : submissionReason === "AUTO_SUBMIT"
+          ? "AUTO_SUBMIT"
+          : "SUBMIT";
     await supabase.from("assessment_activity").insert({
       attempt_id: attemptId,
       activity_type: activityType,
@@ -801,7 +816,6 @@ exports.submitAssessment = async (req, res) => {
       inProgressStudents: (attempts || []).filter(
         (a) => a.status === "IN_PROGRESS",
       ).length,
-
     };
 
     liveEvents.emitDashboardAnalytics(updatedAttempt.assessment_id, dashboard);
@@ -1000,17 +1014,14 @@ exports.heartbeat = async (req, res) => {
      * the session.
      */
 
-    if (
-      remainingSeconds <= 0 &&
-      attempt.status !== "SUBMITTED"
-    ) {
+    if (remainingSeconds <= 0 && attempt.status !== "SUBMITTED") {
       const result = await scoring.calculateScore(attemptId);
 
       const updatedAttempt = await engine.finishAttempt(attemptId, result);
 
       await session.unlockStudent(
         updatedAttempt.assessment_id,
-        updatedAttempt.student_id,
+        updatedAttempt.team_id || updatedAttempt.student_id,
       );
 
       return res.json({
