@@ -371,9 +371,29 @@ export default function StudentExamPortal({
 
       examPopup.focus();
 
+      /*
+       * Ask the newly opened exam window to enter fullscreen immediately.
+       * This is the earliest possible point after the user's Start Exam
+       * click. Browser security may still reject it; the exam page keeps
+       * an explicit Enter Fullscreen button as the standards-compliant
+       * fallback.
+       */
+      try {
+        const popupDocument = examPopup.document;
+        if (
+          popupDocument.fullscreenEnabled &&
+          typeof popupDocument.documentElement.requestFullscreen === "function"
+        ) {
+          void popupDocument.documentElement
+            .requestFullscreen({ navigationUI: "hide" })
+            .catch(() => undefined);
+        }
+      } catch {
+        // Browser may deny fullscreen for a newly opened window.
+      }
+
       try {
         examPopup.moveTo(0, 0);
-
         examPopup.resizeTo(width, height);
       } catch {
         /*

@@ -52,17 +52,6 @@ export interface AnalyticsData {
 
     passPercentage: number;
   }[];
-  questionAnalysis: {
-    questionNumber: number;
-
-    questionText: string;
-
-    correctPercentage: number;
-
-    wrongPercentage: number;
-
-    skippedPercentage: number;
-  }[];
   topPerformers: {
     studentId: string;
     name: string;
@@ -108,7 +97,8 @@ export interface AnalyticsData {
   integrity: {
     warnings: number;
     forceSubmitted: number;
-      tabSwitches: number;
+    disqualified: number;
+    tabSwitches: number;
     windowBlur: number;
   };
   liveActivity: {
@@ -125,7 +115,11 @@ export interface AnalyticsData {
 }
 
 export default function Analytics({ assessment }: Props) {
-  const [loading, setLoading] = useState(() => localStorage.getItem(`assessment_live_updates:${assessment.id}`) !== "false");
+  const [loading, setLoading] = useState(
+    () =>
+      localStorage.getItem(`assessment_live_updates:${assessment.id}`) !==
+      "false",
+  );
 
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     participants: 0,
@@ -143,19 +137,38 @@ export default function Analytics({ assessment }: Props) {
       passingMarks: 0,
     },
     departmentPerformance: [],
-    questionAnalysis: [],
     topPerformers: [],
     bottomPerformers: [],
     fastestSubmissions: [],
     slowestSubmissions: [],
-    completion: { allowed: 0, loggedIn: 0, started: 0, submitted: 0, pending: 0 },
-    integrity: { warnings: 0, forceSubmitted: 0, tabSwitches: 0, windowBlur: 0 },
+    completion: {
+      allowed: 0,
+      loggedIn: 0,
+      started: 0,
+      submitted: 0,
+      pending: 0,
+    },
+    integrity: {
+      warnings: 0,
+      forceSubmitted: 0,
+      disqualified: 0,
+      tabSwitches: 0,
+      windowBlur: 0,
+    },
     liveActivity: { online: 0, taking: 0 },
-    assessmentStatus: { status: "Inactive", duration: 0, questions: 0, studentsOnline: 0, lastSubmission: "-" },
+    assessmentStatus: {
+      status: "Inactive",
+      duration: 0,
+      questions: 0,
+      studentsOnline: 0,
+      lastSubmission: "-",
+    },
   });
 
   const [department, setDepartment] = useState("all");
-  const [liveUpdates, setLiveUpdates] = useState(assessment.live_updates_enabled !== false);
+  const [liveUpdates, setLiveUpdates] = useState(
+    assessment.live_updates_enabled !== false,
+  );
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
   const fetchAnalytics = async () => {
@@ -175,10 +188,12 @@ export default function Analytics({ assessment }: Props) {
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent).detail;
-      if (detail?.assessmentId === assessment.id) setLiveUpdates(Boolean(detail.enabled));
+      if (detail?.assessmentId === assessment.id)
+        setLiveUpdates(Boolean(detail.enabled));
     };
     window.addEventListener("assessment-live-updates-changed", handler);
-    return () => window.removeEventListener("assessment-live-updates-changed", handler);
+    return () =>
+      window.removeEventListener("assessment-live-updates-changed", handler);
   }, [assessment.id]);
 
   useEffect(() => {
@@ -243,8 +258,14 @@ export default function Analytics({ assessment }: Props) {
         </div>
 
         <div className="space-y-2">
-          <LiveUpdatesToggle assessment={assessment} value={liveUpdates} onChange={setLiveUpdates} />
-          <p className="text-xs text-slate-500">Last updated {lastUpdated.toLocaleTimeString()}</p>
+          <LiveUpdatesToggle
+            assessment={assessment}
+            value={liveUpdates}
+            onChange={setLiveUpdates}
+          />
+          <p className="text-xs text-slate-500">
+            Last updated {lastUpdated.toLocaleTimeString()}
+          </p>
         </div>
       </div>
       <AnalyticsFilters
@@ -303,7 +324,6 @@ export default function Analytics({ assessment }: Props) {
             </h3>
           </div>
 
-
           <div className="rounded-xl border p-5">
             <p className="text-sm text-gray-500">Total Attempts</p>
 
@@ -319,7 +339,9 @@ export default function Analytics({ assessment }: Props) {
       <div className="rounded-2xl border bg-white p-8">
         <div>
           <h2 className="text-2xl font-bold">Department Performance</h2>
-          <p className="mt-1 text-gray-500">Performance comparison across departments.</p>
+          <p className="mt-1 text-gray-500">
+            Performance comparison across departments.
+          </p>
         </div>
         <div className="mt-8 overflow-x-auto">
           <table className="min-w-full">
@@ -334,52 +356,29 @@ export default function Analytics({ assessment }: Props) {
             </thead>
             <tbody>
               {analytics.departmentPerformance.length === 0 ? (
-                <tr><td colSpan={5} className="py-12 text-center text-gray-500">Department analytics not available.</td></tr>
-              ) : analytics.departmentPerformance.map((dept) => (
-                <tr key={dept.department} className="border-b transition hover:bg-gray-50">
-                  <td className="p-4 font-semibold">{dept.department}</td>
-                  <td className="p-4 text-center">{dept.participants}</td>
-                  <td className="p-4 text-center font-semibold">{dept.averageScore}</td>
-                  <td className="p-4 text-center font-semibold">{dept.highestScore}</td>
-                  <td className="p-4 text-center">{dept.passPercentage}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Question Analysis */}
-
-      <div className="rounded-2xl border bg-white p-8">
-        <div>
-          <h2 className="text-2xl font-bold">Question Analysis</h2>
-          <p className="mt-1 text-gray-500">Accuracy and response status for each MCQ.</p>
-        </div>
-        <div className="mt-8 overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="border-b bg-gray-50">
-              <tr>
-                <th className="p-4 text-left">Question</th>
-                <th className="p-4 text-center">Correct %</th>
-                <th className="p-4 text-center">Wrong %</th>
-                <th className="p-4 text-center">Skipped %</th>
-              </tr>
-            </thead>
-            <tbody>
-              {analytics.questionAnalysis.length === 0 ? (
-                <tr><td colSpan={4} className="py-12 text-center text-gray-500">Question analytics not available.</td></tr>
-              ) : analytics.questionAnalysis.map((question) => (
-                <tr key={question.questionNumber} className="border-b">
-                  <td className="p-4">
-                    <p className="font-semibold">Question {question.questionNumber}</p>
-                    <p className="mt-1 max-w-2xl text-sm text-gray-500">{question.questionText}</p>
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-gray-500">
+                    Department analytics not available.
                   </td>
-                  <td className="p-4 text-center font-semibold text-green-600">{question.correctPercentage}%</td>
-                  <td className="p-4 text-center font-semibold text-red-600">{question.wrongPercentage}%</td>
-                  <td className="p-4 text-center font-semibold text-yellow-600">{question.skippedPercentage}%</td>
                 </tr>
-              ))}
+              ) : (
+                analytics.departmentPerformance.map((dept) => (
+                  <tr
+                    key={dept.department}
+                    className="border-b transition hover:bg-gray-50"
+                  >
+                    <td className="p-4 font-semibold">{dept.department}</td>
+                    <td className="p-4 text-center">{dept.participants}</td>
+                    <td className="p-4 text-center font-semibold">
+                      {dept.averageScore}
+                    </td>
+                    <td className="p-4 text-center font-semibold">
+                      {dept.highestScore}
+                    </td>
+                    <td className="p-4 text-center">{dept.passPercentage}%</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -706,6 +705,14 @@ export default function Analytics({ assessment }: Props) {
 
             <h3 className="mt-2 text-3xl font-bold text-red-600">
               {analytics.integrity.forceSubmitted}
+            </h3>
+          </div>
+
+          <div className="rounded-xl border p-5 text-center">
+            <p className="text-sm text-gray-500">Disqualified</p>
+
+            <h3 className="mt-2 text-3xl font-bold text-red-700">
+              {analytics.integrity.disqualified}
             </h3>
           </div>
 
