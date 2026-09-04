@@ -89,10 +89,12 @@ async function getStudentMap(assessmentId) {
 exports.getLiveStudents = async (req, res) => {
   try {
     const { assessmentId } = req.params;
-    if (!assessmentId)
+    if (!assessmentId) {
       return res
         .status(400)
         .json({ success: false, message: "Assessment ID is required." });
+    }
+
     const { data: assessment, error: assessmentError } = await supabase
       .from("assessments")
       .select(
@@ -100,10 +102,12 @@ exports.getLiveStudents = async (req, res) => {
       )
       .eq("id", assessmentId)
       .single();
-    if (assessmentError || !assessment)
+    if (assessmentError || !assessment) {
       return res
         .status(404)
         .json({ success: false, message: "Assessment not found." });
+    }
+
     const { data: attempts, error: attemptsError } = await supabase
       .from("assessment_attempts")
       .select(
@@ -112,7 +116,9 @@ exports.getLiveStudents = async (req, res) => {
       .eq("assessment_id", assessmentId)
       .order("started_at", { ascending: true });
     if (attemptsError) throw attemptsError;
+
     await reconcileExpiredAttempts(attempts);
+
     const { data: refreshedAttempts, error: refreshedError } = await supabase
       .from("assessment_attempts")
       .select(
@@ -123,13 +129,17 @@ exports.getLiveStudents = async (req, res) => {
     if (refreshedError) throw refreshedError;
 
     const studentMap = await getStudentMap(assessmentId);
+    const students = [...studentMap.values()];
+
     const { data: teamRows, error: teamError } = await supabase
       .from("assessment_teams")
-      .select("id,team_name,member_count,branch")
-      .eq("assessment_id", assessmentId);
+      .select("id,team_name,contact_email,member_count,branch,mode")
+      .eq("assessment_id", assessmentId)
+      .order("created_at", { ascending: true });
     if (teamError && assessment.participation_mode !== "INDIVIDUAL_STUDENTS")
       throw teamError;
-    const teamIds = (teamRows || []).map((t) => t.id);
+
+    const teamIds = (teamRows || []).map((team) => team.id);
     let teamMembers = [];
     if (
       teamIds.length &&
@@ -137,21 +147,66 @@ exports.getLiveStudents = async (req, res) => {
     ) {
       const { data: members, error: memberError } = await supabase
         .from("assessment_team_members")
-        .select("team_id,name,roll_no,email,branch")
+        .select("id,team_id,name,roll_no,email,branch")
         .in("team_id", teamIds)
-        .order("created_at");
+        .order("created_at", { ascending: true });
       if (memberError) throw memberError;
       teamMembers = members || [];
     }
+
     const teamMap = new Map(
-      (teamRows || []).map((t) => [
-        t.id,
-        { ...t, members: teamMembers.filter((m) => m.team_id === t.id) },
+      (teamRows || []).map((team) => [
+        team.id,
+        {
+          ...team,
+          members: teamMembers.filter((member) => member.team_id === team.id),
+        },
       ]),
     );
-    const students = [];
+
+    const attemptByTeam = new Map();
+    const attemptByStudent = new Map();
     for (const attempt of refreshedAttempts || []) {
-      const student = studentMap.get(attempt.student_id);
+      if (attempt.team_id) {
+        const previous = attemptByTeam.get(attempt.team_id);
+        if (
+          !previous ||
+          new Date(attempt.started_at || 0) > new Date(previous.started_at || 0)
+        ) {
+          attemptByTeam.set(attempt.team_id, attempt);
+        }
+      }
+      if (attempt.student_id) {
+        const previous = attemptByStudent.get(attempt.student_id);
+        if (
+          !previous ||
+          new Date(attempt.started_at || 0) > new Date(previous.started_at || 0)
+        ) {
+          attemptByStudent.set(attempt.student_id, attempt);
+        }
+      }
+    }
+
+    const buildAttemptState = async (attempt) => {
+      if (!attempt) {
+        return {
+          attemptId: "",
+          currentQuestion: 0,
+          answeredQuestions: 0,
+          totalQuestions: 0,
+          score: 0,
+          remainingSeconds: 0,
+          status: "NOT_STARTED",
+          isExpired: false,
+          startedAt: null,
+          submittedAt: null,
+          resumedCount: 0,
+          violations: 0,
+          autoSubmitted: false,
+          forceSubmitted: false,
+        };
+      }
+
       const [
         { count: totalQuestions, error: qError },
         { count: violations, error: iError },
@@ -182,28 +237,13 @@ exports.getLiveStudents = async (req, res) => {
           "Live monitor activity query unavailable:",
           aError.message,
         );
+
       const acts = activities || [];
       const remainingSeconds = await safeRemainingSeconds(attempt);
-      const autoSubmitted = acts.some((a) =>
-        ["AUTO_SUBMIT", "SECURITY_AUTO_SUBMIT"].includes(a.activity_type),
-      );
-      const forceSubmitted = acts.some(
-        (a) => a.activity_type === "FORCE_SUBMIT",
-      );
       const status = attempt.status === "IN_PROGRESS" ? "LIVE" : "SUBMITTED";
-      const resolvedTeamId = attempt.team_id || student?.team_id || null;
-      const team = resolvedTeamId ? teamMap.get(resolvedTeamId) : null;
-      students.push({
+
+      return {
         attemptId: attempt.id,
-        studentId: attempt.student_id,
-        teamId: resolvedTeamId,
-        teamName: team?.team_name || null,
-        teamMemberCount: Number(team?.member_count || 0),
-        members: team?.members || [],
-        studentName: student?.name || team?.team_name || "Unknown Student",
-        rollNo: student?.roll_no || "",
-        email: student?.email || team?.contact_email || "",
-        department: student?.branch || team?.branch || "",
         currentQuestion: Number(attempt.current_question || 0),
         answeredQuestions: Number(attempt.answered_questions || 0),
         totalQuestions: Number(totalQuestions || 0),
@@ -211,20 +251,90 @@ exports.getLiveStudents = async (req, res) => {
         remainingSeconds,
         status,
         isExpired: remainingSeconds <= 0 && status === "LIVE",
-        expiresAt: attempt.expires_at,
-        startedAt: attempt.started_at,
-        submittedAt: attempt.submitted_at,
+        startedAt: attempt.started_at || null,
+        submittedAt: attempt.submitted_at || null,
         resumedCount: Number(attempt.resumed_count || 0),
         violations: Number(iError ? 0 : violations || 0),
-        autoSubmitted,
-        forceSubmitted,
-      });
+        autoSubmitted: acts.some((activity) =>
+          ["AUTO_SUBMIT", "SECURITY_AUTO_SUBMIT"].includes(
+            activity.activity_type,
+          ),
+        ),
+        forceSubmitted: acts.some(
+          (activity) => activity.activity_type === "FORCE_SUBMIT",
+        ),
+      };
+    };
+
+    const rows = [];
+
+    if (assessment.participation_mode === "INDIVIDUAL_STUDENTS") {
+      for (const student of students) {
+        const state = await buildAttemptState(attemptByStudent.get(student.id));
+        rows.push({
+          ...state,
+          studentId: student.id,
+          studentName: student.name,
+          rollNo: student.roll_no || "",
+          email: student.email || "",
+          department: student.branch || "",
+          teamId: null,
+          teamName: null,
+          teamMemberCount: 0,
+          members: [],
+        });
+      }
+    } else if (assessment.participation_mode === "STUDENT_TEAMS") {
+      // Student Teams: keep the individual-student view, but every member
+      // points to the same team attempt and carries the team name/count.
+      for (const team of teamRows || []) {
+        const state = await buildAttemptState(attemptByTeam.get(team.id));
+        const fullTeam = teamMap.get(team.id) || team;
+        const members = fullTeam.members || [];
+        for (const member of members) {
+          const allowedStudent = students.find(
+            (student) =>
+              String(student.email || "").toLowerCase() ===
+              String(member.email || "").toLowerCase(),
+          );
+          rows.push({
+            ...state,
+            studentId: allowedStudent?.id || member.id,
+            studentName: member.name,
+            rollNo: member.roll_no || "",
+            email: member.email || "",
+            department: member.branch || fullTeam.branch || "",
+            teamId: team.id,
+            teamName: team.team_name,
+            teamMemberCount: Number(team.member_count || members.length || 0),
+            members,
+          });
+        }
+      }
+    } else {
+      // Team mode: one row per team. Never expose a student/roll-number row.
+      for (const team of teamRows || []) {
+        const state = await buildAttemptState(attemptByTeam.get(team.id));
+        rows.push({
+          ...state,
+          studentId: "",
+          studentName: team.team_name,
+          rollNo: "",
+          email: team.contact_email || "",
+          department: team.branch || "",
+          teamId: team.id,
+          teamName: team.team_name,
+          teamMemberCount: 0,
+          members: [],
+        });
+      }
     }
+
     return res.json({
       success: true,
       liveUpdatesEnabled: assessment.live_updates_enabled !== false,
-      totalStudents: students.length,
-      students,
+      totalStudents: rows.length,
+      students: rows,
     });
   } catch (err) {
     console.error("LIVE MONITOR ERROR:", err);

@@ -6,19 +6,19 @@ import {
   updateQuestion,
 } from "../../../Assessment/assessmentApi";
 
+type QuestionType =
+  | "MCQ"
+  | "MULTIPLE_CORRECT"
+  | "TRUE_FALSE"
+  | "FILL_IN_THE_BLANK";
+
 interface InitialQuestion {
   id?: string;
   bank_id?: string;
   question_text: string;
-  question_type:
-    | "MCQ"
-    | "MULTIPLE_CORRECT"
-    | "TRUE_FALSE"
-    | "FILL_IN_THE_BLANK";
-  options: string[];
-  correct_answers: number[];
-  marks?: number;
-  negative_marks?: number;
+  question_type: QuestionType;
+  options: string[] | Record<string, unknown>;
+  correct_answers: unknown;
 }
 
 interface Props {
@@ -32,15 +32,9 @@ interface Question {
   id?: string;
   bank_id?: string;
   question_text: string;
-  question_type:
-    | "MCQ"
-    | "MULTIPLE_CORRECT"
-    | "TRUE_FALSE"
-    | "FILL_IN_THE_BLANK";
+  question_type: QuestionType;
   options: string[];
   correct_answers: number[];
-  marks: number;
-  negative_marks: number;
 }
 
 const blankQuestion: Question = {
@@ -48,44 +42,66 @@ const blankQuestion: Question = {
   question_type: "MCQ",
   options: ["", "", "", ""],
   correct_answers: [],
-  marks: 1,
-  negative_marks: 0,
 };
 
 function normalizeOptions(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item ?? ""));
-  }
-
+  if (Array.isArray(value)) return value.map((item) => String(item ?? ""));
   if (value && typeof value === "object") {
     const objectValue = value as Record<string, unknown>;
-
     return ["A", "B", "C", "D"].map((key) =>
       String(objectValue[key] ?? objectValue[key.toLowerCase()] ?? ""),
     );
   }
-
   return [];
 }
 
-function normalizeCorrect(value: unknown): number[] {
-  const input = Array.isArray(value) ? value : value == null ? [] : [value];
+function normalizeAnswerInput(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (value == null) return [];
+  if (typeof value === "string") {
+    const text = value.trim();
+    if (!text) return [];
+    if (
+      (text.startsWith("[") && text.endsWith("]")) ||
+      (text.startsWith('"') && text.endsWith('"'))
+    ) {
+      try {
+        const parsed = JSON.parse(text);
+        return Array.isArray(parsed) ? parsed : [parsed];
+      } catch {
+        // Fall through to separator parsing.
+      }
+    }
+    return text
+      .split(/[|;,]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [value];
+}
 
+function normalizeCorrect(value: unknown, options: string[]): number[] {
   return [
     ...new Set(
-      input
+      normalizeAnswerInput(value)
         .map((answer) => {
           const text = String(answer ?? "").trim();
-
-          if (/^[A-D]$/i.test(text)) {
+          if (!text) return -1;
+          if (/^[A-D]$/i.test(text))
             return text.toUpperCase().charCodeAt(0) - 65;
+          if (/^[1-4]$/.test(text)) return Number(text) - 1;
+          if (/^\d+$/.test(text)) {
+            const numeric = Number(text);
+            return numeric >= 0 && numeric < options.length ? numeric : -1;
           }
-
-          const number = Number(text);
-
-          return Number.isInteger(number) ? number : -1;
+          return options.findIndex(
+            (option) => option.trim().toLowerCase() === text.toLowerCase(),
+          );
         })
-        .filter((index) => index >= 0 && index < 4),
+        .filter(
+          (index) =>
+            Number.isInteger(index) && index >= 0 && index < options.length,
+        ),
     ),
   ];
 }
@@ -97,31 +113,33 @@ export default function QuestionEditor({
   onSaved,
 }: Props) {
   const [loading, setLoading] = useState(false);
-
   const [validation, setValidation] = useState<string[]>([]);
-
-  const [question, setQuestion] = useState<Question>(blankQuestion);
-
+  const [question, setQuestion] = useState<Question>({
+    ...blankQuestion,
+    options: [...blankQuestion.options],
+  });
   const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (!initialQuestion) {
-      setQuestion({
-        ...blankQuestion,
-        options: [...blankQuestion.options],
-      });
-
+      setQuestion({ ...blankQuestion, options: [...blankQuestion.options] });
       setValidation([]);
-
       return;
     }
 
-    const type =
-      initialQuestion.question_type === "TRUE_FALSE"
+    const rawType = String(initialQuestion.question_type || "MCQ")
+      .toUpperCase()
+      .replace(/[\s-]+/g, "_");
+    const type: QuestionType =
+      rawType === "TRUE_FALSE"
         ? "TRUE_FALSE"
-        : initialQuestion.question_type === "MULTIPLE_CORRECT"
+        : rawType === "MULTIPLE_CORRECT" ||
+            rawType === "MULTIPLE_CHOICE" ||
+            rawType === "MULTIPLE"
           ? "MULTIPLE_CORRECT"
-          : initialQuestion.question_type === "FILL_IN_THE_BLANK"
+          : rawType === "FILL_IN_THE_BLANK" ||
+              rawType === "FILL_IN_BLANK" ||
+              rawType === "FILL_BLANK"
             ? "FILL_IN_THE_BLANK"
             : "MCQ";
 
@@ -130,250 +148,153 @@ export default function QuestionEditor({
         ? ["True", "False"]
         : normalizeOptions(initialQuestion.options).slice(0, 4);
 
-    while (type !== "TRUE_FALSE" && options.length < 2) {
-      options.push("");
-    }
-
-    while (type !== "TRUE_FALSE" && options.length < 4) {
-      options.push("");
-    }
+    while (type !== "TRUE_FALSE" && options.length < 4) options.push("");
 
     setQuestion({
       id: initialQuestion.id,
       bank_id: initialQuestion.bank_id,
-      question_text: initialQuestion.question_text || "",
+      question_text: String(initialQuestion.question_text || ""),
       question_type: type,
       options,
-      correct_answers:
-        type === "TRUE_FALSE"
-          ? normalizeCorrect(initialQuestion.correct_answers).filter(
-              (index) => index === 0 || index === 1,
-            )
-          : normalizeCorrect(initialQuestion.correct_answers),
-      marks: Math.max(0, Number((initialQuestion as any).marks ?? 1)),
-      negative_marks: Math.max(
-        0,
-        Number((initialQuestion as any).negative_marks ?? 0),
+      correct_answers: normalizeCorrect(
+        initialQuestion.correct_answers,
+        options,
       ),
     });
-
     setValidation([]);
   }, [initialQuestion]);
 
+  const compactOptions = () => {
+    const original = question.options;
+    const options: string[] = [];
+    const indexMap = new Map<number, number>();
+    original.forEach((option, index) => {
+      const value = option.trim();
+      if (!value) return;
+      indexMap.set(index, options.length);
+      options.push(value);
+    });
+    const correct = question.correct_answers
+      .map((index) => indexMap.get(index))
+      .filter((index): index is number => Number.isInteger(index));
+    return { options, correct: [...new Set(correct)] };
+  };
+
   const handleValidate = () => {
     const errors: string[] = [];
-
-    const options = question.options.map((option) => option.trim());
-
-    if (!question.question_text.trim()) {
+    if (!question.question_text.trim())
       errors.push("Question text is required.");
-    }
-
-    if (
-      !Number.isFinite(Number(question.marks)) ||
-      Number(question.marks) <= 0
-    ) {
-      errors.push("Correct answer marks must be greater than 0.");
-    }
-    if (
-      !Number.isFinite(Number(question.negative_marks)) ||
-      Number(question.negative_marks) < 0
-    ) {
-      errors.push("Negative marks cannot be negative.");
-    }
 
     if (question.question_type === "TRUE_FALSE") {
-      if (question.correct_answers.length !== 1) {
-        errors.push("Select True or False as the correct answer.");
+      if (
+        question.correct_answers.length !== 1 ||
+        ![0, 1].includes(question.correct_answers[0])
+      ) {
+        errors.push("Correct answer must be True or False.");
       }
     } else {
-      const filled = options.filter(Boolean);
-
-      if (filled.length < 2 || filled.length > 4) {
+      const { options, correct } = compactOptions();
+      if (options.length < 2 || options.length > 4)
         errors.push("Use between 2 and 4 answer options.");
-      }
-
       if (
-        new Set(filled.map((option) => option.toLowerCase())).size !==
-        filled.length
+        new Set(options.map((option) => option.toLowerCase())).size !==
+        options.length
       ) {
         errors.push("Answer options must be different.");
       }
-
-      if (!question.correct_answers.length) {
-        errors.push("Select at least one correct answer.");
-      }
-
+      if (!correct.length) errors.push("Select at least one correct answer.");
       if (
         (question.question_type === "MCQ" ||
           question.question_type === "FILL_IN_THE_BLANK") &&
-        question.correct_answers.length !== 1
+        correct.length !== 1
       ) {
-        errors.push("MCQ requires exactly one correct answer.");
+        errors.push(
+          question.question_type === "FILL_IN_THE_BLANK"
+            ? "Fill in the Blank requires exactly one correct option."
+            : "MCQ requires exactly one correct answer.",
+        );
       }
-
-      if (
-        question.question_type === "MULTIPLE_CORRECT" &&
-        question.correct_answers.length < 2
-      ) {
+      if (question.question_type === "MULTIPLE_CORRECT" && correct.length < 2) {
         errors.push("Multiple Correct requires at least two correct answers.");
-      }
-
-      if (
-        question.correct_answers.some(
-          (index) => index < 0 || index >= options.length || !options[index],
-        )
-      ) {
-        errors.push("A selected correct answer is invalid.");
       }
     }
 
     setValidation(errors);
-
-    if (!errors.length) {
-      toast.success("Question is valid.");
-    }
-
+    if (!errors.length) toast.success("Question is valid.");
     return errors;
   };
 
   const handleSave = async () => {
-    if (handleValidate().length) {
-      return;
-    }
+    const errors = handleValidate();
+    if (errors.length) return;
 
     try {
       setLoading(true);
-
-      /*
-       * IMPORTANT:
-       * Remove empty options while preserving the correct-answer
-       * indexes. The old implementation filtered options first but
-       * kept the old indexes, which could mark the wrong answer.
-       */
-      const normalizedOptions =
+      const { options, correct } =
         question.question_type === "TRUE_FALSE"
-          ? ["True", "False"]
-          : question.options.map((option) => option.trim()).filter(Boolean);
-
-      const originalToSavedIndex = new Map<number, number>();
-
-      if (question.question_type !== "TRUE_FALSE") {
-        let savedIndex = 0;
-
-        question.options.forEach((option, originalIndex) => {
-          if (option.trim()) {
-            originalToSavedIndex.set(originalIndex, savedIndex);
-
-            savedIndex += 1;
-          }
-        });
-      }
-
-      const normalizedCorrectAnswers = question.correct_answers
-        .map((originalIndex) => {
-          if (question.question_type === "TRUE_FALSE") {
-            return originalIndex;
-          }
-
-          return originalToSavedIndex.get(originalIndex);
-        })
-        .filter((index): index is number => Number.isInteger(index));
+          ? { options: ["True", "False"], correct: question.correct_answers }
+          : compactOptions();
 
       const payload = {
         question_text: question.question_text.trim(),
-
         question_type: question.question_type,
-
-        options: normalizedOptions,
-
-        correct_answers: [...new Set(normalizedCorrectAnswers)],
-        marks: Number(question.marks),
-        negative_marks: Number(question.negative_marks),
+        options,
+        correct_answers: correct,
       };
 
-      if (question.id) {
-        await updateQuestion(question.id, payload);
-      } else {
-        await createQuestion({
-          ...payload,
-          bank_id: bankId,
-        });
-      }
+      if (question.id) await updateQuestion(question.id, payload);
+      else await createQuestion({ ...payload, bank_id: bankId });
 
       toast.success("Question saved successfully.");
-
       onSaved();
     } catch (err: any) {
       console.error("Question save error:", err);
-
       toast.error(err?.response?.data?.message || "Unable to save question.");
     } finally {
       setLoading(false);
     }
   };
 
-  const setType = (type: Question["question_type"]) => {
-    if (type === "TRUE_FALSE") {
-      setQuestion((current) => ({
-        ...current,
-        question_type: type,
-        options: ["True", "False"],
-        correct_answers: [],
-      }));
-    } else {
-      setQuestion((current) => ({
-        ...current,
-        question_type: type,
-        options:
-          current.options.length >= 2
-            ? current.options.slice(0, 4)
-            : ["", "", "", ""],
-        correct_answers:
-          type === "MCQ" || type === "FILL_IN_THE_BLANK"
-            ? current.correct_answers.slice(0, 1)
-            : current.correct_answers,
-      }));
-    }
-
+  const setType = (type: QuestionType) => {
+    setQuestion((current) => ({
+      ...current,
+      question_type: type,
+      options:
+        type === "TRUE_FALSE"
+          ? ["True", "False"]
+          : [
+              ...current.options.slice(0, 4),
+              ...Array(Math.max(0, 4 - current.options.length)).fill(""),
+            ],
+      correct_answers:
+        type === "MCQ" || type === "FILL_IN_THE_BLANK" || type === "TRUE_FALSE"
+          ? current.correct_answers.slice(0, 1)
+          : current.correct_answers,
+    }));
     setValidation([]);
   };
 
   const setOption = (index: number, value: string) => {
     setQuestion((current) => {
       const options = [...current.options];
-
       options[index] = value;
-
-      return {
-        ...current,
-        options,
-      };
+      return { ...current, options };
     });
+    setValidation([]);
   };
 
   const deleteOption = (index: number) => {
-    if (question.options.length <= 2) {
-      toast.error("At least two options are required.");
-
-      return;
-    }
-
-    setQuestion((current) => {
-      const options = current.options.filter(
+    if (question.options.length <= 2)
+      return toast.error("At least two options are required.");
+    setQuestion((current) => ({
+      ...current,
+      options: current.options.filter(
         (_, optionIndex) => optionIndex !== index,
-      );
-
-      const correct_answers = current.correct_answers
+      ),
+      correct_answers: current.correct_answers
         .filter((answer) => answer !== index)
-        .map((answer) => (answer > index ? answer - 1 : answer));
-
-      return {
-        ...current,
-        options,
-        correct_answers,
-      };
-    });
+        .map((answer) => (answer > index ? answer - 1 : answer)),
+    }));
   };
 
   const setCorrectAnswer = (index: number) => {
@@ -383,21 +304,16 @@ export default function QuestionEditor({
         current.question_type === "FILL_IN_THE_BLANK" ||
         current.question_type === "TRUE_FALSE"
       ) {
-        return {
-          ...current,
-          correct_answers: [index],
-        };
+        return { ...current, correct_answers: [index] };
       }
-
-      const exists = current.correct_answers.includes(index);
-
-      return {
-        ...current,
-        correct_answers: exists
-          ? current.correct_answers.filter((i) => i !== index)
-          : [...current.correct_answers, index],
-      };
+      return current.correct_answers.includes(index)
+        ? {
+            ...current,
+            correct_answers: current.correct_answers.filter((i) => i !== index),
+          }
+        : { ...current, correct_answers: [...current.correct_answers, index] };
     });
+    setValidation([]);
   };
 
   const optionLabel = (index: number) => String.fromCharCode(65 + index);
@@ -414,15 +330,12 @@ export default function QuestionEditor({
             <ArrowLeft size={18} />
             Back
           </button>
-
           <h1 className="mt-3 text-3xl font-bold">Question Editor</h1>
-
           <p className="mt-1 text-sm text-gray-500">
             Create an MCQ, Multiple Correct, True/False or Fill in the Blank
             question.
           </p>
         </div>
-
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
@@ -432,7 +345,6 @@ export default function QuestionEditor({
             <Eye size={18} />
             Preview
           </button>
-
           <button
             type="button"
             onClick={handleValidate}
@@ -441,7 +353,6 @@ export default function QuestionEditor({
             <CheckCircle size={18} />
             Validate
           </button>
-
           <button
             type="button"
             onClick={handleSave}
@@ -457,7 +368,6 @@ export default function QuestionEditor({
       {validation.length > 0 && (
         <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <p className="font-semibold">Please fix the following:</p>
-
           <ul className="mt-2 list-disc pl-5">
             {validation.map((error) => (
               <li key={error}>{error}</li>
@@ -468,17 +378,13 @@ export default function QuestionEditor({
 
       <section className="mt-8 rounded-2xl border bg-white p-6">
         <h2 className="text-xl font-semibold">Question</h2>
-
         <div className="mt-5 max-w-xl">
           <label className="mb-2 block text-sm font-medium">
             Question Type
           </label>
-
           <select
             value={question.question_type}
-            onChange={(event) =>
-              setType(event.target.value as Question["question_type"])
-            }
+            onChange={(event) => setType(event.target.value as QuestionType)}
             className="w-full rounded-xl border p-3"
           >
             <option value="MCQ">MCQ — One Correct Answer</option>
@@ -491,61 +397,26 @@ export default function QuestionEditor({
             </option>
           </select>
         </div>
-
         <textarea
           rows={6}
           value={question.question_text}
-          onChange={(event) =>
-            setQuestion({
-              ...question,
-              question_text: event.target.value,
-            })
+          onChange={(event) => {
+            setQuestion({ ...question, question_text: event.target.value });
+            setValidation([]);
+          }}
+          placeholder={
+            question.question_type === "FILL_IN_THE_BLANK"
+              ? "Enter the sentence with a blank (___) here..."
+              : "Enter question here..."
           }
-          placeholder="Enter question here..."
           className="mt-5 w-full rounded-xl border p-4"
         />
-      </section>
-
-      <section className="mt-8 rounded-2xl border bg-white p-6">
-        <h2 className="text-xl font-semibold">Scoring</h2>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 max-w-xl">
-          <label className="text-sm font-medium">
-            Correct Answer Marks
-            <input
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={question.marks}
-              onChange={(e) =>
-                setQuestion({ ...question, marks: Number(e.target.value) })
-              }
-              className="mt-2 w-full rounded-xl border p-3"
-            />
-          </label>
-          <label className="text-sm font-medium">
-            Negative Marks
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={question.negative_marks}
-              onChange={(e) =>
-                setQuestion({
-                  ...question,
-                  negative_marks: Number(e.target.value),
-                })
-              }
-              className="mt-2 w-full rounded-xl border p-3"
-            />
-          </label>
-        </div>
       </section>
 
       <section className="mt-8 rounded-2xl border bg-white p-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-semibold">Answer Options</h2>
-
             <p className="mt-1 text-sm text-gray-500">
               {question.question_type === "TRUE_FALSE"
                 ? "Choose True or False."
@@ -556,7 +427,6 @@ export default function QuestionEditor({
                     : "Select all correct options."}
             </p>
           </div>
-
           {question.question_type !== "TRUE_FALSE" &&
             question.options.length < 4 && (
               <button
@@ -583,19 +453,16 @@ export default function QuestionEditor({
             >
               <input
                 type={
-                  question.question_type === "MCQ" ||
-                  question.question_type === "TRUE_FALSE"
-                    ? "radio"
-                    : "checkbox"
+                  question.question_type === "MULTIPLE_CORRECT"
+                    ? "checkbox"
+                    : "radio"
                 }
                 name="correct-answer"
                 checked={question.correct_answers.includes(index)}
                 onChange={() => setCorrectAnswer(index)}
                 aria-label={`Mark option ${optionLabel(index)} correct`}
               />
-
               <span className="w-6 font-semibold">{optionLabel(index)}</span>
-
               <input
                 value={option}
                 disabled={question.question_type === "TRUE_FALSE"}
@@ -603,7 +470,6 @@ export default function QuestionEditor({
                 placeholder={`Option ${optionLabel(index)}`}
                 className="w-full rounded-xl border p-3 disabled:bg-gray-50"
               />
-
               {question.question_type !== "TRUE_FALSE" && (
                 <button
                   type="button"
@@ -630,14 +496,7 @@ export default function QuestionEditor({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b px-6 py-5">
-              <div>
-                <h2 className="text-xl font-bold">Student Preview</h2>
-                <p className="text-sm text-gray-500">
-                  {question.marks} mark{question.marks === 1 ? "" : "s"} ·{" "}
-                  {question.negative_marks} negative
-                </p>
-              </div>
-
+              <h2 className="text-xl font-bold">Student Preview</h2>
               <button
                 type="button"
                 onClick={() => setPreviewOpen(false)}
@@ -646,12 +505,10 @@ export default function QuestionEditor({
                 Close
               </button>
             </div>
-
             <div className="p-6">
               <p className="text-lg font-semibold">
                 {question.question_text || "Question text will appear here."}
               </p>
-
               <p className="mt-2 text-sm font-medium text-[#00629B]">
                 {question.question_type === "MCQ"
                   ? "MCQ — Select one answer"
@@ -661,7 +518,6 @@ export default function QuestionEditor({
                       ? "True / False — Select one answer"
                       : "Fill in the Blank — Select one answer"}
               </p>
-
               <div className="mt-6 space-y-3">
                 {question.options.map((option, index) => (
                   <div

@@ -91,7 +91,7 @@ exports.calculateScore = async (attemptId) => {
   let maximumMarks = 0;
 
   for (const question of questions || []) {
-    const questionMarks = Math.max(0, Number(question.marks ?? fallbackMarks));
+    const questionMarks = Math.max(0, fallbackMarks);
     maximumMarks += questionMarks;
     const selectedAnswers = answerMap.get(question.id);
 
@@ -172,10 +172,7 @@ exports.calculateScore = async (attemptId) => {
     } else {
       wrong++;
 
-      const negativeMarks = Math.max(
-        0,
-        Number(question.negative_marks ?? fallbackNegative),
-      );
+      const negativeMarks = Math.max(0, fallbackNegative);
       score -= negativeMarks;
     }
   }

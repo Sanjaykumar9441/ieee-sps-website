@@ -182,14 +182,11 @@ function normalizeQuestion(question, assessment) {
     correct_answers: Array.isArray(question.correct_answers)
       ? [...question.correct_answers]
       : [],
-    marks: Math.max(
-      0.01,
-      Number(question.marks ?? assessment?.marks_per_question ?? 1),
-    ),
-    negative_marks: Math.max(
-      0,
-      Number(question.negative_marks ?? assessment?.negative_marks ?? 0),
-    ),
+    // Scoring is configured once on the assessment. Question-level marks are
+    // intentionally ignored so every question in the assessment uses the
+    // same positive and negative marks.
+    marks: Math.max(0.01, Number(assessment?.marks_per_question ?? 1)),
+    negative_marks: Math.max(0, Number(assessment?.negative_marks ?? 0)),
   };
 }
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import toast from "react-hot-toast";
 import { Plus, Trash2 } from "lucide-react";
 import type { Assessment } from "../AssessmentCard";
@@ -9,6 +10,7 @@ import {
 } from "../assessmentApi";
 import ImportStudentsModal from "./ImportStudentsModal";
 
+type Mode = "STUDENT_TEAMS" | "TEAM";
 type Member = {
   id?: string;
   name: string;
@@ -18,23 +20,30 @@ type Member = {
   status?: string;
   attempt_started?: boolean;
   submitted?: boolean;
-  first_login_at?: string | null;
 };
 type Team = {
   id: string;
   team_name: string;
   contact_email: string;
   branch: string | null;
-  mode: string;
+  mode: Mode;
+  member_count?: number;
   members: Member[];
 };
+
+const emptyMember = (): Member => ({
+  name: "",
+  rollNo: "",
+  email: "",
+  branch: "",
+});
 
 export default function TeamManager({
   assessment,
 }: {
   assessment: Assessment;
 }) {
-  const mode = assessment.participation_mode as "STUDENT_TEAMS" | "TEAM";
+  const mode = (assessment.participation_mode || "STUDENT_TEAMS") as Mode;
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -44,76 +53,148 @@ export default function TeamManager({
   const [contactEmail, setContactEmail] = useState("");
   const [branch, setBranch] = useState("");
   const [members, setMembers] = useState<Member[]>([
-    { name: "", rollNo: "", email: "", branch: "" },
-    { name: "", rollNo: "", email: "", branch: "" },
+    emptyMember(),
+    emptyMember(),
   ]);
+
   const load = useCallback(async () => {
     try {
       setLoading(true);
       const rows = await getAssessmentTeams(assessment.id);
       setTeams(
-        (rows || []).map((t: any) => ({
-          ...t,
-          members: (t.members || []).map((m: any) => ({
-            ...m,
-            rollNo: m.rollNo ?? m.roll_no ?? "",
-            email: m.email ?? "",
-            branch: m.branch ?? "",
+        (rows || []).map((team: any) => ({
+          ...team,
+          member_count: Number(team.member_count ?? team.members?.length ?? 0),
+          members: (team.members || []).map((member: any) => ({
+            ...member,
+            rollNo: member.rollNo ?? member.roll_no ?? "",
+            email: member.email ?? "",
+            branch: member.branch ?? "",
           })),
         })),
       );
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || "Unable to load teams.");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || "Unable to load teams.");
     } finally {
       setLoading(false);
     }
   }, [assessment.id]);
+
   useEffect(() => {
     void load();
   }, [load]);
+
+  const resetForm = () => {
+    setTeamName("");
+    setContactEmail("");
+    setBranch("");
+    setMembers([emptyMember(), emptyMember()]);
+  };
+
   const add = async () => {
     if (!teamName.trim()) return toast.error("Team name is required.");
-    if (mode === "TEAM" && !contactEmail.trim())
-      return toast.error("Member email is required.");
-    if (mode === "TEAM" && !branch.trim())
-      return toast.error("Branch is required.");
-    if (
-      mode === "STUDENT_TEAMS" &&
-      members.some(
-        (m) =>
-          !m.name.trim() ||
-          !m.rollNo.trim() ||
-          !m.email.trim() ||
-          !m.branch.trim(),
-      )
-    )
-      return toast.error("Complete every team member, including branch.");
+
+    if (mode === "STUDENT_TEAMS") {
+      const validMembers = members.filter(
+        (member) =>
+          member.name.trim() ||
+          member.rollNo.trim() ||
+          member.email.trim() ||
+          member.branch.trim(),
+      );
+      if (validMembers.length < 2)
+        return toast.error("Student Teams require at least two members.");
+      if (
+        validMembers.some(
+          (member) =>
+            !member.name.trim() ||
+            !member.rollNo.trim() ||
+            !member.email.trim() ||
+            !member.branch.trim(),
+        )
+      ) {
+        return toast.error(
+          "Complete every team member: name, roll number, email and branch.",
+        );
+      }
+      const payload = {
+        mode: "STUDENT_TEAMS",
+        teamName: teamName.trim(),
+        // Compatibility field: the first member is the team contact.
+        contactEmail: validMembers[0].email.trim(),
+        branch: validMembers[0].branch.trim(),
+        members: validMembers.map((member) => ({
+          name: member.name.trim(),
+          rollNo: member.rollNo.trim(),
+          email: member.email.trim(),
+          branch: member.branch.trim(),
+        })),
+      };
+      try {
+        setBusy(true);
+        await createAssessmentTeam(assessment.id, payload);
+        toast.success("Student Team added successfully.");
+        resetForm();
+        setShowAdd(false);
+        await load();
+      } catch (error: any) {
+        console.error(error);
+        toast.error(
+          error?.response?.data?.message || "Unable to add Student Team.",
+        );
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
+    if (!contactEmail.trim())
+      return toast.error("Email of one team member is required.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim()))
+      return toast.error("Enter a valid team member email.");
+    if (!branch.trim()) return toast.error("Branch is required.");
+
     try {
       setBusy(true);
       await createAssessmentTeam(assessment.id, {
-        mode,
-        teamName,
-        contactEmail,
-        branch,
-        members,
+        mode: "TEAM",
+        teamName: teamName.trim(),
+        contactEmail: contactEmail.trim(),
+        // Also send the common alias so older backend deployments remain compatible.
+        email: contactEmail.trim(),
+        branch: branch.trim(),
+        members: [],
       });
-      toast.success("Team added.");
-      setTeamName("");
-      setContactEmail("");
-      setBranch("");
-      setMembers([
-        { name: "", rollNo: "", email: "", branch: "" },
-        { name: "", rollNo: "", email: "", branch: "" },
-      ]);
+      toast.success("Team added successfully.");
+      resetForm();
       setShowAdd(false);
       await load();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || "Unable to add team.");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || "Unable to add Team.");
     } finally {
       setBusy(false);
     }
   };
+
+  const remove = async (team: Team) => {
+    if (!window.confirm(`Delete ${team.team_name}?`)) return;
+    try {
+      setBusy(true);
+      await deleteAssessmentTeam(assessment.id, team.id);
+      toast.success("Team deleted.");
+      await load();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || "Unable to delete team.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading) return <div className="py-16 text-center">Loading teams...</div>;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -123,8 +204,8 @@ export default function TeamManager({
           </h2>
           <p className="mt-1 text-sm text-slate-500">
             {mode === "TEAM"
-              ? "One test attempt per team. Register team name, one member email and branch."
-              : "One test attempt per team. Add all member details below."}
+              ? "One test for each team. Only team name, one member email and branch are required."
+              : "One test for each Student Team. Every member keeps their own name, roll number, email and branch."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -141,14 +222,18 @@ export default function TeamManager({
             onClick={() => setShowImport(true)}
             className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-3 font-semibold"
           >
-            Import Students
+            {mode === "TEAM" ? "Import Teams" : "Import Student Teams"}
           </button>
         </div>
       </div>
+
       <div className="rounded-2xl border bg-white p-5">
-        <p className="text-sm text-slate-500">Teams</p>
+        <p className="text-sm text-slate-500">
+          {mode === "TEAM" ? "Teams" : "Student Teams"}
+        </p>
         <p className="mt-2 text-3xl font-bold">{teams.length}</p>
       </div>
+
       <div className="overflow-hidden rounded-2xl border bg-white">
         <div className="overflow-x-auto">
           {mode === "STUDENT_TEAMS" ? (
@@ -156,6 +241,7 @@ export default function TeamManager({
               <thead className="bg-slate-50">
                 <tr>
                   <th className="p-4 text-left">Team</th>
+                  <th className="p-4 text-left">Members</th>
                   <th className="p-4 text-left">Roll No</th>
                   <th className="p-4 text-left">Name</th>
                   <th className="p-4 text-left">Email</th>
@@ -166,25 +252,33 @@ export default function TeamManager({
                 </tr>
               </thead>
               <tbody>
-                {teams.flatMap((t) =>
-                  t.members.map((m, i) => (
-                    <tr key={`${t.id}-${m.id || i}`} className="border-t">
-                      <td className="p-4 font-semibold">{t.team_name}</td>
-                      <td className="p-4">{m.rollNo}</td>
-                      <td className="p-4">{m.name}</td>
-                      <td className="p-4">{m.email}</td>
-                      <td className="p-4">{m.branch || t.branch || "-"}</td>
+                {teams.flatMap((team) =>
+                  team.members.map((member, index) => (
+                    <tr
+                      key={`${team.id}-${member.id || index}`}
+                      className="border-t"
+                    >
+                      <td className="p-4 font-semibold">{team.team_name}</td>
+                      <td className="p-4 font-semibold">
+                        {team.member_count ?? team.members.length}
+                      </td>
+                      <td className="p-4">{member.rollNo}</td>
+                      <td className="p-4">{member.name}</td>
+                      <td className="p-4">{member.email}</td>
+                      <td className="p-4">
+                        {member.branch || team.branch || "-"}
+                      </td>
                       <td className="p-4">
                         <span
-                          className={`rounded-full px-3 py-1 text-xs font-medium ${m.status === "blocked" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${member.status === "blocked" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}
                         >
-                          {m.status || "allowed"}
+                          {member.status || "allowed"}
                         </span>
                       </td>
                       <td className="p-4">
-                        {m.submitted
+                        {member.submitted
                           ? "Submitted"
-                          : m.attempt_started
+                          : member.attempt_started
                             ? "In Progress"
                             : "Not Started"}
                       </td>
@@ -192,23 +286,8 @@ export default function TeamManager({
                         <button
                           type="button"
                           disabled={busy}
-                          onClick={async () => {
-                            if (!confirm(`Delete ${t.team_name}?`)) return;
-                            try {
-                              setBusy(true);
-                              await deleteAssessmentTeam(assessment.id, t.id);
-                              await load();
-                              toast.success("Team deleted.");
-                            } catch (e: any) {
-                              toast.error(
-                                e?.response?.data?.message ||
-                                  "Unable to delete team.",
-                              );
-                            } finally {
-                              setBusy(false);
-                            }
-                          }}
-                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-red-600"
+                          onClick={() => void remove(team)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-red-600 disabled:opacity-50"
                         >
                           <Trash2 size={15} />
                           Delete Team
@@ -217,9 +296,9 @@ export default function TeamManager({
                     </tr>
                   )),
                 )}
-                {!teams.some((t) => t.members.length > 0) && (
+                {!teams.some((team) => team.members.length) && (
                   <tr>
-                    <td colSpan={8} className="p-12 text-center text-slate-500">
+                    <td colSpan={9} className="p-12 text-center text-slate-500">
                       No team members added yet.
                     </td>
                   </tr>
@@ -238,32 +317,17 @@ export default function TeamManager({
               </thead>
               <tbody>
                 {teams.length ? (
-                  teams.map((t) => (
-                    <tr key={t.id} className="border-t">
-                      <td className="p-4 font-semibold">{t.team_name}</td>
-                      <td className="p-4">{t.contact_email}</td>
-                      <td className="p-4">{t.branch || "-"}</td>
+                  teams.map((team) => (
+                    <tr key={team.id} className="border-t">
+                      <td className="p-4 font-semibold">{team.team_name}</td>
+                      <td className="p-4">{team.contact_email}</td>
+                      <td className="p-4">{team.branch || "-"}</td>
                       <td className="p-4">
                         <button
                           type="button"
                           disabled={busy}
-                          onClick={async () => {
-                            if (!confirm(`Delete ${t.team_name}?`)) return;
-                            try {
-                              setBusy(true);
-                              await deleteAssessmentTeam(assessment.id, t.id);
-                              await load();
-                              toast.success("Team deleted.");
-                            } catch (e: any) {
-                              toast.error(
-                                e?.response?.data?.message ||
-                                  "Unable to delete team.",
-                              );
-                            } finally {
-                              setBusy(false);
-                            }
-                          }}
-                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-red-600"
+                          onClick={() => void remove(team)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-red-600 disabled:opacity-50"
                         >
                           <Trash2 size={15} />
                           Delete
@@ -283,6 +347,7 @@ export default function TeamManager({
           )}
         </div>
       </div>
+
       {showAdd && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-4">
           <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6">
@@ -302,69 +367,77 @@ export default function TeamManager({
                 />
               </Field>
             </div>
-            {mode === "STUDENT_TEAMS" && (
+
+            {mode === "STUDENT_TEAMS" ? (
               <div className="mt-6">
                 <div className="mb-3 flex items-center justify-between">
                   <h4 className="font-bold">Members</h4>
                   <button
                     type="button"
                     onClick={() =>
-                      setMembers((m) => [
-                        ...m,
-                        { name: "", rollNo: "", email: "", branch: branch },
-                      ])
+                      setMembers((current) => [...current, emptyMember()])
                     }
-                    className="rounded-lg border px-3 py-2"
+                    disabled={members.length >= 10}
+                    className="rounded-lg border px-3 py-2 disabled:opacity-50"
                   >
                     + Member
                   </button>
                 </div>
                 <div className="space-y-3">
-                  {members.map((m, i) => (
+                  {members.map((member, index) => (
                     <div
-                      key={i}
+                      key={index}
                       className="grid gap-3 rounded-xl border p-4 md:grid-cols-4"
                     >
                       <input
                         placeholder="Name"
-                        value={m.name}
+                        value={member.name}
                         onChange={(e) =>
-                          setMembers((ms) =>
-                            ms.map((x, j) =>
-                              j === i ? { ...x, name: e.target.value } : x,
+                          setMembers((current) =>
+                            current.map((item, i) =>
+                              i === index
+                                ? { ...item, name: e.target.value }
+                                : item,
                             ),
                           )
                         }
                       />
                       <input
                         placeholder="Roll No"
-                        value={m.rollNo}
+                        value={member.rollNo}
                         onChange={(e) =>
-                          setMembers((ms) =>
-                            ms.map((x, j) =>
-                              j === i ? { ...x, rollNo: e.target.value } : x,
+                          setMembers((current) =>
+                            current.map((item, i) =>
+                              i === index
+                                ? { ...item, rollNo: e.target.value }
+                                : item,
                             ),
                           )
                         }
                       />
                       <input
                         placeholder="Email"
-                        value={m.email}
+                        type="email"
+                        value={member.email}
                         onChange={(e) =>
-                          setMembers((ms) =>
-                            ms.map((x, j) =>
-                              j === i ? { ...x, email: e.target.value } : x,
+                          setMembers((current) =>
+                            current.map((item, i) =>
+                              i === index
+                                ? { ...item, email: e.target.value }
+                                : item,
                             ),
                           )
                         }
                       />
                       <input
                         placeholder="Branch"
-                        value={m.branch}
+                        value={member.branch}
                         onChange={(e) =>
-                          setMembers((ms) =>
-                            ms.map((x, j) =>
-                              j === i ? { ...x, branch: e.target.value } : x,
+                          setMembers((current) =>
+                            current.map((item, i) =>
+                              i === index
+                                ? { ...item, branch: e.target.value }
+                                : item,
                             ),
                           )
                         }
@@ -373,8 +446,7 @@ export default function TeamManager({
                   ))}
                 </div>
               </div>
-            )}
-            {mode === "TEAM" && (
+            ) : (
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <Field label="Email of one team member">
                   <input
@@ -391,6 +463,7 @@ export default function TeamManager({
                 </Field>
               </div>
             )}
+
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
@@ -403,7 +476,7 @@ export default function TeamManager({
                 type="button"
                 disabled={busy}
                 onClick={() => void add()}
-                className="rounded-xl bg-[#00629B] px-5 py-3 font-semibold text-white"
+                className="rounded-xl bg-[#00629B] px-5 py-3 font-semibold text-white disabled:opacity-50"
               >
                 {busy ? "Saving..." : "Add Team"}
               </button>
@@ -411,6 +484,7 @@ export default function TeamManager({
           </div>
         </div>
       )}
+
       {showImport && (
         <ImportStudentsModal
           open={showImport}
@@ -425,13 +499,8 @@ export default function TeamManager({
     </div>
   );
 }
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="text-sm font-semibold">
       {label}

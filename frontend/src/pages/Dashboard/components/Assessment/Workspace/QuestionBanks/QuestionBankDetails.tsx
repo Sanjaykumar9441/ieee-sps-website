@@ -39,8 +39,6 @@ interface Question {
   question_type: QuestionType;
   options: string[];
   correct_answers: number[];
-  marks?: number;
-  negative_marks?: number;
   is_active?: boolean;
 }
 interface ImportQuestion {
@@ -48,8 +46,6 @@ interface ImportQuestion {
   question_type: QuestionType;
   options: string[];
   correct_answers: number[];
-  marks?: number;
-  negative_marks?: number;
 }
 
 const parseCSV = (text: string) => {
@@ -305,8 +301,6 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
         "option_c",
         "option_d",
         "correct_answers",
-        "marks",
-        "negative_marks",
       ],
       [
         "What is a multiplexer?",
@@ -316,8 +310,6 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
         "Decoder",
         "Register",
         "A",
-        "1",
-        "0",
       ],
       [
         "Which are programming languages?",
@@ -327,8 +319,6 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
         "HTML",
         "JavaScript",
         "A|B|D",
-        "2",
-        "0.5",
       ],
       [
         "The Earth is the third planet from the Sun.",
@@ -337,9 +327,16 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
         "False",
         "",
         "",
+        "True",
+      ],
+      [
+        "The output of an AND gate with all inputs HIGH is ___.",
+        "FILL_IN_THE_BLANK",
+        "HIGH",
+        "LOW",
+        "Z",
+        "X",
         "A",
-        "1",
-        "0",
       ],
     ];
     const csv = rows
@@ -734,8 +731,8 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
               <div>
                 <h2 className="text-xl font-bold">Import Questions from CSV</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Supports MCQ, Multiple Correct and True / False. No
-                  explanation or tag columns.
+                  Supports MCQ, Multiple Correct, True / False and Fill in the
+                  Blank. No explanation, tag or per-question scoring columns.
                 </p>
               </div>
               <button
@@ -754,7 +751,8 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
                   option_d, correct_answers
                 </p>
                 <p className="mt-2">
-                  MCQ: A · Multiple Correct: A|C|D · True/False: True or False.
+                  MCQ: A · Multiple Correct: A|C|D · True/False: True or False ·
+                  Fill in the Blank: A.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">

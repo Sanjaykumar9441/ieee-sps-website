@@ -155,113 +155,180 @@ exports.list = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const { assessmentId } = req.params;
-    const mode = String(req.body.mode || "").toUpperCase();
-    await ensureMode(assessmentId, mode);
-    const teamName = String(req.body.teamName || "").trim();
-    let contactEmail = String(req.body.contactEmail || "")
+    const { data: assessment, error: assessmentError } =
+      await getAssessment(assessmentId);
+    if (assessmentError || !assessment) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Assessment not found." });
+    }
+
+    // The assessment configuration is authoritative. Do not trust a stale
+    // client-side mode value, which previously caused Student Teams to enter
+    // the TEAM validation branch.
+    const mode = assessment.participation_mode;
+    if (!MODES.has(mode)) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "This assessment is configured for individual students.",
+        });
+    }
+
+    const teamName = String(
+      req.body.teamName || req.body.team_name || "",
+    ).trim();
+    let contactEmail = String(
+      req.body.contactEmail || req.body.contact_email || req.body.email || "",
+    )
       .trim()
       .toLowerCase();
-    const branch = String(req.body.branch || "").trim() || null;
-    if (!teamName)
+    const branch =
+      String(req.body.branch || req.body.department || "").trim() || null;
+
+    if (!teamName) {
       return res
         .status(400)
         .json({ success: false, message: "Team name is required." });
+    }
+
     if (mode === "STUDENT_TEAMS") {
-      if (!Array.isArray(req.body.members) || req.body.members.length < 2)
+      if (!Array.isArray(req.body.members) || req.body.members.length < 2) {
         return res
           .status(400)
           .json({
             success: false,
             message: "Student Teams require at least two members.",
           });
+      }
+
       const members = req.body.members
-        .map((m) => ({
-          name: String(m.name || "").trim(),
-          roll_no: String(m.rollNo || m.roll_no || "").trim(),
-          email: String(m.email || "")
+        .map((member) => ({
+          name: String(member?.name || "").trim(),
+          roll_no: String(member?.rollNo || member?.roll_no || "").trim(),
+          email: String(member?.email || "")
             .trim()
             .toLowerCase(),
-          branch: String(m.branch || m.department || "").trim() || branch,
+          branch:
+            String(
+              member?.branch || member?.department || branch || "",
+            ).trim() || null,
         }))
-        .filter((m) => m.name || m.roll_no || m.email);
-      // For Student Teams the contact email is simply the first member's email.
-      // The UI should not ask for a second, duplicate email field.
-      contactEmail = contactEmail || members[0]?.email || "";
-      if (!emailOk(contactEmail))
+        .filter(
+          (member) =>
+            member.name || member.roll_no || member.email || member.branch,
+        );
+
+      if (members.length < 2) {
         return res
           .status(400)
           .json({
             success: false,
-            message: "At least one team member must have a valid email.",
+            message: "Student Teams require at least two complete members.",
           });
-      for (const m of members)
-        if (!m.name || !m.roll_no || !emailOk(m.email))
+      }
+
+      for (const member of members) {
+        if (
+          !member.name ||
+          !member.roll_no ||
+          !emailOk(member.email) ||
+          !member.branch
+        ) {
           return res
             .status(400)
             .json({
               success: false,
               message:
-                "Every team member needs name, roll number and a valid email.",
+                "Every team member needs name, roll number, valid email and branch.",
             });
-      const { data: team, error } = await supabase
+        }
+      }
+
+      // First member is used only as the contact/compatibility record.
+      contactEmail = members[0].email;
+
+      const { data: team, error: teamError } = await supabase
         .from("assessment_teams")
         .insert({
           assessment_id: assessmentId,
           team_name: teamName,
           contact_email: contactEmail,
-          branch,
+          branch: branch || members[0].branch,
           mode,
         })
         .select()
         .single();
-      if (error)
+
+      if (teamError) {
         return res
-          .status(error.code === "23505" ? 409 : 400)
-          .json({ success: false, message: error.message });
+          .status(teamError.code === "23505" ? 409 : 400)
+          .json({ success: false, message: teamError.message });
+      }
+
       const { data: insertedMembers, error: memberError } = await supabase
         .from("assessment_team_members")
-        .insert(members.map((m) => ({ ...m, team_id: team.id })))
+        .insert(members.map((member) => ({ ...member, team_id: team.id })))
         .select();
+
       if (memberError) {
         await supabase.from("assessment_teams").delete().eq("id", team.id);
         return res
           .status(400)
           .json({ success: false, message: memberError.message });
       }
+
+      const allowedRows = insertedMembers.map((member) => ({
+        assessment_id: assessmentId,
+        name: member.name,
+        roll_no: member.roll_no,
+        email: member.email,
+        branch: member.branch,
+        team_id: team.id,
+        status: "allowed",
+        has_logged_in: false,
+      }));
+
       const { error: allowedError } = await supabase
         .from("assessment_allowed_students")
-        .upsert(
-          insertedMembers.map((m) => ({
-            assessment_id: assessmentId,
-            name: m.name,
-            roll_no: m.roll_no,
-            email: m.email,
-            branch: m.branch,
-            team_id: team.id,
-            status: "allowed",
-            has_logged_in: false,
-          })),
-          { onConflict: "assessment_id,email" },
-        );
-      if (allowedError) throw allowedError;
-      await syncMemberCount(team.id);
+        .upsert(allowedRows, { onConflict: "assessment_id,email" });
+
+      if (allowedError) {
+        await supabase
+          .from("assessment_team_members")
+          .delete()
+          .eq("team_id", team.id);
+        await supabase.from("assessment_teams").delete().eq("id", team.id);
+        throw allowedError;
+      }
+
+      const updatedTeam = await syncMemberCount(team.id);
       liveEvents.emitDashboardRefresh(assessmentId);
       return res
         .status(201)
-        .json({ success: true, team: { ...team, members: insertedMembers } });
+        .json({
+          success: true,
+          team: { ...updatedTeam, members: insertedMembers },
+        });
     }
-    if (!contactEmail || !emailOk(contactEmail))
+
+    // TEAM mode deliberately has no member list and no roll number.
+    if (!emailOk(contactEmail)) {
       return res
         .status(400)
         .json({
           success: false,
           message: "Team name and a valid member email are required.",
         });
-    if (!branch)
+    }
+    if (!branch) {
       return res
         .status(400)
         .json({ success: false, message: "Branch is required." });
-    const { data: team, error } = await supabase
+    }
+
+    const { data: team, error: teamError } = await supabase
       .from("assessment_teams")
       .insert({
         assessment_id: assessmentId,
@@ -273,22 +340,32 @@ exports.create = async (req, res) => {
       })
       .select()
       .single();
-    if (error)
+
+    if (teamError) {
       return res
-        .status(error.code === "23505" ? 409 : 400)
-        .json({ success: false, message: error.message });
-    await createRepresentativeStudent(
-      assessmentId,
-      team.id,
-      teamName,
-      contactEmail,
-      branch,
-    );
+        .status(teamError.code === "23505" ? 409 : 400)
+        .json({ success: false, message: teamError.message });
+    }
+
+    try {
+      await createRepresentativeStudent(
+        assessmentId,
+        team.id,
+        teamName,
+        contactEmail,
+        branch,
+      );
+    } catch (error) {
+      await supabase.from("assessment_teams").delete().eq("id", team.id);
+      throw error;
+    }
+
     liveEvents.emitDashboardRefresh(assessmentId);
     return res
       .status(201)
       .json({ success: true, team: { ...team, members: [] } });
   } catch (err) {
+    console.error("CREATE ASSESSMENT TEAM ERROR:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -296,8 +373,21 @@ exports.create = async (req, res) => {
 exports.importTeams = async (req, res) => {
   try {
     const { assessmentId } = req.params;
-    const { mode, teams } = req.body || {};
-    await ensureMode(assessmentId, String(mode || "").toUpperCase());
+    const { teams } = req.body || {};
+    const { data: assessment, error: assessmentError } =
+      await getAssessment(assessmentId);
+    if (assessmentError || !assessment)
+      return res
+        .status(404)
+        .json({ success: false, message: "Assessment not found." });
+    const mode = assessment.participation_mode;
+    if (!MODES.has(mode))
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "This assessment is configured for individual students.",
+        });
     if (!Array.isArray(teams) || !teams.length)
       return res
         .status(400)
@@ -316,7 +406,7 @@ exports.importTeams = async (req, res) => {
         String(item.branch || item.department || "").trim() || null;
       try {
         if (!teamName) throw new Error("Team name is required.");
-        if (String(mode).toUpperCase() === "STUDENT_TEAMS") {
+        if (mode === "STUDENT_TEAMS") {
           const members = Array.isArray(item.members) ? item.members : [];
           if (members.length < 2)
             throw new Error(
@@ -346,7 +436,7 @@ exports.importTeams = async (req, res) => {
               team_name: teamName,
               contact_email: teamContactEmail,
               branch,
-              mode: String(mode).toUpperCase(),
+              mode,
             })
             .select()
             .single();
@@ -387,7 +477,7 @@ exports.importTeams = async (req, res) => {
               contact_email: email,
               branch,
               member_count: 0,
-              mode: String(mode).toUpperCase(),
+              mode,
             })
             .select()
             .single();

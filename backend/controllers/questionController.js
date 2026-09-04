@@ -69,7 +69,13 @@ function normalizeCorrectAnswers(value, options = [], questionType = "MCQ") {
 
     let index = -1;
 
-    if (/^[A-D]$/i.test(text)) {
+    // Frontend editors commonly send zero-based numeric indexes (0, 1, 2, 3).
+    // Accept those directly, while still supporting A-D, 1-4 and option text.
+    if (typeof answer === "number" && Number.isInteger(answer)) {
+      index = answer;
+    } else if (/^[0-3]$/.test(text)) {
+      index = Number(text);
+    } else if (/^[A-D]$/i.test(text)) {
       index = text.toUpperCase().charCodeAt(0) - 65;
     } else if (/^[1-4]$/.test(text)) {
       index = Number(text) - 1;
@@ -107,7 +113,9 @@ function normalizeQuestionPayload(input, bankId) {
   if (questionType === "TRUE_FALSE") {
     options = ["True", "False"];
   } else {
-    options = options.slice(0, 4);
+    // Store only real options. This keeps correct-answer indexes stable even
+    // when a CSV/template leaves option C or D empty.
+    options = options.filter(Boolean).slice(0, 4);
   }
 
   const incomingCorrect =
@@ -126,10 +134,9 @@ function normalizeQuestionPayload(input, bankId) {
       options,
       questionType,
     ),
-    marks: Number.isFinite(Number(input.marks)) ? Number(input.marks) : 1,
-    negative_marks: Number.isFinite(Number(input.negative_marks))
-      ? Number(input.negative_marks)
-      : 0,
+    // Marks are configured at assessment level, not per question.
+    // The database may still contain legacy marks columns, but the question
+    // workflow deliberately does not read or write them.
     // Kept for compatibility with the existing schema; not exposed in the UI.
     difficulty: "MEDIUM",
     estimated_seconds: 60,
@@ -144,16 +151,6 @@ function validateQuestion(question, rowLabel = "Question") {
 
   if (!question.question_text) {
     errors.push(`${rowLabel}: Question text is required.`);
-  }
-
-  if (!Number.isFinite(Number(question.marks)) || Number(question.marks) <= 0) {
-    errors.push(`${rowLabel}: Correct answer marks must be greater than 0.`);
-  }
-  if (
-    !Number.isFinite(Number(question.negative_marks)) ||
-    Number(question.negative_marks) < 0
-  ) {
-    errors.push(`${rowLabel}: Negative marks cannot be negative.`);
   }
 
   if (!QUESTION_TYPES.includes(question.question_type)) {
@@ -180,20 +177,35 @@ function validateQuestion(question, rowLabel = "Question") {
 
   if (question.question_type === "FILL_IN_THE_BLANK") {
     const filled = question.options.filter(Boolean);
-    if (filled.length < 2 || filled.length > 4)
+    const hasBlank = /(___+|\[blank\])/i.test(question.question_text);
+    if (!hasBlank) {
+      errors.push(
+        `${rowLabel}: Fill in the Blank question must contain a blank (___).`,
+      );
+    }
+    if (filled.length < 2 || filled.length > 4) {
       errors.push(`${rowLabel}: Fill in the Blank requires 2 to 4 options.`);
-    if (question.correct_answers.length !== 1)
+    }
+    if (
+      new Set(filled.map((option) => option.toLowerCase())).size !==
+      filled.length
+    ) {
+      errors.push(`${rowLabel}: Answer options must be different.`);
+    }
+    if (question.correct_answers.length !== 1) {
       errors.push(
         `${rowLabel}: Fill in the Blank requires exactly one correct option.`,
       );
+    }
     if (
       question.correct_answers.some(
         (index) => index < 0 || index >= filled.length,
       )
-    )
+    ) {
       errors.push(
         `${rowLabel}: Correct answer must point to an available option.`,
       );
+    }
     return errors;
   }
 

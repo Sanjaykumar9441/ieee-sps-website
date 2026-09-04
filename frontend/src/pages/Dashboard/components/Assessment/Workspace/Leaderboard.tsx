@@ -33,6 +33,7 @@ export interface LeaderboardStudent {
   participantType?: "INDIVIDUAL" | "TEAM";
   teamId?: string | null;
   teamName?: string | null;
+  teamMemberCount?: number;
   members?: {
     name: string;
     roll_no: string;
@@ -128,8 +129,12 @@ export default function Leaderboard({ assessment }: Props) {
 
       data = data.filter(
         (student) =>
-          student.name.toLowerCase().includes(keyword) ||
-          student.rollNo.toLowerCase().includes(keyword) ||
+          String(student.name || "")
+            .toLowerCase()
+            .includes(keyword) ||
+          String(student.rollNo || "")
+            .toLowerCase()
+            .includes(keyword) ||
           (student.teamName || "").toLowerCase().includes(keyword),
       );
     }
@@ -323,9 +328,17 @@ export default function Leaderboard({ assessment }: Props) {
             >
               <div className="text-5xl">{medals[index].emoji}</div>
 
-              <h3 className="mt-5 text-xl font-bold">{student.name}</h3>
+              <h3 className="mt-5 text-xl font-bold">
+                {assessment.participation_mode === "TEAM"
+                  ? student.teamName || "Team"
+                  : student.name}
+              </h3>
 
-              <p className="mt-2 text-gray-500">{student.rollNo}</p>
+              {assessment.participation_mode === "TEAM" ? (
+                <p className="mt-2 text-gray-500">{student.email || ""}</p>
+              ) : (
+                <p className="mt-2 text-gray-500">{student.rollNo || ""}</p>
+              )}
 
               <div className="mt-6 space-y-2">
                 <p className="text-3xl font-bold text-[#00629B]">
@@ -427,17 +440,25 @@ export default function Leaderboard({ assessment }: Props) {
             <tr>
               <th className="p-4 text-left">Rank</th>
 
-              <th className="p-4 text-left">Student</th>
-
-              {assessment.participation_mode !== "INDIVIDUAL_STUDENTS" && (
-                <th className="p-4 text-left">Team</th>
+              {assessment.participation_mode === "TEAM" ? (
+                <>
+                  <th className="p-4 text-left">Team</th>
+                  <th className="p-4 text-left">Email</th>
+                  <th className="p-4 text-left">Branch</th>
+                </>
+              ) : (
+                <>
+                  <th className="p-4 text-left">Student</th>
+                  {assessment.participation_mode === "STUDENT_TEAMS" && (
+                    <th className="p-4 text-left">Team</th>
+                  )}
+                  {assessment.participation_mode === "STUDENT_TEAMS" && (
+                    <th className="p-4 text-left">Members</th>
+                  )}
+                  <th className="p-4 text-left">Roll No</th>
+                  <th className="p-4 text-left">Department</th>
+                </>
               )}
-
-              {assessment.participation_mode !== "TEAM" && (
-                <th className="p-4 text-left">Roll No</th>
-              )}
-
-              <th className="p-4 text-left">Department</th>
 
               <th className="p-4 text-left">Score</th>
 
@@ -463,7 +484,7 @@ export default function Leaderboard({ assessment }: Props) {
                     assessment.participation_mode === "INDIVIDUAL_STUDENTS"
                       ? 11
                       : assessment.participation_mode === "STUDENT_TEAMS"
-                        ? 12
+                        ? 13
                         : 11
                   }
                   className="py-16 text-center"
@@ -526,41 +547,42 @@ export default function Leaderboard({ assessment }: Props) {
                       )}
                     </td>
 
-                    {/* Student */}
-
-                    <td className="p-4">
-                      <div>
-                        <p className="font-semibold">{student.name}</p>
-                        <p className="text-xs text-gray-500">{student.email}</p>
-                        {student.teamName && (
-                          <div className="mt-1 space-y-0.5 text-xs text-slate-500">
-                            {(student.members || []).map((m, i) => (
-                              <div key={`${m.email}-${i}`}>
-                                {m.name} · {m.roll_no}
-                              </div>
-                            ))}
+                    {assessment.participation_mode === "TEAM" ? (
+                      <>
+                        <td className="p-4 font-semibold">
+                          {student.teamName || "—"}
+                        </td>
+                        <td className="p-4">{student.email || "—"}</td>
+                        <td className="p-4">{student.department || "—"}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="p-4">
+                          <div>
+                            <p className="font-semibold">
+                              {student.name || "—"}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {student.email || "—"}
+                            </p>
                           </div>
+                        </td>
+                        {assessment.participation_mode === "STUDENT_TEAMS" && (
+                          <td className="p-4 font-semibold">
+                            {student.teamName || "—"}
+                          </td>
                         )}
-                        <p className="text-xs text-gray-500">
-                          {student.department}
-                        </p>
-                      </div>
-                    </td>
-
-                    {assessment.participation_mode !==
-                      "INDIVIDUAL_STUDENTS" && (
-                      <td className="p-4 font-semibold">
-                        {student.teamName || "—"}
-                      </td>
+                        {assessment.participation_mode === "STUDENT_TEAMS" && (
+                          <td className="p-4">
+                            {student.teamMemberCount ||
+                              student.members?.length ||
+                              0}
+                          </td>
+                        )}
+                        <td className="p-4">{student.rollNo || "—"}</td>
+                        <td className="p-4">{student.department || "—"}</td>
+                      </>
                     )}
-
-                    {assessment.participation_mode !== "TEAM" && (
-                      <td className="p-4">{student.rollNo || "—"}</td>
-                    )}
-
-                    {/* Department */}
-
-                    <td className="p-4">{student.department}</td>
 
                     {/* Score */}
 
