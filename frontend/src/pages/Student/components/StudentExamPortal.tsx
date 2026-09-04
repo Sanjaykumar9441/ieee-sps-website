@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Clock3, Maximize, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
 
 import StudentExam from "./StudentExam";
@@ -66,7 +67,13 @@ interface StudentAssessment {
   live_updates_enabled?: boolean;
 }
 
-type Step = "loading" | "login" | "otp" | "instructions" | "submitted";
+type Step =
+  | "loading"
+  | "login"
+  | "otp"
+  | "instructions"
+  | "launch-gate"
+  | "submitted";
 
 type ExamStatus = "NOT_STARTED" | "LIVE" | "CLOSED";
 
@@ -97,11 +104,30 @@ const isExamWindow = (): boolean => {
   }
 };
 
-const getLaunchAttemptId = (): string | null => {
+const isLaunchGate = (): boolean => {
   try {
     const params = new URLSearchParams(window.location.search);
 
-    return params.get("attemptId") || localStorage.getItem("studentAttemptId");
+    return params.get("launchGate") === "1";
+  } catch {
+    return false;
+  }
+};
+
+const getLaunchTitle = (): string => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+
+    return params.get("assessmentTitle") || "Assessment";
+  } catch {
+    return "Assessment";
+  }
+};
+
+const getLaunchAttemptId = (): string | null => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("attemptId") || null;
   } catch {
     return null;
   }
@@ -124,6 +150,61 @@ const getStudentName = (): string => {
     return "Student";
   }
 };
+
+/* -------------------------------------------------------------------------- */
+/* Fullscreen start gate                                                     */
+/* -------------------------------------------------------------------------- */
+
+function FullscreenStartGate({
+  assessmentTitle,
+  onStart,
+}: {
+  assessmentTitle: string;
+  onStart: () => void;
+}) {
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-sm">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#00629B]/10 text-[#00629B]">
+          <ShieldCheck className="h-7 w-7" />
+        </div>
+
+        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+          Secure Examination
+        </p>
+        <h1 className="mt-2 text-2xl font-bold text-slate-900">
+          {assessmentTitle}
+        </h1>
+
+        <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-left">
+          <div className="flex items-start gap-3">
+            <Maximize className="mt-0.5 h-5 w-5 shrink-0 text-[#00629B]" />
+            <div>
+              <p className="font-semibold text-slate-800">Enter fullscreen to begin</p>
+              <p className="mt-1 text-sm leading-5 text-slate-600">
+                The examination timer and secure monitoring begin only after you click the button below.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onStart}
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#00629B] px-5 py-3.5 font-semibold text-white transition hover:bg-[#004f7d] focus:outline-none focus:ring-2 focus:ring-[#00629B]/40"
+        >
+          <Maximize className="h-5 w-5" />
+          Enter Fullscreen &amp; Start
+        </button>
+
+        <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-400">
+          <Clock3 className="h-4 w-4" />
+          Timer starts after this click
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* -------------------------------------------------------------------------- */
 /* Submitted page                                                             */
@@ -160,6 +241,9 @@ export default function StudentExamPortal({
   onStartExam,
 }: Props) {
   const examWindow = isExamWindow();
+  const launchGate = examWindow && isLaunchGate();
+  const urlAttemptId = examWindow ? getLaunchAttemptId() : null;
+  const gateRequired = examWindow && (launchGate || Boolean(urlAttemptId));
 
   const [step, setStep] = useState<Step>("loading");
 
@@ -172,6 +256,9 @@ export default function StudentExamPortal({
   const [email, setEmail] = useState<string>("");
 
   const [examData, setExamData] = useState<ExamData | null>(null);
+
+  // Prevent double-clicks while fullscreen/start is being processed.
+  const [startingExam, setStartingExam] = useState(false);
 
   /* ------------------------------------------------------------------------ */
   /* Finish / submitted                                                       */
@@ -277,35 +364,26 @@ export default function StudentExamPortal({
   /* Start examination                                                        */
   /* ------------------------------------------------------------------------ */
 
-  const handleStartExam = async () => {
+  const handleStartExam = () => {
     if (examStatus !== "LIVE") {
       toast.error("The examination is not live yet.");
-
       return;
     }
 
     /*
-     * Open popup immediately from the user's click.
-     *
-     * If we wait for the API request first,
-     * Chrome/Edge may block the popup.
+     * IMPORTANT: open the popup synchronously from the Start Exam click.
+     * No API request is made here. The server-side attempt (and therefore
+     * the real exam timer) is created only after the student clicks
+     * "Enter Fullscreen & Start" inside the exam window.
      */
-    const width = Math.max(
-      1024,
-      window.screen.availWidth || window.innerWidth || 1024,
-    );
-
-    const height = Math.max(
-      700,
-      window.screen.availHeight || window.innerHeight || 700,
-    );
+    const width = Math.max(1024, window.screen.availWidth || window.innerWidth || 1024);
+    const height = Math.max(700, window.screen.availHeight || window.innerHeight || 700);
 
     const examPopup = window.open(
       "about:blank",
       "student-exam-window",
       [
         "popup=yes",
-        "fullscreen=yes",
         `width=${width}`,
         `height=${height}`,
         "left=0",
@@ -320,193 +398,148 @@ export default function StudentExamPortal({
     );
 
     if (!examPopup) {
-      toast.error(
-        "Please allow pop-ups for this website and click Start Exam again.",
-      );
-
+      toast.error("Please allow pop-ups for this website and click Start Exam again.");
       return;
     }
 
-    /*
-     * Show loading state inside popup immediately.
-     */
     try {
-      examPopup.document.title = "Opening Examination...";
-
+      examPopup.document.title = "Ready to Start Examination";
       examPopup.document.body.innerHTML = `
-        <div
-          style="
-            font-family: Arial, sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background: #f8fafc;
-            color: #334155;
-          "
-        >
+        <div style="font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f8fafc;color:#0f172a">
           <div style="text-align:center">
-            <div
-              style="
-                font-size:20px;
-                font-weight:600;
-              "
-            >
-              Opening examination...
-            </div>
-
-            <div
-              style="
-                margin-top:8px;
-                font-size:14px;
-                color:#64748b;
-              "
-            >
-              Please wait.
-            </div>
+            <div style="font-size:20px;font-weight:700">Preparing examination...</div>
+            <div style="margin-top:8px;font-size:14px;color:#64748b">Please wait.</div>
           </div>
-        </div>
-      `;
-
+        </div>`;
       examPopup.focus();
-
-      /*
-       * Ask the newly opened exam window to enter fullscreen immediately.
-       * This is the earliest possible point after the user's Start Exam
-       * click. Browser security may still reject it; the exam page keeps
-       * an explicit Enter Fullscreen button as the standards-compliant
-       * fallback.
-       */
-      try {
-        const popupDocument = examPopup.document;
-        if (
-          popupDocument.fullscreenEnabled &&
-          typeof popupDocument.documentElement.requestFullscreen === "function"
-        ) {
-          void popupDocument.documentElement
-            .requestFullscreen({ navigationUI: "hide" })
-            .catch(() => undefined);
-        }
-      } catch {
-        // Browser may deny fullscreen for a newly opened window.
-      }
-
       try {
         examPopup.moveTo(0, 0);
         examPopup.resizeTo(width, height);
       } catch {
-        /*
-         * Browser may block move/resize.
-         */
+        // Browser may block move/resize.
       }
     } catch {
-      /*
-       * Ignore popup document errors.
-       */
+      // Ignore popup document access errors.
     }
+
+    const examUrl = new URL(`${window.location.origin}/student/exam/${assessmentId}`);
+    examUrl.searchParams.set("examWindow", "1");
+    examUrl.searchParams.set("launchGate", "1");
+    examUrl.searchParams.set("assessmentTitle", assessment?.title || "Assessment");
+
+    /*
+     * Navigate the already-open popup. The popup now contains only the
+     * fullscreen gate; startAssessment() is deliberately NOT called here.
+     */
+    examPopup.location.replace(examUrl.toString());
+    examPopup.focus();
+  };
+
+  /* ------------------------------------------------------------------------ */
+  /* Fullscreen gate / actual attempt start                                   */
+  /* ------------------------------------------------------------------------ */
+
+  const handleFullscreenAndStart = async () => {
+    if (!examWindow || !gateRequired || examData || startingExam) return;
+
+    setStartingExam(true);
 
     try {
       /*
-       * Create server-side attempt.
+       * This request is intentionally the first async-sensitive operation in
+       * the click handler. It is therefore still tied to the student's direct
+       * click and Chrome/Edge can grant fullscreen.
        */
-      const result = await startAssessment(assessmentId);
+      if (!document.fullscreenElement) {
+        if (!document.fullscreenEnabled) {
+          throw new Error("Fullscreen is not available in this browser window.");
+        }
 
-      if (!result?.success || !result?.attemptId || !result?.question) {
-        throw new Error(
-          result?.message ||
-            "Assessment started but the first question could not be loaded.",
-        );
+        await document.documentElement.requestFullscreen();
+      }
+
+      setStep("loading");
+
+      const existingAttemptId = getLaunchAttemptId();
+      const result = existingAttemptId
+        ? await resumeAssessment(assessmentId, existingAttemptId)
+        : await startAssessment(assessmentId);
+
+      if (!result?.attemptId || !result?.question) {
+        throw new Error("Assessment started but the first question could not be loaded.");
       }
 
       const attemptId = String(result.attemptId);
+      const totalQuestions = Math.max(0, Number(result.totalQuestions || 0));
+      const currentQuestion = Math.max(1, Number(result.currentQuestion || 1));
+      const remaining = Math.max(0, Number(result.remainingSeconds || 0));
 
       const launchData: ExamLaunchData = {
         attemptId,
-
-        totalQuestions: Math.max(0, Number(result.totalQuestions || 0)),
-
-        currentQuestion: Math.max(1, Number(result.currentQuestion || 1)),
-
-        remainingSeconds: Math.max(0, Number(result.remainingSeconds || 0)),
-
+        totalQuestions,
+        currentQuestion,
+        remainingSeconds: remaining,
         question: result.question,
-
-        assessmentTitle: assessment?.title || "Assessment",
-
-        sessionId: result.sessionId,
+        assessmentTitle: assessment?.title || getLaunchTitle(),
+        sessionId: (result as any).sessionId,
       };
 
-      /*
-       * Save all launch information before loading
-       * the exam application in the popup.
-       */
-      localStorage.setItem(
-        `studentExamLaunch:${attemptId}`,
-        JSON.stringify(launchData),
-      );
-
+      localStorage.setItem(`studentExamLaunch:${attemptId}`, JSON.stringify(launchData));
       localStorage.setItem("studentAttemptId", attemptId);
+      localStorage.setItem(`studentCurrentQuestion:${attemptId}`, String(currentQuestion));
 
-      localStorage.setItem(
-        `studentCurrentQuestion:${attemptId}`,
-        String(launchData.currentQuestion),
-      );
-
-      /*
-       * startAssessment() already saves sessionId,
-       * but save it again here to guarantee the popup
-       * can restore the session.
-       */
-      if (result.sessionId) {
-        sessionStorage.setItem(
-          `quiz_session_${attemptId}`,
-          String(result.sessionId),
-        );
-
-        localStorage.setItem(
-          `quiz_session_${attemptId}`,
-          String(result.sessionId),
-        );
+      if ((result as any).sessionId) {
+        sessionStorage.setItem(`quiz_session_${attemptId}`, String((result as any).sessionId));
+        localStorage.setItem(`quiz_session_${attemptId}`, String((result as any).sessionId));
       }
 
-      /*
-       * Notify the parent application.
-       */
       onStartExam(assessmentId);
 
-      /*
-       * Navigate ONLY the popup.
-       *
-       * The original Start Exam page stays open.
-       */
-      const examUrl = new URL(
-        `${window.location.origin}/student/exam/${assessmentId}`,
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("launchGate");
+      cleanUrl.searchParams.set("attemptId", attemptId);
+      window.history.replaceState({}, "", cleanUrl.toString());
+
+      setAssessment((current) =>
+        current || {
+          id: assessmentId,
+          title: getLaunchTitle(),
+          total_questions: totalQuestions,
+          duration_minutes: Math.ceil(remaining / 60),
+          is_active: true,
+          is_published: true,
+        },
       );
 
-      examUrl.searchParams.set("examWindow", "1");
+      setExamData({
+        attemptId,
+        totalQuestions,
+        currentQuestion,
+        remainingSeconds: remaining,
+        question: result.question,
+      });
 
-      examUrl.searchParams.set("attemptId", attemptId);
-
-      examPopup.location.replace(examUrl.toString());
-
-      examPopup.focus();
+      setExamStatus("LIVE");
+      setStep("instructions");
     } catch (error: any) {
-      console.error("[EXAM PORTAL] Start error:", error);
+      console.error("[EXAM PORTAL] Fullscreen/start error:", error);
 
+      /* If the fullscreen request succeeded but starting failed, leave the
+       * gate usable and don't create a half-started exam UI. */
       try {
-        examPopup.close();
+        if (document.fullscreenElement) await document.exitFullscreen();
       } catch {
-        /*
-         * Ignore close errors.
-         */
+        // Ignore exit errors.
       }
 
+      setStep("launch-gate");
       toast.error(
         error?.response?.data?.message ||
           error?.message ||
           "Unable to start assessment.",
       );
+    } finally {
+      setStartingExam(false);
     }
   };
 
@@ -524,161 +557,102 @@ export default function StudentExamPortal({
        * ==============================================================
        */
       if (examWindow) {
+        const currentAttemptId = urlAttemptId;
+
+        /*
+         * A newly opened exam window starts at the fullscreen gate. No
+         * attempt is created until the student clicks the gate button.
+         * This is what makes the fullscreen request browser-compliant and
+         * ensures the real exam timer starts only after that click.
+         *
+         * A refresh of an already-started exam also returns to this gate.
+         * That prevents the timer/anti-cheat UI from restarting outside
+         * fullscreen after a browser refresh.
+         */
+        if (launchGate || currentAttemptId) {
+          if (!mounted) return;
+          setAssessment((current) =>
+            current || {
+              id: assessmentId,
+              title: getLaunchTitle(),
+              total_questions: 0,
+              duration_minutes: 0,
+              is_active: true,
+              is_published: true,
+            },
+          );
+          setExamStatus("LIVE");
+          setStep("launch-gate");
+          return;
+        }
+
         const attemptId = getLaunchAttemptId();
 
         if (!attemptId) {
           console.error("[EXAM PORTAL] No attempt ID in exam window.");
-
           toast.error("Exam session could not be found.");
-
           setStep("submitted");
-
           return;
         }
 
-        const rawLaunch = localStorage.getItem(
-          `studentExamLaunch:${attemptId}`,
-        );
+        const rawLaunch = localStorage.getItem(`studentExamLaunch:${attemptId}`);
 
         if (!rawLaunch) {
-          console.error("[EXAM PORTAL] Launch data missing.");
-
-          toast.error("Exam session could not be restored.");
-
-          setStep("submitted");
-
+          /* A refresh can lose in-memory React state. Put the window back on
+           * the fullscreen gate so the user can explicitly re-establish
+           * fullscreen before we resume the server-side attempt. */
+          if (!mounted) return;
+          setAssessment((current) =>
+            current || {
+              id: assessmentId,
+              title: getLaunchTitle(),
+              total_questions: 0,
+              duration_minutes: 0,
+              is_active: true,
+              is_published: true,
+            },
+          );
+          setExamStatus("LIVE");
+          setStep("launch-gate");
           return;
         }
 
         try {
           const launch = JSON.parse(rawLaunch) as ExamLaunchData;
 
-          /*
-           * Restore session token.
-           */
           if (launch.sessionId) {
-            sessionStorage.setItem(
-              `quiz_session_${attemptId}`,
-              launch.sessionId,
-            );
-
+            sessionStorage.setItem(`quiz_session_${attemptId}`, launch.sessionId);
             localStorage.setItem(`quiz_session_${attemptId}`, launch.sessionId);
           }
 
-          /*
-           * Create the minimal assessment object
-           * needed by StudentExam/ExamInstructions.
-           *
-           * The actual exam timer is controlled by StudentExam.
-           */
           const popupAssessment: StudentAssessment = {
             id: assessmentId,
-
             title: launch.assessmentTitle || "Assessment",
-
             total_questions: launch.totalQuestions,
-
             duration_minutes: Math.ceil(launch.remainingSeconds / 60),
-
             is_active: true,
-
             is_published: true,
-
             start_time: new Date().toISOString(),
-
-            end_time: new Date(
-              Date.now() + launch.remainingSeconds * 1000,
-            ).toISOString(),
+            end_time: new Date(Date.now() + launch.remainingSeconds * 1000).toISOString(),
           };
 
-          if (!mounted) {
-            return;
-          }
+          if (!mounted) return;
 
           setAssessment(popupAssessment);
-
           setExamStatus("LIVE");
-
           setExamData({
             attemptId: launch.attemptId,
-
             totalQuestions: launch.totalQuestions,
-
             currentQuestion: launch.currentQuestion,
-
             remainingSeconds: launch.remainingSeconds,
-
             question: launch.question,
           });
-
-          /*
-           * StudentExam is rendered from examData.
-           *
-           * Do not send popup through login/instructions.
-           */
           setStep("instructions");
-
-          /*
-           * Restore the latest question/answer from the server.
-           *
-           * IMPORTANT:
-           *
-           * resumeAssessment() returns:
-           * attemptId
-           * totalQuestions
-           * currentQuestion
-           * remainingSeconds
-           * question
-           *
-           * It does NOT return status/sessionId.
-           */
-          try {
-            const resumed = await resumeAssessment(assessmentId, attemptId);
-
-            if (!mounted) {
-              return;
-            }
-
-            setExamData({
-              attemptId: String(resumed.attemptId),
-
-              totalQuestions: Math.max(
-                0,
-                Number(resumed.totalQuestions || launch.totalQuestions || 0),
-              ),
-
-              currentQuestion: Math.max(
-                1,
-                Number(resumed.currentQuestion || launch.currentQuestion || 1),
-              ),
-
-              remainingSeconds: Math.max(
-                0,
-                Number(resumed.remainingSeconds || 0),
-              ),
-
-              question: resumed.question,
-            });
-          } catch (error) {
-            /*
-             * Do NOT immediately destroy the launch data.
-             *
-             * StudentExam performs its own status synchronization.
-             */
-            console.warn(
-              "[EXAM PORTAL] Resume request failed; using launch data.",
-              error,
-            );
-          }
-
           return;
         } catch (error) {
           console.error("[EXAM PORTAL] Invalid launch data:", error);
-
           toast.error("Invalid examination session.");
-
           setStep("submitted");
-
           return;
         }
       }
@@ -829,6 +803,19 @@ export default function StudentExamPortal({
 
   if (step === "submitted") {
     return <SubmittedPage />;
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /* Exam popup fullscreen gate                                               */
+  /* ------------------------------------------------------------------------ */
+
+  if (examWindow && gateRequired && step === "launch-gate") {
+    return (
+      <FullscreenStartGate
+        assessmentTitle={assessment?.title || getLaunchTitle()}
+        onStart={handleFullscreenAndStart}
+      />
+    );
   }
 
   /* ------------------------------------------------------------------------ */
