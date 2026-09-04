@@ -182,12 +182,8 @@ function normalizeQuestion(question, assessment) {
     correct_answers: Array.isArray(question.correct_answers)
       ? [...question.correct_answers]
       : [],
-    marks: Number.isFinite(Number(question.marks))
-      ? Math.max(0, Number(question.marks))
-      : Math.max(0, Number(assessment?.marks_per_question ?? 1)),
-    negative_marks: Number.isFinite(Number(question.negative_marks))
-      ? Math.max(0, Number(question.negative_marks))
-      : Math.max(0, Number(assessment?.negative_marks || 0)),
+    marks: Math.max(0, Number(assessment?.marks_per_question ?? 1)),
+    negative_marks: Math.max(0, Number(assessment?.negative_marks || 0)),
   };
 }
 

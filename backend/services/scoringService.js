@@ -17,11 +17,8 @@ exports.calculateScore = async (attemptId) => {
         .eq("id", attempt.assessment_id)
         .single()
     : { data: null };
-  const configuredMarks = Number(assessment?.marks_per_question ?? 1);
-  const configuredNegative = Math.max(
-    0,
-    Number(assessment?.negative_marks ?? 0),
-  );
+  const fallbackMarks = Number(assessment?.marks_per_question ?? 1);
+  const fallbackNegative = Math.max(0, Number(assessment?.negative_marks ?? 0));
   // ------------------------------------------------------------
   // 1. Get frozen attempt questions
   // ------------------------------------------------------------
@@ -168,13 +165,16 @@ exports.calculateScore = async (attemptId) => {
     if (isCorrect) {
       correct++;
 
-      score += Number.isFinite(Number(question.marks))
-        ? Number(question.marks)
-        : configuredMarks;
+      const marks = Math.max(0, Number(question.marks ?? fallbackMarks));
+      score += marks;
     } else {
       wrong++;
 
-      score -= Number(question.negative_marks ?? configuredNegative);
+      const negativeMarks = Math.max(
+        0,
+        Number(question.negative_marks ?? fallbackNegative),
+      );
+      score -= negativeMarks;
     }
   }
 

@@ -24,8 +24,6 @@ interface Question {
     | "FILL_IN_THE_BLANK";
   options: string[];
   correct_answers: number[];
-  marks: number;
-  negative_marks: number;
 }
 
 const blankQuestion: Question = {
@@ -33,8 +31,6 @@ const blankQuestion: Question = {
   question_type: "MCQ",
   options: ["", "", "", ""],
   correct_answers: [],
-  marks: 1,
-  negative_marks: 0,
 };
 
 function normalizeOptions(value: unknown): string[] {
@@ -129,8 +125,6 @@ export default function QuestionEditor({
       question_text: initialQuestion.question_text || "",
       question_type: type,
       options,
-      marks: Number((initialQuestion as any).marks ?? 1),
-      negative_marks: Number((initialQuestion as any).negative_marks ?? 0),
       correct_answers:
         type === "TRUE_FALSE"
           ? normalizeCorrect(initialQuestion.correct_answers).filter(
@@ -257,8 +251,6 @@ export default function QuestionEditor({
         options: normalizedOptions,
 
         correct_answers: [...new Set(normalizedCorrectAnswers)],
-        marks: Math.max(0, Number(question.marks ?? 1)),
-        negative_marks: Math.max(0, Number(question.negative_marks ?? 0)),
       };
 
       if (question.id) {
@@ -482,38 +474,6 @@ export default function QuestionEditor({
                   ? "Select exactly one correct option."
                   : "Select all correct options."}
             </p>
-          </div>
-
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <label className="text-sm font-semibold">
-              Correct answer marks
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={question.marks}
-                onChange={(e) =>
-                  setQuestion((q) => ({ ...q, marks: Number(e.target.value) }))
-                }
-                className="mt-1 w-full rounded-xl border p-3"
-              />
-            </label>
-            <label className="text-sm font-semibold">
-              Negative marks
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={question.negative_marks}
-                onChange={(e) =>
-                  setQuestion((q) => ({
-                    ...q,
-                    negative_marks: Number(e.target.value),
-                  }))
-                }
-                className="mt-1 w-full rounded-xl border p-3"
-              />
-            </label>
           </div>
 
           {question.question_type !== "TRUE_FALSE" &&

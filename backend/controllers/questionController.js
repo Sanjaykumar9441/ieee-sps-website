@@ -126,12 +126,8 @@ function normalizeQuestionPayload(input, bankId) {
       options,
       questionType,
     ),
-    marks: Number.isFinite(Number(input.marks))
-      ? Math.max(0, Number(input.marks))
-      : 1,
-    negative_marks: Number.isFinite(Number(input.negative_marks))
-      ? Math.max(0, Number(input.negative_marks))
-      : 0,
+    marks: 1,
+    negative_marks: 0,
     // Kept for compatibility with the existing schema; not exposed in the UI.
     difficulty: "MEDIUM",
     estimated_seconds: 60,

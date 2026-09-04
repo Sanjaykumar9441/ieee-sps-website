@@ -381,11 +381,18 @@ export default function StudentExam({
     } catch (error) {
       console.warn("[EXAM] Fullscreen request blocked by browser.", error);
       setFullscreenError(
-        "Your browser requires one direct click to enter fullscreen.",
+        "Click Enter Fullscreen once. Browsers require a direct user action for fullscreen.",
       );
       return false;
     }
   };
+  useEffect(() => {
+    if (isFullscreen) return;
+    const timer = window.setTimeout(() => {
+      void enterFullscreen();
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [isFullscreen]);
   return (
     <div className="fixed inset-0 bg-slate-50 flex flex-col overflow-hidden">
       {reconnecting && (

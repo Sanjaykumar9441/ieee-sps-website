@@ -39,8 +39,6 @@ interface Question {
   question_type: QuestionType;
   options: string[];
   correct_answers: number[];
-  marks: number;
-  negative_marks: number;
   is_active?: boolean;
 }
 interface ImportQuestion {
@@ -231,8 +229,6 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
           .filter((q: any) => q?.is_active !== false)
           .map((q: any) => ({
             ...q,
-            marks: Number(q.marks ?? 1),
-            negative_marks: Number(q.negative_marks ?? 0),
             options: normalizeOptions(q.options),
             correct_answers: (Array.isArray(q.correct_answers)
               ? q.correct_answers

@@ -33,7 +33,6 @@ export interface LeaderboardStudent {
   participantType?: "INDIVIDUAL" | "TEAM";
   teamId?: string | null;
   teamName?: string | null;
-  teamMemberCount?: number;
   members?: {
     name: string;
     roll_no: string;
@@ -434,11 +433,7 @@ export default function Leaderboard({ assessment }: Props) {
                   : "Team"}
               </th>
 
-              <th className="p-4 text-left">
-                {assessment.participation_mode === "INDIVIDUAL_STUDENTS"
-                  ? "Roll No"
-                  : "Members"}
-              </th>
+              <th className="p-4 text-left">Roll No</th>
 
               <th className="p-4 text-left">Department</th>
 
@@ -530,17 +525,14 @@ export default function Leaderboard({ assessment }: Props) {
                         {student.teamName && (
                           <>
                             <p className="text-xs text-gray-500">
-                              {student.teamMemberCount || 0} member(s) ·
                               Contact: {student.email}
                             </p>
                             <div className="mt-1 space-y-0.5 text-xs text-slate-500">
-                              {(student.members || [])
-                                .slice(0, 5)
-                                .map((m, i) => (
-                                  <div key={`${m.email}-${i}`}>
-                                    {m.name} · {m.roll_no}
-                                  </div>
-                                ))}
+                              {(student.members || []).map((m, i) => (
+                                <div key={`${m.email}-${i}`}>
+                                  {m.name} · {m.roll_no}
+                                </div>
+                              ))}
                             </div>
                           </>
                         )}
@@ -554,9 +546,7 @@ export default function Leaderboard({ assessment }: Props) {
                     {/* Roll */}
 
                     <td className="p-4">
-                      {student.teamName
-                        ? `${student.teamMemberCount || 0} member(s)`
-                        : student.rollNo}
+                      {student.teamName ? "—" : student.rollNo}
                     </td>
 
                     {/* Department */}

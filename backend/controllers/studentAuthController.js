@@ -22,10 +22,12 @@ exports.login = async (req, res) => {
     const otp = String(req.body.otp || "").trim();
 
     if (!assessmentId || !email)
-      return res.status(400).json({
-        success: false,
-        message: "Assessment ID and email are required.",
-      });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Assessment ID and email are required.",
+        });
 
     const { data: assessment, error: assessmentError } =
       await assessmentService.getAssessment(assessmentId);
@@ -34,18 +36,22 @@ exports.login = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Assessment not found." });
     if (assessment.status !== "PUBLISHED" || !assessment.is_active)
-      return res.status(403).json({
-        success: false,
-        message: "Assessment is not available for login.",
-      });
+      return res
+        .status(403)
+        .json({
+          success: false,
+          message: "Assessment is not available for login.",
+        });
 
     const { data: student, error: studentError } =
       await assessmentService.getAllowedStudent(assessmentId, email);
     if (studentError || !student)
-      return res.status(401).json({
-        success: false,
-        message: "This email is not registered for the assessment.",
-      });
+      return res
+        .status(401)
+        .json({
+          success: false,
+          message: "This email is not registered for the assessment.",
+        });
     if (student.status === "blocked")
       return res
         .status(403)
@@ -62,10 +68,12 @@ exports.login = async (req, res) => {
         !student.otp_expires_at ||
         new Date(student.otp_expires_at).getTime() < Date.now()
       )
-        return res.status(401).json({
-          success: false,
-          message: "OTP has expired. Request a new OTP.",
-        });
+        return res
+          .status(401)
+          .json({
+            success: false,
+            message: "OTP has expired. Request a new OTP.",
+          });
       const validOtp = await bcrypt.compare(otp, student.otp_hash);
       if (!validOtp)
         return res
@@ -74,10 +82,13 @@ exports.login = async (req, res) => {
     } else {
       const passwordHash = process.env.ASSESSMENT_COMMON_PASSWORD_HASH;
       if (!passwordHash)
-        return res.status(500).json({
-          success: false,
-          message: "Assessment password login is not configured on the server.",
-        });
+        return res
+          .status(500)
+          .json({
+            success: false,
+            message:
+              "Assessment password login is not configured on the server.",
+          });
       if (!password)
         return res
           .status(400)
@@ -144,10 +155,12 @@ exports.sendOtp = async (req, res) => {
       .trim()
       .toLowerCase();
     if (!assessmentId || !email)
-      return res.status(400).json({
-        success: false,
-        message: "Assessment ID and email are required.",
-      });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Assessment ID and email are required.",
+        });
     const { data: assessment } =
       await assessmentService.getAssessment(assessmentId);
     if (
@@ -159,19 +172,23 @@ exports.sendOtp = async (req, res) => {
         .status(403)
         .json({ success: false, message: "Assessment is not available." });
     if (String(assessment.login_method || "PASSWORD").toUpperCase() !== "OTP")
-      return res.status(400).json({
-        success: false,
-        message: "OTP login is not enabled for this assessment.",
-      });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "OTP login is not enabled for this assessment.",
+        });
     const { data: student } = await assessmentService.getAllowedStudent(
       assessmentId,
       email,
     );
     if (!student || student.status === "blocked")
-      return res.status(401).json({
-        success: false,
-        message: "This email is not registered for the assessment.",
-      });
+      return res
+        .status(401)
+        .json({
+          success: false,
+          message: "This email is not registered for the assessment.",
+        });
     const brevoApiKey = process.env.BREVO_API_KEY;
     const senderEmail = process.env.BREVO_SENDER_EMAIL;
     const senderName = process.env.BREVO_SENDER_NAME || "IEEE SPS";
@@ -484,10 +501,12 @@ exports.getStudentDetails = async (req, res) => {
 
     if (error) {
       if (error.code === "PGRST116") {
-        return res.status(404).json({
-          success: false,
-          message: "Student not found for this assessment.",
-        });
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message: "Student not found for this assessment.",
+          });
       }
       throw error;
     }

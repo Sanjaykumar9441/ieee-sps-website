@@ -1,6 +1,7 @@
 import { useState } from "react";
 import * as XLSX from "xlsx";
 import axios from "axios";
+import { importAssessmentTeams } from "../assessmentApi";
 import toast from "react-hot-toast";
 import { AlertTriangle, CheckCircle, Download, FileUp, X } from "lucide-react";
 
@@ -8,6 +9,7 @@ const API = import.meta.env.VITE_API_URL;
 interface Props {
   open: boolean;
   assessmentId: string;
+  participationMode?: "INDIVIDUAL_STUDENTS" | "STUDENT_TEAMS" | "TEAM";
   onClose: () => void;
   onSuccess: () => Promise<void>;
 }
@@ -16,6 +18,7 @@ interface Student {
   rollNo: string;
   email: string;
   department: string;
+  teamName?: string;
 }
 interface RowError extends Student {
   row: number;
@@ -33,17 +36,31 @@ const aliases: Record<string, string[]> = {
   rollNo: ["roll_no", "roll_number", "rollnumber", "roll_no_", "roll"],
   email: ["email", "email_id", "email_address"],
   department: ["department", "branch", "branch_name", "dept"],
+  teamName: ["team_name", "team", "team_name_"],
 };
 const get = (row: Record<string, any>, key: string) => {
   for (const a of aliases[key] || [key])
     if (row[a] !== undefined) return String(row[a] ?? "").trim();
   return "";
 };
-const downloadTemplate = () => {
-  const csv = [
-    ["Name", "Roll No", "Email", "Department"],
-    ["Sanjay Kumar", "24A81A0001", "sanjay@example.com", "ECE"],
-  ]
+const downloadTemplate = (mode: Props["participationMode"]) => {
+  const rows =
+    mode === "STUDENT_TEAMS"
+      ? [
+          ["Team Name", "Member Name", "Roll No", "Email", "Department"],
+          ["Team Alpha", "Student One", "24ECE001", "one@example.com", "ECE"],
+          ["Team Alpha", "Student Two", "24ECE002", "two@example.com", "ECE"],
+        ]
+      : mode === "TEAM"
+        ? [
+            ["Team Name", "Email", "Department"],
+            ["Team Alpha", "member@example.com", "ECE"],
+          ]
+        : [
+            ["Name", "Roll No", "Email", "Department"],
+            ["Sanjay Kumar", "24A81A0001", "sanjay@example.com", "ECE"],
+          ];
+  const csv = rows
     .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
     .join("\n");
   const url = URL.createObjectURL(
@@ -51,7 +68,12 @@ const downloadTemplate = () => {
   );
   const a = document.createElement("a");
   a.href = url;
-  a.download = "assessment-student-template.csv";
+  a.download =
+    mode === "STUDENT_TEAMS"
+      ? "assessment-student-team-template.csv"
+      : mode === "TEAM"
+        ? "assessment-team-template.csv"
+        : "assessment-student-template.csv";
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -61,6 +83,7 @@ const downloadTemplate = () => {
 export default function ImportStudentsModal({
   open,
   assessmentId,
+  participationMode = "INDIVIDUAL_STUDENTS",
   onClose,
   onSuccess,
 }: Props) {
@@ -107,6 +130,7 @@ export default function ImportStudentsModal({
           rollNo: get(r, "rollNo"),
           email: get(r, "email").toLowerCase(),
           department: get(r, "department"),
+          teamName: get(r, "teamName"),
         };
       });
       const rowErrors: RowError[] = [];
@@ -114,17 +138,33 @@ export default function ImportStudentsModal({
         seenEmail = new Set<string>();
       parsed.forEach((s, i) => {
         const reasons: string[] = [];
-        if (!s.name) reasons.push("Name is required");
-        if (!s.rollNo) reasons.push("Roll No is required");
-        if (!s.email) reasons.push("Email is required");
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email))
-          reasons.push("Invalid email");
-        const rk = s.rollNo.toLowerCase(),
-          ek = s.email.toLowerCase();
-        if (rk && seenRoll.has(rk)) reasons.push("Duplicate Roll No in file");
-        if (ek && seenEmail.has(ek)) reasons.push("Duplicate Email in file");
-        if (rk) seenRoll.add(rk);
-        if (ek) seenEmail.add(ek);
+        if (participationMode === "INDIVIDUAL_STUDENTS") {
+          if (!s.name) reasons.push("Name is required");
+          if (!s.rollNo) reasons.push("Roll No is required");
+          if (!s.email) reasons.push("Email is required");
+          else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email))
+            reasons.push("Invalid email");
+          const rk = s.rollNo.toLowerCase(),
+            ek = s.email.toLowerCase();
+          if (rk && seenRoll.has(rk)) reasons.push("Duplicate Roll No in file");
+          if (ek && seenEmail.has(ek)) reasons.push("Duplicate Email in file");
+          if (rk) seenRoll.add(rk);
+          if (ek) seenEmail.add(ek);
+        } else if (participationMode === "TEAM") {
+          if (!s.teamName) reasons.push("Team Name is required");
+          if (!s.email) reasons.push("Email is required");
+          else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email))
+            reasons.push("Invalid email");
+          if (!s.department) reasons.push("Department is required");
+        } else {
+          if (!s.teamName) reasons.push("Team Name is required");
+          if (!s.name) reasons.push("Member Name is required");
+          if (!s.rollNo) reasons.push("Roll No is required");
+          if (!s.email) reasons.push("Email is required");
+          else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email))
+            reasons.push("Invalid email");
+          if (!s.department) reasons.push("Department is required");
+        }
         if (reasons.length)
           rowErrors.push({ ...s, row: i + 2, reason: reasons.join("; ") });
       });
@@ -139,13 +179,55 @@ export default function ImportStudentsModal({
     }
   };
   const importNow = async () => {
-    const valid = students.filter(
-      (s) =>
-        s.name &&
-        s.rollNo &&
-        s.email &&
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email),
+    const valid = students.filter((s) =>
+      errors.every((e) => e.row !== students.indexOf(s) + 2),
     );
+    if (participationMode !== "INDIVIDUAL_STUDENTS") {
+      if (!valid.length) {
+        toast.error("No valid team rows to import.");
+        return;
+      }
+      try {
+        setBusy(true);
+        const payload =
+          participationMode === "TEAM"
+            ? valid.map((s) => ({
+                teamName: s.teamName,
+                contactEmail: s.email,
+                branch: s.department,
+              }))
+            : Object.values(
+                valid.reduce((acc: any, s) => {
+                  const key = s.teamName!;
+                  const x = (acc[key] ||= {
+                    teamName: key,
+                    contactEmail: s.email,
+                    branch: s.department,
+                    members: [],
+                  });
+                  x.members.push({
+                    name: s.name,
+                    rollNo: s.rollNo,
+                    email: s.email,
+                    branch: s.department,
+                  });
+                  return acc;
+                }, {}),
+              );
+        const data = await importAssessmentTeams(assessmentId, {
+          mode: participationMode,
+          teams: payload,
+        });
+        setDone(data);
+        await onSuccess();
+        toast.success(`${data.imported || 0} team(s) imported.`);
+      } catch (e: any) {
+        toast.error(e?.response?.data?.message || "Unable to import teams.");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     if (!valid.length) {
       toast.error("No valid student rows to import.");
       return;
@@ -175,10 +257,17 @@ export default function ImportStudentsModal({
       <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b px-6 py-5">
           <div>
-            <h2 className="text-xl font-bold">Import Students</h2>
+            <h2 className="text-xl font-bold">
+              Import{" "}
+              {participationMode === "INDIVIDUAL_STUDENTS"
+                ? "Students"
+                : participationMode === "STUDENT_TEAMS"
+                  ? "Student Teams"
+                  : "Teams"}
+            </h2>
             <p className="mt-1 text-sm text-slate-500">
-              CSV or Excel. Name, Roll No and Email are required; Department is
-              optional.
+              CSV or Excel. This is the same Import Students interface for
+              individual students and both team modes.
             </p>
           </div>
           <button
@@ -209,19 +298,24 @@ export default function ImportStudentsModal({
         ) : (
           <div className="space-y-6 p-6">
             <div className="rounded-xl border bg-slate-50 p-4">
-              <p className="font-semibold">Required CSV columns</p>
+              <p className="font-semibold">CSV columns</p>
               <p className="mt-1 font-mono text-xs">
-                Name, Roll No, Email, Department
+                {participationMode === "INDIVIDUAL_STUDENTS"
+                  ? "Name, Roll No, Email, Department"
+                  : participationMode === "STUDENT_TEAMS"
+                    ? "Team Name, Member Name, Roll No, Email, Department"
+                    : "Team Name, Email, Department"}
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                Department can be empty. The importer also accepts snake_case
-                headers such as roll_no.
+                For Student Teams, each row is one member. For Team mode, each
+                row is one team. The importer also accepts snake_case headers
+                such as roll_no.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={downloadTemplate}
+                onClick={() => downloadTemplate(participationMode)}
                 className="flex items-center gap-2 rounded-xl border px-4 py-3"
               >
                 <Download size={17} />
@@ -260,6 +354,9 @@ export default function ImportStudentsModal({
                   <thead className="bg-slate-50">
                     <tr>
                       <th className="p-3 text-left">#</th>
+                      {participationMode !== "INDIVIDUAL_STUDENTS" && (
+                        <th className="p-3 text-left">Team Name</th>
+                      )}
                       <th className="p-3 text-left">Name</th>
                       <th className="p-3 text-left">Roll No</th>
                       <th className="p-3 text-left">Email</th>
@@ -270,6 +367,9 @@ export default function ImportStudentsModal({
                     {students.slice(0, 100).map((s, i) => (
                       <tr key={i} className="border-t">
                         <td className="p-3">{i + 1}</td>
+                        {participationMode !== "INDIVIDUAL_STUDENTS" && (
+                          <td className="p-3">{s.teamName || "—"}</td>
+                        )}
                         <td className="p-3">{s.name || "—"}</td>
                         <td className="p-3">{s.rollNo || "—"}</td>
                         <td className="p-3">{s.email || "—"}</td>

@@ -20,7 +20,6 @@ export interface LiveStudent {
   studentName: string;
   teamId?: string | null;
   teamName?: string | null;
-  teamMemberCount?: number;
   members?: any[];
   email: string;
   rollNo: string;
@@ -141,7 +140,6 @@ export default function LiveMonitor({
           String(s.rollNo || "")
             .toLowerCase()
             .includes(q);
-        const status = normalizeStatus(s.status);
         const matchesStatus =
           statusFilter === "ALL" ||
           (statusFilter === "LIVE" && isLive(s)) ||
@@ -267,11 +265,7 @@ export default function LiveMonitor({
                     ? "Student"
                     : "Team"}
                 </th>
-                <th className="px-4 py-4">
-                  {assessment.participation_mode === "INDIVIDUAL_STUDENTS"
-                    ? "Roll No"
-                    : "Members"}
-                </th>
+                <th className="px-4 py-4">Roll No</th>
                 <th className="px-4 py-4">Current</th>
                 <th className="px-4 py-4">Answered</th>
                 <th className="px-4 py-4">Timer</th>
@@ -312,16 +306,14 @@ export default function LiveMonitor({
                             </p>
                             <p className="text-xs text-slate-500">
                               {student.teamName
-                                ? `${student.teamMemberCount || 0} member(s) · ${student.email}`
+                                ? `Contact: ${student.email}`
                                 : student.email}
                             </p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-4 font-medium">
-                        {student.teamName
-                          ? `${student.teamMemberCount || 0} member(s)`
-                          : student.rollNo}
+                        {student.teamName ? "—" : student.rollNo}
                       </td>
                       <td className="px-4 py-4">
                         {student.currentQuestion} / {student.totalQuestions}

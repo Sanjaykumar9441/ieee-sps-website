@@ -11,7 +11,8 @@ import toast from "react-hot-toast";
 import { downloadAssessmentExport, getLeaderboard } from "../assessmentApi";
 import type { Assessment } from "../AssessmentCard";
 
-const csvCell = (value: any) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+const csvCell = (value: unknown): string =>
+  `"${String(value ?? "").replace(/"/g, '""')}"`;
 const downloadText = (filename: string, text: string) => {
   const url = URL.createObjectURL(
     new Blob([text], { type: "text/csv;charset=utf-8;" }),
@@ -45,32 +46,43 @@ export default function ExportTab({ assessment }: { assessment: Assessment }) {
   const downloadRound2 = async () => {
     try {
       setBusy("round2");
-      const leaderboard = await getLeaderboard(assessment.id);
-      const rows = (leaderboard || []).map((s: any) => ({
-        rank: s.rank,
-        name: s.teamName || s.name || "",
-        rollNo: s.teamName ? "" : s.rollNo || "",
-        email: s.email || "",
-        department: s.department || s.branch || "",
-      }));
+      type Round2Row = {
+        rank: unknown;
+        name: string;
+        rollNo: string;
+        email: string;
+        department: string;
+      };
+
+      const leaderboard: any[] = await getLeaderboard(assessment.id);
+      const rows: Round2Row[] = (leaderboard || []).map(
+        (s: any): Round2Row => ({
+          rank: s.rank,
+          name: String(s.teamName || s.name || ""),
+          rollNo: s.teamName ? "" : String(s.rollNo || ""),
+          email: String(s.email || ""),
+          department: String(s.department || s.branch || ""),
+        }),
+      );
       if (!rows.length) {
         toast.error("No submitted students are available.");
         return;
       }
-      const headers =
-        assessment.participation_mode === "INDIVIDUAL_STUDENTS"
+      const isIndividual =
+        assessment.participation_mode === "INDIVIDUAL_STUDENTS";
+
+      const csvRows: unknown[][] = [
+        isIndividual
           ? ["Rank", "Name", "Roll No", "Email", "Department"]
-          : ["Rank", "Team Name", "Email", "Branch", "Members"];
-      const csv = [
-        headers,
-        ...rows.map((r) =>
-          assessment.participation_mode === "INDIVIDUAL_STUDENTS"
-            ? [r.rank, r.name, r.rollNo, r.email, r.department]
-            : [r.rank, r.name, r.email, r.department, ""],
+          : ["Rank", "Team Name", "Email", "Branch"],
+        ...rows.map((row: Round2Row) =>
+          isIndividual
+            ? [row.rank, row.name, row.rollNo, row.email, row.department]
+            : [row.rank, row.name, row.email, row.department],
         ),
-      ]
-        .map((r) => r.map(csvCell).join(","))
-        .join("\n");
+      ];
+
+      const csv = csvRows.map((row) => row.map(csvCell).join(",")).join("\n");
       downloadText(
         `${(assessment.title || "assessment").replace(/[^a-z0-9_-]+/gi, "_")}-round2-students.csv`,
         csv,

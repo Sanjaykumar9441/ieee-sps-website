@@ -1,7 +1,7 @@
 import { useState } from "react";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
-import { CheckCircle, Download, FileText, FileUp, X } from "lucide-react";
+import { CheckCircle, Download, FileUp, X } from "lucide-react";
 import {
   validateImportedQuestions,
   checkQuestionDuplicates,
@@ -14,7 +14,11 @@ interface Props {
   onClose: () => void;
   onSuccess: () => void;
 }
-type QuestionType = "MCQ" | "MULTIPLE_CORRECT" | "TRUE_FALSE";
+type QuestionType =
+  | "MCQ"
+  | "MULTIPLE_CORRECT"
+  | "TRUE_FALSE"
+  | "FILL_IN_THE_BLANK";
 type ImportQuestion = {
   question_text: string;
   question_type: QuestionType;
@@ -56,6 +60,15 @@ const typeOf = (v: string): QuestionType => {
     return "MULTIPLE_CORRECT";
   if (["true_false", "truefalse", "true_or_false"].includes(x))
     return "TRUE_FALSE";
+  if (
+    [
+      "fill_in_the_blank",
+      "fill_in_blank",
+      "fill_blank",
+      "fill_in_the_blank_with_options",
+    ].includes(x)
+  )
+    return "FILL_IN_THE_BLANK";
   return "MCQ";
 };
 const parseCorrect = (value: string, type: QuestionType, options: string[]) =>
@@ -72,6 +85,7 @@ const parseCorrect = (value: string, type: QuestionType, options: string[]) =>
             ? 1
             : -1;
       if (/^[A-D]$/.test(x)) return x.charCodeAt(0) - 65;
+      if (/^[0-3]$/.test(v)) return Number(v);
       if (/^[1-4]$/.test(v)) return Number(v) - 1;
       return options.findIndex((o) => o.toLowerCase() === v.toLowerCase());
     })
@@ -114,6 +128,15 @@ const downloadTemplate = () => {
       "",
       "",
       "True",
+    ],
+    [
+      "The output of an AND gate with all inputs HIGH is ___.",
+      "FILL_IN_THE_BLANK",
+      "HIGH",
+      "LOW",
+      "Z",
+      "X",
+      "A",
     ],
   ];
   const csv = rows
@@ -301,7 +324,8 @@ export default function ImportQuestionsModal({
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 MCQ: one answer (A). Multiple Correct: two or more (A|C|D).
-                True/False: True or False.
+                True/False: True or False. Fill in the Blank: one correct option
+                (A).
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -315,10 +339,10 @@ export default function ImportQuestionsModal({
               </button>
               <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-[#00629B] px-4 py-3 font-semibold text-white">
                 <FileUp size={17} />
-                Choose CSV
+                Choose File
                 <input
                   type="file"
-                  accept=".csv,text/csv"
+                  accept=".csv,.xlsx,.xls,text/csv"
                   className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];

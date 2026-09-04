@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
-import { Download, FileUp, Plus, Trash2, Users } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import type { Assessment } from "../AssessmentCard";
 import {
   createAssessmentTeam,
   deleteAssessmentTeam,
   getAssessmentTeams,
-  importAssessmentTeams,
 } from "../assessmentApi";
+import ImportStudentsModal from "./ImportStudentsModal";
 
 type Member = {
   id?: string;
@@ -22,31 +21,9 @@ type Team = {
   team_name: string;
   contact_email: string;
   branch: string | null;
-  member_count: number;
   mode: string;
   members: Member[];
 };
-
-const clean = (v: any) => String(v ?? "").trim();
-const header = (v: any) =>
-  clean(v)
-    .replace(/^\uFEFF/, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-const get = (r: any, keys: string[]) => {
-  for (const k of keys) {
-    const v = r[header(k)];
-    if (v !== undefined) return clean(v);
-  }
-  return "";
-};
-const csv = (rows: any[]) =>
-  rows
-    .map((r) =>
-      r.map((v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","),
-    )
-    .join("\n");
 
 export default function TeamManager({
   assessment,
@@ -57,6 +34,7 @@ export default function TeamManager({
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [busy, setBusy] = useState(false);
   const [teamName, setTeamName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -79,13 +57,22 @@ export default function TeamManager({
     void load();
   }, [load]);
   const add = async () => {
-    if (!teamName.trim() || !contactEmail.trim())
-      return toast.error("Team name and member email are required.");
+    if (!teamName.trim()) return toast.error("Team name is required.");
+    if (mode === "TEAM" && !contactEmail.trim())
+      return toast.error("Member email is required.");
+    if (mode === "TEAM" && !branch.trim())
+      return toast.error("Branch is required.");
     if (
       mode === "STUDENT_TEAMS" &&
-      members.some((m) => !m.name.trim() || !m.rollNo.trim() || !m.email.trim())
+      members.some(
+        (m) =>
+          !m.name.trim() ||
+          !m.rollNo.trim() ||
+          !m.email.trim() ||
+          !m.branch.trim(),
+      )
     )
-      return toast.error("Complete every team member.");
+      return toast.error("Complete every team member, including branch.");
     try {
       setBusy(true);
       await createAssessmentTeam(assessment.id, {
@@ -111,90 +98,6 @@ export default function TeamManager({
       setBusy(false);
     }
   };
-  const importFile = async (file: File) => {
-    try {
-      setBusy(true);
-      const wb = XLSX.read(await file.arrayBuffer(), {
-        type: "array",
-        raw: false,
-      });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      if (!ws) throw new Error("No worksheet found.");
-      const rows = XLSX.utils.sheet_to_json<any>(ws, {
-        defval: "",
-        raw: false,
-      });
-      if (!rows.length) throw new Error("The file is empty.");
-      let payload: any[] = [];
-      if (mode === "TEAM") {
-        payload = rows.map((r) => ({
-          teamName: get(r, ["team_name", "team name"]),
-          contactEmail: get(r, ["contact_email", "email", "member_email"]),
-          branch: get(r, ["branch", "department"]),
-        }));
-      } else {
-        const grouped = new Map<string, any>();
-        for (const r of rows) {
-          const name = get(r, ["team_name", "team name"]);
-          if (!name) continue;
-          const item = grouped.get(name) || {
-            teamName: name,
-            contactEmail: "",
-            branch: get(r, ["branch", "department"]),
-            members: [],
-          };
-          const m = {
-            name: get(r, ["member_name", "name"]),
-            rollNo: get(r, ["roll_number", "roll_no", "roll no"]),
-            email: get(r, ["member_email", "email"]),
-            branch: get(r, ["member_branch", "branch", "department"]),
-          };
-          if (!item.contactEmail && m.email) item.contactEmail = m.email;
-          if (m.name || m.rollNo || m.email) item.members.push(m);
-          grouped.set(name, item);
-        }
-        payload = [...grouped.values()];
-      }
-      if (!payload.length) throw new Error("No valid team rows found.");
-      const result = await importAssessmentTeams(assessment.id, {
-        mode,
-        teams: payload,
-      });
-      toast.success(`${result.imported || 0} team(s) imported.`);
-      if (result.errorRows?.length)
-        toast.error(`${result.errorRows.length} team row(s) failed.`);
-      await load();
-    } catch (e: any) {
-      toast.error(
-        e?.message || e?.response?.data?.message || "Unable to import teams.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-  const downloadTemplate = () => {
-    const rows =
-      mode === "TEAM"
-        ? [
-            ["team_name", "email", "branch"],
-            ["Team Alpha", "member@example.com", "ECE"],
-          ]
-        : [
-            ["team_name", "member_name", "roll_number", "email", "branch"],
-            ["Team Alpha", "Student One", "23ECE001", "one@example.com", "ECE"],
-            ["Team Alpha", "Student Two", "23ECE002", "two@example.com", "ECE"],
-          ];
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(
-      new Blob([csv(rows)], { type: "text/csv;charset=utf-8" }),
-    );
-    a.download =
-      mode === "TEAM"
-        ? "team-assessment-template.csv"
-        : "student-team-template.csv";
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  };
   if (loading) return <div className="py-16 text-center">Loading teams...</div>;
   return (
     <div className="space-y-6">
@@ -206,7 +109,7 @@ export default function TeamManager({
           <p className="mt-1 text-sm text-slate-500">
             {mode === "TEAM"
               ? "One test attempt per team. Register team name, one member email and branch."
-              : "One test attempt per team with all member details."}
+              : "One test attempt per team. Add all member details below."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -218,35 +121,18 @@ export default function TeamManager({
             <Plus size={17} />
             Add Team
           </button>
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border bg-white px-4 py-3 font-semibold">
-            <FileUp size={17} />
-            Import CSV
-            <input
-              type="file"
-              accept=".csv,.xlsx,.xls"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void importFile(f);
-              }}
-            />
-          </label>
           <button
             type="button"
-            onClick={downloadTemplate}
+            onClick={() => setShowImport(true)}
             className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-3 font-semibold"
           >
-            <Download size={17} />
-            Template
+            Import Students
           </button>
         </div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Stat label="Teams" value={teams.length} />
-        <Stat
-          label="Members"
-          value={teams.reduce((n, t) => n + (t.members?.length || 0), 0)}
-        />
+      <div className="rounded-2xl border bg-white p-5">
+        <p className="text-sm text-slate-500">Teams</p>
+        <p className="mt-2 text-3xl font-bold">{teams.length}</p>
       </div>
       <div className="overflow-hidden rounded-2xl border bg-white">
         <div className="overflow-x-auto">
@@ -256,7 +142,6 @@ export default function TeamManager({
                 <th className="p-4 text-left">Team</th>
                 <th className="p-4 text-left">Email</th>
                 <th className="p-4 text-left">Branch</th>
-                <th className="p-4 text-left">Members</th>
                 <th className="p-4 text-left">Action</th>
               </tr>
             </thead>
@@ -267,19 +152,6 @@ export default function TeamManager({
                     <td className="p-4 font-semibold">{t.team_name}</td>
                     <td className="p-4">{t.contact_email}</td>
                     <td className="p-4">{t.branch || "-"}</td>
-                    <td className="p-4">
-                      {mode === "TEAM" ? (
-                        "Team participant"
-                      ) : (
-                        <div className="space-y-1">
-                          {t.members.map((m, i) => (
-                            <div key={m.id || i}>
-                              {m.name} · {m.rollNo} · {m.email}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </td>
                     <td className="p-4">
                       <button
                         type="button"
@@ -310,7 +182,7 @@ export default function TeamManager({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="p-12 text-center text-slate-500">
+                  <td colSpan={4} className="p-12 text-center text-slate-500">
                     No teams added yet.
                   </td>
                 </tr>
@@ -330,24 +202,11 @@ export default function TeamManager({
                 ✕
               </button>
             </div>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <div className="mt-5">
               <Field label="Team Name">
                 <input
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
-                />
-              </Field>
-              <Field label="Email of one team member">
-                <input
-                  type="email"
-                  value={contactEmail}
-                  onChange={(e) => setContactEmail(e.target.value)}
-                />
-              </Field>
-              <Field label="Branch">
-                <input
-                  value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
                 />
               </Field>
             </div>
@@ -423,6 +282,23 @@ export default function TeamManager({
                 </div>
               </div>
             )}
+            {mode === "TEAM" && (
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <Field label="Email of one team member">
+                  <input
+                    type="email"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                  />
+                </Field>
+                <Field label="Branch">
+                  <input
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                  />
+                </Field>
+              </div>
+            )}
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
@@ -443,6 +319,17 @@ export default function TeamManager({
           </div>
         </div>
       )}
+      {showImport && (
+        <ImportStudentsModal
+          open={showImport}
+          assessmentId={assessment.id}
+          participationMode={mode}
+          onClose={() => setShowImport(false)}
+          onSuccess={async () => {
+            await load();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -458,13 +345,5 @@ function Field({
       {label}
       <span className="mt-1 block">{children}</span>
     </label>
-  );
-}
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl border bg-white p-5">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-bold">{value}</p>
-    </div>
   );
 }
