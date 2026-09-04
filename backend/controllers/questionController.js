@@ -37,6 +37,9 @@ function normalizeOptions(value) {
 }
 
 function normalizeCorrectAnswers(value, options = [], questionType = "MCQ") {
+  // The frontend sends correct_answers as option indexes (0-based), while
+  // CSV imports may provide A-D, 1-4, True/False, or option text. Accept all
+  // supported forms so validation and final import use the same representation.
   let input = Array.isArray(value) ? value : value == null ? [] : [value];
 
   if (typeof value === "string") {
@@ -51,7 +54,10 @@ function normalizeCorrectAnswers(value, options = [], questionType = "MCQ") {
 
     let index = -1;
 
-    if (/^[A-D]$/i.test(text)) {
+    // Frontend representation: zero-based option index.
+    if (typeof answer === "number" && Number.isInteger(answer)) {
+      index = answer;
+    } else if (/^[A-D]$/i.test(text)) {
       index = text.toUpperCase().charCodeAt(0) - 65;
     } else if (/^[1-4]$/.test(text)) {
       index = Number(text) - 1;
@@ -61,7 +67,7 @@ function normalizeCorrectAnswers(value, options = [], questionType = "MCQ") {
       if (normalized === "false") index = 1;
     } else {
       index = options.findIndex(
-        (option) => option.toLowerCase() === text.toLowerCase(),
+        (option) => String(option ?? "").toLowerCase() === text.toLowerCase(),
       );
     }
 
