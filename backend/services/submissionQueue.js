@@ -108,7 +108,18 @@ async function claimBatch() {
     if (!raw) break;
 
     try {
-      jobs.push({ raw, job: JSON.parse(raw) });
+      const job =
+        typeof raw === "string"
+          ? JSON.parse(raw)
+          : raw && typeof raw === "object"
+            ? raw
+            : JSON.parse(String(raw));
+
+      jobs.push({
+        raw,
+        rawValue: typeof raw === "string" ? raw : JSON.stringify(raw),
+        job,
+      });
     } catch (error) {
       console.error(
         "[SUBMISSION QUEUE] Invalid job moved to failed list:",
@@ -123,7 +134,8 @@ async function claimBatch() {
 }
 
 async function acknowledge(raw) {
-  await redis.lrem(INFLIGHT_KEY, 1, raw);
+  const value = typeof raw === "string" ? raw : JSON.stringify(raw);
+  await redis.lrem(INFLIGHT_KEY, 1, value);
 }
 
 async function recoverInflightJobs() {
@@ -136,7 +148,13 @@ async function recoverInflightJobs() {
   await redis.del(INFLIGHT_KEY);
   for (const raw of rawJobs) {
     try {
-      const job = normalizeJob(JSON.parse(raw));
+      const parsed =
+        typeof raw === "string"
+          ? JSON.parse(raw)
+          : raw && typeof raw === "object"
+            ? raw
+            : JSON.parse(String(raw));
+      const job = normalizeJob(parsed);
       job.retryCount += 1;
       if (job.retryCount > MAX_RETRIES) {
         await redis.rpush(FAILED_KEY, JSON.stringify(job));
@@ -271,7 +289,7 @@ async function processSubmission(job) {
 }
 
 async function processOne(item) {
-  const { raw, job } = item;
+  const { raw, rawValue, job } = item;
   const normalized = normalizeJob(job);
   normalized.retryCount = Number(normalized.retryCount || 0);
 
@@ -291,11 +309,11 @@ async function processOne(item) {
           }
         : null,
     });
-    await acknowledge(raw);
+    await acknowledge(rawValue ?? raw);
     return result;
   } catch (error) {
     normalized.retryCount += 1;
-    await acknowledge(raw);
+    await acknowledge(rawValue ?? raw);
 
     if (normalized.retryCount > MAX_RETRIES) {
       await redis.rpush(FAILED_KEY, JSON.stringify(normalized));

@@ -37,7 +37,6 @@ export interface LiveStudent {
 
   currentQuestion: number;
   totalQuestions: number;
-  answeredQuestions: number;
 
   remainingSeconds: number;
   violations: number;
@@ -121,8 +120,6 @@ export default function LiveMonitor({
         status: normalizeStatus(row.status),
 
         remainingSeconds: Math.max(0, Number(row.remainingSeconds || 0)),
-
-        answeredQuestions: Number(row.answeredQuestions || 0),
 
         totalQuestions: Number(row.totalQuestions || 0),
 
@@ -249,22 +246,6 @@ export default function LiveMonitor({
 
   const submittedCount = students.filter(isSubmitted).length;
 
-  const averageProgress = students.length
-    ? Math.round(
-        students.reduce(
-          (sum, student) =>
-            sum +
-            (student.totalQuestions
-              ? Math.min(
-                  100,
-                  (student.answeredQuestions / student.totalQuestions) * 100,
-                )
-              : 0),
-          0,
-        ) / students.length,
-      )
-    : 0;
-
   /*
    * Force submit.
    */
@@ -324,7 +305,7 @@ export default function LiveMonitor({
    * Current | Answered | Timer | Violations | Status | Actions
    * = 8 columns
    */
-  const noDataColSpan = isTeam ? 9 : isStudentTeams ? 12 : 8;
+  const noDataColSpan = isTeam ? 8 : isStudentTeams ? 11 : 7;
 
   return (
     <div className="space-y-6">
@@ -356,7 +337,7 @@ export default function LiveMonitor({
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <div className="rounded-2xl border bg-white p-5">
           <p className="text-sm text-slate-500">Live {participantLabel}</p>
 
@@ -376,14 +357,6 @@ export default function LiveMonitor({
 
           <p className="mt-2 text-3xl font-bold text-amber-600">
             {students.reduce((sum, student) => sum + student.violations, 0)}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border bg-white p-5">
-          <p className="text-sm text-slate-500">Average Progress</p>
-
-          <p className="mt-2 text-3xl font-bold text-[#00629B]">
-            {averageProgress}%
           </p>
         </div>
       </div>
@@ -455,8 +428,6 @@ export default function LiveMonitor({
 
                 <th className="px-4 py-4">Current</th>
 
-                <th className="px-4 py-4">Answered</th>
-
                 <th className="px-4 py-4">Timer</th>
 
                 <th className="px-4 py-4">Violations</th>
@@ -482,13 +453,6 @@ export default function LiveMonitor({
               ) : (
                 filtered.map((student) => {
                   const submitted = isSubmitted(student);
-
-                  const progress = student.totalQuestions
-                    ? Math.round(
-                        (student.answeredQuestions / student.totalQuestions) *
-                          100,
-                      )
-                    : 0;
 
                   return (
                     <tr key={student.attemptId} className="text-sm">
@@ -558,26 +522,6 @@ export default function LiveMonitor({
                       {/* CURRENT QUESTION */}
                       <td className="px-4 py-4">
                         {student.currentQuestion} / {student.totalQuestions}
-                      </td>
-
-                      {/* ANSWERED */}
-                      <td className="px-4 py-4">
-                        <div className="w-32">
-                          <div className="flex justify-between text-xs">
-                            <span>{student.answeredQuestions}</span>
-
-                            <span>{progress}%</span>
-                          </div>
-
-                          <div className="mt-1 h-2 rounded-full bg-slate-200">
-                            <div
-                              className="h-2 rounded-full bg-[#00629B]"
-                              style={{
-                                width: `${Math.min(100, progress)}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
                       </td>
 
                       {/* TIMER */}
