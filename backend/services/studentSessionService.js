@@ -21,7 +21,8 @@ exports.lockStudent = async (
 };
 
 exports.unlockStudent = async (assessmentId, studentId) => {
-  return await releaseAttemptLock(assessmentId, studentId);
+  await releaseAttemptLock(assessmentId, studentId);
+  return true;
 };
 
 exports.verifySession = async (assessmentId, studentId, sessionId) => {
@@ -42,21 +43,33 @@ exports.refreshSession = async (
   );
 };
 
-/* ============================================================
-   UNLOCK STUDENT / STALE SESSION CLEANUP
-============================================================ */
+/*
+ * Recover a session only when the Redis lock is currently absent.
+ * If another browser owns the lock, this returns false and does not replace it.
+ * This handles Redis expiry/cold-start recovery without allowing two active
+ * sessions for the same attempt.
+ */
+exports.recoverSession = async (
+  assessmentId,
+  studentId,
+  sessionId,
+  durationSeconds,
+) => {
+  const key = `assessment:lock:${assessmentId}:${studentId}`;
+  const existing = await redis.get(key);
 
-exports.unlockStudent = async (assessmentId, studentId) => {
-  await releaseAttemptLock(assessmentId, studentId);
-  return true;
+  if (existing !== null && existing !== undefined) {
+    return String(existing) === String(sessionId);
+  }
+
+  const result = await redis.set(key, sessionId, {
+    nx: true,
+    ex: Math.max(1, Number(durationSeconds) || 1),
+  });
+
+  return result === "OK";
 };
 
-/*
- * Clear a Redis session lock only when the caller has already established
- * that there is no IN_PROGRESS database attempt. This is used to recover
- * from a server crash or an abandoned pre-attempt lock without weakening
- * the one-active-session protection while a real attempt exists.
- */
 exports.clearStaleSession = async (assessmentId, studentId) => {
   const key = `assessment:lock:${assessmentId}:${studentId}`;
   const existing = await redis.get(key);
@@ -66,32 +79,18 @@ exports.clearStaleSession = async (assessmentId, studentId) => {
   return true;
 };
 
-/* ============================================================
-   CHECK SESSION
-============================================================ */
-
 exports.hasActiveSession = async (assessmentId, studentId) => {
   const key = `assessment:lock:${assessmentId}:${studentId}`;
-
   const value = await redis.get(key);
-
   return value !== null;
 };
 
-/* ============================================================
-   EXTEND SESSION
-============================================================ */
-
 exports.extendSession = async (assessmentId, studentId, durationSeconds) => {
   const key = `assessment:lock:${assessmentId}:${studentId}`;
-
   const exists = await redis.get(key);
 
-  if (!exists) {
-    return false;
-  }
+  if (!exists) return false;
 
   await redis.expire(key, durationSeconds);
-
   return true;
 };
