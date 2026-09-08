@@ -12,10 +12,7 @@ PUBLIC / PRE-LOGIN
 ============================================================
 */
 
-router.get(
-  "/:assessmentId/check",
-  controller.checkAssessment,
-);
+router.get("/:assessmentId/check", controller.checkAssessment);
 
 /*
 ============================================================
@@ -43,6 +40,14 @@ router.post(
 );
 
 router.get(
+  "/:attemptId/paper",
+  verifyStudentToken,
+  verifyAssessmentSession,
+  controller.getPaper,
+);
+
+// Kept for older clients; the current exam UI does not call this route.
+router.get(
   "/:attemptId/question/:number",
   verifyStudentToken,
   verifyAssessmentSession,
@@ -68,6 +73,13 @@ router.post(
   verifyStudentToken,
   verifyAssessmentSession,
   controller.submitAssessment,
+);
+
+router.get(
+  "/:attemptId/submission-status",
+  verifyStudentToken,
+  verifyAssessmentSession,
+  controller.getSubmissionQueueStatus,
 );
 
 router.post(

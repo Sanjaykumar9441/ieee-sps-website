@@ -1,6 +1,7 @@
 const Question = require("../models/Question");
 const QuestionBank = require("../models/QuestionBank");
 const liveEvents = require("../services/liveEvents");
+const assessmentEngine = require("../services/assessmentEngine");
 const {
   syncQuestionBankTotal,
   syncAssessmentsForBank,
@@ -321,6 +322,7 @@ exports.create = async (req, res) => {
     if (error) throw error;
 
     await refreshQuestionCounts(bankId);
+    assessmentEngine.invalidateQuestionBankCache(bankId);
     liveEvents.emitQuestionCreated?.(bankId, data);
 
     return res.status(201).json({
@@ -373,6 +375,7 @@ exports.update = async (req, res) => {
     if (error) throw error;
 
     await refreshQuestionCounts(existing.bank_id);
+    assessmentEngine.invalidateQuestionBankCache(existing.bank_id);
     liveEvents.emitQuestionUpdated?.(existing.bank_id, data);
 
     return res.json({
@@ -405,6 +408,7 @@ exports.delete = async (req, res) => {
     if (error) throw error;
 
     await refreshQuestionCounts(existing.bank_id);
+    assessmentEngine.invalidateQuestionBankCache(existing.bank_id);
     liveEvents.emitQuestionDeleted?.(existing.bank_id, existing);
 
     return res.json({
@@ -430,6 +434,7 @@ exports.duplicate = async (req, res) => {
     if (error) throw error;
 
     await refreshQuestionCounts(source.bank_id);
+    assessmentEngine.invalidateQuestionBankCache(source.bank_id);
     liveEvents.emitQuestionCreated?.(source.bank_id, data);
 
     return res.status(201).json({
@@ -641,6 +646,7 @@ exports.finalImport = async (req, res) => {
 
     const totalQuestions = await syncQuestionBankTotal(bankId);
     const assessmentIds = await syncAssessmentsForBank(bankId);
+    assessmentEngine.invalidateQuestionBankCache(bankId);
     const { data: bank } = await QuestionBank.get(bankId);
 
     assessmentIds.forEach((assessmentId) =>

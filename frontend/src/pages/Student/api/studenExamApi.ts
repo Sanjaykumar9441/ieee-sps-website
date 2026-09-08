@@ -9,9 +9,7 @@ import type {
 const API = import.meta.env.VITE_API_URL;
 
 const getToken = () =>
-  localStorage.getItem("studentToken") ||
-  localStorage.getItem("token") ||
-  "";
+  localStorage.getItem("studentToken") || localStorage.getItem("token") || "";
 
 const getAuthConfig = () => ({
   headers: {
@@ -23,12 +21,8 @@ const getSessionConfig = (attemptId: string) => ({
   headers: {
     Authorization: `Bearer ${getToken()}`,
     "x-assessment-session":
-      sessionStorage.getItem(
-        `quiz_session_${attemptId}`,
-      ) ||
-      localStorage.getItem(
-        `quiz_session_${attemptId}`,
-      ) ||
+      sessionStorage.getItem(`quiz_session_${attemptId}`) ||
+      localStorage.getItem(`quiz_session_${attemptId}`) ||
       "",
   },
 });
@@ -44,10 +38,7 @@ export const checkAssessment = async (
   return data;
 };
 
-export const sendOtp = async (
-  assessmentId: string,
-  email: string,
-) => {
+export const sendOtp = async (assessmentId: string, email: string) => {
   const { data } = await axios.post(
     `${API}/api/student-auth/send-otp`,
     { assessmentId, email },
@@ -57,10 +48,8 @@ export const sendOtp = async (
   return data;
 };
 
-export const requestStudentOtp = (
-  assessmentId: string,
-  email: string,
-) => sendOtp(assessmentId, email);
+export const requestStudentOtp = (assessmentId: string, email: string) =>
+  sendOtp(assessmentId, email);
 
 export const verifyOtp = async (
   assessmentId: string,
@@ -74,28 +63,16 @@ export const verifyOtp = async (
   );
 
   if (!data?.success) {
-    throw new Error(
-      data?.message ||
-        "Unable to verify OTP.",
-    );
+    throw new Error(data?.message || "Unable to verify OTP.");
   }
 
   if (data.token) {
-    localStorage.setItem(
-      "studentToken",
-      data.token,
-    );
-    localStorage.setItem(
-      "token",
-      data.token,
-    );
+    localStorage.setItem("studentToken", data.token);
+    localStorage.setItem("token", data.token);
   }
 
   if (data.student) {
-    localStorage.setItem(
-      "student",
-      JSON.stringify(data.student),
-    );
+    localStorage.setItem("student", JSON.stringify(data.student));
   }
 
   return data;
@@ -105,9 +82,7 @@ export const loginStudent = async (
   assessmentId: string,
   email: string,
   passwordOrOtp: string,
-  loginMethod:
-    | "PASSWORD"
-    | "OTP" = "PASSWORD",
+  loginMethod: "PASSWORD" | "OTP" = "PASSWORD",
 ) => {
   const payload =
     loginMethod === "OTP"
@@ -129,28 +104,16 @@ export const loginStudent = async (
   );
 
   if (!data?.success) {
-    throw new Error(
-      data?.message ||
-        "Unable to login.",
-    );
+    throw new Error(data?.message || "Unable to login.");
   }
 
   if (data.token) {
-    localStorage.setItem(
-      "studentToken",
-      data.token,
-    );
-    localStorage.setItem(
-      "token",
-      data.token,
-    );
+    localStorage.setItem("studentToken", data.token);
+    localStorage.setItem("token", data.token);
   }
 
   if (data.student) {
-    localStorage.setItem(
-      "student",
-      JSON.stringify(data.student),
-    );
+    localStorage.setItem("student", JSON.stringify(data.student));
   }
 
   return data;
@@ -168,34 +131,48 @@ export const startAssessment = async (
   if (
     !data?.success ||
     !data?.attemptId ||
-    !data?.question
+    !Array.isArray(data?.questions) ||
+    !data.questions.length
   ) {
-    throw new Error(
-      data?.message ||
-        "Unable to start assessment.",
-    );
+    throw new Error(data?.message || "Unable to start assessment.");
   }
 
   if (data.attemptId) {
-    localStorage.setItem(
-      "studentAttemptId",
-      data.attemptId,
-    );
+    localStorage.setItem("studentAttemptId", data.attemptId);
 
     if (data.sessionId) {
-      sessionStorage.setItem(
-        `quiz_session_${data.attemptId}`,
-        data.sessionId,
-      );
+      sessionStorage.setItem(`quiz_session_${data.attemptId}`, data.sessionId);
 
-      localStorage.setItem(
-        `quiz_session_${data.attemptId}`,
-        data.sessionId,
-      );
+      localStorage.setItem(`quiz_session_${data.attemptId}`, data.sessionId);
     }
   }
 
   return data;
+};
+
+export const getPaper = async (
+  attemptId: string,
+): Promise<{
+  questions: AttemptQuestion[];
+  remainingSeconds: number;
+}> => {
+  const { data } = await axios.get(
+    `${API}/api/student-assessments/${attemptId}/paper`,
+    getSessionConfig(attemptId),
+  );
+
+  if (
+    !data?.success ||
+    !Array.isArray(data.questions) ||
+    !data.questions.length
+  ) {
+    throw new Error(data?.message || "Unable to load examination paper.");
+  }
+
+  return {
+    questions: data.questions,
+    remainingSeconds: Number(data.remainingSeconds || 0),
+  };
 };
 
 export const getQuestion = async (
@@ -211,17 +188,12 @@ export const getQuestion = async (
   );
 
   if (!data?.success) {
-    throw new Error(
-      data?.message ||
-        "Unable to load question.",
-    );
+    throw new Error(data?.message || "Unable to load question.");
   }
 
   return {
     question: data.question,
-    remainingSeconds: Number(
-      data.remainingSeconds || 0,
-    ),
+    remainingSeconds: Number(data.remainingSeconds || 0),
   };
 };
 
@@ -240,10 +212,7 @@ export const saveAnswer = async (
   );
 
   if (!data?.success) {
-    throw new Error(
-      data?.message ||
-        "Unable to save answer.",
-    );
+    throw new Error(data?.message || "Unable to save answer.");
   }
 
   return data;
@@ -260,10 +229,7 @@ export const getPalette = async (
   );
 
   if (!data?.success) {
-    throw new Error(
-      data?.message ||
-        "Unable to load question palette.",
-    );
+    throw new Error(data?.message || "Unable to load question palette.");
   }
 
   return {
@@ -271,9 +237,7 @@ export const getPalette = async (
   };
 };
 
-export const getAssessmentStatus = async (
-  attemptId: string,
-) => {
+export const getAssessmentStatus = async (attemptId: string) => {
   const { data } = await axios.get(
     `${API}/api/student-assessments/${attemptId}/status`,
     getSessionConfig(attemptId),
@@ -288,58 +252,40 @@ export const resumeAssessment = async (
 ) => {
   void assessmentId;
 
-  const status =
-    await getAssessmentStatus(
-      attemptId,
-    );
+  const status = await getAssessmentStatus(attemptId);
 
-  if (!status?.success) {
-    throw new Error(
-      status?.message ||
-        "Unable to restore assessment.",
-    );
+  if (!status?.success && !status?.expired) {
+    throw new Error(status?.message || "Unable to restore assessment.");
   }
 
   if (
     status.status === "SUBMITTED" ||
-    status.status === "EXPIRED" ||
     status.expired ||
     Number(status.remainingSeconds) <= 0
   ) {
-    throw new Error(
-      "This assessment attempt is no longer active.",
-    );
+    throw new Error("This assessment attempt is no longer active.");
   }
 
   const savedQuestion =
-    Number(
-      localStorage.getItem(
-        `studentCurrentQuestion:${attemptId}`,
-      ),
-    ) || 1;
+    Number(localStorage.getItem(`studentCurrentQuestion:${attemptId}`)) ||
+    Number(status.currentQuestion || 1) ||
+    1;
 
-  const questionResult =
-    await getQuestion(
-      attemptId,
-      savedQuestion,
-    );
+  const paperResult = await getPaper(attemptId);
+  const questions = paperResult.questions;
+  const currentQuestion = Math.min(
+    Math.max(1, savedQuestion),
+    questions.length,
+  );
 
   return {
     attemptId,
-
-    totalQuestions:
-      status.totalQuestions ||
-      status.total_questions ||
-      0,
-
-    currentQuestion:
-      savedQuestion,
-
+    totalQuestions: questions.length,
+    currentQuestion,
     remainingSeconds:
-      questionResult.remainingSeconds,
-
-    question:
-      questionResult.question,
+      paperResult.remainingSeconds || Number(status.remainingSeconds || 0),
+    questions,
+    question: questions[currentQuestion - 1],
   };
 };
 
@@ -349,11 +295,12 @@ export const submitAssessment = async (
     | "STUDENT_SUBMIT"
     | "AUTO_SUBMIT"
     | "SECURITY_AUTO_SUBMIT" = "STUDENT_SUBMIT",
+  answers: { attemptQuestionId: string; selectedAnswers: string[] }[] = [],
 ) => {
   try {
     const { data } = await axios.post(
       `${API}/api/student-assessments/${attemptId}/submit`,
-      { reason },
+      { reason, answers },
       getSessionConfig(attemptId),
     );
 
@@ -366,12 +313,7 @@ export const submitAssessment = async (
      */
     if (
       error?.response?.status === 400 &&
-      /already submitted/i.test(
-        String(
-          error?.response?.data
-            ?.message || "",
-        ),
-      )
+      /already submitted/i.test(String(error?.response?.data?.message || ""))
     ) {
       return {
         success: true,
@@ -384,9 +326,7 @@ export const submitAssessment = async (
   }
 };
 
-export const assessmentHeartbeat = async (
-  attemptId: string,
-) => {
+export const assessmentHeartbeat = async (attemptId: string) => {
   const { data } = await axios.post(
     `${API}/api/student-assessments/${attemptId}/heartbeat`,
     {},

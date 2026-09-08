@@ -82,6 +82,7 @@ interface ExamData {
   totalQuestions: number;
   currentQuestion: number;
   remainingSeconds: number;
+  questions: AttemptQuestion[];
   question: AttemptQuestion;
 }
 
@@ -493,12 +494,23 @@ export default function StudentExamPortal({
       const currentQuestion = Math.max(1, Number(result.currentQuestion || 1));
       const remaining = Math.max(0, Number(result.remainingSeconds || 0));
 
+      const questions = Array.isArray((result as any).questions)
+        ? ((result as any).questions as AttemptQuestion[])
+        : [];
+
+      if (!questions.length) {
+        throw new Error(
+          "The complete examination paper was not returned by the server.",
+        );
+      }
+
       const launchData: ExamLaunchData = {
         attemptId,
-        totalQuestions,
+        totalQuestions: questions.length,
         currentQuestion,
         remainingSeconds: remaining,
-        question: result.question,
+        questions,
+        question: questions[currentQuestion - 1] || questions[0],
         assessmentTitle: assessment?.title || getLaunchTitle(),
         sessionId: (result as any).sessionId,
       };
@@ -545,10 +557,11 @@ export default function StudentExamPortal({
 
       setExamData({
         attemptId,
-        totalQuestions,
+        totalQuestions: questions.length,
         currentQuestion,
         remainingSeconds: remaining,
-        question: result.question,
+        questions,
+        question: questions[currentQuestion - 1] || questions[0],
       });
 
       setExamStatus("LIVE");
@@ -681,12 +694,21 @@ export default function StudentExamPortal({
 
           setAssessment(popupAssessment);
           setExamStatus("LIVE");
+          if (!Array.isArray(launch.questions) || !launch.questions.length) {
+            throw new Error(
+              "Saved examination paper is missing. Please resume the attempt.",
+            );
+          }
+
           setExamData({
             attemptId: launch.attemptId,
-            totalQuestions: launch.totalQuestions,
+            totalQuestions: launch.questions.length,
             currentQuestion: launch.currentQuestion,
             remainingSeconds: launch.remainingSeconds,
-            question: launch.question,
+            questions: launch.questions,
+            question:
+              launch.questions[launch.currentQuestion - 1] ||
+              launch.questions[0],
           });
           setStep("instructions");
           return;
@@ -871,7 +893,8 @@ export default function StudentExamPortal({
         assessmentTitle={assessment.title}
         studentName={getStudentName()}
         totalQuestions={examData.totalQuestions}
-        firstQuestion={examData.question}
+        currentQuestion={examData.currentQuestion}
+        questions={examData.questions}
         remainingSeconds={examData.remainingSeconds}
         onSubmitted={() => {
           const attemptId = examData.attemptId;

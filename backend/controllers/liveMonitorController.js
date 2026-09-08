@@ -37,14 +37,21 @@ async function safeRemainingSeconds(attempt) {
 }
 
 async function reconcileExpiredAttempts(attempts) {
+  // The scaled exam flow keeps answers in the browser until final submit.
+  // Never score an attempt immediately at expiry because a valid final
+  // snapshot may already be waiting in the Redis submission queue. A small
+  // grace period is retained only for abandoned browsers.
   const now = Date.now();
+  const EXPIRY_GRACE_MS = 2 * 60 * 1000;
+
   for (const attempt of attempts || []) {
     if (
       attempt.status !== "IN_PROGRESS" ||
       !attempt.expires_at ||
-      new Date(attempt.expires_at).getTime() > now
+      now - new Date(attempt.expires_at).getTime() < EXPIRY_GRACE_MS
     )
       continue;
+
     try {
       const result = await scoring.calculateScore(attempt.id);
       const updated = await engine.finishAttempt(
@@ -52,19 +59,21 @@ async function reconcileExpiredAttempts(attempts) {
         result,
         "SUBMITTED",
       );
-      await supabase
-        .from("assessment_activity")
-        .insert({
-          attempt_id: attempt.id,
-          activity_type: "AUTO_SUBMIT",
-          metadata: { source: "server_reconciliation", reason: "TIME_EXPIRED" },
-        });
+      await supabase.from("assessment_activity").insert({
+        attempt_id: attempt.id,
+        activity_type: "AUTO_SUBMIT",
+        metadata: { source: "server_reconciliation", reason: "TIME_EXPIRED" },
+      });
       try {
-        await session.unlockStudent(updated.assessment_id, updated.student_id);
+        await session.unlockStudent(
+          updated.assessment_id,
+          updated.team_id || updated.student_id,
+        );
       } catch (_) {}
       liveEvents.emitSubmitted(updated.assessment_id, updated);
       liveEvents.emitStudentSubmitted(updated.assessment_id);
       liveEvents.emitDashboardRefresh(updated.assessment_id);
+      liveEvents.emitLeaderboard(updated.assessment_id, []);
     } catch (error) {
       console.error(
         "Expired attempt reconciliation failed:",

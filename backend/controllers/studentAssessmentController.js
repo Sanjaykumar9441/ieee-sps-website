@@ -1,12 +1,14 @@
 const assessmentService = require("../services/assessmentService");
 const engine = require("../services/assessmentEngine");
 const session = require("../services/studentSessionService");
-const scoring = require("../services/scoringService");
 const { setAttemptStartTime, getSecondsRemaining } = require("../lib/redis");
-const { supabase } = require("../lib/supabase");
 const liveEvents = require("../services/liveEvents");
 const antiCheat = require("../services/antiCheatService");
 const crypto = require("crypto");
+const {
+  enqueueSubmission,
+  getSubmissionStatus,
+} = require("../services/submissionQueue");
 
 function calculateAllowedDurationSeconds(assessment, startTime = new Date()) {
   const configuredDurationSeconds = Number(assessment.duration_minutes) * 60;
@@ -230,18 +232,19 @@ exports.startAssessment = async (req, res) => {
     await setAttemptStartTime(attempt.id, actualDurationSeconds);
 
     // --------------------------------
-    // First Question
+    // One-time complete paper fetch
     // --------------------------------
-    const firstQuestion = await engine.getQuestion(attempt.id, 1);
+    const paper = await engine.getAttemptPaper(attempt.id);
 
     return res.json({
       success: true,
       attemptId: attempt.id,
       sessionId,
       remainingSeconds: actualDurationSeconds,
-      totalQuestions: frozenQuestions.length,
+      totalQuestions: paper.length,
       currentQuestion: 1,
-      question: firstQuestion,
+      questions: paper,
+      question: paper[0] || null,
     });
   } catch (err) {
     if (lockAcquired) {
@@ -326,7 +329,47 @@ exports.saveAnswer = async (req, res) => {
 };
 
 /* ============================================================
-   GET QUESTION
+   GET COMPLETE ATTEMPT PAPER
+============================================================ */
+
+exports.getPaper = async (req, res) => {
+  try {
+    const { attemptId } = req.params;
+    const attempt =
+      req.assessmentAttempt || (await engine.getAttempt(attemptId));
+    if (!attempt) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Attempt not found." });
+    }
+
+    const { data: assessment } = await assessmentService.getAssessment(
+      attempt.assessment_id,
+    );
+    const allowedDurationSeconds = getAttemptAllowedDurationSeconds(
+      assessment,
+      attempt,
+    );
+    const remainingSeconds = await getSecondsRemaining(
+      attemptId,
+      allowedDurationSeconds,
+    );
+    const questions = await engine.getAttemptPaper(attemptId);
+
+    return res.json({
+      success: true,
+      totalQuestions: questions.length,
+      remainingSeconds,
+      questions,
+    });
+  } catch (err) {
+    console.error("GET ATTEMPT PAPER ERROR:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ============================================================
+   GET QUESTION (LEGACY COMPATIBILITY)
 ============================================================ */
 
 exports.getQuestion = async (req, res) => {
@@ -397,25 +440,22 @@ exports.getPalette = async (req, res) => {
 exports.getStatus = async (req, res) => {
   try {
     const { attemptId } = req.params;
-
-    const attempt = await engine.getAttempt(attemptId);
+    const attempt =
+      req.assessmentAttempt || (await engine.getAttempt(attemptId));
 
     if (!attempt) {
-      return res.status(404).json({
-        success: false,
-        message: "Attempt not found.",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Attempt not found." });
     }
 
     const { data: assessment } = await assessmentService.getAssessment(
       attempt.assessment_id,
     );
-
     const allowedDurationSeconds = getAttemptAllowedDurationSeconds(
       assessment,
       attempt,
     );
-
     const remainingSeconds = await getSecondsRemaining(
       attemptId,
       allowedDurationSeconds,
@@ -426,434 +466,115 @@ exports.getStatus = async (req, res) => {
       remainingSeconds,
     });
 
-    /*
-    ------------------------------------
-    AUTO SUBMIT
-    ------------------------------------
-    */
-
-    if (remainingSeconds <= 0 && attempt.status !== "SUBMITTED") {
-      const result = await scoring.calculateScore(attemptId);
-
-      const updatedAttempt = await engine.finishAttempt(attemptId, result);
-      await supabase.from("assessment_activity").insert({
-        attempt_id: attemptId,
-        activity_type: "AUTO_SUBMIT",
-        metadata: { source: "timer" },
-      });
-
-      await session.unlockStudent(
-        updatedAttempt.assessment_id,
-        updatedAttempt.team_id || updatedAttempt.student_id,
-      );
-
-      /*
-      ----------------------------------------------------
-      Refresh Leaderboard
-      ----------------------------------------------------
-      */
-
-      const { data: leaderboard } = await supabase
-        .from("assessment_attempts")
-        .select(
-          `
-            id,
-            student_id,
-            score,
-            correct,
-            wrong,
-            unanswered,
-            percentage,
-            submitted_at,
-            started_at,
-            assessment_allowed_students(
-              name,
-              roll_no,
-              branch
-            )
-          `,
-        )
-        .eq("assessment_id", updatedAttempt.assessment_id)
-        .eq("status", "SUBMITTED");
-
-      const sortedLeaderboard = (leaderboard || [])
-        .sort((a, b) => {
-          if (Number(b.score) !== Number(a.score)) {
-            return Number(b.score) - Number(a.score);
-          }
-
-          const aTime = a.submitted_at
-            ? new Date(a.submitted_at).getTime()
-            : Number.MAX_SAFE_INTEGER;
-
-          const bTime = b.submitted_at
-            ? new Date(b.submitted_at).getTime()
-            : Number.MAX_SAFE_INTEGER;
-
-          if (aTime !== bTime) {
-            return aTime - bTime;
-          }
-
-          return (a.assessment_allowed_students?.roll_no || "").localeCompare(
-            b.assessment_allowed_students?.roll_no || "",
-          );
-        })
-        .map((student, index) => ({
-          rank: index + 1,
-
-          attemptId: student.id,
-
-          studentId: student.student_id,
-
-          name: student.assessment_allowed_students?.name,
-
-          rollNo: student.assessment_allowed_students?.roll_no,
-
-          department: student.assessment_allowed_students?.branch,
-
-          status: "SUBMITTED",
-
-          score: Number(student.score || 0),
-
-          correct: Number(student.correct || 0),
-
-          wrong: Number(student.wrong || 0),
-
-          unanswered: Number(student.unanswered || 0),
-
-          percentage: Number(student.percentage || 0),
-
-          timeTaken:
-            student.submitted_at && student.started_at
-              ? Math.max(
-                  0,
-                  Math.floor(
-                    (new Date(student.submitted_at).getTime() -
-                      new Date(student.started_at).getTime()) /
-                      1000,
-                  ),
-                )
-              : 0,
-
-          submittedAt: student.submitted_at,
-
-          startedAt: student.started_at,
-        }));
-
-      liveEvents.emitLeaderboard(
-        updatedAttempt.assessment_id,
-        sortedLeaderboard,
-      );
-
-      /*
-      ----------------------------------------------------
-      Refresh Dashboard
-      ----------------------------------------------------
-      */
-
-      const { count: registeredStudents } = await supabase
-        .from("assessment_allowed_students")
-        .select("*", {
-          count: "exact",
-          head: true,
-        })
-        .eq("assessment_id", updatedAttempt.assessment_id);
-
-      const { data: attempts } = await supabase
-        .from("assessment_attempts")
-        .select("*")
-        .eq("assessment_id", updatedAttempt.assessment_id);
-
-      const dashboard = {
-        registeredStudents: registeredStudents || 0,
-
-        startedStudents: (attempts || []).length,
-
-        submittedStudents: (attempts || []).filter(
-          (a) => a.status === "SUBMITTED",
-        ).length,
-
-        inProgressStudents: (attempts || []).filter(
-          (a) => a.status === "IN_PROGRESS",
-        ).length,
-      };
-
-      liveEvents.emitDashboardAnalytics(
-        updatedAttempt.assessment_id,
-        dashboard,
-      );
-
-      liveEvents.emitSubmitted(updatedAttempt.assessment_id, updatedAttempt);
-
-      liveEvents.emitStudentSubmitted(updatedAttempt.assessment_id);
-
+    if (remainingSeconds <= 0 && attempt.status === "IN_PROGRESS") {
       return res.json({
         success: false,
         expired: true,
-        message: "Assessment time completed.",
+        status: "EXPIRED",
+        remainingSeconds: 0,
+        totalQuestions: Number(attempt.total_questions || 0),
+        message: "Assessment time completed. Submit the local answer snapshot.",
       });
     }
-
-    const palette = await engine.getPalette(attemptId);
-
-    const answered = palette.filter((q) => q.answered).length;
 
     return res.json({
       success: true,
       remainingSeconds,
-      answered,
-      totalQuestions: palette.length,
-      palette,
+      status: attempt.status,
+      currentQuestion: Number(attempt.current_question || 1),
+      answeredQuestions: Number(attempt.answered_questions || 0),
+      totalQuestions: Number(attempt.total_questions || 0),
     });
   } catch (err) {
-    console.error(err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    console.error("GET ASSESSMENT STATUS ERROR:", err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
 /* ============================================================
-   SUBMIT ASSESSMENT
+   SUBMIT ASSESSMENT — QUEUED BATCH WRITE
 ============================================================ */
 
 exports.submitAssessment = async (req, res) => {
   try {
     const { attemptId } = req.params;
-
-    const attempt = await engine.getAttempt(attemptId);
+    const attempt =
+      req.assessmentAttempt || (await engine.getAttempt(attemptId));
 
     if (!attempt) {
-      return res.status(404).json({
-        success: false,
-        message: "Attempt not found.",
+      return res
+        .status(404)
+        .json({ success: false, message: "Attempt not found." });
+    }
+
+    if (attempt.status === "SUBMITTED" || attempt.status === "EXPIRED") {
+      return res.json({
+        success: true,
+        alreadySubmitted: true,
+        queued: false,
+        status: attempt.status,
       });
     }
 
-    if (attempt.status === "SUBMITTED") {
-      return res.status(400).json({
-        success: false,
-        message: "Assessment already submitted.",
-      });
-    }
-
-    const { data: assessment } = await assessmentService.getAssessment(
-      attempt.assessment_id,
-    );
-    const deadlineCandidates = [attempt.expires_at, assessment?.end_time]
-      .filter(Boolean)
-      .map((value) => new Date(value).getTime())
-      .filter(Number.isFinite);
-    const deadline = deadlineCandidates.length
-      ? Math.min(...deadlineCandidates)
-      : Number.MAX_SAFE_INTEGER;
-    const expired = Date.now() >= deadline;
-
-    /*
-    ------------------------------------
-    SCORE
-    ------------------------------------
-    */
-
-    const result = await scoring.calculateScore(attemptId);
-
-    /*
-    ------------------------------------
-    FINISH ATTEMPT
-    ------------------------------------
-    */
-
-    const updatedAttempt = await engine.finishAttempt(attemptId, result);
     const requestedReason = String(req.body?.reason || "STUDENT_SUBMIT");
-    const submissionReason = expired ? "AUTO_SUBMIT" : requestedReason;
-    const activityType =
-      submissionReason === "SECURITY_AUTO_SUBMIT"
-        ? "SECURITY_AUTO_SUBMIT"
-        : submissionReason === "AUTO_SUBMIT"
-          ? "AUTO_SUBMIT"
-          : "SUBMIT";
-    await supabase.from("assessment_activity").insert({
-      attempt_id: attemptId,
-      activity_type: activityType,
-      metadata: { source: "student", reason: submissionReason },
+    const allowedReasons = new Set([
+      "STUDENT_SUBMIT",
+      "AUTO_SUBMIT",
+      "SECURITY_AUTO_SUBMIT",
+    ]);
+    const reason = allowedReasons.has(requestedReason)
+      ? requestedReason
+      : "STUDENT_SUBMIT";
+    const answers = Array.isArray(req.body?.answers) ? req.body.answers : [];
+
+    if (answers.length > 500) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Too many answer records were submitted.",
+        });
+    }
+
+    const queueResult = await enqueueSubmission({
+      attemptId,
+      reason,
+      answers,
+      queuedAt: new Date().toISOString(),
     });
-    /*
-    ------------------------------------
-    RELEASE REDIS LOCK
-    ------------------------------------
-    */
 
-    await session.unlockStudent(
-      updatedAttempt.assessment_id,
-      updatedAttempt.student_id,
-    );
-
-    /*
-    ------------------------------------
-    LEADERBOARD
-    ------------------------------------
-    */
-
-    const { data: leaderboard } = await supabase
-      .from("assessment_attempts")
-      .select(
-        `
-          id,
-          student_id,
-          score,
-          correct,
-          wrong,
-          unanswered,
-          percentage,
-          submitted_at,
-          started_at,
-          assessment_allowed_students(
-            name,
-            roll_no,
-              branch
-)
-        `,
-      )
-      .eq("assessment_id", updatedAttempt.assessment_id)
-      .eq("status", "SUBMITTED");
-
-    const sortedLeaderboard = (leaderboard || [])
-      .sort((a, b) => {
-        if (Number(b.score) !== Number(a.score)) {
-          return Number(b.score) - Number(a.score);
-        }
-
-        const aTime = a.submitted_at
-          ? new Date(a.submitted_at).getTime()
-          : Number.MAX_SAFE_INTEGER;
-
-        const bTime = b.submitted_at
-          ? new Date(b.submitted_at).getTime()
-          : Number.MAX_SAFE_INTEGER;
-
-        if (aTime !== bTime) {
-          return aTime - bTime;
-        }
-
-        return (a.assessment_allowed_students?.roll_no || "").localeCompare(
-          b.assessment_allowed_students?.roll_no || "",
-        );
-      })
-      .map((student, index) => ({
-        rank: index + 1,
-
-        attemptId: student.id,
-
-        studentId: student.student_id,
-
-        name: student.assessment_allowed_students?.name,
-
-        rollNo: student.assessment_allowed_students?.roll_no,
-
-        department: student.assessment_allowed_students?.branch,
-
-        status: "SUBMITTED",
-
-        score: Number(student.score || 0),
-
-        correct: Number(student.correct || 0),
-
-        wrong: Number(student.wrong || 0),
-
-        unanswered: Number(student.unanswered || 0),
-
-        percentage: Number(student.percentage || 0),
-
-        timeTaken:
-          student.submitted_at && student.started_at
-            ? Math.max(
-                0,
-                Math.floor(
-                  (new Date(student.submitted_at).getTime() -
-                    new Date(student.started_at).getTime()) /
-                    1000,
-                ),
-              )
-            : 0,
-
-        submittedAt: student.submitted_at,
-
-        startedAt: student.started_at,
-      }));
-
-    liveEvents.emitLeaderboard(updatedAttempt.assessment_id, sortedLeaderboard);
-
-    /*
-    ------------------------------------
-    DASHBOARD
-    ------------------------------------
-    */
-
-    const { count: registeredStudents } = await supabase
-      .from("assessment_allowed_students")
-      .select("*", {
-        count: "exact",
-        head: true,
-      })
-      .eq("assessment_id", updatedAttempt.assessment_id);
-
-    const { data: attempts } = await supabase
-      .from("assessment_attempts")
-      .select("*")
-      .eq("assessment_id", updatedAttempt.assessment_id);
-
-    const dashboard = {
-      registeredStudents: registeredStudents || 0,
-
-      startedStudents: (attempts || []).length,
-
-      submittedStudents: (attempts || []).filter(
-        (a) => a.status === "SUBMITTED",
-      ).length,
-
-      inProgressStudents: (attempts || []).filter(
-        (a) => a.status === "IN_PROGRESS",
-      ).length,
-    };
-
-    liveEvents.emitDashboardAnalytics(updatedAttempt.assessment_id, dashboard);
-
-    liveEvents.emitSubmitted(updatedAttempt.assessment_id, updatedAttempt);
-
-    liveEvents.emitStudentSubmitted(updatedAttempt.assessment_id);
-
-    return res.json({
+    return res.status(202).json({
       success: true,
-      autoSubmitted: expired,
-      submissionReason,
-
-      score: result.score,
-
-      correct: result.correct,
-
-      wrong: result.wrong,
-
-      unanswered: result.unanswered,
-
-      percentage: result.percentage,
-
-      submittedAt: updatedAttempt.submitted_at,
+      queued: true,
+      status: queueResult.state || "QUEUED",
+      queue: queueResult,
+      message: queueResult.duplicate
+        ? "Assessment submission is already queued for processing."
+        : "Assessment submission accepted and queued for processing.",
     });
   } catch (err) {
-    console.error(err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    console.error("QUEUE ASSESSMENT SUBMISSION ERROR:", err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-/* ==========================================================
+/* ============================================================
+   SUBMISSION QUEUE STATUS
+============================================================ */
+
+exports.getSubmissionQueueStatus = async (req, res) => {
+  try {
+    const status = await getSubmissionStatus(req.params.attemptId);
+    return res.json({ success: true, status });
+  } catch (err) {
+    console.error("GET SUBMISSION QUEUE STATUS ERROR:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ============================================================
    REPORT INFRACTION
-========================================================== */
+============================================================ */
 
 exports.reportInfraction = async (req, res) => {
   try {
@@ -1015,19 +736,12 @@ exports.heartbeat = async (req, res) => {
      */
 
     if (remainingSeconds <= 0 && attempt.status !== "SUBMITTED") {
-      const result = await scoring.calculateScore(attemptId);
-
-      const updatedAttempt = await engine.finishAttempt(attemptId, result);
-
-      await session.unlockStudent(
-        updatedAttempt.assessment_id,
-        updatedAttempt.team_id || updatedAttempt.student_id,
-      );
-
       return res.json({
         success: false,
         expired: true,
-        message: "Assessment time completed.",
+        status: "EXPIRED",
+        remainingSeconds: 0,
+        message: "Assessment time completed. Submit the local answer snapshot.",
       });
     }
 

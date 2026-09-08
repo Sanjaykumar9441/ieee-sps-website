@@ -83,5 +83,6 @@ export interface StartAssessmentResponse {
   totalQuestions: number;
   currentQuestion: number;
   question: AttemptQuestion;
+  questions: AttemptQuestion[];
   message?: string;
 }

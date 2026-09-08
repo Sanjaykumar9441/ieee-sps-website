@@ -4,6 +4,7 @@ console.log("MONGO_URI from ENV:", process.env.MONGO_URI);
 const http = require("http");
 const { Server } = require("socket.io");
 const { initSocket } = require("./socket");
+const { startSubmissionWorker } = require("./services/submissionQueue");
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -55,6 +56,7 @@ const dashboardAnalyticsRoutes = require("./routes/dashboardAnalyticsRoutes");
 const exportRoutes = require("./routes/exportRoutes");
 const studentAuthRoutes = require("./routes/studentAuthRoutes");
 const assessmentTeamRoutes = require("./routes/assessmentTeamRoutes");
+const submissionQueueRoutes = require("./routes/submissionQueueRoutes");
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
@@ -130,6 +132,7 @@ app.use("/api/admin/dashboard-analytics", dashboardAnalyticsRoutes);
 app.use("/api/admin/export", exportRoutes);
 app.use("/api/student-auth", studentAuthRoutes);
 app.use("/api/assessment-teams", assessmentTeamRoutes);
+app.use("/api/admin/submission-queue", submissionQueueRoutes);
 
 /* ===============================
    ✅ MongoDB Connection
@@ -222,6 +225,7 @@ io.on("connection", (socket) => {
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  void startSubmissionWorker();
 });
 
 // ✅ RUN OTHER TASKS IN BACKGROUND
