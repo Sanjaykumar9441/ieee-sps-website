@@ -104,7 +104,7 @@ async function claimBatch() {
   // INFLIGHT until the worker explicitly removes it. A crash therefore does
   // not silently lose a submission.
   for (let i = 0; i < BATCH_SIZE; i += 1) {
-    const raw = await redis.move(QUEUE_KEY, INFLIGHT_KEY, "right", "left");
+    const raw = await redis.lmove(QUEUE_KEY, INFLIGHT_KEY, "right", "left");
     if (!raw) break;
 
     try {
