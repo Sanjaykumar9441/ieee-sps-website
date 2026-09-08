@@ -87,6 +87,7 @@ interface ExamData {
 }
 
 interface ExamLaunchData extends ExamData {
+  assessmentId: string;
   assessmentTitle: string;
   sessionId?: string;
 }
@@ -129,6 +130,25 @@ const getLaunchAttemptId = (): string | null => {
   try {
     const params = new URLSearchParams(window.location.search);
     return params.get("attemptId") || null;
+  } catch {
+    return null;
+  }
+};
+
+const getLocalActiveAttemptId = (assessmentId: string): string | null => {
+  try {
+    const attemptId = localStorage.getItem("studentAttemptId");
+    if (!attemptId) return null;
+
+    const raw = localStorage.getItem(`studentExamLaunch:${attemptId}`);
+    if (!raw) return null;
+
+    const launch = JSON.parse(raw) as Partial<ExamLaunchData>;
+    if (String(launch.assessmentId || "") !== String(assessmentId)) {
+      return null;
+    }
+
+    return attemptId;
   } catch {
     return null;
   }
@@ -443,6 +463,14 @@ export default function StudentExamPortal({
       assessment?.title || "Assessment",
     );
 
+    // Reuse the student's own saved active attempt when reopening the exam.
+    // This prevents a normal refresh/reopen from creating a second Redis
+    // session and showing the misleading "another session" error.
+    const localAttemptId = getLocalActiveAttemptId(assessmentId);
+    if (localAttemptId) {
+      examUrl.searchParams.set("attemptId", localAttemptId);
+    }
+
     /*
      * Navigate the already-open popup. The popup now contains only the
      * fullscreen gate; startAssessment() is deliberately NOT called here.
@@ -505,6 +533,7 @@ export default function StudentExamPortal({
       }
 
       const launchData: ExamLaunchData = {
+        assessmentId,
         attemptId,
         totalQuestions: questions.length,
         currentQuestion,
@@ -668,6 +697,15 @@ export default function StudentExamPortal({
 
         try {
           const launch = JSON.parse(rawLaunch) as ExamLaunchData;
+
+          if (
+            launch.assessmentId &&
+            String(launch.assessmentId) !== String(assessmentId)
+          ) {
+            throw new Error(
+              "Saved examination session belongs to a different assessment.",
+            );
+          }
 
           if (launch.sessionId) {
             sessionStorage.setItem(

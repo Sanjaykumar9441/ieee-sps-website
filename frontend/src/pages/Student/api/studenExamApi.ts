@@ -250,9 +250,16 @@ export const resumeAssessment = async (
   assessmentId: string,
   attemptId: string,
 ) => {
-  void assessmentId;
-
   const status = await getAssessmentStatus(attemptId);
+
+  if (
+    status?.assessmentId &&
+    String(status.assessmentId) !== String(assessmentId)
+  ) {
+    throw new Error(
+      "This saved assessment session belongs to a different assessment.",
+    );
+  }
 
   if (!status?.success && !status?.expired) {
     throw new Error(status?.message || "Unable to restore assessment.");

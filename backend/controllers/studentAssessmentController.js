@@ -5,10 +5,7 @@ const { setAttemptStartTime, getSecondsRemaining } = require("../lib/redis");
 const liveEvents = require("../services/liveEvents");
 const antiCheat = require("../services/antiCheatService");
 const crypto = require("crypto");
-const {
-  enqueueSubmission,
-  getSubmissionStatus,
-} = require("../services/submissionQueue");
+const { enqueueSubmission } = require("../services/submissionQueue");
 
 function calculateAllowedDurationSeconds(assessment, startTime = new Date()) {
   const configuredDurationSeconds = Number(assessment.duration_minutes) * 60;
@@ -162,12 +159,16 @@ exports.startAssessment = async (req, res) => {
     // --------------------------------
     // Already Submitted?
     // --------------------------------
-    const { data: submittedAttempt } =
+    const { data: submittedAttempt, error: submittedAttemptError } =
       await assessmentService.getSubmittedAttempt(
         assessment.id,
         student.id,
         teamId,
       );
+
+    if (submittedAttemptError) {
+      throw submittedAttemptError;
+    }
 
     if (submittedAttempt) {
       return res.status(400).json({
@@ -179,18 +180,30 @@ exports.startAssessment = async (req, res) => {
     // --------------------------------
     // Running Attempt?
     // --------------------------------
-    const { data: runningAttempt } = await assessmentService.hasRunningAttempt(
-      assessment.id,
-      student.id,
-      teamId,
-    );
+    const { data: runningAttempt, error: runningAttemptError } =
+      await assessmentService.hasRunningAttempt(
+        assessment.id,
+        student.id,
+        teamId,
+      );
+
+    if (runningAttemptError) {
+      throw runningAttemptError;
+    }
 
     if (runningAttempt) {
       return res.status(409).json({
         success: false,
-        message: "Assessment already running.",
+        code: "ASSESSMENT_ALREADY_RUNNING",
+        message: "Assessment already running. Resume the existing attempt.",
+        attemptId: runningAttempt.id,
       });
     }
+
+    // If there is no database attempt in progress, a remaining Redis lock is
+    // stale (for example after a crashed process before the attempt row was
+    // created). Clear only that stale lock before acquiring a fresh session.
+    await session.clearStaleSession(assessment.id, teamId || student.id);
 
     // --------------------------------
     // Redis Lock
@@ -479,6 +492,7 @@ exports.getStatus = async (req, res) => {
 
     return res.json({
       success: true,
+      assessmentId: attempt.assessment_id,
       remainingSeconds,
       status: attempt.status,
       currentQuestion: Number(attempt.current_question || 1),
@@ -536,7 +550,7 @@ exports.submitAssessment = async (req, res) => {
         });
     }
 
-    const queueResult = await enqueueSubmission({
+    await enqueueSubmission({
       attemptId,
       reason,
       answers,
@@ -546,28 +560,11 @@ exports.submitAssessment = async (req, res) => {
     return res.status(202).json({
       success: true,
       queued: true,
-      status: queueResult.state || "QUEUED",
-      queue: queueResult,
-      message: queueResult.duplicate
-        ? "Assessment submission is already queued for processing."
-        : "Assessment submission accepted and queued for processing.",
+      status: "PROCESSING",
+      message: "Assessment submission accepted and queued for processing.",
     });
   } catch (err) {
     console.error("QUEUE ASSESSMENT SUBMISSION ERROR:", err);
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-/* ============================================================
-   SUBMISSION QUEUE STATUS
-============================================================ */
-
-exports.getSubmissionQueueStatus = async (req, res) => {
-  try {
-    const status = await getSubmissionStatus(req.params.attemptId);
-    return res.json({ success: true, status });
-  } catch (err) {
-    console.error("GET SUBMISSION QUEUE STATUS ERROR:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
