@@ -5,7 +5,10 @@ const { setAttemptStartTime, getSecondsRemaining } = require("../lib/redis");
 const liveEvents = require("../services/liveEvents");
 const antiCheat = require("../services/antiCheatService");
 const crypto = require("crypto");
-const { enqueueSubmission } = require("../services/submissionQueue");
+const {
+  enqueueSubmission,
+  getSubmissionStatus,
+} = require("../services/submissionQueue");
 
 function calculateAllowedDurationSeconds(assessment, startTime = new Date()) {
   const configuredDurationSeconds = Number(assessment.duration_minutes) * 60;
@@ -566,6 +569,28 @@ exports.submitAssessment = async (req, res) => {
   } catch (err) {
     console.error("QUEUE ASSESSMENT SUBMISSION ERROR:", err);
     return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ============================================================
+   SUBMISSION QUEUE STATUS
+============================================================ */
+
+exports.getSubmissionQueueStatus = async (req, res) => {
+  try {
+    const status = await getSubmissionStatus(req.params.attemptId);
+
+    return res.json({
+      success: true,
+      status,
+    });
+  } catch (err) {
+    console.error("GET SUBMISSION QUEUE STATUS ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 
