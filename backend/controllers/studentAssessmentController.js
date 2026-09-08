@@ -5,7 +5,10 @@ const { setAttemptStartTime, getSecondsRemaining } = require("../lib/redis");
 const liveEvents = require("../services/liveEvents");
 const antiCheat = require("../services/antiCheatService");
 const crypto = require("crypto");
-const { enqueueSubmission } = require("../services/submissionQueue");
+const {
+  enqueueSubmission,
+  getSubmissionStatus,
+} = require("../services/submissionQueue");
 
 function calculateAllowedDurationSeconds(assessment, startTime = new Date()) {
   const configuredDurationSeconds = Number(assessment.duration_minutes) * 60;
@@ -570,6 +573,28 @@ exports.submitAssessment = async (req, res) => {
 };
 
 /* ============================================================
+   SUBMISSION QUEUE STATUS
+============================================================ */
+
+exports.getSubmissionQueueStatus = async (req, res) => {
+  try {
+    const status = await getSubmissionStatus(req.params.attemptId);
+
+    return res.json({
+      success: true,
+      status,
+    });
+  } catch (err) {
+    console.error("GET SUBMISSION QUEUE STATUS ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+/* ============================================================
    REPORT INFRACTION
 ============================================================ */
 
@@ -748,7 +773,7 @@ exports.heartbeat = async (req, res) => {
 
     const refreshed = await session.refreshSession(
       attempt.assessment_id,
-      attempt.team_id || attempt.student_id,
+      attempt.student_id,
       req.assessmentSessionId,
       Math.max(remainingSeconds, 1),
     );

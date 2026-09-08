@@ -31,12 +31,6 @@ router.get(
   controller.getQuestion,
 );
 router.get(
-  "/:attemptId/palette",
-  verifyStudentToken,
-  verifyAssessmentSession,
-  controller.getPalette,
-);
-router.get(
   "/:attemptId/status",
   verifyStudentToken,
   verifyAssessmentSession,
