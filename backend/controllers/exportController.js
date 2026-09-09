@@ -86,18 +86,11 @@ async function getExportData(assessmentId) {
 
   const mode = assessment.participation_mode || MODES.INDIVIDUAL;
 
-  const { data: mappings, error: mappingError } = await supabase
-    .from("assessment_question_banks")
-    .select("questions_to_pick")
-    .eq("assessment_id", assessmentId);
-
-  if (mappingError) throw mappingError;
-
-  const totalQuestions =
-    (mappings || []).reduce(
-      (sum, row) => sum + toNumber(row.questions_to_pick),
-      0,
-    ) || toNumber(assessment.total_questions);
+  // `assessments.total_questions` is the authoritative snapshot for an
+  // assessment export. Do not make the export depend on the optional
+  // question-bank mapping table, because a legacy assessment may not have
+  // rows there even though the assessment itself is valid.
+  const totalQuestions = Math.max(0, toNumber(assessment.total_questions));
 
   const { data: students, error: studentsError } = await supabase
     .from("assessment_allowed_students")
@@ -114,26 +107,40 @@ async function getExportData(assessmentId) {
    * assessment_teams. Older versions of this controller did that, causing
    * Excel/PDF/CSV to fail with HTTP 500 when that column did not exist.
    */
-  const { data: teams, error: teamsError } = await supabase
+  // Team tables are only required for team-mode presentation. Keep the
+  // export usable for legacy/partially migrated assessments instead of
+  // turning a missing optional team column/table into HTTP 500.
+  let teams = [];
+  let teamMembers = [];
+
+  const { data: teamRows, error: teamsError } = await supabase
     .from("assessment_teams")
     .select("id,team_name,contact_email,branch,member_count")
     .eq("assessment_id", assessmentId)
     .order("created_at");
 
-  if (teamsError) throw teamsError;
+  if (teamsError) {
+    console.warn("[EXPORT] Team metadata unavailable:", teamsError.message);
+  } else {
+    teams = teamRows || [];
 
-  const teamIds = (teams || []).map((team) => team.id);
-  let teamMembers = [];
+    const teamIds = teams.map((team) => team.id);
+    if (teamIds.length) {
+      const { data, error } = await supabase
+        .from("assessment_team_members")
+        .select("team_id,name,roll_no,email,branch")
+        .in("team_id", teamIds)
+        .order("created_at");
 
-  if (teamIds.length) {
-    const { data, error } = await supabase
-      .from("assessment_team_members")
-      .select("team_id,name,roll_no,email,branch")
-      .in("team_id", teamIds)
-      .order("created_at");
-
-    if (error) throw error;
-    teamMembers = data || [];
+      if (error) {
+        console.warn(
+          "[EXPORT] Team member metadata unavailable:",
+          error.message,
+        );
+      } else {
+        teamMembers = data || [];
+      }
+    }
   }
 
   const membersByTeam = new Map();
@@ -151,25 +158,53 @@ async function getExportData(assessmentId) {
     ]),
   );
 
-  const { data: attempts, error: attemptsError } = await supabase
+  let attempts = [];
+
+  // `team_id` is present on current attempts. If a legacy database is missing
+  // that column, retry with the pre-team shape so Individual exports still
+  // work. `completed_at` is deliberately not selected because it is not
+  // required for any export calculation.
+  let attemptsQuery = await supabase
     .from("assessment_attempts")
     .select(
-      "id,student_id,team_id,status,score,correct,wrong,unanswered,percentage,started_at,submitted_at,completed_at",
+      "id,student_id,team_id,status,score,correct,wrong,unanswered,percentage,started_at,submitted_at",
     )
     .eq("assessment_id", assessmentId);
 
-  if (attemptsError) throw attemptsError;
+  if (attemptsQuery.error) {
+    console.warn(
+      "[EXPORT] Team-aware attempt query failed; retrying legacy shape:",
+      attemptsQuery.error.message,
+    );
 
-  const attemptIds = (attempts || []).map((attempt) => attempt.id);
+    attemptsQuery = await supabase
+      .from("assessment_attempts")
+      .select(
+        "id,student_id,status,score,correct,wrong,unanswered,percentage,started_at,submitted_at",
+      )
+      .eq("assessment_id", assessmentId);
+  }
 
-  const { data: activities, error: activityError } = attemptIds.length
-    ? await supabase
-        .from("assessment_activity")
-        .select("attempt_id,activity_type,occurred_at,metadata")
-        .in("attempt_id", attemptIds)
-    : { data: [], error: null };
+  if (attemptsQuery.error) throw attemptsQuery.error;
+  attempts = attemptsQuery.data || [];
 
-  if (activityError) throw activityError;
+  // Activity data is enrichment only. A missing/legacy activity table must
+  // never prevent the actual Excel/PDF/CSV result from being downloaded.
+  const attemptIds = attempts.map((attempt) => attempt.id);
+  let activities = [];
+
+  if (attemptIds.length) {
+    const { data, error } = await supabase
+      .from("assessment_activity")
+      .select("attempt_id,activity_type,occurred_at,metadata")
+      .in("attempt_id", attemptIds);
+
+    if (error) {
+      console.warn("[EXPORT] Activity data unavailable:", error.message);
+    } else {
+      activities = data || [];
+    }
+  }
 
   const activityMap = new Map();
   for (const activity of activities || []) {
@@ -276,7 +311,11 @@ async function getExportData(assessmentId) {
         (students || []).find((student) => student.team_id === team.id) ||
         null;
 
-      return buildResult(fallbackStudent, attemptByTeam.get(team.id), teamData);
+      const teamAttempt =
+        attemptByTeam.get(team.id) ||
+        (fallbackStudent ? attemptByStudent.get(fallbackStudent.id) : null);
+
+      return buildResult(fallbackStudent, teamAttempt, teamData);
     });
   }
 
@@ -298,11 +337,19 @@ async function getExportData(assessmentId) {
       )
       .in("attempt_id", submittedAttemptIds);
 
-    if (questionError) throw questionError;
+    // Question analysis is an optional report sheet. Supabase relationship
+    // metadata can differ on older deployments, so do not fail the whole
+    // download if this enrichment query is unavailable.
+    if (questionError) {
+      console.warn(
+        "[EXPORT] Question analysis unavailable:",
+        questionError.message,
+      );
+    }
 
     const map = new Map();
 
-    for (const question of questionRows || []) {
+    for (const question of questionError ? [] : questionRows || []) {
       const key =
         question.question_id ||
         `${question.attempt_id}:${question.question_order}`;
