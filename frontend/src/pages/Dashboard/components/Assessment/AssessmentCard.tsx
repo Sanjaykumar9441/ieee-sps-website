@@ -55,7 +55,10 @@ const formatDateTime = (value?: string | null) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? "Not scheduled"
-    : date.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+    : date.toLocaleString([], {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
 };
 
 export default function AssessmentCard({
@@ -94,12 +97,12 @@ export default function AssessmentCard({
           </div>
           <div className="flex shrink-0 gap-2">
             <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${assessment.is_active ? "bg-zinc-100 text-zinc-800" : "bg-slate-100 text-slate-600"}`}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${assessment.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}
             >
               {assessment.is_active ? "Active" : "Inactive"}
             </span>
             <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${assessment.is_published ? "bg-zinc-950 text-white" : "bg-slate-100 text-slate-600"}`}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${assessment.is_published ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"}`}
             >
               {assessment.is_published ? "Published" : "Draft"}
             </span>
@@ -107,13 +110,13 @@ export default function AssessmentCard({
         </div>
 
         {assessment.is_published && (
-          <div className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+          <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-3">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-medium text-zinc-600">
+                <p className="text-xs font-medium text-blue-700">
                   Assessment ID
                 </p>
-                <p className="mt-1 truncate font-mono text-sm text-zinc-900">
+                <p className="mt-1 truncate font-mono text-sm text-blue-900">
                   {assessment.id}
                 </p>
               </div>
@@ -121,7 +124,7 @@ export default function AssessmentCard({
                 type="button"
                 onClick={copyId}
                 title="Copy assessment ID"
-                className="rounded-lg border border-zinc-200 bg-white p-2 text-zinc-800 hover:bg-zinc-100"
+                className="rounded-lg border border-blue-200 bg-white p-2 text-blue-700 hover:bg-blue-100"
               >
                 <CopyCheck size={16} />
               </button>
@@ -173,6 +176,7 @@ export default function AssessmentCard({
             <Action
               onClick={() => onUnpublish(assessment.id)}
               icon={<Rocket size={17} />}
+              className="border-orange-300 text-orange-600 hover:bg-orange-50"
             >
               Unpublish
             </Action>
@@ -187,6 +191,7 @@ export default function AssessmentCard({
           <Action
             onClick={() => onDelete(assessment.id)}
             icon={<Trash2 size={17} />}
+            className="border-red-300 text-red-600 hover:bg-red-50 sm:col-span-1"
           >
             Delete
           </Action>
@@ -221,17 +226,19 @@ function Action({
   children,
   icon,
   primary,
+  className = "",
 }: {
   onClick: () => void;
   children: React.ReactNode;
   icon: React.ReactNode;
   primary?: boolean;
+  className?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition ${primary ? "bg-zinc-950 text-white hover:bg-zinc-800" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
+      className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition ${primary ? "bg-[#00629B] text-white hover:bg-[#00527f]" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"} ${className}`}
     >
       {icon}
       {children}
