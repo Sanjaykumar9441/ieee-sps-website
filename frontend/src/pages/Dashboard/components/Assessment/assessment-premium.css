@@ -1,0 +1,395 @@
+/* Assessment Dashboard — Premium Black & White System
+   Scoped by body.assessment-premium-active.
+   This stylesheet changes presentation only; assessment APIs and logic are untouched. */
+
+body.assessment-premium-active {
+  --assessment-ink: #09090b;
+  --assessment-ink-soft: #18181b;
+  --assessment-paper: #ffffff;
+  --assessment-surface: #fafafa;
+  --assessment-muted: #71717a;
+  --assessment-line: #e4e4e7;
+  --assessment-line-strong: #d4d4d8;
+  --assessment-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+  background: #f5f5f5;
+}
+
+/* Page shell */
+body.assessment-premium-active .assessment-dashboard-premium {
+  color: var(--assessment-ink);
+}
+
+body.assessment-premium-active
+  .assessment-dashboard-premium
+  > .assessment-premium-header {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #18181b;
+  border-radius: 28px;
+  padding: 30px 32px;
+  background: #09090b;
+  color: #fff;
+  box-shadow: var(--assessment-shadow);
+}
+
+.assessment-premium-header::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -55% 42%;
+  height: 280px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 0 0 30px rgba(255, 255, 255, 0.025),
+    0 0 0 60px rgba(255, 255, 255, 0.018);
+  pointer-events: none;
+}
+
+body.assessment-premium-active
+  .assessment-dashboard-premium
+  > .assessment-premium-toolbar {
+  border: 1px solid var(--assessment-line);
+  border-radius: 22px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.045);
+}
+
+/* Remove color accents everywhere inside Assessment Dashboard */
+body.assessment-premium-active [class*="blue-"],
+body.assessment-premium-active [class*="indigo-"],
+body.assessment-premium-active [class*="violet-"],
+body.assessment-premium-active [class*="purple-"],
+body.assessment-premium-active [class*="cyan-"],
+body.assessment-premium-active [class*="teal-"],
+body.assessment-premium-active [class*="pink-"],
+body.assessment-premium-active [class*="emerald-"],
+body.assessment-premium-active [class*="green-"],
+body.assessment-premium-active [class*="orange-"],
+body.assessment-premium-active [class*="amber-"],
+body.assessment-premium-active [class*="yellow-"],
+body.assessment-premium-active [class*="red-"] {
+  --tw-ring-color: #a1a1aa !important;
+}
+
+/* Text color utilities become a deliberate grayscale */
+body.assessment-premium-active [class*="text-blue-"],
+body.assessment-premium-active [class*="text-indigo-"],
+body.assessment-premium-active [class*="text-violet-"],
+body.assessment-premium-active [class*="text-purple-"],
+body.assessment-premium-active [class*="text-cyan-"],
+body.assessment-premium-active [class*="text-teal-"],
+body.assessment-premium-active [class*="text-pink-"],
+body.assessment-premium-active [class*="text-emerald-"],
+body.assessment-premium-active [class*="text-green-"],
+body.assessment-premium-active [class*="text-orange-"],
+body.assessment-premium-active [class*="text-amber-"],
+body.assessment-premium-active [class*="text-yellow-"],
+body.assessment-premium-active [class*="text-red-"] {
+  color: #27272a !important;
+}
+
+/* Colored backgrounds/borders are flattened to premium grayscale */
+body.assessment-premium-active [class*="bg-blue-"],
+body.assessment-premium-active [class*="bg-indigo-"],
+body.assessment-premium-active [class*="bg-violet-"],
+body.assessment-premium-active [class*="bg-purple-"],
+body.assessment-premium-active [class*="bg-cyan-"],
+body.assessment-premium-active [class*="bg-teal-"],
+body.assessment-premium-active [class*="bg-pink-"],
+body.assessment-premium-active [class*="bg-emerald-"],
+body.assessment-premium-active [class*="bg-green-"],
+body.assessment-premium-active [class*="bg-orange-"],
+body.assessment-premium-active [class*="bg-amber-"],
+body.assessment-premium-active [class*="bg-yellow-"],
+body.assessment-premium-active [class*="bg-red-"] {
+  background-color: #f4f4f5 !important;
+}
+
+body.assessment-premium-active [class*="border-blue-"],
+body.assessment-premium-active [class*="border-indigo-"],
+body.assessment-premium-active [class*="border-violet-"],
+body.assessment-premium-active [class*="border-purple-"],
+body.assessment-premium-active [class*="border-cyan-"],
+body.assessment-premium-active [class*="border-teal-"],
+body.assessment-premium-active [class*="border-pink-"],
+body.assessment-premium-active [class*="border-emerald-"],
+body.assessment-premium-active [class*="border-green-"],
+body.assessment-premium-active [class*="border-orange-"],
+body.assessment-premium-active [class*="border-amber-"],
+body.assessment-premium-active [class*="border-yellow-"],
+body.assessment-premium-active [class*="border-red-"] {
+  border-color: #d4d4d8 !important;
+}
+
+/* Explicit IEEE blue button/background used by current AssessmentCard */
+body.assessment-premium-active [class*="bg-[#00629B]"],
+body.assessment-premium-active [class*="bg-[#00629b]"] {
+  background-color: #09090b !important;
+}
+
+/* Cards */
+body.assessment-premium-active .assessment-dashboard-premium article,
+body.assessment-premium-active .assessment-dashboard-premium section,
+body.assessment-premium-active .assessment-dashboard-premium .rounded-2xl,
+body.assessment-premium-active .assessment-dashboard-premium .rounded-3xl {
+  border-color: var(--assessment-line) !important;
+}
+
+body.assessment-premium-active .assessment-dashboard-premium article {
+  background: #fff !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.055) !important;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+body.assessment-premium-active .assessment-dashboard-premium article:hover {
+  border-color: #a1a1aa !important;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.09) !important;
+}
+
+/* Inputs: larger, cleaner, premium */
+body.assessment-premium-active input:not([type="checkbox"]):not([type="radio"]),
+body.assessment-premium-active select,
+body.assessment-premium-active textarea {
+  min-height: 52px !important;
+  border: 1px solid #d4d4d8 !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  color: #18181b !important;
+  font-size: 15px !important;
+  line-height: 1.45 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 1px 2px rgba(0, 0, 0, 0.025);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
+body.assessment-premium-active textarea {
+  min-height: 120px !important;
+  padding-top: 14px !important;
+}
+
+body.assessment-premium-active
+  input:not([type="checkbox"]):not([type="radio"]):focus,
+body.assessment-premium-active select:focus,
+body.assessment-premium-active textarea:focus {
+  border-color: #18181b !important;
+  outline: none !important;
+  box-shadow: 0 0 0 4px rgba(24, 24, 27, 0.08) !important;
+}
+
+body.assessment-premium-active input::placeholder,
+body.assessment-premium-active textarea::placeholder {
+  color: #a1a1aa !important;
+}
+
+/* Search field needs extra breathing room for its icon */
+body.assessment-premium-active .assessment-dashboard-premium input {
+  padding-top: 13px !important;
+  padding-bottom: 13px !important;
+}
+
+/* Buttons */
+body.assessment-premium-active .assessment-dashboard-premium button {
+  border-radius: 13px;
+  transition:
+    transform 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+body.assessment-premium-active
+  .assessment-dashboard-premium
+  button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+body.assessment-premium-active .assessment-dashboard-premium button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+body.assessment-premium-active
+  .assessment-dashboard-premium
+  button[class*="bg-"] {
+  background-color: #09090b !important;
+  color: #fff !important;
+}
+
+body.assessment-premium-active
+  .assessment-dashboard-premium
+  button[class*="border-"] {
+  border-color: #d4d4d8 !important;
+}
+
+/* Workspace */
+body.assessment-premium-active
+  .assessment-dashboard-premium
+  .assessment-workspace-premium {
+  overflow: hidden;
+  border: 1px solid #18181b !important;
+  border-radius: 28px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.09);
+}
+
+body.assessment-premium-active
+  .assessment-dashboard-premium
+  .assessment-workspace-premium
+  > header {
+  background: #09090b !important;
+}
+
+body.assessment-premium-active
+  .assessment-dashboard-premium
+  .assessment-workspace-premium
+  > nav {
+  border-color: #e4e4e7 !important;
+  background: #fff !important;
+}
+
+body.assessment-premium-active
+  .assessment-dashboard-premium
+  .assessment-workspace-premium
+  > main {
+  background: #f7f7f7 !important;
+}
+
+body.assessment-premium-active
+  .assessment-dashboard-premium
+  .assessment-workspace-premium
+  nav
+  button {
+  min-height: 46px;
+}
+
+body.assessment-premium-active
+  .assessment-dashboard-premium
+  .assessment-workspace-premium
+  nav
+  button[class*="bg-"] {
+  background: #09090b !important;
+  color: #fff !important;
+}
+
+/* Data tables */
+body.assessment-premium-active .assessment-dashboard-premium table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid #e4e4e7;
+  border-radius: 18px;
+  background: #fff;
+}
+
+body.assessment-premium-active .assessment-dashboard-premium thead {
+  background: #f4f4f5 !important;
+}
+
+body.assessment-premium-active .assessment-dashboard-premium th {
+  color: #52525b !important;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body.assessment-premium-active .assessment-dashboard-premium td,
+body.assessment-premium-active .assessment-dashboard-premium th {
+  border-color: #e4e4e7 !important;
+}
+
+/* Dialogs / modals */
+body.assessment-premium-active [role="dialog"] {
+  border-color: #d4d4d8 !important;
+  background: #fff !important;
+  color: #18181b !important;
+  border-radius: 24px !important;
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.18) !important;
+}
+
+body.assessment-premium-active
+  [role="dialog"]
+  input:not([type="checkbox"]):not([type="radio"]),
+body.assessment-premium-active [role="dialog"] select,
+body.assessment-premium-active [role="dialog"] textarea {
+  min-height: 54px !important;
+}
+
+body.assessment-premium-active [role="dialog"] header,
+body.assessment-premium-active [role="dialog"] [class*="bg-slate-950"],
+body.assessment-premium-active [role="dialog"] [class*="bg-gray-900"] {
+  background: #09090b !important;
+  color: #fff !important;
+}
+
+/* Charts stay monochrome */
+body.assessment-premium-active .recharts-bar-rectangle path,
+body.assessment-premium-active .recharts-area-area,
+body.assessment-premium-active .recharts-radial-bar-sector path {
+  fill: #18181b !important;
+  stroke: #18181b !important;
+}
+
+body.assessment-premium-active .recharts-line-curve {
+  stroke: #18181b !important;
+}
+
+body.assessment-premium-active .recharts-cartesian-grid line {
+  stroke: #e4e4e7 !important;
+}
+
+body.assessment-premium-active .recharts-text {
+  fill: #71717a !important;
+}
+
+/* Scrollbars */
+body.assessment-premium-active
+  .assessment-dashboard-premium
+  ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body.assessment-premium-active
+  .assessment-dashboard-premium
+  ::-webkit-scrollbar-track {
+  background: #f4f4f5;
+}
+
+body.assessment-premium-active
+  .assessment-dashboard-premium
+  ::-webkit-scrollbar-thumb {
+  background: #a1a1aa;
+  border-radius: 999px;
+}
+
+@media (max-width: 768px) {
+  body.assessment-premium-active
+    .assessment-dashboard-premium
+    > .assessment-premium-header {
+    border-radius: 22px;
+    padding: 24px 20px;
+  }
+
+  body.assessment-premium-active
+    .assessment-dashboard-premium
+    > .assessment-premium-toolbar {
+    border-radius: 18px;
+  }
+
+  body.assessment-premium-active
+    .assessment-dashboard-premium
+    .assessment-workspace-premium {
+    border-radius: 22px;
+  }
+}
