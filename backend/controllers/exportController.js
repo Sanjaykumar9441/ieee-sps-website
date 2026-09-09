@@ -13,28 +13,37 @@ const safeFilename = (value) =>
     .replace(/[^a-z0-9._-]+/gi, "_")
     .slice(0, 100);
 
-const toNumber = (value) =>
-  Number.isFinite(Number(value)) ? Number(value) : 0;
+const toNumber = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+};
 
 const formatTime = (seconds) => {
-  const n = Math.max(0, Number(seconds || 0));
+  const n = Math.max(0, Math.floor(toNumber(seconds)));
   return `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
 };
 
 const normalizeAnswer = (value) => {
-  if (typeof value === "number") {
-    return value >= 0 && value < 4
-      ? String.fromCharCode(65 + value)
-      : String(value);
+  if (value == null) return "";
+  if (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value < 26
+  ) {
+    return String.fromCharCode(65 + value);
   }
-  const text = String(value ?? "")
-    .trim()
-    .toUpperCase();
-  if (/^[A-D]$/.test(text)) return text;
-  if (/^\d+$/.test(text) && Number(text) < 4) {
-    return String.fromCharCode(65 + Number(text));
+
+  const text = String(value).trim();
+  if (!text) return "";
+
+  const upper = text.toUpperCase();
+  if (/^[A-Z]$/.test(upper)) return upper;
+  if (/^\d+$/.test(upper)) {
+    const n = Number(upper);
+    if (n >= 0 && n < 26) return String.fromCharCode(65 + n);
   }
-  return text;
+  return upper;
 };
 
 const normalizeAnswers = (value) =>
@@ -50,22 +59,27 @@ const latestBy = (items, keyFn) => {
     if (!key) continue;
     const old = map.get(key);
     const itemTime = new Date(
-      item.submitted_at || item.started_at || 0,
+      item.submitted_at || item.completed_at || item.started_at || 0,
     ).getTime();
     const oldTime = old
-      ? new Date(old.submitted_at || old.started_at || 0).getTime()
+      ? new Date(
+          old.submitted_at || old.completed_at || old.started_at || 0,
+        ).getTime()
       : -1;
-    if (!old || itemTime > oldTime) map.set(key, item);
+    if (!old || itemTime >= oldTime) map.set(key, item);
   }
   return map;
 };
 
 async function getExportData(assessmentId) {
+  if (!assessmentId) throw new Error("Assessment ID is required.");
+
   const { data: assessment, error: assessmentError } = await supabase
     .from("assessments")
     .select("*")
     .eq("id", assessmentId)
     .single();
+
   if (assessmentError || !assessment) {
     throw assessmentError || new Error("Assessment not found.");
   }
@@ -76,6 +90,7 @@ async function getExportData(assessmentId) {
     .from("assessment_question_banks")
     .select("questions_to_pick")
     .eq("assessment_id", assessmentId);
+
   if (mappingError) throw mappingError;
 
   const totalQuestions =
@@ -90,31 +105,42 @@ async function getExportData(assessmentId) {
       "id,name,roll_no,email,branch,has_logged_in,first_login_at,status,team_id",
     )
     .eq("assessment_id", assessmentId);
+
   if (studentsError) throw studentsError;
 
+  /*
+   * IMPORTANT:
+   * participation_mode lives on assessments. Do not request `mode` from
+   * assessment_teams. Older versions of this controller did that, causing
+   * Excel/PDF/CSV to fail with HTTP 500 when that column did not exist.
+   */
   const { data: teams, error: teamsError } = await supabase
     .from("assessment_teams")
-    .select("id,team_name,contact_email,branch,member_count,mode")
+    .select("id,team_name,contact_email,branch,member_count")
     .eq("assessment_id", assessmentId)
     .order("created_at");
+
   if (teamsError) throw teamsError;
 
   const teamIds = (teams || []).map((team) => team.id);
   let teamMembers = [];
+
   if (teamIds.length) {
     const { data, error } = await supabase
       .from("assessment_team_members")
       .select("team_id,name,roll_no,email,branch")
       .in("team_id", teamIds)
       .order("created_at");
+
     if (error) throw error;
     teamMembers = data || [];
   }
 
   const membersByTeam = new Map();
   for (const member of teamMembers) {
-    if (!membersByTeam.has(member.team_id))
+    if (!membersByTeam.has(member.team_id)) {
       membersByTeam.set(member.team_id, []);
+    }
     membersByTeam.get(member.team_id).push(member);
   }
 
@@ -131,15 +157,18 @@ async function getExportData(assessmentId) {
       "id,student_id,team_id,status,score,correct,wrong,unanswered,percentage,started_at,submitted_at,completed_at",
     )
     .eq("assessment_id", assessmentId);
+
   if (attemptsError) throw attemptsError;
 
   const attemptIds = (attempts || []).map((attempt) => attempt.id);
+
   const { data: activities, error: activityError } = attemptIds.length
     ? await supabase
         .from("assessment_activity")
         .select("attempt_id,activity_type,occurred_at,metadata")
         .in("attempt_id", attemptIds)
     : { data: [], error: null };
+
   if (activityError) throw activityError;
 
   const activityMap = new Map();
@@ -150,14 +179,12 @@ async function getExportData(assessmentId) {
     activityMap.get(activity.attempt_id).push(activity);
   }
 
-  const studentMap = new Map(
-    (students || []).map((student) => [student.id, student]),
-  );
   const attemptByStudent = latestBy(attempts, (attempt) => attempt.student_id);
   const attemptByTeam = latestBy(attempts, (attempt) => attempt.team_id);
 
   const buildResult = (student, attempt, team = null) => {
     const activitiesForAttempt = activityMap.get(attempt?.id) || [];
+
     const timeTaken =
       attempt?.started_at && attempt?.submitted_at
         ? Math.max(
@@ -199,7 +226,7 @@ async function getExportData(assessmentId) {
       memberBranches: members.map((member) => member.branch || "").join("; "),
       name: isTeam ? team.team_name : student?.name || "",
       rollNo: isTeam ? "" : student?.roll_no || "",
-      email: isTeam ? team.contact_email : student?.email || "",
+      email: isTeam ? team.contact_email || "" : student?.email || "",
       branch: isTeam ? team.branch || "" : student?.branch || "",
       loginStatus: student?.has_logged_in ? "Logged In" : "Not Logged In",
       attemptStatus: attempt?.status || "NOT STARTED",
@@ -216,33 +243,53 @@ async function getExportData(assessmentId) {
   };
 
   let rows;
+
   if (mode === MODES.INDIVIDUAL) {
     rows = (students || []).map((student) =>
       buildResult(student, attemptByStudent.get(student.id)),
     );
   } else {
     rows = (teams || []).map((team) => {
-      const members = teamMap.get(team.id)?.members || [];
+      const teamData = teamMap.get(team.id) || { ...team, members: [] };
+      const members = teamData.members || [];
+
+      /*
+       * Team member records use email as their stable participant identity.
+       * Do not assume member.id is an assessment_allowed_students.id.
+       */
       const representative = members
-        .map((member) => studentMap.get(member.id))
+        .map((member) => {
+          const email = String(member.email || "")
+            .trim()
+            .toLowerCase();
+          return (students || []).find(
+            (student) =>
+              String(student.email || "")
+                .trim()
+                .toLowerCase() === email && student.team_id === team.id,
+          );
+        })
         .find(Boolean);
-      const student =
+
+      const fallbackStudent =
         representative ||
-        (students || []).find((item) => item.team_id === team.id) ||
+        (students || []).find((student) => student.team_id === team.id) ||
         null;
-      return buildResult(
-        student,
-        attemptByTeam.get(team.id),
-        teamMap.get(team.id),
-      );
+
+      return buildResult(fallbackStudent, attemptByTeam.get(team.id), teamData);
     });
   }
 
   const submittedAttemptIds = (attempts || [])
-    .filter((attempt) => attempt.status !== "IN_PROGRESS")
+    .filter((attempt) => attempt.status === "SUBMITTED")
     .map((attempt) => attempt.id);
 
+  /*
+   * Question Analysis is intentionally independent of the main participant
+   * result query. If no submitted attempts exist, the export still works.
+   */
   let questionAnalysis = [];
+
   if (submittedAttemptIds.length) {
     const { data: questionRows, error: questionError } = await supabase
       .from("assessment_attempt_questions")
@@ -250,13 +297,16 @@ async function getExportData(assessmentId) {
         "id,attempt_id,question_id,question_order,correct_answers,assessment_answers(selected_answers)",
       )
       .in("attempt_id", submittedAttemptIds);
+
     if (questionError) throw questionError;
 
     const map = new Map();
+
     for (const question of questionRows || []) {
       const key =
         question.question_id ||
         `${question.attempt_id}:${question.question_order}`;
+
       if (!map.has(key)) {
         map.set(key, {
           questionNumber: question.question_order,
@@ -267,20 +317,26 @@ async function getExportData(assessmentId) {
           skipped: 0,
         });
       }
+
       const stat = map.get(key);
       stat.attempts += 1;
+
       const selected = normalizeAnswers(
         question.assessment_answers?.[0]?.selected_answers,
       );
       const expected = normalizeAnswers(question.correct_answers);
-      if (!selected.length) stat.skipped += 1;
-      else if (JSON.stringify(selected) === JSON.stringify(expected))
+
+      if (!selected.length) {
+        stat.skipped += 1;
+      } else if (JSON.stringify(selected) === JSON.stringify(expected)) {
         stat.correct += 1;
-      else stat.wrong += 1;
+      } else {
+        stat.wrong += 1;
+      }
     }
 
     questionAnalysis = [...map.values()]
-      .sort((a, b) => a.questionNumber - b.questionNumber)
+      .sort((a, b) => Number(a.questionNumber) - Number(b.questionNumber))
       .map((question) => ({
         ...question,
         correctPercentage: question.attempts
@@ -296,13 +352,25 @@ async function getExportData(assessmentId) {
   }
 
   const submitted = rows.filter((row) => row.attemptStatus === "SUBMITTED");
-  const maxMarks =
-    totalQuestions * Math.max(0, toNumber(assessment.marks_per_question ?? 1));
+
+  const marksPerQuestion = Math.max(
+    0,
+    toNumber(assessment.marks_per_question ?? 1),
+  );
+
+  const maxMarks = totalQuestions * marksPerQuestion;
+
   const averageScore = submitted.length
     ? submitted.reduce((sum, row) => sum + row.score, 0) / submitted.length
     : 0;
+
+  const passPercentage = Math.max(
+    0,
+    toNumber(assessment.pass_percentage ?? 40),
+  );
+
   const passed = submitted.filter(
-    (row) => row.percentage >= toNumber(assessment.pass_percentage ?? 40),
+    (row) => row.percentage >= passPercentage,
   ).length;
 
   const leaderboard = [...submitted]
@@ -310,12 +378,15 @@ async function getExportData(assessmentId) {
       (a, b) =>
         b.score - a.score ||
         a.timeTakenSeconds - b.timeTakenSeconds ||
-        a.name.localeCompare(b.name),
+        String(a.name).localeCompare(String(b.name)),
     )
     .map((row, index) => ({ ...row, rank: index + 1 }));
 
   return {
-    assessment: { ...assessment, total_questions: totalQuestions },
+    assessment: {
+      ...assessment,
+      total_questions: totalQuestions,
+    },
     mode,
     rows,
     questionAnalysis,
@@ -439,15 +510,16 @@ exports.exportExcel = async (req, res) => {
     const { assessment, mode, rows, questionAnalysis, leaderboard, summary } =
       await getExportData(assessmentId);
 
-    const wb = new ExcelJS.Workbook();
-    wb.creator = "IEEE SPS Assessment Platform";
-    wb.created = new Date();
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "IEEE SPS Assessment Platform";
+    workbook.created = new Date();
 
-    const info = wb.addWorksheet("Summary");
+    const info = workbook.addWorksheet("Summary");
     info.columns = [
       { header: "Metric", key: "metric", width: 30 },
-      { header: "Value", key: "value", width: 32 },
+      { header: "Value", key: "value", width: 36 },
     ];
+
     [
       ["Assessment", assessment.title],
       ["Participation Mode", mode],
@@ -455,9 +527,9 @@ exports.exportExcel = async (req, res) => {
       ["End", assessment.end_time || ""],
       ["Total Questions", assessment.total_questions],
       ["Duration (minutes)", assessment.duration_minutes],
-      ["Marks Per Question", assessment.marks_per_question],
+      ["Marks Per Question", assessment.marks_per_question ?? 1],
       ["Maximum Marks", summary.maxMarks],
-      ["Passing Percentage", assessment.pass_percentage],
+      ["Passing Percentage", assessment.pass_percentage ?? 40],
       ["Registered", summary.registered],
       ["Submitted", summary.submitted],
       ["In Progress", summary.inProgress],
@@ -467,8 +539,9 @@ exports.exportExcel = async (req, res) => {
     ].forEach(([metric, value]) => info.addRow({ metric, value }));
 
     const columns = getExportColumns(mode);
-    const sheet = wb.addWorksheet("Results");
-    sheet.columns = columns.map(([header, key]) => ({
+    const results = workbook.addWorksheet("Results");
+
+    results.columns = columns.map(([header, key]) => ({
       header,
       key,
       width: Math.min(42, Math.max(12, header.length + 4)),
@@ -477,13 +550,20 @@ exports.exportExcel = async (req, res) => {
     const rankMap = new Map(
       leaderboard.map((row) => [row.participantId, row.rank]),
     );
-    rows.forEach((row) => {
-      sheet.addRow({ ...row, rank: rankMap.get(row.participantId) || "" });
-    });
-    sheet.views = [{ state: "frozen", ySplit: 1 }];
-    sheet.autoFilter = `A1:${String.fromCharCode(64 + columns.length)}1`;
 
-    const q = wb.addWorksheet("Question Analysis");
+    rows.forEach((row) => {
+      results.addRow({
+        ...row,
+        rank: rankMap.get(row.participantId) || "",
+      });
+    });
+
+    results.views = [{ state: "frozen", ySplit: 1 }];
+
+    const lastColumn = results.getColumn(results.columnCount).letter;
+    results.autoFilter = `A1:${lastColumn}1`;
+
+    const q = workbook.addWorksheet("Question Analysis");
     q.columns = [
       { header: "Question #", key: "questionNumber", width: 12 },
       { header: "Attempts", key: "attempts", width: 12 },
@@ -494,10 +574,11 @@ exports.exportExcel = async (req, res) => {
       { header: "Wrong %", key: "wrongPercentage", width: 14 },
       { header: "Skipped %", key: "skippedPercentage", width: 14 },
     ];
+
     questionAnalysis.forEach((question) => q.addRow(question));
     q.views = [{ state: "frozen", ySplit: 1 }];
 
-    for (const worksheet of [info, sheet, q]) {
+    for (const worksheet of [info, results, q]) {
       worksheet.getRow(1).font = { bold: true };
       worksheet.getRow(1).alignment = { vertical: "middle" };
       worksheet.eachRow((row) => {
@@ -513,11 +594,18 @@ exports.exportExcel = async (req, res) => {
       "Content-Disposition",
       `attachment; filename="${safeFilename(assessment.title)}-results.xlsx"`,
     );
-    await wb.xlsx.write(res);
-    res.end();
+
+    await workbook.xlsx.write(res);
+    return res.end();
   } catch (err) {
     console.error("EXPORT EXCEL ERROR:", err);
-    res.status(500).json({ success: false, message: err.message });
+    if (!res.headersSent) {
+      return res.status(500).json({
+        success: false,
+        message: err.message || "Unable to export Excel report.",
+      });
+    }
+    return res.end();
   }
 };
 
@@ -526,42 +614,54 @@ exports.exportCSV = async (req, res) => {
     const { assessmentId } = req.params;
     const { assessment, mode, rows, leaderboard } =
       await getExportData(assessmentId);
+
     const columns = getExportColumns(mode);
     const rankMap = new Map(
       leaderboard.map((row) => [row.participantId, row.rank]),
     );
-    const esc = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+    const escapeCSV = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+
     const csv = [
-      columns.map(([header]) => esc(header)).join(","),
+      columns.map(([header]) => escapeCSV(header)).join(","),
       ...rows.map((row) =>
         columns
           .map(([, key]) =>
-            esc(
+            escapeCSV(
               key === "rank" ? rankMap.get(row.participantId) || "" : row[key],
             ),
           )
           .join(","),
       ),
-    ].join("\n");
+    ].join("\r\n");
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="${safeFilename(assessment.title)}-results.csv"`,
     );
-    res.send(csv);
+
+    return res.send("\uFEFF" + csv);
   } catch (err) {
     console.error("EXPORT CSV ERROR:", err);
-    res.status(500).json({ success: false, message: err.message });
+    if (!res.headersSent) {
+      return res.status(500).json({
+        success: false,
+        message: err.message || "Unable to export CSV report.",
+      });
+    }
   }
 };
 
 exports.exportPDF = async (req, res) => {
+  let doc;
+
   try {
     const { assessmentId } = req.params;
     const { assessment, mode, rows, leaderboard, summary } =
       await getExportData(assessmentId);
-    const doc = new PDFDocument({
+
+    doc = new PDFDocument({
       size: "A4",
       layout: "landscape",
       margin: 36,
@@ -573,15 +673,12 @@ exports.exportPDF = async (req, res) => {
       "Content-Disposition",
       `attachment; filename="${safeFilename(assessment.title)}-results.pdf"`,
     );
+
     doc.pipe(res);
 
-    const navy = "#0B3558";
-    const blue = "#00629B";
-    const muted = "#64748B";
-    const light = "#F1F5F9";
-    const pageW = doc.page.width;
-    const pageH = doc.page.height;
-    const usable = pageW - 72;
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
+    const usableWidth = pageWidth - 72;
 
     const modeLabel =
       mode === MODES.STUDENT_TEAMS
@@ -590,50 +687,58 @@ exports.exportPDF = async (req, res) => {
           ? "Team"
           : "Individual Students";
 
-    const header = () => {
-      doc.rect(0, 0, pageW, 76).fill(navy);
+    const colors = {
+      dark: "#0F172A",
+      navy: "#0B3558",
+      blue: "#00629B",
+      muted: "#64748B",
+      light: "#F1F5F9",
+      text: "#334155",
+    };
+
+    const drawHeader = () => {
+      doc.rect(0, 0, pageWidth, 76).fill(colors.navy);
+
       doc
         .fillColor("white")
+        .font("Helvetica-Bold")
         .fontSize(20)
-        .font("Helvetica-Bold")
         .text("IEEE SPS", 36, 24);
+
       doc
-        .fontSize(10)
         .font("Helvetica")
+        .fontSize(10)
         .text(`${modeLabel.toUpperCase()} ASSESSMENT REPORT`, 36, 49);
+
       doc
-        .fontSize(18)
         .font("Helvetica-Bold")
+        .fontSize(18)
         .text(assessment.title || "Assessment", 250, 26, {
-          width: pageW - 286,
+          width: pageWidth - 286,
           align: "right",
         });
+
       doc
-        .fontSize(9)
         .font("Helvetica")
+        .fontSize(9)
         .text(`Generated ${new Date().toLocaleString()}`, 250, 50, {
-          width: pageW - 286,
+          width: pageWidth - 286,
           align: "right",
         });
     };
 
-    const participantTitle =
-      mode === MODES.STUDENT_TEAMS
-        ? "Team / Members"
-        : mode === MODES.TEAM
-          ? "Team"
-          : "Student";
+    drawHeader();
 
-    header();
     doc
-      .fillColor("#0F172A")
+      .fillColor(colors.dark)
       .font("Helvetica-Bold")
       .fontSize(22)
       .text("Executive Summary", 36, 102);
+
     doc
+      .fillColor(colors.muted)
       .font("Helvetica")
       .fontSize(10)
-      .fillColor(muted)
       .text(
         `${assessment.start_time ? new Date(assessment.start_time).toLocaleString() : ""}  →  ${assessment.end_time ? new Date(assessment.end_time).toLocaleString() : ""}`,
         36,
@@ -647,41 +752,61 @@ exports.exportPDF = async (req, res) => {
       ["Pass Rate", `${summary.passRate}%`],
       ["Maximum Marks", summary.maxMarks],
     ];
-    let x = 36;
-    let y = 158;
+
+    let cardX = 36;
+    const cardY = 158;
+
     for (const [label, value] of cards) {
-      doc.roundedRect(x, y, 145, 60, 8).fill(light);
+      doc.roundedRect(cardX, cardY, 145, 60, 8).fill(colors.light);
+
       doc
-        .fillColor(muted)
+        .fillColor(colors.muted)
+        .font("Helvetica")
         .fontSize(8)
-        .text(label, x + 10, y + 10);
+        .text(String(label), cardX + 10, cardY + 10);
+
       doc
-        .fillColor(blue)
+        .fillColor(colors.blue)
         .font("Helvetica-Bold")
         .fontSize(18)
-        .text(String(value), x + 10, y + 28);
-      x += 155;
+        .text(String(value), cardX + 10, cardY + 28);
+
+      cardX += 155;
     }
 
-    y = 244;
-    doc.fillColor("#0F172A").fontSize(15).text("Top Performers", 36, y);
+    let y = 244;
+
+    doc
+      .fillColor(colors.dark)
+      .font("Helvetica-Bold")
+      .fontSize(15)
+      .text("Top Performers", 36, y);
+
     y += 24;
 
     const top = leaderboard.slice(0, 5);
+
     const topHeaders =
       mode === MODES.STUDENT_TEAMS
         ? ["#", "Team", "Members", "Score", "Correct", "Wrong", "%", "Time"]
         : mode === MODES.TEAM
           ? ["#", "Team", "Email", "Score", "Correct", "Wrong", "%", "Time"]
           : ["#", "Name", "Roll No", "Score", "Correct", "Wrong", "%", "Time"];
+
     const topCols = [36, 70, 270, 410, 480, 545, 610, 680];
+
     doc.font("Helvetica-Bold").fontSize(8);
-    topHeaders.forEach((label, index) => doc.text(label, topCols[index], y));
+
+    topHeaders.forEach((label, index) => {
+      doc.text(label, topCols[index], y, {
+        width: index === 1 ? 190 : 70,
+      });
+    });
+
     y += 16;
-    doc.font("Helvetica");
 
     for (const row of top) {
-      const identity =
+      const values =
         mode === MODES.STUDENT_TEAMS
           ? [
               row.rank,
@@ -714,21 +839,25 @@ exports.exportPDF = async (req, res) => {
                 `${row.percentage}%`,
                 formatTime(row.timeTakenSeconds),
               ];
-      identity.forEach((value, index) =>
+
+      values.forEach((value, index) => {
         doc
+          .font("Helvetica")
           .fontSize(8)
-          .fillColor("#334155")
+          .fillColor(colors.text)
           .text(String(value ?? ""), topCols[index], y, {
             width: index === 1 ? 190 : 70,
-          }),
-      );
+          });
+      });
+
       y += 18;
     }
 
     doc.addPage();
-    header();
+    drawHeader();
+
     doc
-      .fillColor("#0F172A")
+      .fillColor(colors.dark)
       .font("Helvetica-Bold")
       .fontSize(17)
       .text("Detailed Results", 36, 102);
@@ -772,37 +901,38 @@ exports.exportPDF = async (req, res) => {
               "%",
               "Time",
             ];
+
     const detailCols = [36, 65, 220, 320, 400, 460, 520, 580, 660, 715];
 
     const drawTableHeader = (tableY) => {
-      doc.roundedRect(36, tableY - 5, 760, 22, 4).fill(blue);
-      doc.fillColor("white").fontSize(7).font("Helvetica-Bold");
-      detailHeaders.forEach((label, index) =>
+      doc.roundedRect(36, tableY - 5, 760, 22, 4).fill(colors.blue);
+      doc.fillColor("white").font("Helvetica-Bold").fontSize(7);
+
+      detailHeaders.forEach((label, index) => {
         doc.text(label, detailCols[index], tableY, {
           width: index === 1 ? 150 : 65,
-        }),
-      );
+        });
+      });
     };
 
     let tableY = 132;
     drawTableHeader(tableY);
     tableY += 24;
-    doc.font("Helvetica");
 
     rows.forEach((row, index) => {
-      if (tableY > pageH - 45) {
+      if (tableY > pageHeight - 45) {
         doc.addPage();
-        header();
+        drawHeader();
         tableY = 102;
         drawTableHeader(tableY);
         tableY += 24;
-        doc.font("Helvetica");
       }
 
       if (index % 2 === 0) {
-        doc.rect(36, tableY - 4, 760, 18).fill(light);
+        doc.rect(36, tableY - 4, 760, 18).fill(colors.light);
       }
-      doc.fillColor("#334155").fontSize(7);
+
+      doc.fillColor(colors.text).font("Helvetica").fontSize(7);
 
       const values =
         mode === MODES.STUDENT_TEAMS
@@ -844,123 +974,156 @@ exports.exportPDF = async (req, res) => {
                 formatTime(row.timeTakenSeconds),
               ];
 
-      values.forEach((value, columnIndex) =>
+      values.forEach((value, columnIndex) => {
         doc.text(String(value ?? ""), detailCols[columnIndex], tableY, {
           width: columnIndex === 1 ? 150 : 65,
-        }),
-      );
+        });
+      });
+
       tableY += 18;
     });
 
     if (mode === MODES.STUDENT_TEAMS && rows.length) {
       doc.addPage();
-      header();
+      drawHeader();
+
       doc
-        .fillColor("#0F172A")
+        .fillColor(colors.dark)
         .font("Helvetica-Bold")
         .fontSize(17)
         .text("Team Members", 36, 102);
+
       let memberY = 132;
       const memberHeaders = ["Team", "Name", "Roll No", "Email", "Branch"];
       const memberCols = [36, 180, 330, 420, 650];
-      doc.roundedRect(36, memberY - 5, 760, 22, 4).fill(blue);
-      doc.fillColor("white").fontSize(7).font("Helvetica-Bold");
-      memberHeaders.forEach((label, index) =>
-        doc.text(label, memberCols[index], memberY, {
-          width: index === 3 ? 220 : 130,
-        }),
-      );
-      memberY += 24;
-      doc.font("Helvetica");
+
+      const drawMemberHeader = () => {
+        doc.roundedRect(36, memberY - 5, 760, 22, 4).fill(colors.blue);
+        doc.fillColor("white").font("Helvetica-Bold").fontSize(7);
+
+        memberHeaders.forEach((label, index) => {
+          doc.text(label, memberCols[index], memberY, {
+            width: index === 3 ? 220 : 130,
+          });
+        });
+
+        memberY += 24;
+      };
+
+      drawMemberHeader();
+
       for (const row of rows) {
         for (const member of row.members || []) {
-          if (memberY > pageH - 45) {
+          if (memberY > pageHeight - 45) {
             doc.addPage();
-            header();
+            drawHeader();
             memberY = 102;
-            doc.roundedRect(36, memberY - 5, 760, 22, 4).fill(blue);
-            doc.fillColor("white").font("Helvetica-Bold").fontSize(7);
-            memberHeaders.forEach((label, index) =>
-              doc.text(label, memberCols[index], memberY, {
-                width: index === 3 ? 220 : 130,
-              }),
-            );
-            memberY += 24;
-            doc.font("Helvetica");
+            drawMemberHeader();
           }
-          doc.fillColor("#334155").fontSize(7);
+
+          doc.fillColor(colors.text).font("Helvetica").fontSize(7);
+
           [
             row.teamName,
             member.name,
             member.roll_no,
             member.email,
             member.branch || "",
-          ].forEach((value, index) =>
+          ].forEach((value, index) => {
             doc.text(String(value ?? ""), memberCols[index], memberY, {
               width: index === 3 ? 220 : 130,
-            }),
-          );
+            });
+          });
+
           memberY += 18;
         }
       }
     }
 
     doc.addPage();
-    header();
+    drawHeader();
+
     doc
-      .fillColor("#0F172A")
+      .fillColor(colors.dark)
       .font("Helvetica-Bold")
       .fontSize(17)
       .text("Assessment Notes", 36, 102);
+
     doc
+      .fillColor(colors.text)
       .font("Helvetica")
       .fontSize(10)
-      .fillColor("#334155")
       .text(
-        `Participation mode: ${modeLabel}\nTotal questions: ${assessment.total_questions}\nMarks per question: ${assessment.marks_per_question ?? 1}\nMaximum marks: ${summary.maxMarks}\nDuration: ${assessment.duration_minutes} minutes\nPassing percentage: ${assessment.pass_percentage ?? 40}%\nLogin method: ${assessment.login_method || "PASSWORD"}\nLive updates: ${assessment.live_updates_enabled === false ? "OFF" : "ON"}`,
+        [
+          `Participation mode: ${modeLabel}`,
+          `Total questions: ${assessment.total_questions}`,
+          `Marks per question: ${assessment.marks_per_question ?? 1}`,
+          `Maximum marks: ${summary.maxMarks}`,
+          `Duration: ${assessment.duration_minutes} minutes`,
+          `Passing percentage: ${assessment.pass_percentage ?? 40}%`,
+          `Login method: ${assessment.login_method || "PASSWORD"}`,
+          `Live updates: ${assessment.live_updates_enabled === false ? "OFF" : "ON"}`,
+        ].join("\n"),
         36,
         136,
         { lineGap: 8 },
       );
+
     doc
+      .fillColor(colors.muted)
       .fontSize(9)
-      .fillColor(muted)
       .text(
         "This report is generated by the IEEE SPS Assessment Platform and contains the latest records available at export time.",
         36,
         280,
-        { width: usable },
+        { width: usableWidth },
       );
 
     const range = doc.bufferedPageRange();
+
     for (
       let index = range.start;
       index < range.start + range.count;
       index += 1
     ) {
       doc.switchToPage(index);
+
       doc
+        .fillColor(colors.muted)
+        .font("Helvetica")
         .fontSize(8)
-        .fillColor(muted)
         .text(
           `IEEE SPS Assessment Platform  •  Page ${index - range.start + 1} of ${range.count}`,
           36,
-          pageH - 24,
-          { width: usable, align: "center" },
+          pageHeight - 24,
+          { width: usableWidth, align: "center" },
         );
     }
 
-    doc.end();
+    return doc.end();
   } catch (err) {
     console.error("EXPORT PDF ERROR:", err);
-    if (!res.headersSent) {
-      res.status(500).json({ success: false, message: err.message });
+
+    if (doc && !res.headersSent) {
+      try {
+        doc.end();
+      } catch (_) {}
     }
+
+    if (!res.headersSent) {
+      return res.status(500).json({
+        success: false,
+        message: err.message || "Unable to export PDF report.",
+      });
+    }
+
+    return res.end();
   }
 };
 
 exports.getRound2ExportData = async (assessmentId) => {
   const { assessment, mode, rows } = await getExportData(assessmentId);
+
   return {
     assessment,
     mode,
