@@ -26,7 +26,7 @@ const ASSESSMENTS = [
     description:
       "The opening assessment used to shortlist teams for the final stages of the Technical Quiz.",
     meta: ["25 MCQs", "15 minutes", "Team assessment"],
-    href: "/student/exam/29c228ed-7508-4280-82fe-63b055937fac",
+    href: "",
     accent: "from-[#00629B] to-[#00A8E8]",
   },
   {
@@ -116,7 +116,7 @@ export default function VedaTechnicalQuiz() {
             className="mb-10 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-[#00629B]"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to IEEE SPS
+            Back to Main Site
           </Link>
 
           <div className="grid items-center gap-10 lg:grid-cols-[1.25fr_.75fr]">
@@ -372,7 +372,7 @@ export default function VedaTechnicalQuiz() {
           <div>
             <p className="font-bold">VEDA 2K26 · Technical Quiz (ECE)</p>
             <p className="mt-1 text-slate-400">
-              IEEE SPS Student Branch Chapter · Aditya University
+              Electronics and Communication Engineering · Aditya University
             </p>
           </div>
           <a
