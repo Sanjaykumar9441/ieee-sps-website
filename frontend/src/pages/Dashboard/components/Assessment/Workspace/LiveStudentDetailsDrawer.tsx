@@ -49,7 +49,6 @@ export default function LiveStudentDetailsDrawer({
   const [loading, setLoading] = useState(false),
     [processing, setProcessing] = useState(false),
     [details, setDetails] = useState<any>(null);
-
   const fetchDetails = useCallback(async () => {
     if (!student?.attemptId) {
       setDetails(null);
@@ -65,7 +64,6 @@ export default function LiveStudentDetailsDrawer({
       setLoading(false);
     }
   }, [student?.attemptId]);
-
   useEffect(() => {
     if (open) void fetchDetails();
   }, [open, fetchDetails]);
@@ -80,26 +78,24 @@ export default function LiveStudentDetailsDrawer({
       socket.off("forceSubmitted", fetchDetails);
     };
   }, [open, fetchDetails]);
-
   const questions: Review[] = details?.questions || [],
     attempt = details?.attempt,
     team = details?.team,
     stats = details?.statistics || {};
   const correct = useMemo(
-    () => questions.filter((q) => q.result === "CORRECT").length,
-    [questions],
-  );
-  const wrong = useMemo(
-    () => questions.filter((q) => q.result === "WRONG").length,
-    [questions],
-  );
-  const unanswered = useMemo(
-    () => questions.filter((q) => q.result === "UNANSWERED").length,
-    [questions],
-  );
+      () => questions.filter((q) => q.result === "CORRECT").length,
+      [questions],
+    ),
+    wrong = useMemo(
+      () => questions.filter((q) => q.result === "WRONG").length,
+      [questions],
+    ),
+    unanswered = useMemo(
+      () => questions.filter((q) => q.result === "UNANSWERED").length,
+      [questions],
+    );
   const finished = attempt?.status === "SUBMITTED",
     blocked = details?.student?.status === "blocked";
-
   const force = async () => {
     if (!attempt?.id || finished) return;
     if (
@@ -150,7 +146,6 @@ export default function LiveStudentDetailsDrawer({
       setProcessing(false);
     }
   };
-
   if (!open || !student) return null;
   return (
     <>
@@ -231,7 +226,11 @@ export default function LiveStudentDetailsDrawer({
                 <Stat l="Status" v={attempt?.status || "NOT STARTED"} />
                 <Stat
                   l="Current"
-                  v={`${student.currentQuestion} / ${student.totalQuestions}`}
+                  v={
+                    attempt?.status === "SUBMITTED"
+                      ? "—"
+                      : `${student.currentQuestion} / ${student.totalQuestions}`
+                  }
                 />
                 <Stat
                   l="Answered"
@@ -319,7 +318,6 @@ export default function LiveStudentDetailsDrawer({
     </>
   );
 }
-
 function Info({ l, v }: { l: string; v: string }) {
   return (
     <div>

@@ -64,7 +64,6 @@ export default function LiveMonitor({
     [selected, setSelected] = useState<LiveStudent | null>(null),
     [open, setOpen] = useState(false),
     [processing, setProcessing] = useState<string | null>(null);
-
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
@@ -150,8 +149,19 @@ export default function LiveMonitor({
       setProcessing(null);
     }
   };
-  const answered = rows.reduce((a, s) => a + s.answeredQuestions, 0),
-    violations = rows.reduce((a, s) => a + s.violations, 0);
+  const uniqueAttempts = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          rows.filter((s) => s.attemptId).map((s) => [s.attemptId, s]),
+        ).values(),
+      ),
+    [rows],
+  );
+  const answered = uniqueAttempts.reduce((a, s) => a + s.answeredQuestions, 0),
+    violations = uniqueAttempts.reduce((a, s) => a + s.violations, 0);
+  const liveCount = uniqueAttempts.filter(live).length,
+    submittedCount = uniqueAttempts.filter(submitted).length;
   const cols = teams ? 10 : studentTeams ? 13 : 9;
   return (
     <div className="space-y-6">
@@ -178,11 +188,8 @@ export default function LiveMonitor({
         </button>
       </div>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Summary
-          l={`Live ${teams ? "Teams" : "Students"}`}
-          v={rows.filter(live).length}
-        />
-        <Summary l="Submitted" v={rows.filter(submitted).length} />
+        <Summary l={`Live ${teams ? "Teams" : "Students"}`} v={liveCount} />
+        <Summary l="Submitted" v={submittedCount} />
         <Summary l="Answered" v={answered} />
         <Summary l="Violations" v={violations} />
       </div>
@@ -305,7 +312,9 @@ export default function LiveMonitor({
                         </>
                       )}
                       <td className="px-4 py-4">
-                        {s.currentQuestion} / {s.totalQuestions}
+                        {done
+                          ? "—"
+                          : `${s.currentQuestion} / ${s.totalQuestions}`}
                       </td>
                       <td className="px-4 py-4 font-semibold">
                         {s.answeredQuestions} / {s.totalQuestions}
