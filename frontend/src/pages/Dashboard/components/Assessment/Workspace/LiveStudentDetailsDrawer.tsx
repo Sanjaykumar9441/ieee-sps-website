@@ -49,6 +49,7 @@ export default function LiveStudentDetailsDrawer({
   const [loading, setLoading] = useState(false),
     [processing, setProcessing] = useState(false),
     [details, setDetails] = useState<any>(null);
+
   const fetchDetails = useCallback(async () => {
     if (!student?.attemptId) {
       setDetails(null);
@@ -64,9 +65,11 @@ export default function LiveStudentDetailsDrawer({
       setLoading(false);
     }
   }, [student?.attemptId]);
+
   useEffect(() => {
     if (open) void fetchDetails();
   }, [open, fetchDetails]);
+
   useEffect(() => {
     if (!open) return;
     socket.on("dashboardRefresh", fetchDetails);
@@ -78,24 +81,26 @@ export default function LiveStudentDetailsDrawer({
       socket.off("forceSubmitted", fetchDetails);
     };
   }, [open, fetchDetails]);
-  const questions: Review[] = details?.questions || [],
-    attempt = details?.attempt,
-    team = details?.team,
-    stats = details?.statistics || {};
+
+  const questions: Review[] = details?.questions || [];
+  const attempt = details?.attempt;
+  const team = details?.team;
+  const stats = details?.statistics || {};
   const correct = useMemo(
-      () => questions.filter((q) => q.result === "CORRECT").length,
-      [questions],
-    ),
-    wrong = useMemo(
-      () => questions.filter((q) => q.result === "WRONG").length,
-      [questions],
-    ),
-    unanswered = useMemo(
-      () => questions.filter((q) => q.result === "UNANSWERED").length,
-      [questions],
-    );
-  const finished = attempt?.status === "SUBMITTED",
-    blocked = details?.student?.status === "blocked";
+    () => questions.filter((q) => q.result === "CORRECT").length,
+    [questions],
+  );
+  const wrong = useMemo(
+    () => questions.filter((q) => q.result === "WRONG").length,
+    [questions],
+  );
+  const unanswered = useMemo(
+    () => questions.filter((q) => q.result === "UNANSWERED").length,
+    [questions],
+  );
+  const finished = attempt?.status === "SUBMITTED";
+  const blocked = details?.student?.status === "blocked";
+
   const force = async () => {
     if (!attempt?.id || finished) return;
     if (
@@ -116,6 +121,7 @@ export default function LiveStudentDetailsDrawer({
       setProcessing(false);
     }
   };
+
   const toggleBlock = async () => {
     if (!assessmentId || !student?.studentId || team) return;
     try {
@@ -131,6 +137,7 @@ export default function LiveStudentDetailsDrawer({
       setProcessing(false);
     }
   };
+
   const remove = async () => {
     if (!assessmentId || !student?.studentId || team) return;
     if (!confirm(`Delete ${student.studentName} from this assessment?`)) return;
@@ -146,7 +153,9 @@ export default function LiveStudentDetailsDrawer({
       setProcessing(false);
     }
   };
+
   if (!open || !student) return null;
+
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/45" onClick={onClose} />
@@ -154,7 +163,7 @@ export default function LiveStudentDetailsDrawer({
         <header className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b bg-white px-6 py-5">
           <div>
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-              {team ? <Users size={14} /> : <User size={14} />}{" "}
+              {team ? <Users size={14} /> : <User size={14} />}
               {team ? "Team Attempt" : "Student Attempt"}
             </div>
             <h2 className="mt-1 text-2xl font-bold text-slate-950">
@@ -173,6 +182,7 @@ export default function LiveStudentDetailsDrawer({
             <X size={20} />
           </button>
         </header>
+
         {loading ? (
           <div className="flex min-h-[500px] items-center justify-center text-sm text-slate-500">
             Loading participant details...
@@ -203,6 +213,7 @@ export default function LiveStudentDetailsDrawer({
                 </div>
               </section>
             )}
+
             {!team && (
               <section className="rounded-2xl border bg-white p-5">
                 <div className="mb-4 flex items-center gap-3">
@@ -217,6 +228,7 @@ export default function LiveStudentDetailsDrawer({
                 </div>
               </section>
             )}
+
             <section className="rounded-2xl border bg-white p-5">
               <div className="mb-4 flex items-center gap-3">
                 <Activity size={19} />
@@ -252,6 +264,7 @@ export default function LiveStudentDetailsDrawer({
                 <Stat l="Resume Count" v={String(attempt?.resumedCount || 0)} />
               </div>
             </section>
+
             <section className="rounded-2xl border bg-white p-5">
               <div className="mb-5 flex items-end justify-between gap-3">
                 <div>
@@ -268,6 +281,7 @@ export default function LiveStudentDetailsDrawer({
                   </span>
                 )}
               </div>
+
               {!questions.length ? (
                 <div className="rounded-xl border border-dashed bg-slate-50 px-5 py-10 text-center text-sm text-slate-500">
                   {finished
@@ -282,6 +296,7 @@ export default function LiveStudentDetailsDrawer({
                 </div>
               )}
             </section>
+
             <section className="rounded-2xl border bg-white p-5">
               <h3 className="mb-4 font-bold">Actions</h3>
               <div className="flex flex-wrap gap-3">
@@ -318,6 +333,7 @@ export default function LiveStudentDetailsDrawer({
     </>
   );
 }
+
 function Info({ l, v }: { l: string; v: string }) {
   return (
     <div>
@@ -326,6 +342,7 @@ function Info({ l, v }: { l: string; v: string }) {
     </div>
   );
 }
+
 function Stat({ l, v }: { l: string; v: string }) {
   return (
     <div className="rounded-xl border bg-slate-50 p-3">
@@ -334,6 +351,12 @@ function Stat({ l, v }: { l: string; v: string }) {
     </div>
   );
 }
+
+/*
+ * IMPORTANT:
+ * selectedDisplay and correctDisplay are already converted by the backend into
+ * the actual option text. Do NOT prepend A/B/C/D here.
+ */
 function Question({ q }: { q: Review }) {
   const icon =
     q.result === "CORRECT" ? (
@@ -343,6 +366,7 @@ function Question({ q }: { q: Review }) {
     ) : (
       <MinusCircle size={14} />
     );
+
   return (
     <article className="overflow-hidden rounded-xl border">
       <div className="flex flex-col gap-3 border-b bg-slate-50 px-4 py-4 md:flex-row md:items-start md:justify-between">
@@ -364,6 +388,7 @@ function Question({ q }: { q: Review }) {
           {q.result}
         </span>
       </div>
+
       <div className="grid gap-4 p-4 md:grid-cols-2">
         <Answer
           l="Student Answer"
@@ -376,6 +401,7 @@ function Question({ q }: { q: Review }) {
           empty="No correct answer configured"
         />
       </div>
+
       <div className="flex flex-wrap gap-2 border-t px-4 py-3 text-xs font-semibold text-slate-500">
         <span className="rounded-full bg-slate-100 px-3 py-1">
           {q.answered ? "Answered" : "Unanswered"}
@@ -397,6 +423,7 @@ function Question({ q }: { q: Review }) {
     </article>
   );
 }
+
 function Answer({
   l,
   values,
