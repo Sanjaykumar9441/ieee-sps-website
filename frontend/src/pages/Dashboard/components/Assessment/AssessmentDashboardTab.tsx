@@ -3,7 +3,6 @@ import { Plus, RefreshCw, Search } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { socket } from "../../../../lib/socket";
-
 import AssessmentCard, { Assessment } from "./AssessmentCard";
 import AssessmentWorkspace from "./AssessmentWorkspace";
 import CreateAssessmentModal from "./CreateAssessmentModal";
@@ -49,15 +48,12 @@ export default function AssessmentDashboardTab() {
   };
 
   useEffect(() => {
-    fetchAssessments();
+    void fetchAssessments();
   }, []);
 
   useEffect(() => {
     document.body.classList.add("assessment-premium-active");
-
-    if (!socket.connected) {
-      socket.connect();
-    }
+    if (!socket.connected) socket.connect();
 
     socket.on("assessmentCreated", fetchAssessments);
     socket.on("assessmentUpdated", fetchAssessments);
@@ -88,7 +84,7 @@ export default function AssessmentDashboardTab() {
     try {
       await deleteAssessment(id);
       toast.success("Assessment deleted");
-      fetchAssessments();
+      void fetchAssessments();
     } catch {
       toast.error("Delete failed");
     }
@@ -98,7 +94,7 @@ export default function AssessmentDashboardTab() {
     try {
       await duplicateAssessment(id);
       toast.success("Assessment duplicated");
-      fetchAssessments();
+      void fetchAssessments();
     } catch {
       toast.error("Duplicate failed");
     }
@@ -108,7 +104,7 @@ export default function AssessmentDashboardTab() {
     try {
       await publishAssessment(id);
       toast.success("Assessment published");
-      fetchAssessments();
+      void fetchAssessments();
     } catch {
       toast.error("Publish failed");
     }
@@ -126,169 +122,171 @@ export default function AssessmentDashboardTab() {
   };
 
   return (
-    <div className="assessment-premium space-y-8">
-      <div className="assessment-premium-hero">
-        <div className="assessment-premium-hero-orbit assessment-premium-hero-orbit-one" />
-        <div className="assessment-premium-hero-orbit assessment-premium-hero-orbit-two" />
+    <div className="assessment-premium">
+      <div className="assessment-premium-page">
+        <section className="assessment-premium-hero">
+          <div className="assessment-premium-hero-orbit assessment-premium-hero-orbit-one" />
+          <div className="assessment-premium-hero-orbit assessment-premium-hero-orbit-two" />
 
-        <div className="assessment-premium-hero-content">
-          <div>
-            <div className="assessment-premium-eyebrow">
-              Assessment Control Center
+          <div className="assessment-premium-hero-content">
+            <div>
+              <div className="assessment-premium-eyebrow">
+                Assessment Control Center
+              </div>
+              <h1>Assessment Dashboard</h1>
+              <p>
+                Create, manage and monitor assessments from one focused
+                workspace.
+              </p>
             </div>
 
-            <h1>Assessment Dashboard</h1>
-
-            <p>
-              Create, manage and monitor assessments from one focused,
-              professional workspace.
-            </p>
-          </div>
-
-          <button
-            onClick={() => setOpenCreateModal(true)}
-            className="assessment-premium-primary-action"
-          >
-            <Plus size={18} />
-            Create Assessment
-          </button>
-        </div>
-
-        <div className="assessment-premium-hero-stats">
-          <div>
-            <span>Total</span>
-            <strong>{assessments.length}</strong>
-          </div>
-          <div>
-            <span>Active</span>
-            <strong>
-              {assessments.filter((item) => item.is_active).length}
-            </strong>
-          </div>
-          <div>
-            <span>Published</span>
-            <strong>
-              {assessments.filter((item) => item.is_published).length}
-            </strong>
-          </div>
-        </div>
-      </div>
-
-      <div className="assessment-premium-toolbar">
-        <div className="assessment-premium-search">
-          <Search size={19} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search assessment by title..."
-          />
-          {search && (
-            <button
-              type="button"
-              className="assessment-premium-clear-search"
-              onClick={() => setSearch("")}
-              aria-label="Clear search"
-            >
-              ×
-            </button>
-          )}
-        </div>
-
-        <button
-          onClick={fetchAssessments}
-          disabled={loading}
-          className="assessment-premium-secondary-action"
-        >
-          <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-          Refresh
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="assessment-premium-card-grid">
-          {[1, 2, 3].map((item) => (
-            <div className="assessment-premium-skeleton" key={item}>
-              <div />
-              <div />
-              <div />
-              <div />
-            </div>
-          ))}
-        </div>
-      ) : filteredAssessments.length === 0 ? (
-        <div className="assessment-premium-empty">
-          <div className="assessment-premium-empty-icon">
-            <Search size={22} />
-          </div>
-          <h2>No assessments found</h2>
-          <p>
-            {search
-              ? "Try another search term."
-              : "Create your first assessment to get started."}
-          </p>
-          {!search && (
             <button
               type="button"
               onClick={() => setOpenCreateModal(true)}
-              className="assessment-premium-primary-action assessment-premium-empty-action"
+              className="assessment-premium-primary-action"
             >
               <Plus size={18} />
               Create Assessment
             </button>
-          )}
-        </div>
-      ) : (
-        <>
-          <div className="assessment-premium-result-line">
-            <span>
-              {filteredAssessments.length}{" "}
-              {filteredAssessments.length === 1 ? "assessment" : "assessments"}
-            </span>
-            {search && <span>Filtered results</span>}
           </div>
 
+          <div className="assessment-premium-hero-stats">
+            <div>
+              <span>Total</span>
+              <strong>{assessments.length}</strong>
+            </div>
+            <div>
+              <span>Active</span>
+              <strong>{assessments.filter((x) => x.is_active).length}</strong>
+            </div>
+            <div>
+              <span>Published</span>
+              <strong>
+                {assessments.filter((x) => x.is_published).length}
+              </strong>
+            </div>
+          </div>
+        </section>
+
+        <section className="assessment-premium-toolbar">
+          <div className="assessment-premium-search">
+            <Search size={19} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search assessment by title..."
+              aria-label="Search assessment by title"
+            />
+            {search && (
+              <button
+                type="button"
+                className="assessment-premium-clear-search"
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void fetchAssessments()}
+            disabled={loading}
+            className="assessment-premium-secondary-action"
+          >
+            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
+        </section>
+
+        {loading ? (
           <div className="assessment-premium-card-grid">
-            {filteredAssessments.map((assessment) => (
-              <AssessmentCard
-                key={assessment.id}
-                assessment={assessment}
-                onDashboard={setSelectedAssessment}
-                onEdit={(assessment) => {
-                  setEditingAssessment(assessment);
-                  setOpenEditModal(true);
-                }}
-                onDuplicate={handleDuplicate}
-                onPublish={handlePublish}
-                onUnpublish={handleUnpublish}
-                onDelete={handleDelete}
-              />
+            {[1, 2, 3].map((item) => (
+              <div className="assessment-premium-skeleton" key={item}>
+                <div />
+                <div />
+                <div />
+                <div />
+              </div>
             ))}
           </div>
+        ) : filteredAssessments.length === 0 ? (
+          <section className="assessment-premium-empty">
+            <div className="assessment-premium-empty-icon">
+              <Search size={22} />
+            </div>
+            <h2>No assessments found</h2>
+            <p>
+              {search
+                ? "Try another search term."
+                : "Create your first assessment to get started."}
+            </p>
+            {!search && (
+              <button
+                type="button"
+                onClick={() => setOpenCreateModal(true)}
+                className="assessment-premium-primary-action assessment-premium-empty-action"
+              >
+                <Plus size={18} /> Create Assessment
+              </button>
+            )}
+          </section>
+        ) : (
+          <>
+            <div className="assessment-premium-result-line">
+              <span>
+                {filteredAssessments.length}{" "}
+                {filteredAssessments.length === 1
+                  ? "assessment"
+                  : "assessments"}
+              </span>
+              {search && <span>Filtered results</span>}
+            </div>
 
-          {selectedAssessment && (
-            <AssessmentWorkspace
-              assessment={selectedAssessment}
-              onClose={() => setSelectedAssessment(null)}
-            />
-          )}
-        </>
-      )}
+            <div className="assessment-premium-card-grid">
+              {filteredAssessments.map((assessment) => (
+                <AssessmentCard
+                  key={assessment.id}
+                  assessment={assessment}
+                  onDashboard={setSelectedAssessment}
+                  onEdit={(item) => {
+                    setEditingAssessment(item);
+                    setOpenEditModal(true);
+                  }}
+                  onDuplicate={handleDuplicate}
+                  onPublish={handlePublish}
+                  onUnpublish={handleUnpublish}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
 
-      <CreateAssessmentModal
-        open={openCreateModal}
-        onClose={() => setOpenCreateModal(false)}
-        onCreated={fetchAssessments}
-      />
+            {selectedAssessment && (
+              <AssessmentWorkspace
+                assessment={selectedAssessment}
+                onClose={() => setSelectedAssessment(null)}
+              />
+            )}
+          </>
+        )}
 
-      <CreateAssessmentModal
-        open={openEditModal}
-        assessment={editingAssessment}
-        onClose={() => {
-          setOpenEditModal(false);
-          setEditingAssessment(null);
-        }}
-        onCreated={fetchAssessments}
-      />
+        <CreateAssessmentModal
+          open={openCreateModal}
+          onClose={() => setOpenCreateModal(false)}
+          onCreated={fetchAssessments}
+        />
+
+        <CreateAssessmentModal
+          open={openEditModal}
+          assessment={editingAssessment}
+          onClose={() => {
+            setOpenEditModal(false);
+            setEditingAssessment(null);
+          }}
+          onCreated={fetchAssessments}
+        />
+      </div>
     </div>
   );
 }
