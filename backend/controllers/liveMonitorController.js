@@ -318,20 +318,45 @@ function optionObject(value) {
 
 function answerDisplay(values, options) {
   const list = Array.isArray(values) ? values : [];
+  const entries = Object.entries(options || {});
 
   return list.map((value) => {
     const normalized = answerValue(value);
 
-    if (typeof normalized === "number" && options[normalized]) {
-      const key = String.fromCharCode(65 + normalized);
-      return `${key}. ${options[normalized]}`;
+    // The dashboard should display the option text only, never A/B/C/D.
+    // Support both frozen option objects keyed as A/B/C/D and numeric keys.
+    const candidates = [];
+
+    if (typeof normalized === "number" && Number.isFinite(normalized)) {
+      candidates.push(
+        String(normalized),
+        String.fromCharCode(65 + normalized),
+        String(normalized + 1),
+      );
+    } else if (typeof normalized === "string") {
+      const key = normalized.trim().toUpperCase();
+      candidates.push(key);
+      if (/^[A-D]$/.test(key)) {
+        candidates.push(String(key.charCodeAt(0) - 65));
+      }
+      if (/^\d+$/.test(key)) {
+        const n = Number(key);
+        candidates.push(String.fromCharCode(65 + n));
+      }
     }
 
-    const byKey = Object.entries(options).find(
-      ([key]) => key.toUpperCase() === String(normalized).toUpperCase(),
-    );
+    for (const candidate of candidates) {
+      const exact = entries.find(
+        ([key]) => String(key).trim().toUpperCase() === candidate.toUpperCase(),
+      );
+      if (exact) return String(exact[1]);
+    }
 
-    if (byKey) return `${byKey[0]}. ${byKey[1]}`;
+    // If the database already contains the actual option text, preserve it.
+    const textMatch = entries.find(
+      ([, text]) => String(text).trim() === String(value).trim(),
+    );
+    if (textMatch) return String(textMatch[1]);
 
     return String(value);
   });

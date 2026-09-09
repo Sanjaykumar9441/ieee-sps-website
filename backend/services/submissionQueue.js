@@ -108,18 +108,7 @@ async function claimBatch() {
     if (!raw) break;
 
     try {
-      const job =
-        typeof raw === "string"
-          ? JSON.parse(raw)
-          : raw && typeof raw === "object"
-            ? raw
-            : JSON.parse(String(raw));
-
-      jobs.push({
-        raw,
-        rawValue: typeof raw === "string" ? raw : JSON.stringify(raw),
-        job,
-      });
+      jobs.push({ raw, job: JSON.parse(raw) });
     } catch (error) {
       console.error(
         "[SUBMISSION QUEUE] Invalid job moved to failed list:",
@@ -134,8 +123,7 @@ async function claimBatch() {
 }
 
 async function acknowledge(raw) {
-  const value = typeof raw === "string" ? raw : JSON.stringify(raw);
-  await redis.lrem(INFLIGHT_KEY, 1, value);
+  await redis.lrem(INFLIGHT_KEY, 1, raw);
 }
 
 async function recoverInflightJobs() {
@@ -148,13 +136,7 @@ async function recoverInflightJobs() {
   await redis.del(INFLIGHT_KEY);
   for (const raw of rawJobs) {
     try {
-      const parsed =
-        typeof raw === "string"
-          ? JSON.parse(raw)
-          : raw && typeof raw === "object"
-            ? raw
-            : JSON.parse(String(raw));
-      const job = normalizeJob(parsed);
+      const job = normalizeJob(JSON.parse(raw));
       job.retryCount += 1;
       if (job.retryCount > MAX_RETRIES) {
         await redis.rpush(FAILED_KEY, JSON.stringify(job));
@@ -235,8 +217,11 @@ async function processSubmission(job) {
   const attempt = await engine.getAttempt(normalized.attemptId);
 
   if (!attempt) throw new Error(`Attempt ${normalized.attemptId} not found.`);
-  if (attempt.status === "SUBMITTED" || attempt.status === "EXPIRED")
-    return attempt;
+  // SUBMITTED is terminal. EXPIRED is not terminal for queued submissions:
+  // a timeout/security event can race with the final browser snapshot. We
+  // must still persist and score that snapshot before marking the attempt
+  // SUBMITTED, otherwise a valid auto-submit can become a zero-score result.
+  if (attempt.status === "SUBMITTED") return attempt;
 
   const { data: assessment } = await supabase
     .from("assessments")
@@ -289,7 +274,7 @@ async function processSubmission(job) {
 }
 
 async function processOne(item) {
-  const { raw, rawValue, job } = item;
+  const { raw, job } = item;
   const normalized = normalizeJob(job);
   normalized.retryCount = Number(normalized.retryCount || 0);
 
@@ -309,11 +294,11 @@ async function processOne(item) {
           }
         : null,
     });
-    await acknowledge(rawValue ?? raw);
+    await acknowledge(raw);
     return result;
   } catch (error) {
     normalized.retryCount += 1;
-    await acknowledge(rawValue ?? raw);
+    await acknowledge(raw);
 
     if (normalized.retryCount > MAX_RETRIES) {
       await redis.rpush(FAILED_KEY, JSON.stringify(normalized));

@@ -354,8 +354,9 @@ function Stat({ l, v }: { l: string; v: string }) {
 
 /*
  * IMPORTANT:
- * selectedDisplay and correctDisplay are already converted by the backend into
- * the actual option text. Do NOT prepend A/B/C/D here.
+ * selectedDisplay and correctDisplay are actual option text.
+ * The backend deliberately strips option keys (A/B/C/D) before sending them.
+ * This component must never reconstruct or prepend option labels.
  */
 function Question({ q }: { q: Review }) {
   const icon =
