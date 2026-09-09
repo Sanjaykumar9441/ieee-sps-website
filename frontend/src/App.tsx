@@ -27,6 +27,7 @@ import SpaceDayRegistrationStatus from "./pages/SpaceDayRegistrationStatus";
 import StudentExamPortal from "./pages/Student/components/StudentExamPortal";
 import StudentExamCompleted from "./pages/Student/components/StudentExamCompleted";
 import CertificateDownload from "./pages/CertificateDownload";
+import VedaTechnicalQuiz from "./pages/VedaTechnicalQuiz";
 
 function StudentExamRoute() {
   const { assessmentId } = useParams();
@@ -50,7 +51,7 @@ function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 1800); // 1.8 seconds
+    }, 1800);
 
     return () => clearTimeout(timer);
   }, []);
@@ -61,7 +62,6 @@ function App() {
       <AnimatePresence>{loading && <LoadingScreen />}</AnimatePresence>
 
       <div className="relative min-h-screen bg-white text-slate-900">
-        {/* Main Content */}
         <div className="relative z-10">
           <Routes>
             <Route path="/" element={<Home />} />
@@ -76,27 +76,13 @@ function App() {
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/join-sps" element={<JoinSPS />} />
             <Route path="/space-day" element={<SpaceDay />} />
-            <Route
-              path="/space-day/register"
-              element={<SpaceDayRegistration />}
-            />
-            <Route
-              path="/space-day/registration-success"
-              element={<RegistrationSuccess />}
-            />
-            <Route
-              path="/space-day/status/:registrationId"
-              element={<SpaceDayRegistrationStatus />}
-            />
-            <Route
-              path="/student/exam/:assessmentId"
-              element={<StudentExamRoute />}
-            />
-            <Route
-              path="/student/exam/completed"
-              element={<StudentExamCompleted />}
-            />
+            <Route path="/space-day/register" element={<SpaceDayRegistration />} />
+            <Route path="/space-day/registration-success" element={<RegistrationSuccess />} />
+            <Route path="/space-day/status/:registrationId" element={<SpaceDayRegistrationStatus />} />
+            <Route path="/student/exam/:assessmentId" element={<StudentExamRoute />} />
+            <Route path="/student/exam/completed" element={<StudentExamCompleted />} />
             <Route path="/certificates" element={<CertificateDownload />} />
+            <Route path="/veda-2k26" element={<VedaTechnicalQuiz />} />
           </Routes>
         </div>
       </div>
