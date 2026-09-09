@@ -5,62 +5,124 @@ const engine = require("../services/assessmentEngine");
 const session = require("../services/studentSessionService");
 const liveEvents = require("../services/liveEvents");
 
-async function safeRemainingSeconds(attempt) {
+const remaining = async (attempt) => {
+  if (!attempt?.expires_at) return 0;
   try {
-    if (attempt.expires_at) {
+    if (attempt.started_at) {
       const duration = Math.max(
         0,
         Math.floor(
-          (new Date(attempt.expires_at).getTime() -
-            new Date(attempt.started_at).getTime()) /
-            1000,
+          (new Date(attempt.expires_at) - new Date(attempt.started_at)) / 1000,
         ),
       );
-      const remaining = await getSecondsRemaining(attempt.id, duration);
-      if (Number.isFinite(Number(remaining)))
-        return Math.max(0, Number(remaining));
+      const value = await getSecondsRemaining(attempt.id, duration);
+      if (Number.isFinite(Number(value))) return Math.max(0, Number(value));
     }
-  } catch (error) {
-    console.warn(
-      "Redis timer unavailable; using expires_at fallback:",
-      error.message,
-    );
+  } catch (e) {
+    console.warn("Redis timer unavailable:", e.message);
   }
-  return attempt.expires_at
-    ? Math.max(
-        0,
-        Math.floor(
-          (new Date(attempt.expires_at).getTime() - Date.now()) / 1000,
-        ),
-      )
-    : 0;
-}
+  return Math.max(
+    0,
+    Math.floor((new Date(attempt.expires_at) - Date.now()) / 1000),
+  );
+};
 
-async function reconcileExpiredAttempts(attempts) {
-  // The scaled exam flow keeps answers in the browser until final submit.
-  // Never score an attempt immediately at expiry because a valid final
-  // snapshot may already be waiting in the Redis submission queue. A small
-  // grace period is retained only for abandoned browsers.
-  const now = Date.now();
-  const EXPIRY_GRACE_MS = 2 * 60 * 1000;
+const studentMap = async (assessmentId) => {
+  const { data, error } = await supabase
+    .from("assessment_allowed_students")
+    .select("id,name,roll_no,email,branch,status,first_login_at,team_id")
+    .eq("assessment_id", assessmentId);
+  if (error) throw error;
+  return new Map((data || []).map((x) => [x.id, x]));
+};
 
-  for (const attempt of attempts || []) {
+const teams = async (assessmentId) => {
+  const { data, error } = await supabase
+    .from("assessment_teams")
+    .select("id,team_name,contact_email,member_count,branch,mode")
+    .eq("assessment_id", assessmentId)
+    .order("created_at");
+  if (error) throw error;
+  const list = data || [],
+    ids = list.map((x) => x.id);
+  if (!ids.length) return [];
+  const { data: members, error: me } = await supabase
+    .from("assessment_team_members")
+    .select("id,team_id,name,roll_no,email,branch")
+    .in("team_id", ids)
+    .order("created_at");
+  if (me) throw me;
+  const by = new Map();
+  for (const m of members || []) {
+    if (!by.has(m.team_id)) by.set(m.team_id, []);
+    by.get(m.team_id).push(m);
+  }
+  return list.map((x) => ({ ...x, members: by.get(x.id) || [] }));
+};
+
+const countAnswers = async (attemptIds) => {
+  const result = new Map();
+  if (!attemptIds.length) return result;
+  const { data: aq, error: qe } = await supabase
+    .from("assessment_attempt_questions")
+    .select("id,attempt_id")
+    .in("attempt_id", attemptIds);
+  if (qe) throw qe;
+  const ids = (aq || []).map((x) => x.id);
+  if (!ids.length) return result;
+  const owner = new Map((aq || []).map((x) => [String(x.id), x.attempt_id]));
+  const { data: answers, error: ae } = await supabase
+    .from("assessment_answers")
+    .select(
+      "attempt_question_id,selected_answers,subjective_answer,coding_answer",
+    )
+    .in("attempt_question_id", ids);
+  if (ae) throw ae;
+  for (const a of answers || []) {
+    const answered =
+      (Array.isArray(a.selected_answers) && a.selected_answers.length) ||
+      (typeof a.subjective_answer === "string" && a.subjective_answer.trim()) ||
+      (typeof a.coding_answer === "string" && a.coding_answer.trim());
+    if (!answered) continue;
+    const id = owner.get(String(a.attempt_question_id));
+    if (id) result.set(id, (result.get(id) || 0) + 1);
+  }
+  return result;
+};
+
+const latest = (attempts) => {
+  const byStudent = new Map(),
+    byTeam = new Map();
+  for (const a of attempts || []) {
+    if (a.student_id) {
+      const old = byStudent.get(a.student_id);
+      if (!old || new Date(a.started_at || 0) > new Date(old.started_at || 0))
+        byStudent.set(a.student_id, a);
+    }
+    if (a.team_id) {
+      const old = byTeam.get(a.team_id);
+      if (!old || new Date(a.started_at || 0) > new Date(old.started_at || 0))
+        byTeam.set(a.team_id, a);
+    }
+  }
+  return { byStudent, byTeam };
+};
+
+async function reconcile(attempts) {
+  const grace = 120000,
+    now = Date.now();
+  for (const a of attempts || []) {
     if (
-      attempt.status !== "IN_PROGRESS" ||
-      !attempt.expires_at ||
-      now - new Date(attempt.expires_at).getTime() < EXPIRY_GRACE_MS
+      a.status !== "IN_PROGRESS" ||
+      !a.expires_at ||
+      now - new Date(a.expires_at).getTime() < grace
     )
       continue;
-
     try {
-      const result = await scoring.calculateScore(attempt.id);
-      const updated = await engine.finishAttempt(
-        attempt.id,
-        result,
-        "SUBMITTED",
-      );
+      const result = await scoring.calculateScore(a.id);
+      const updated = await engine.finishAttempt(a.id, result, "SUBMITTED");
       await supabase.from("assessment_activity").insert({
-        attempt_id: attempt.id,
+        attempt_id: a.id,
         activity_type: "AUTO_SUBMIT",
         metadata: { source: "server_reconciliation", reason: "TIME_EXPIRED" },
       });
@@ -74,130 +136,67 @@ async function reconcileExpiredAttempts(attempts) {
       liveEvents.emitStudentSubmitted(updated.assessment_id);
       liveEvents.emitDashboardRefresh(updated.assessment_id);
       liveEvents.emitLeaderboard(updated.assessment_id, []);
-    } catch (error) {
-      console.error(
-        "Expired attempt reconciliation failed:",
-        attempt.id,
-        error.message,
-      );
+    } catch (e) {
+      console.error("Expired reconciliation failed:", a.id, e.message);
     }
   }
-}
-
-async function getStudentMap(assessmentId) {
-  const { data, error } = await supabase
-    .from("assessment_allowed_students")
-    .select(
-      "id,name,roll_no,email,branch,status,has_logged_in,first_login_at,team_id",
-    )
-    .eq("assessment_id", assessmentId);
-  if (error) throw error;
-  return new Map((data || []).map((s) => [s.id, s]));
 }
 
 exports.getLiveStudents = async (req, res) => {
   try {
     const { assessmentId } = req.params;
-    if (!assessmentId) {
+    if (!assessmentId)
       return res
         .status(400)
         .json({ success: false, message: "Assessment ID is required." });
-    }
 
-    const { data: assessment, error: assessmentError } = await supabase
+    const { data: assessment, error: ae } = await supabase
       .from("assessments")
       .select(
         "id,title,duration_minutes,live_updates_enabled,participation_mode",
       )
       .eq("id", assessmentId)
       .single();
-    if (assessmentError || !assessment) {
+    if (ae || !assessment)
       return res
         .status(404)
         .json({ success: false, message: "Assessment not found." });
-    }
 
-    const { data: attempts, error: attemptsError } = await supabase
+    const { data: attempts, error: te } = await supabase
       .from("assessment_attempts")
       .select(
         "id,assessment_id,student_id,team_id,started_at,submitted_at,expires_at,resumed_count,current_question,score,answered_questions,status",
       )
       .eq("assessment_id", assessmentId)
-      .order("started_at", { ascending: true });
-    if (attemptsError) throw attemptsError;
+      .order("started_at");
+    if (te) throw te;
 
-    await reconcileExpiredAttempts(attempts);
+    await reconcile(attempts);
 
-    const { data: refreshedAttempts, error: refreshedError } = await supabase
+    const { data: current, error: ce } = await supabase
       .from("assessment_attempts")
       .select(
         "id,assessment_id,student_id,team_id,started_at,submitted_at,expires_at,resumed_count,current_question,score,answered_questions,status",
       )
       .eq("assessment_id", assessmentId)
-      .order("started_at", { ascending: true });
-    if (refreshedError) throw refreshedError;
+      .order("started_at");
+    if (ce) throw ce;
 
-    const studentMap = await getStudentMap(assessmentId);
-    const students = [...studentMap.values()];
+    const students = [...(await studentMap(assessmentId)).values()];
+    const teamList = await teams(assessmentId);
+    const { byStudent, byTeam } = latest(current);
+    const ids = [
+      ...new Set(
+        [
+          ...students.map((s) => byStudent.get(s.id)?.id),
+          ...teamList.map((t) => byTeam.get(t.id)?.id),
+        ].filter(Boolean),
+      ),
+    ];
+    const answers = await countAnswers(ids);
 
-    const { data: teamRows, error: teamError } = await supabase
-      .from("assessment_teams")
-      .select("id,team_name,contact_email,member_count,branch,mode")
-      .eq("assessment_id", assessmentId)
-      .order("created_at", { ascending: true });
-    if (teamError && assessment.participation_mode !== "INDIVIDUAL_STUDENTS")
-      throw teamError;
-
-    const teamIds = (teamRows || []).map((team) => team.id);
-    let teamMembers = [];
-    if (
-      teamIds.length &&
-      assessment.participation_mode !== "INDIVIDUAL_STUDENTS"
-    ) {
-      const { data: members, error: memberError } = await supabase
-        .from("assessment_team_members")
-        .select("id,team_id,name,roll_no,email,branch")
-        .in("team_id", teamIds)
-        .order("created_at", { ascending: true });
-      if (memberError) throw memberError;
-      teamMembers = members || [];
-    }
-
-    const teamMap = new Map(
-      (teamRows || []).map((team) => [
-        team.id,
-        {
-          ...team,
-          members: teamMembers.filter((member) => member.team_id === team.id),
-        },
-      ]),
-    );
-
-    const attemptByTeam = new Map();
-    const attemptByStudent = new Map();
-    for (const attempt of refreshedAttempts || []) {
-      if (attempt.team_id) {
-        const previous = attemptByTeam.get(attempt.team_id);
-        if (
-          !previous ||
-          new Date(attempt.started_at || 0) > new Date(previous.started_at || 0)
-        ) {
-          attemptByTeam.set(attempt.team_id, attempt);
-        }
-      }
-      if (attempt.student_id) {
-        const previous = attemptByStudent.get(attempt.student_id);
-        if (
-          !previous ||
-          new Date(attempt.started_at || 0) > new Date(previous.started_at || 0)
-        ) {
-          attemptByStudent.set(attempt.student_id, attempt);
-        }
-      }
-    }
-
-    const buildAttemptState = async (attempt) => {
-      if (!attempt) {
+    const state = async (a) => {
+      if (!a)
         return {
           attemptId: "",
           currentQuestion: 0,
@@ -207,136 +206,93 @@ exports.getLiveStudents = async (req, res) => {
           remainingSeconds: 0,
           status: "NOT_STARTED",
           isExpired: false,
-          startedAt: null,
-          submittedAt: null,
-          resumedCount: 0,
           violations: 0,
-          autoSubmitted: false,
-          forceSubmitted: false,
         };
-      }
-
-      const [
-        { count: totalQuestions, error: qError },
-        { count: violations, error: iError },
-        { data: activities, error: aError },
-      ] = await Promise.all([
-        supabase
-          .from("assessment_attempt_questions")
-          .select("id", { count: "exact", head: true })
-          .eq("attempt_id", attempt.id),
-        supabase
-          .from("assessment_infractions")
-          .select("id", { count: "exact", head: true })
-          .eq("attempt_id", attempt.id),
-        supabase
-          .from("assessment_activity")
-          .select("activity_type,metadata,created_at")
-          .eq("attempt_id", attempt.id)
-          .order("created_at", { ascending: false }),
-      ]);
-      if (qError) throw qError;
-      if (iError)
-        console.warn(
-          "Live monitor infraction query unavailable:",
-          iError.message,
-        );
-      if (aError)
-        console.warn(
-          "Live monitor activity query unavailable:",
-          aError.message,
-        );
-
-      const acts = activities || [];
-      const remainingSeconds = await safeRemainingSeconds(attempt);
-      const status = attempt.status === "IN_PROGRESS" ? "LIVE" : "SUBMITTED";
-
+      const [{ count: total, error: qe }, { count: violations, error: ve }] =
+        await Promise.all([
+          supabase
+            .from("assessment_attempt_questions")
+            .select("id", { count: "exact", head: true })
+            .eq("attempt_id", a.id),
+          supabase
+            .from("assessment_infractions")
+            .select("id", { count: "exact", head: true })
+            .eq("attempt_id", a.id),
+        ]);
+      if (qe) throw qe;
+      if (ve) console.warn("Infraction count unavailable:", ve.message);
+      const seconds = await remaining(a);
       return {
-        attemptId: attempt.id,
-        currentQuestion: Number(attempt.current_question || 0),
-        answeredQuestions: Number(attempt.answered_questions || 0),
-        totalQuestions: Number(totalQuestions || 0),
-        score: Number(attempt.score || 0),
-        remainingSeconds,
-        status,
-        isExpired: remainingSeconds <= 0 && status === "LIVE",
-        startedAt: attempt.started_at || null,
-        submittedAt: attempt.submitted_at || null,
-        resumedCount: Number(attempt.resumed_count || 0),
-        violations: Number(iError ? 0 : violations || 0),
-        autoSubmitted: acts.some((activity) =>
-          ["AUTO_SUBMIT", "SECURITY_AUTO_SUBMIT"].includes(
-            activity.activity_type,
-          ),
+        attemptId: a.id,
+        currentQuestion: Number(a.current_question || 0),
+        answeredQuestions: Math.max(
+          Number(a.answered_questions || 0),
+          Number(answers.get(a.id) || 0),
         ),
-        forceSubmitted: acts.some(
-          (activity) => activity.activity_type === "FORCE_SUBMIT",
-        ),
+        totalQuestions: Number(total || 0),
+        score: Number(a.score || 0),
+        remainingSeconds: seconds,
+        status: a.status === "IN_PROGRESS" ? "LIVE" : "SUBMITTED",
+        isExpired: seconds <= 0 && a.status === "IN_PROGRESS",
+        startedAt: a.started_at || null,
+        submittedAt: a.submitted_at || null,
+        resumedCount: Number(a.resumed_count || 0),
+        violations: Number(ve ? 0 : violations || 0),
       };
     };
 
     const rows = [];
-
     if (assessment.participation_mode === "INDIVIDUAL_STUDENTS") {
-      for (const student of students) {
-        const state = await buildAttemptState(attemptByStudent.get(student.id));
+      for (const s of students)
         rows.push({
-          ...state,
-          studentId: student.id,
-          studentName: student.name,
-          rollNo: student.roll_no || "",
-          email: student.email || "",
-          department: student.branch || "",
+          ...(await state(byStudent.get(s.id))),
+          studentId: s.id,
+          studentName: s.name,
+          rollNo: s.roll_no || "",
+          email: s.email || "",
+          department: s.branch || "",
           teamId: null,
           teamName: null,
           teamMemberCount: 0,
           members: [],
         });
-      }
     } else if (assessment.participation_mode === "STUDENT_TEAMS") {
-      // Student Teams: keep the individual-student view, but every member
-      // points to the same team attempt and carries the team name/count.
-      for (const team of teamRows || []) {
-        const state = await buildAttemptState(attemptByTeam.get(team.id));
-        const fullTeam = teamMap.get(team.id) || team;
-        const members = fullTeam.members || [];
-        for (const member of members) {
-          const allowedStudent = students.find(
-            (student) =>
-              String(student.email || "").toLowerCase() ===
-              String(member.email || "").toLowerCase(),
+      for (const t of teamList) {
+        const st = await state(byTeam.get(t.id));
+        for (const m of t.members || []) {
+          const s = students.find(
+            (x) =>
+              String(x.email || "").toLowerCase() ===
+              String(m.email || "").toLowerCase(),
           );
           rows.push({
-            ...state,
-            studentId: allowedStudent?.id || member.id,
-            studentName: member.name,
-            rollNo: member.roll_no || "",
-            email: member.email || "",
-            department: member.branch || fullTeam.branch || "",
-            teamId: team.id,
-            teamName: team.team_name,
-            teamMemberCount: Number(team.member_count || members.length || 0),
-            members,
+            ...st,
+            studentId: s?.id || m.id,
+            studentName: m.name,
+            rollNo: m.roll_no || "",
+            email: m.email || "",
+            department: m.branch || t.branch || "",
+            teamId: t.id,
+            teamName: t.team_name,
+            teamMemberCount: Number(t.member_count || t.members.length || 0),
+            members: t.members,
           });
         }
       }
     } else {
-      // Team mode: one row per team. Never expose a student/roll-number row.
-      for (const team of teamRows || []) {
-        const state = await buildAttemptState(attemptByTeam.get(team.id));
+      for (const t of teamList)
         rows.push({
-          ...state,
+          ...(await state(byTeam.get(t.id))),
           studentId: "",
-          studentName: team.team_name,
+          studentName: t.team_name,
           rollNo: "",
-          email: team.contact_email || "",
-          department: team.branch || "",
-          teamId: team.id,
-          teamName: team.team_name,
-          teamMemberCount: 0,
-          members: [],
+          email: t.contact_email || "",
+          department: t.branch || "",
+          teamId: t.id,
+          teamName: t.team_name,
+          teamMemberCount: Number(t.member_count || 0),
+          members: t.members || [],
         });
-      }
     }
 
     return res.json({
@@ -345,11 +301,55 @@ exports.getLiveStudents = async (req, res) => {
       totalStudents: rows.length,
       students: rows,
     });
-  } catch (err) {
-    console.error("LIVE MONITOR ERROR:", err);
-    return res.status(500).json({ success: false, message: err.message });
+  } catch (error) {
+    console.error("LIVE MONITOR ERROR:", error);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: error.message || "Unable to load live monitor.",
+      });
   }
 };
+
+const norm = (v) => {
+  if (typeof v === "number") return v;
+  if (typeof v === "string") {
+    const s = v.trim().toUpperCase(),
+      map = { A: 0, B: 1, C: 2, D: 3 };
+    if (map[s] !== undefined) return map[s];
+    if (/^\d+$/.test(s)) return Number(s);
+  }
+  return v;
+};
+const set = (v) =>
+  (Array.isArray(v) ? v : v == null ? [] : [v])
+    .map(norm)
+    .sort((a, b) =>
+      typeof a === "number" && typeof b === "number"
+        ? a - b
+        : String(a).localeCompare(String(b)),
+    );
+const options = (v) =>
+  Array.isArray(v)
+    ? v.map((x, i) => ({
+        key: String.fromCharCode(65 + i),
+        text: String(x ?? ""),
+      }))
+    : v && typeof v === "object"
+      ? Object.entries(v).map(([key, text]) => ({
+          key,
+          text: String(text ?? ""),
+        }))
+      : [];
+const display = (values, opts) =>
+  (Array.isArray(values) ? values : []).map((v) => {
+    const n = norm(v);
+    if (typeof n === "number" && opts[n])
+      return `${opts[n].key}. ${opts[n].text}`;
+    const x = opts.find((o) => o.key.toUpperCase() === String(n).toUpperCase());
+    return x ? `${x.key}. ${x.text}` : String(v);
+  });
 
 exports.getStudentDetails = async (req, res) => {
   try {
@@ -358,51 +358,117 @@ exports.getStudentDetails = async (req, res) => {
       return res
         .status(400)
         .json({ success: false, message: "Attempt ID is required." });
-    const { data: attempt, error } = await supabase
+    const { data: attempt, error: ae } = await supabase
       .from("assessment_attempts")
       .select(
         "id,assessment_id,student_id,team_id,started_at,submitted_at,expires_at,resumed_count,current_question,score,answered_questions,status",
       )
       .eq("id", attemptId)
       .single();
-    if (error || !attempt)
+    if (ae || !attempt)
       return res
         .status(404)
         .json({ success: false, message: "Assessment attempt not found." });
-    const studentMap = await getStudentMap(attempt.assessment_id);
-    const student = studentMap.get(attempt.student_id);
+
+    const [sm, teamList] = await Promise.all([
+      studentMap(attempt.assessment_id),
+      teams(attempt.assessment_id),
+    ]);
+    const student = sm.get(attempt.student_id) || null;
     const team = attempt.team_id
-      ? (
-          await supabase
-            .from("assessment_teams")
-            .select("id,team_name,member_count,branch")
-            .eq("id", attempt.team_id)
-            .maybeSingle()
-        ).data
+      ? teamList.find((x) => x.id === attempt.team_id) || null
       : null;
-    const { data: questions, error: questionsError } = await supabase
+
+    const { data: aq, error: qe } = await supabase
       .from("assessment_attempt_questions")
       .select(
-        "id,question_id,question_order,shuffled_options,correct_answers,marks,negative_marks,questions(question_text,question_type),assessment_answers(selected_answers,answered_at),assessment_question_flags(marked_for_review,answered,visited)",
+        "id,question_id,question_order,shuffled_options,correct_answers,marks,negative_marks,questions(question_text,question_type,options),assessment_question_flags(marked_for_review,answered,visited)",
       )
       .eq("attempt_id", attemptId)
       .order("question_order");
-    if (questionsError) throw questionsError;
-    const { data: infractions, error: infractionsError } = await supabase
-      .from("assessment_infractions")
-      .select("id,type,details,occurred_at")
-      .eq("attempt_id", attemptId)
-      .order("occurred_at", { ascending: true });
-    if (infractionsError) throw infractionsError;
-    const { data: activities, error: activityError } = await supabase
-      .from("assessment_activity")
-      .select("activity_type,metadata,created_at")
-      .eq("attempt_id", attemptId)
-      .order("created_at", { ascending: true });
-    if (activityError) throw activityError;
+    if (qe) throw qe;
+
+    const ids = (aq || []).map((x) => x.id);
+    let answers = [];
+    if (ids.length) {
+      const { data, error } = await supabase
+        .from("assessment_answers")
+        .select(
+          "attempt_question_id,selected_answers,subjective_answer,coding_answer,answered_at",
+        )
+        .in("attempt_question_id", ids);
+      if (error) throw error;
+      answers = data || [];
+    }
+    const answerMap = new Map(
+      answers.map((x) => [String(x.attempt_question_id), x]),
+    );
+
+    const questions = (aq || []).map((q) => {
+      const a = answerMap.get(String(q.id));
+      const selected = Array.isArray(a?.selected_answers)
+        ? a.selected_answers
+        : [];
+      const correctAnswers = Array.isArray(q.correct_answers)
+        ? q.correct_answers
+        : [];
+      const opts = options(q.shuffled_options || q.questions?.options);
+      const answered =
+        selected.length > 0 ||
+        Boolean(
+          typeof a?.subjective_answer === "string" &&
+          a.subjective_answer.trim(),
+        ) ||
+        Boolean(typeof a?.coding_answer === "string" && a.coding_answer.trim());
+      const correct =
+        answered &&
+        selected.length > 0 &&
+        JSON.stringify(set(selected)) === JSON.stringify(set(correctAnswers));
+      const marks = Math.max(0, Number(q.marks ?? 0));
+      const negative = Math.max(0, Number(q.negative_marks ?? 0));
+      return {
+        id: q.id,
+        questionId: q.question_id,
+        questionNumber: Number(q.question_order || 0) + 1,
+        questionText: q.questions?.question_text || "Question",
+        questionType: q.questions?.question_type || "MCQ",
+        selectedAnswers: selected,
+        selectedDisplay: display(selected, opts),
+        correctAnswers,
+        correctDisplay: display(correctAnswers, opts),
+        answered,
+        result: !answered ? "UNANSWERED" : correct ? "CORRECT" : "WRONG",
+        marksAwarded: !answered ? 0 : correct ? marks : -negative,
+        answeredAt: a?.answered_at || null,
+        markedForReview:
+          q.assessment_question_flags?.marked_for_review ?? false,
+      };
+    });
+
+    const infractions =
+      (
+        await supabase
+          .from("assessment_infractions")
+          .select("id,type,details,occurred_at")
+          .eq("attempt_id", attemptId)
+          .order("occurred_at")
+      ).data || [];
+    const activities =
+      (
+        await supabase
+          .from("assessment_activity")
+          .select("activity_type,metadata,created_at")
+          .eq("attempt_id", attemptId)
+          .order("created_at")
+      ).data || [];
+    const answeredCount = questions.filter((q) => q.answered).length;
+    const correctCount = questions.filter((q) => q.result === "CORRECT").length;
+    const wrongCount = questions.filter((q) => q.result === "WRONG").length;
+
     return res.json({
       success: true,
-      student: student || null,
+      student,
+      team,
       attempt: {
         ...attempt,
         startedAt: attempt.started_at,
@@ -410,7 +476,7 @@ exports.getStudentDetails = async (req, res) => {
         expiresAt: attempt.expires_at,
         resumedCount: Number(attempt.resumed_count || 0),
         currentQuestion: Number(attempt.current_question || 0),
-        answeredQuestions: Number(attempt.answered_questions || 0),
+        answeredQuestions: answeredCount,
       },
       timeline: {
         loggedInAt: student?.first_login_at || null,
@@ -419,16 +485,24 @@ exports.getStudentDetails = async (req, res) => {
         submittedAt: attempt.submitted_at,
       },
       statistics: {
-        questionsAnswered: Number(attempt.answered_questions || 0),
+        questionsAnswered: answeredCount,
+        correct: correctCount,
+        wrong: wrongCount,
+        unanswered: questions.length - answeredCount,
         score: Number(attempt.score || 0),
-        violations: infractions?.length || 0,
+        violations: infractions.length,
       },
-      infractions: infractions || [],
-      activities: activities || [],
-      questions: questions || [],
+      infractions,
+      activities,
+      questions,
     });
-  } catch (err) {
-    console.error("LIVE STUDENT DETAILS ERROR:", err);
-    return res.status(500).json({ success: false, message: err.message });
+  } catch (error) {
+    console.error("LIVE STUDENT DETAILS ERROR:", error);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: error.message || "Unable to load participant details.",
+      });
   }
 };
