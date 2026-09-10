@@ -1,9 +1,5 @@
 const { supabase } = require("../lib/supabase");
 
-// Short-lived in-process cache. Render normally runs one Node process on the
-// free service, so this removes repeated question-bank reads during a burst
-// of simultaneous exam starts. A promise is cached too, preventing a cache
-// stampede when many students start at the same moment.
 const questionBankCache = new Map();
 const assessmentBankCache = new Map();
 const QUESTION_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -14,10 +10,6 @@ const {
   selectRandomQuestions,
   buildAttemptQuestions,
 } = require("../lib/randomizeQuiz");
-
-/* ============================================================
-   PRIVATE HELPERS
-============================================================ */
 
 async function getAssessmentBanks(assessmentId) {
   const key = String(assessmentId);
@@ -45,15 +37,25 @@ async function getAssessmentBanks(assessmentId) {
       .eq("assessment_id", assessmentId);
 
     if (error) throw error;
-    const result = data || [];
+
+    // IMPORTANT: The assessment dashboard only counts ACTIVE question banks.
+    // The exam paper must use the exact same rule. Previously an inactive bank
+    // could still be included here, causing the student exam/live monitor to
+    // show more questions than the assessment dashboard.
+    const result = (data || []).filter(
+      (mapping) => mapping.question_banks?.is_active === true,
+    );
+
     assessmentBankCache.set(key, {
       data: result,
       expiresAt: Date.now() + ASSESSMENT_BANK_CACHE_TTL_MS,
     });
+
     return result;
   })();
 
   assessmentBankCache.set(key, { promise });
+
   try {
     return await promise;
   } catch (error) {
@@ -71,9 +73,6 @@ async function getBankQuestions(bankId) {
   if (cached?.promise) return cached.promise;
 
   const promise = (async () => {
-    // Do not filter by question_type in Supabase. Older imported rows may use
-    // MULTIPLE_CHOICE / MULTIPLE even though the current enum uses
-    // MULTIPLE_CORRECT. Fetch active rows and normalize in JavaScript.
     const { data, error } = await supabase
       .from("questions")
       .select(
@@ -97,21 +96,21 @@ async function getBankQuestions(bankId) {
 
     if (error) throw error;
 
-    const result = (data || [])
-      .map((question) => ({
-        ...question,
-        question_type: normalizeQuestionType(question.question_type),
-      }))
-      .filter(Boolean);
+    const result = (data || []).map((question) => ({
+      ...question,
+      question_type: normalizeQuestionType(question.question_type),
+    }));
 
     questionBankCache.set(key, {
       data: result,
       expiresAt: Date.now() + QUESTION_CACHE_TTL_MS,
     });
+
     return result;
   })();
 
   questionBankCache.set(key, { promise });
+
   try {
     return await promise;
   } catch (error) {
@@ -137,8 +136,10 @@ function normalizeQuestionType(value) {
     return "TRUE_FALSE";
   }
 
-  if (["MULTIPLE_CORRECT", "MULTIPLE_CHOICE", "MULTIPLE"].includes(type))
+  if (["MULTIPLE_CORRECT", "MULTIPLE_CHOICE", "MULTIPLE"].includes(type)) {
     return "MULTIPLE_CORRECT";
+  }
+
   if (
     [
       "FILL_IN_THE_BLANK",
@@ -146,31 +147,33 @@ function normalizeQuestionType(value) {
       "FILL_BLANK",
       "FILL_IN_THE_BLANK_WITH_OPTIONS",
     ].includes(type)
-  )
+  ) {
     return "FILL_IN_THE_BLANK";
+  }
+
   return "MCQ";
 }
 
 async function buildQuestionPaper(assessment) {
   const mappings = await getAssessmentBanks(assessment.id);
-
-  let paper = [];
+  const paper = [];
   const randomQuestions = assessment.random_questions ?? true;
   const shuffleQuestions = assessment.shuffle_questions ?? true;
 
   for (const mapping of mappings) {
     const bankQuestions = await getBankQuestions(mapping.question_bank_id);
-    let count = Number(mapping.questions_to_pick);
+    const requestedCount = Number(mapping.questions_to_pick);
 
-    if (!Number.isInteger(count) || count < 1) {
+    if (!Number.isInteger(requestedCount) || requestedCount < 1) {
       throw new Error("Question bank selection count must be at least 1.");
     }
 
-    if (bankQuestions.length < count) {
-      throw new Error(
-        `Question bank has only ${bankQuestions.length} active questions but ${count} are required.`,
-      );
-    }
+    if (!bankQuestions.length) continue;
+
+    // Never create more questions than actually exist in the active bank.
+    // This also keeps the generated paper consistent with the dashboard's
+    // live question count calculation.
+    const count = Math.min(requestedCount, bankQuestions.length);
 
     const picked = randomQuestions
       ? selectRandomQuestions(bankQuestions, count)
@@ -179,23 +182,15 @@ async function buildQuestionPaper(assessment) {
     paper.push(...picked);
   }
 
-  // The question-bank allocations are the source of truth for the paper.
-  // assessments.total_questions can be stale on older assessments, so never
-  // block a valid paper because that cached field disagrees with the live
-  // bank allocations. The dashboard already calculates the live total.
-
   return shuffleQuestions ? shuffle(paper) : paper;
 }
-
-/* ============================================================
-   NORMALIZE QUESTION
-============================================================ */
 
 function normalizeQuestion(question, assessment) {
   const rawType = String(question.question_type || "MCQ")
     .trim()
     .toUpperCase()
     .replace(/[- ]/g, "_");
+
   const questionType = [
     "TRUE_FALSE",
     "TRUEFALSE",
@@ -226,17 +221,10 @@ function normalizeQuestion(question, assessment) {
     correct_answers: Array.isArray(question.correct_answers)
       ? [...question.correct_answers]
       : [],
-    // Scoring is configured once on the assessment. Question-level marks are
-    // intentionally ignored so every question in the assessment uses the
-    // same positive and negative marks.
     marks: Math.max(0.01, Number(assessment?.marks_per_question ?? 1)),
     negative_marks: Math.max(0, Number(assessment?.negative_marks ?? 0)),
   };
 }
-
-/* ============================================================
-   GENERATE ATTEMPT
-============================================================ */
 
 exports.generateAttempt = async (assessment) => {
   const paper = await buildQuestionPaper(assessment);
@@ -255,10 +243,6 @@ exports.generateAttempt = async (assessment) => {
     shuffleOptions: assessment.shuffle_options ?? true,
   });
 };
-
-/* ============================================================
-   CREATE ATTEMPT
-============================================================ */
 
 exports.createAttempt = async (
   assessment,
@@ -283,7 +267,6 @@ exports.createAttempt = async (
       : configuredDurationSeconds;
 
   const startedAt = new Date();
-
   const expiresAt = new Date(startedAt.getTime() + durationSeconds * 1000);
 
   const { data, error } = await supabase
@@ -292,20 +275,16 @@ exports.createAttempt = async (
       assessment_id: assessment.id,
       student_id: student.id,
       ...(teamId ? { team_id: teamId } : {}),
-
       started_at: startedAt.toISOString(),
       expires_at: expiresAt.toISOString(),
-
       resumed_count: 0,
       current_question: 1,
       answered_questions: 0,
-
       score: 0,
       correct: 0,
       wrong: 0,
       unanswered: 0,
       percentage: 0,
-
       status: "IN_PROGRESS",
     })
     .select()
@@ -319,26 +298,18 @@ exports.createAttempt = async (
   try {
     await exports.storeQuestions(data.id, questions);
   } catch (error) {
-    // Do not leave a broken IN_PROGRESS attempt
     await supabase.from("assessment_attempts").delete().eq("id", data.id);
-
     throw error;
   }
 
   return data;
 };
 
-/* ============================================================
-   STORE ATTEMPT QUESTIONS
-============================================================ */
-
 exports.storeQuestions = async (attemptId, questions) => {
   if (!Array.isArray(questions) || questions.length === 0) {
     throw new Error("No attempt questions to store.");
   }
 
-  // Explicitly select DB columns. The generated paper can now carry client
-  // metadata without accidentally sending unknown fields to Supabase.
   const rows = questions.map((question) => ({
     attempt_id: attemptId,
     question_id: question.question_id,
@@ -360,10 +331,6 @@ exports.storeQuestions = async (attemptId, questions) => {
 
   return true;
 };
-
-/* ============================================================
-   GET QUESTION
-============================================================ */
 
 exports.getAttemptPaper = async (attemptId) => {
   const { data, error } = await supabase
@@ -431,10 +398,6 @@ exports.getQuestion = async (attemptId, questionNumber) => {
   return question;
 };
 
-/* ============================================================
-   SAVE ANSWER
-============================================================ */
-
 exports.saveAnswer = async (attemptId, attemptQuestionId, selectedAnswers) => {
   if (!attemptQuestionId) {
     throw new Error("Attempt question ID is required.");
@@ -450,9 +413,7 @@ exports.saveAnswer = async (attemptId, attemptQuestionId, selectedAnswers) => {
         selected_answers: answers,
         answered_at: new Date().toISOString(),
       },
-      {
-        onConflict: "attempt_question_id",
-      },
+      { onConflict: "attempt_question_id" },
     )
     .select()
     .single();
@@ -461,25 +422,17 @@ exports.saveAnswer = async (attemptId, attemptQuestionId, selectedAnswers) => {
 
   const { count, error: countError } = await supabase
     .from("assessment_attempt_questions")
-    .select(
-      `
-        id,
-        assessment_answers!inner(id)
-        `,
-      {
-        count: "exact",
-        head: true,
-      },
-    )
+    .select(`id, assessment_answers!inner(id)`, {
+      count: "exact",
+      head: true,
+    })
     .eq("attempt_id", attemptId);
 
   if (countError) throw countError;
 
   const { error: updateError } = await supabase
     .from("assessment_attempts")
-    .update({
-      answered_questions: count ?? 0,
-    })
+    .update({ answered_questions: count ?? 0 })
     .eq("id", attemptId);
 
   if (updateError) throw updateError;
@@ -487,120 +440,75 @@ exports.saveAnswer = async (attemptId, attemptQuestionId, selectedAnswers) => {
   return data;
 };
 
-/* ============================================================
-   QUESTION PALETTE
-============================================================ */
-
 exports.getPalette = async (attemptId) => {
-  try {
-    // ------------------------------------------------------------
-    // 1. Get all questions belonging to this attempt
-    // ------------------------------------------------------------
-    const { data: questions, error: questionsError } = await supabase
-      .from("assessment_attempt_questions")
+  const { data: questions, error: questionsError } = await supabase
+    .from("assessment_attempt_questions")
+    .select(
+      `
+      id,
+      question_order,
+      assessment_question_flags(marked_for_review)
+    `,
+    )
+    .eq("attempt_id", attemptId)
+    .order("question_order");
+
+  if (questionsError) throw questionsError;
+
+  const questionIds = (questions || []).map((q) => q.id);
+  let answers = [];
+
+  if (questionIds.length > 0) {
+    const { data: answerRows, error: answersError } = await supabase
+      .from("assessment_answers")
       .select(
         `
-          id,
-          question_order,
-          assessment_question_flags(
-            marked_for_review
-          )
-        `,
+        attempt_question_id,
+        selected_answers,
+        subjective_answer,
+        coding_answer,
+        answered_at
+      `,
       )
-      .eq("attempt_id", attemptId)
-      .order("question_order");
+      .in("attempt_question_id", questionIds);
 
-    if (questionsError) {
-      throw questionsError;
-    }
-
-    // ------------------------------------------------------------
-    // 2. Get ALL saved answers for this attempt
-    // ------------------------------------------------------------
-    const questionIds = (questions || []).map((q) => q.id);
-
-    let answers = [];
-
-    if (questionIds.length > 0) {
-      const { data: answerRows, error: answersError } = await supabase
-        .from("assessment_answers")
-        .select(
-          `
-          attempt_question_id,
-          selected_answers,
-          subjective_answer,
-          coding_answer,
-          answered_at
-        `,
-        )
-        .in("attempt_question_id", questionIds);
-
-      if (answersError) {
-        throw answersError;
-      }
-
-      answers = answerRows || [];
-    }
-
-    // ------------------------------------------------------------
-    // 3. Build a Set of answered question IDs
-    // ------------------------------------------------------------
-    const answeredQuestionIds = new Set(
-      answers
-        .filter((answer) => {
-          // MCQ / MSQ
-          if (
-            Array.isArray(answer.selected_answers) &&
-            answer.selected_answers.length > 0
-          ) {
-            return true;
-          }
-
-          // Subjective
-          if (
-            typeof answer.subjective_answer === "string" &&
-            answer.subjective_answer.trim().length > 0
-          ) {
-            return true;
-          }
-
-          // Coding
-          if (
-            typeof answer.coding_answer === "string" &&
-            answer.coding_answer.trim().length > 0
-          ) {
-            return true;
-          }
-
-          return false;
-        })
-        .map((answer) => answer.attempt_question_id),
-    );
-
-    // ------------------------------------------------------------
-    // 4. Build palette
-    // ------------------------------------------------------------
-    const palette = (questions || []).map((q) => ({
-      id: q.id,
-
-      questionOrder: q.question_order,
-
-      answered: answeredQuestionIds.has(q.id),
-
-      markedForReview: q.assessment_question_flags?.marked_for_review ?? false,
-    }));
-
-    return palette;
-  } catch (error) {
-    console.error("[EXAM] getPalette error:", error);
-
-    throw error;
+    if (answersError) throw answersError;
+    answers = answerRows || [];
   }
-};
 
-/* ============================================================
-   FINISH ATTEMPT
-============================================================ */
+  const answeredQuestionIds = new Set(
+    answers
+      .filter((answer) => {
+        if (
+          Array.isArray(answer.selected_answers) &&
+          answer.selected_answers.length > 0
+        )
+          return true;
+
+        if (
+          typeof answer.subjective_answer === "string" &&
+          answer.subjective_answer.trim().length > 0
+        )
+          return true;
+
+        if (
+          typeof answer.coding_answer === "string" &&
+          answer.coding_answer.trim().length > 0
+        )
+          return true;
+
+        return false;
+      })
+      .map((answer) => answer.attempt_question_id),
+  );
+
+  return (questions || []).map((q) => ({
+    id: q.id,
+    questionOrder: q.question_order,
+    answered: answeredQuestionIds.has(q.id),
+    markedForReview: q.assessment_question_flags?.marked_for_review ?? false,
+  }));
+};
 
 exports.finishAttempt = async (attemptId, result, status = "SUBMITTED") => {
   const now = new Date().toISOString();
@@ -627,9 +535,6 @@ exports.finishAttempt = async (attemptId, result, status = "SUBMITTED") => {
     .maybeSingle();
 
   if (error) throw error;
-
-  // Idempotent completion: another request may have finished the attempt
-  // milliseconds earlier (timer, heartbeat, anti-cheat, or manual submit).
   if (data) return data;
 
   const { data: existing, error: existingError } = await supabase
@@ -637,14 +542,12 @@ exports.finishAttempt = async (attemptId, result, status = "SUBMITTED") => {
     .select("*")
     .eq("id", attemptId)
     .maybeSingle();
+
   if (existingError) throw existingError;
   if (!existing) throw new Error("Assessment attempt not found.");
+
   return existing;
 };
-
-/* ============================================================
-   GET ATTEMPT
-============================================================ */
 
 exports.getAttempt = async (attemptId) => {
   const { data, error } = await supabase
@@ -654,59 +557,35 @@ exports.getAttempt = async (attemptId) => {
     .single();
 
   if (error) {
-    if (error.code === "PGRST116") {
-      return null;
-    }
-
+    if (error.code === "PGRST116") return null;
     throw error;
   }
 
   return data;
 };
 
-/* ============================================================
-   UPDATE CURRENT QUESTION
-============================================================ */
-
 exports.updateCurrentQuestion = async (attemptId, questionNumber) => {
   const { error } = await supabase
     .from("assessment_attempts")
-    .update({
-      current_question: Number(questionNumber),
-    })
+    .update({ current_question: Number(questionNumber) })
     .eq("id", attemptId);
 
   if (error) throw error;
-
   return true;
 };
-
-/* ============================================================
-   INCREMENT RESUME COUNT
-============================================================ */
 
 exports.incrementResumeCount = async (attemptId) => {
   const attempt = await exports.getAttempt(attemptId);
-
-  if (!attempt) {
-    throw new Error("Attempt not found.");
-  }
+  if (!attempt) throw new Error("Attempt not found.");
 
   const { error } = await supabase
     .from("assessment_attempts")
-    .update({
-      resumed_count: Number(attempt.resumed_count || 0) + 1,
-    })
+    .update({ resumed_count: Number(attempt.resumed_count || 0) + 1 })
     .eq("id", attemptId);
 
   if (error) throw error;
-
   return true;
 };
-
-/* ============================================================
-   MARK QUESTION
-============================================================ */
 
 exports.markQuestion = async (attemptQuestionId, marked) => {
   const { error } = await supabase.from("assessment_question_flags").upsert(
@@ -714,19 +593,12 @@ exports.markQuestion = async (attemptQuestionId, marked) => {
       attempt_question_id: attemptQuestionId,
       marked_for_review: marked,
     },
-    {
-      onConflict: "attempt_question_id",
-    },
+    { onConflict: "attempt_question_id" },
   );
 
   if (error) throw error;
-
   return true;
 };
-
-/* ============================================================
-   UNMARK QUESTION
-============================================================ */
 
 exports.unmarkQuestion = async (attemptQuestionId) => {
   const { error } = await supabase
@@ -735,13 +607,8 @@ exports.unmarkQuestion = async (attemptQuestionId) => {
     .eq("attempt_question_id", attemptQuestionId);
 
   if (error) throw error;
-
   return true;
 };
-
-/* ============================================================
-   QUESTION CACHE INVALIDATION
-============================================================ */
 
 exports.invalidateQuestionBankCache = (bankId) => {
   if (bankId) questionBankCache.delete(String(bankId));
