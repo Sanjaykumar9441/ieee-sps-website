@@ -1,14 +1,18 @@
 const assessmentService = require("../services/assessmentService");
 const engine = require("../services/assessmentEngine");
 const session = require("../services/studentSessionService");
-const { setAttemptStartTime, getSecondsRemaining } = require("../lib/redis");
 const liveEvents = require("../services/liveEvents");
 const antiCheat = require("../services/antiCheatService");
 const crypto = require("crypto");
-const {
-  enqueueSubmission,
-  getSubmissionStatus,
-} = require("../services/submissionQueue");
+const { enqueueSubmission } = require("../services/submissionQueue");
+
+function getRemainingSecondsFromAttempt(attempt) {
+  if (!attempt?.expires_at) return 0;
+  return Math.max(
+    0,
+    Math.floor((new Date(attempt.expires_at).getTime() - Date.now()) / 1000),
+  );
+}
 
 function calculateAllowedDurationSeconds(assessment, startTime = new Date()) {
   const configuredDurationSeconds = Number(assessment.duration_minutes) * 60;
@@ -203,11 +207,6 @@ exports.startAssessment = async (req, res) => {
       });
     }
 
-    // If there is no database attempt in progress, a remaining Redis lock is
-    // stale (for example after a crashed process before the attempt row was
-    // created). Clear only that stale lock before acquiring a fresh session.
-    await session.clearStaleSession(assessment.id, teamId || student.id);
-
     // --------------------------------
     // Redis Lock
     // --------------------------------
@@ -241,11 +240,6 @@ exports.startAssessment = async (req, res) => {
       null,
       teamId,
     );
-
-    // --------------------------------
-    // Redis Timer
-    // --------------------------------
-    await setAttemptStartTime(attempt.id, actualDurationSeconds);
 
     // --------------------------------
     // One-time complete paper fetch
@@ -366,10 +360,7 @@ exports.getPaper = async (req, res) => {
       assessment,
       attempt,
     );
-    const remainingSeconds = await getSecondsRemaining(
-      attemptId,
-      allowedDurationSeconds,
-    );
+    const remainingSeconds = getRemainingSecondsFromAttempt(attempt);
     const questions = await engine.getAttemptPaper(attemptId);
 
     return res.json({
@@ -405,10 +396,7 @@ exports.getQuestion = async (req, res) => {
       attempt,
     );
 
-    const remainingSeconds = await getSecondsRemaining(
-      attemptId,
-      allowedDurationSeconds,
-    );
+    const remainingSeconds = getRemainingSecondsFromAttempt(attempt);
 
     await engine.updateCurrentQuestion(attemptId, Number(number));
 
@@ -472,10 +460,7 @@ exports.getStatus = async (req, res) => {
       assessment,
       attempt,
     );
-    const remainingSeconds = await getSecondsRemaining(
-      attemptId,
-      allowedDurationSeconds,
-    );
+    const remainingSeconds = getRemainingSecondsFromAttempt(attempt);
 
     liveEvents.emitTimer(attempt.assessment_id, {
       attemptId,
@@ -524,7 +509,7 @@ exports.submitAssessment = async (req, res) => {
         .json({ success: false, message: "Attempt not found." });
     }
 
-    if (attempt.status === "SUBMITTED" || attempt.status === "EXPIRED") {
+    if (attempt.status === "SUBMITTED") {
       return res.json({
         success: true,
         alreadySubmitted: true,
@@ -569,28 +554,6 @@ exports.submitAssessment = async (req, res) => {
   } catch (err) {
     console.error("QUEUE ASSESSMENT SUBMISSION ERROR:", err);
     return res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-/* ============================================================
-   SUBMISSION QUEUE STATUS
-============================================================ */
-
-exports.getSubmissionQueueStatus = async (req, res) => {
-  try {
-    const status = await getSubmissionStatus(req.params.attemptId);
-
-    return res.json({
-      success: true,
-      status,
-    });
-  } catch (err) {
-    console.error("GET SUBMISSION QUEUE STATUS ERROR:", err);
-
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
   }
 };
 
@@ -747,10 +710,7 @@ exports.heartbeat = async (req, res) => {
      * Get authoritative Redis timer.
      */
 
-    const remainingSeconds = await getSecondsRemaining(
-      attemptId,
-      allowedDurationSeconds,
-    );
+    const remainingSeconds = getRemainingSecondsFromAttempt(attempt);
 
     /*
      * If time has expired, do NOT refresh
@@ -773,7 +733,7 @@ exports.heartbeat = async (req, res) => {
 
     const refreshed = await session.refreshSession(
       attempt.assessment_id,
-      attempt.student_id,
+      attempt.team_id || attempt.student_id,
       req.assessmentSessionId,
       Math.max(remainingSeconds, 1),
     );

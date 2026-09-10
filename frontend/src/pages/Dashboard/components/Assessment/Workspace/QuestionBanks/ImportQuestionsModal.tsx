@@ -107,7 +107,7 @@ export default function ImportQuestionsModal({
               .filter(Boolean);
 
         const correctAnswer = String(
-          row["Accepted Answers"] ?? row["Correct Answer"] ?? "",
+          row["Correct Answer"] ?? row["Accepted Answers"] ?? "",
         ).trim();
 
         return {
@@ -212,7 +212,7 @@ export default function ImportQuestionsModal({
         "Option B": "Encoder",
         "Option C": "Decoder",
         "Option D": "Register",
-        "Accepted Answers": "A",
+        "Correct Answer": "A",
         Explanation: "A multiplexer selects one input from multiple inputs.",
         Difficulty: "MEDIUM",
         Marks: 1,
@@ -225,7 +225,7 @@ export default function ImportQuestionsModal({
         "Option B": "Python",
         "Option C": "HTML",
         "Option D": "JavaScript",
-        "Accepted Answers": "A,B,D",
+        "Correct Answer": "A,B,D",
         Explanation: "C, Python and JavaScript are programming languages.",
         Difficulty: "MEDIUM",
         Marks: 1,
@@ -238,7 +238,7 @@ export default function ImportQuestionsModal({
         "Option B": "False",
         "Option C": "",
         "Option D": "",
-        "Accepted Answers": "TRUE",
+        "Correct Answer": "TRUE",
         Explanation: "Earth is the third planet from the Sun.",
         Difficulty: "MEDIUM",
         Marks: 1,
@@ -251,7 +251,7 @@ export default function ImportQuestionsModal({
         "Option B": "",
         "Option C": "",
         "Option D": "",
-        "Accepted Answers": "HERTZ | HZ",
+        "Correct Answer": "HERTZ | HZ",
         Explanation: "Frequency is measured in hertz.",
         Difficulty: "MEDIUM",
         Marks: 1,
@@ -367,7 +367,7 @@ export default function ImportQuestionsModal({
                     "Option B",
                     "Option C",
                     "Option D",
-                    "Accepted Answers / Correct Answer",
+                    "Correct Answer / Accepted Answers",
                     "Explanation",
                     "Difficulty",
                     "Marks",

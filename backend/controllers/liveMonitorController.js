@@ -1,30 +1,11 @@
 const { supabase } = require("../lib/supabase");
-const { getSecondsRemaining } = require("../lib/redis");
 const scoring = require("../services/scoringService");
 const engine = require("../services/assessmentEngine");
 const session = require("../services/studentSessionService");
 const liveEvents = require("../services/liveEvents");
 
-async function getRemainingSeconds(attempt) {
+function getRemainingSeconds(attempt) {
   if (!attempt?.expires_at) return 0;
-
-  try {
-    if (attempt.started_at) {
-      const duration = Math.max(
-        0,
-        Math.floor(
-          (new Date(attempt.expires_at).getTime() -
-            new Date(attempt.started_at).getTime()) /
-            1000,
-        ),
-      );
-      const value = await getSecondsRemaining(attempt.id, duration);
-      if (Number.isFinite(Number(value))) return Math.max(0, Number(value));
-    }
-  } catch (error) {
-    console.warn("[LIVE MONITOR] Redis timer fallback:", error.message);
-  }
-
   return Math.max(
     0,
     Math.floor((new Date(attempt.expires_at).getTime() - Date.now()) / 1000),
@@ -522,29 +503,11 @@ exports.getStudentDetails = async (req, res) => {
         (typeof answer?.coding_answer === "string" &&
           answer.coding_answer.trim().length > 0);
 
-      const isFillInTheBlank =
-        String(question.questions?.question_type || "")
-          .toUpperCase()
-          .replace(/[\s-]+/g, "_") === "FILL_IN_THE_BLANK";
-
-      const normalizeTextAnswer = (value) =>
-        String(value ?? "")
-          .normalize("NFKC")
-          .trim()
-          .replace(/\s+/g, " ")
-          .toLocaleLowerCase();
-
-      const isCorrect = isFillInTheBlank
-        ? selected.length > 0 &&
-          correctAnswers.length > 0 &&
-          correctAnswers.some(
-            (answer) =>
-              normalizeTextAnswer(answer) === normalizeTextAnswer(selected[0]),
-          )
-        : selected.length > 0 &&
-          correctAnswers.length > 0 &&
-          JSON.stringify(answerSet(selected)) ===
-            JSON.stringify(answerSet(correctAnswers));
+      const isCorrect =
+        selected.length > 0 &&
+        correctAnswers.length > 0 &&
+        JSON.stringify(answerSet(selected)) ===
+          JSON.stringify(answerSet(correctAnswers));
 
       const storedMarks = Number(question.marks);
       const marks =

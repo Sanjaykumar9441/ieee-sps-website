@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Flag, Maximize, Send, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
-import { getAssessmentStatus, submitAssessment } from "../api/studenExamApi";
+import {
+  getAssessmentStatus,
+  submitAssessment,
+  submitAssessmentKeepalive,
+} from "../api/studenExamApi";
 import useAntiCheat from "../api/useAntiCheat";
 import useExamSocket from "../api/useExamSocket";
 import type { AttemptQuestion, PaletteQuestion } from "../types";
@@ -226,6 +230,25 @@ export default function StudentExam({
     onConnectionLost: () => console.warn("[EXAM] Socket connection lost."),
     onReconnected: () => console.log("[EXAM] Socket connection restored."),
   });
+
+  useEffect(() => {
+    const handlePageHide = () => {
+      if (finishingRef.current || submittingRef.current || !questions.length)
+        return;
+
+      persistCurrentAnswer();
+      const answers = questions.map((item) => ({
+        attemptQuestionId: item.id,
+        selectedAnswers: answersRef.current[item.id] || [],
+      }));
+
+      submittingRef.current = true;
+      submitAssessmentKeepalive(attemptId, "AUTO_SUBMIT", answers);
+    };
+
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
+  }, [attemptId, persistCurrentAnswer, questions]);
 
   useEffect(() => {
     const tick = () => {

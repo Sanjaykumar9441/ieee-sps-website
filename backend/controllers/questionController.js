@@ -98,13 +98,7 @@ function normalizeTextAnswers(value) {
   if (typeof value === "string") input = value.split("|");
   return [
     ...new Set(
-      input
-        .map((answer) =>
-          String(answer ?? "")
-            .trim()
-            .toUpperCase(),
-        )
-        .filter(Boolean),
+      input.map((answer) => String(answer ?? "").trim()).filter(Boolean),
     ),
   ];
 }
@@ -665,3 +659,4 @@ exports.finalImport = async (req, res) => {
     });
   }
 };
+  

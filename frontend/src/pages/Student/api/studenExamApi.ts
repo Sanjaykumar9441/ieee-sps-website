@@ -250,9 +250,16 @@ export const resumeAssessment = async (
   assessmentId: string,
   attemptId: string,
 ) => {
-  void assessmentId;
-
   const status = await getAssessmentStatus(attemptId);
+
+  if (
+    status?.assessmentId &&
+    String(status.assessmentId) !== String(assessmentId)
+  ) {
+    throw new Error(
+      "This saved assessment session belongs to a different assessment.",
+    );
+  }
 
   if (!status?.success && !status?.expired) {
     throw new Error(status?.message || "Unable to restore assessment.");
@@ -323,6 +330,36 @@ export const submitAssessment = async (
     }
 
     throw error;
+  }
+};
+
+export const submitAssessmentKeepalive = (
+  attemptId: string,
+  reason: "STUDENT_SUBMIT" | "AUTO_SUBMIT" | "SECURITY_AUTO_SUBMIT",
+  answers: { attemptQuestionId: string; selectedAnswers: string[] }[] = [],
+) => {
+  const token = getToken();
+  const sessionId =
+    sessionStorage.getItem(`quiz_session_${attemptId}`) ||
+    localStorage.getItem(`quiz_session_${attemptId}`) ||
+    "";
+
+  try {
+    void fetch(`${API}/api/student-assessments/${attemptId}/submit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        "x-assessment-session": sessionId,
+      },
+      body: JSON.stringify({ reason, answers }),
+      keepalive: true,
+      credentials: "same-origin",
+    }).catch((error) => {
+      console.warn("[EXAM] Keepalive submission request failed:", error);
+    });
+  } catch (error) {
+    console.warn("[EXAM] Unable to start keepalive submission:", error);
   }
 };
 
