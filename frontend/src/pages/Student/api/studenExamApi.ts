@@ -333,6 +333,36 @@ export const submitAssessment = async (
   }
 };
 
+export const submitAssessmentKeepalive = (
+  attemptId: string,
+  reason: "STUDENT_SUBMIT" | "AUTO_SUBMIT" | "SECURITY_AUTO_SUBMIT",
+  answers: { attemptQuestionId: string; selectedAnswers: string[] }[] = [],
+) => {
+  const token = getToken();
+  const sessionId =
+    sessionStorage.getItem(`quiz_session_${attemptId}`) ||
+    localStorage.getItem(`quiz_session_${attemptId}`) ||
+    "";
+
+  try {
+    void fetch(`${API}/api/student-assessments/${attemptId}/submit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        "x-assessment-session": sessionId,
+      },
+      body: JSON.stringify({ reason, answers }),
+      keepalive: true,
+      credentials: "same-origin",
+    }).catch((error) => {
+      console.warn("[EXAM] Keepalive submission request failed:", error);
+    });
+  } catch (error) {
+    console.warn("[EXAM] Unable to start keepalive submission:", error);
+  }
+};
+
 export const assessmentHeartbeat = async (attemptId: string) => {
   const { data } = await axios.post(
     `${API}/api/student-assessments/${attemptId}/heartbeat`,
@@ -342,3 +372,4 @@ export const assessmentHeartbeat = async (attemptId: string) => {
 
   return data;
 };
+  

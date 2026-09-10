@@ -107,7 +107,7 @@ export default function ImportQuestionsModal({
               .filter(Boolean);
 
         const correctAnswer = String(
-          row["Correct Answer"] ?? row["Accepted Answers"] ?? "",
+          row["Accepted Answers"] ?? row["Correct Answer"] ?? "",
         ).trim();
 
         return {
@@ -212,7 +212,11 @@ export default function ImportQuestionsModal({
         "Option B": "Encoder",
         "Option C": "Decoder",
         "Option D": "Register",
-        "Correct Answer": "A",
+        "Accepted Answers": "A",
+        Explanation: "A multiplexer selects one input from multiple inputs.",
+        Difficulty: "MEDIUM",
+        Marks: 1,
+        "Negative Marks": 0,
       },
       {
         Question: "Which are programming languages?",
@@ -221,7 +225,11 @@ export default function ImportQuestionsModal({
         "Option B": "Python",
         "Option C": "HTML",
         "Option D": "JavaScript",
-        "Correct Answer": "A,B,D",
+        "Accepted Answers": "A,B,D",
+        Explanation: "C, Python and JavaScript are programming languages.",
+        Difficulty: "MEDIUM",
+        Marks: 1,
+        "Negative Marks": 0,
       },
       {
         Question: "The Earth is the third planet from the Sun.",
@@ -230,7 +238,11 @@ export default function ImportQuestionsModal({
         "Option B": "False",
         "Option C": "",
         "Option D": "",
-        "Correct Answer": "TRUE",
+        "Accepted Answers": "TRUE",
+        Explanation: "Earth is the third planet from the Sun.",
+        Difficulty: "MEDIUM",
+        Marks: 1,
+        "Negative Marks": 0,
       },
       {
         Question: "The SI unit of frequency is ___",
@@ -239,14 +251,20 @@ export default function ImportQuestionsModal({
         "Option B": "",
         "Option C": "",
         "Option D": "",
-        "Correct Answer": "HERTZ | HZ",
+        "Accepted Answers": "HERTZ | HZ",
+        Explanation: "Frequency is measured in hertz.",
+        Difficulty: "MEDIUM",
+        Marks: 1,
+        "Negative Marks": 0,
       },
     ];
     const worksheet = XLSX.utils.json_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Questions");
-    XLSX.writeFile(workbook, "question-import-template.xlsx");
-    toast.success("Template downloaded");
+    XLSX.writeFile(workbook, "question-import-template.csv", {
+      bookType: "csv",
+    });
+    toast.success("CSV template downloaded");
   };
 
   const handleClose = () => {
@@ -323,7 +341,7 @@ export default function ImportQuestionsModal({
                   className="mt-5 inline-flex items-center gap-2 rounded-xl border px-5 py-3 font-semibold"
                 >
                   <Download size={18} />
-                  Download Template
+                  Download CSV Template
                 </button>
 
                 <input
@@ -349,7 +367,11 @@ export default function ImportQuestionsModal({
                     "Option B",
                     "Option C",
                     "Option D",
-                    "Correct Answer / Accepted Answers",
+                    "Accepted Answers / Correct Answer",
+                    "Explanation",
+                    "Difficulty",
+                    "Marks",
+                    "Negative Marks",
                   ].map((column) => (
                     <div
                       key={column}

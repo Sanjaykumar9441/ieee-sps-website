@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Flag, Maximize, Send, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
-import { getAssessmentStatus, submitAssessment } from "../api/studenExamApi";
+import {
+  getAssessmentStatus,
+  submitAssessment,
+  submitAssessmentKeepalive,
+} from "../api/studenExamApi";
 import useAntiCheat from "../api/useAntiCheat";
 import useExamSocket from "../api/useExamSocket";
 import type { AttemptQuestion, PaletteQuestion } from "../types";
@@ -82,7 +86,6 @@ export default function StudentExam({
 }: Props) {
   const finishingRef = useRef(false);
   const submittingRef = useRef(false);
-  const pageHideSubmitRef = useRef(false);
   const submitRef = useRef<(reason: SubmitReason) => void>(() => undefined);
   const answersRef = useRef<AnswerMap>({});
   const deadlineRef = useRef(Date.now() + Math.max(0, initialSeconds) * 1000);
@@ -185,65 +188,6 @@ export default function StudentExam({
     [attemptId, finishExam, persistCurrentAnswer, questions],
   );
 
-  useEffect(() => {
-    const submitSnapshotOnPageHide = () => {
-      if (
-        finishingRef.current ||
-        submittingRef.current ||
-        pageHideSubmitRef.current
-      )
-        return;
-      pageHideSubmitRef.current = true;
-
-      try {
-        persistCurrentAnswer();
-
-        const answers = questions.map((item) => ({
-          attemptQuestionId: item.id,
-          selectedAnswers: answersRef.current[item.id] || [],
-        }));
-
-        const token =
-          localStorage.getItem("studentToken") ||
-          localStorage.getItem("token") ||
-          "";
-        const sessionId =
-          sessionStorage.getItem(`quiz_session_${attemptId}`) ||
-          localStorage.getItem(`quiz_session_${attemptId}`) ||
-          "";
-
-        const url = `${import.meta.env.VITE_API_URL}/api/student-assessments/${attemptId}/submit`;
-
-        // keepalive lets the browser finish the single final snapshot request
-        // while the exam popup is being closed. This is NOT a per-answer API.
-        void fetch(url, {
-          method: "POST",
-          keepalive: true,
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-            "x-assessment-session": sessionId,
-          },
-          body: JSON.stringify({
-            reason: "AUTO_SUBMIT",
-            answers,
-          }),
-        }).catch((error) => {
-          console.warn(
-            "[EXAM] Close-time submission could not be sent:",
-            error,
-          );
-        });
-      } catch (error) {
-        console.warn("[EXAM] Close-time submission preparation failed:", error);
-      }
-    };
-
-    window.addEventListener("pagehide", submitSnapshotOnPageHide);
-    return () =>
-      window.removeEventListener("pagehide", submitSnapshotOnPageHide);
-  }, [attemptId, persistCurrentAnswer, questions]);
-
   submitRef.current = submitForReason;
 
   const handleSecurityAutoSubmit = useCallback((reason: string) => {
@@ -286,6 +230,25 @@ export default function StudentExam({
     onConnectionLost: () => console.warn("[EXAM] Socket connection lost."),
     onReconnected: () => console.log("[EXAM] Socket connection restored."),
   });
+
+  useEffect(() => {
+    const handlePageHide = () => {
+      if (finishingRef.current || submittingRef.current || !questions.length)
+        return;
+
+      persistCurrentAnswer();
+      const answers = questions.map((item) => ({
+        attemptQuestionId: item.id,
+        selectedAnswers: answersRef.current[item.id] || [],
+      }));
+
+      submittingRef.current = true;
+      submitAssessmentKeepalive(attemptId, "AUTO_SUBMIT", answers);
+    };
+
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
+  }, [attemptId, persistCurrentAnswer, questions]);
 
   useEffect(() => {
     const tick = () => {
