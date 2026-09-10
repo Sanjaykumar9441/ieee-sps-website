@@ -26,7 +26,7 @@ const ASSESSMENTS = [
     description:
       "The opening assessment used to shortlist teams for the final stages of the Technical Quiz.",
     meta: ["25 MCQs", "15 minutes", "Team assessment"],
-    href: "/student/exam/29c228ed-7508-4280-82fe-63b055937fac", 
+    href: "/student/exam/ed45b7b5-5efa-497a-b37a-05cfc09f4d2c", 
     accent: "from-[#00629B] to-[#00A8E8]",
   },
   {
@@ -36,7 +36,7 @@ const ASSESSMENTS = [
     description:
       "The first final-stage assessment for teams that qualify through the elimination round.",
     meta: ["Final stage", "ECE focused", "Team assessment"],
-    href: "",
+    href: "/student/exam/a5b7bacf-66ec-4a80-b0ae-2f060a758a84",
     accent: "from-[#F59E0B] to-[#F97316]",
   },
   {
@@ -46,7 +46,7 @@ const ASSESSMENTS = [
     description:
       "The concluding final-stage assessment used to determine the final standings.",
     meta: ["Final stage", "ECE focused", "Team assessment"],
-    href: "",
+    href: "/student/exam/cee49be2-76c7-4e6c-8004-18f22c0da6e8",
     accent: "from-[#0F766E] to-[#14B8A6]",
   },
 ] as const;
