@@ -101,9 +101,7 @@ function normalizeTextAnswers(value) {
       input
         .map((answer) =>
           String(answer ?? "")
-            .normalize("NFKC")
             .trim()
-            .replace(/\s+/g, " ")
             .toUpperCase(),
         )
         .filter(Boolean),

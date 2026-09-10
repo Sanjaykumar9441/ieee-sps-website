@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Clock3, Maximize, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -11,6 +11,7 @@ import {
   checkAssessment,
   resumeAssessment,
   startAssessment,
+  submitAssessment,
 } from "../api/studenExamApi";
 
 import type { AttemptQuestion } from "../types";
@@ -87,7 +88,6 @@ interface ExamData {
 }
 
 interface ExamLaunchData extends ExamData {
-  assessmentId: string;
   assessmentTitle: string;
   sessionId?: string;
 }
@@ -130,25 +130,6 @@ const getLaunchAttemptId = (): string | null => {
   try {
     const params = new URLSearchParams(window.location.search);
     return params.get("attemptId") || null;
-  } catch {
-    return null;
-  }
-};
-
-const getLocalActiveAttemptId = (assessmentId: string): string | null => {
-  try {
-    const attemptId = localStorage.getItem("studentAttemptId");
-    if (!attemptId) return null;
-
-    const raw = localStorage.getItem(`studentExamLaunch:${attemptId}`);
-    if (!raw) return null;
-
-    const launch = JSON.parse(raw) as Partial<ExamLaunchData>;
-    if (String(launch.assessmentId || "") !== String(assessmentId)) {
-      return null;
-    }
-
-    return attemptId;
   } catch {
     return null;
   }
@@ -282,6 +263,8 @@ export default function StudentExamPortal({
   const [examData, setExamData] = useState<ExamData | null>(null);
 
   const [startingExam, setStartingExam] = useState(false);
+  const examPopupRef = useRef<Window | null>(null);
+  const closeSubmitInProgressRef = useRef(false);
 
   /* ------------------------------------------------------------------------ */
   /* Finish / submitted                                                       */
@@ -299,6 +282,8 @@ export default function StudentExamPortal({
 
       if (attemptId) {
         localStorage.removeItem(`studentExamLaunch:${attemptId}`);
+
+        localStorage.removeItem(`studentAnswers:${attemptId}`);
 
         localStorage.removeItem(`studentCurrentQuestion:${attemptId}`);
 
@@ -384,6 +369,83 @@ export default function StudentExamPortal({
   }, [assessmentId, completeExam, examWindow]);
 
   /* ------------------------------------------------------------------------ */
+  /* Detect a closed exam popup and submit its local answer snapshot          */
+  /* ------------------------------------------------------------------------ */
+
+  useEffect(() => {
+    if (examWindow) return;
+
+    const submitClosedExam = async () => {
+      if (closeSubmitInProgressRef.current) return;
+
+      const popup = examPopupRef.current;
+      if (!popup || !popup.closed) return;
+
+      examPopupRef.current = null;
+
+      let attemptId = localStorage.getItem("studentAttemptId");
+      if (!attemptId) return;
+
+      const launchRaw = localStorage.getItem(`studentExamLaunch:${attemptId}`);
+      const answersRaw = localStorage.getItem(`studentAnswers:${attemptId}`);
+
+      if (!launchRaw) return;
+
+      try {
+        const launch = JSON.parse(launchRaw);
+        const storedAnswers = answersRaw ? JSON.parse(answersRaw) : {};
+        const questions = Array.isArray(launch.questions)
+          ? launch.questions
+          : [];
+
+        const answers = questions.map((question: any) => ({
+          attemptQuestionId: String(
+            question.id || question.attempt_question_id,
+          ),
+          selectedAnswers: Array.isArray(storedAnswers?.[question.id])
+            ? storedAnswers[question.id].map(String)
+            : [],
+        }));
+
+        closeSubmitInProgressRef.current = true;
+        toast("Exam window closed. Submitting your saved answers...", {
+          icon: "⏳",
+        });
+
+        const result = await submitAssessment(
+          String(attemptId),
+          "AUTO_SUBMIT",
+          answers,
+        );
+
+        if (result?.success === false) {
+          throw new Error(
+            result.message || "Unable to submit the closed exam.",
+          );
+        }
+
+        toast.success("Assessment submitted successfully.");
+        completeExam(String(attemptId));
+      } catch (error: any) {
+        console.error("[EXAM PORTAL] Closed-window auto-submit failed:", error);
+        // Keep the attempt ID/local snapshot so the user can retry instead of
+        // silently losing the answers.
+        localStorage.setItem("studentAttemptId", String(attemptId));
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Unable to submit the closed assessment. Please reopen the assessment.",
+        );
+      } finally {
+        closeSubmitInProgressRef.current = false;
+      }
+    };
+
+    const interval = window.setInterval(() => void submitClosedExam(), 750);
+    return () => window.clearInterval(interval);
+  }, [completeExam, examWindow]);
+
+  /* ------------------------------------------------------------------------ */
   /* Start examination                                                        */
   /* ------------------------------------------------------------------------ */
 
@@ -433,6 +495,8 @@ export default function StudentExamPortal({
       return;
     }
 
+    examPopupRef.current = examPopup;
+
     try {
       examPopup.document.title = "Ready to Start Examination";
       examPopup.document.body.innerHTML = `
@@ -462,14 +526,6 @@ export default function StudentExamPortal({
       "assessmentTitle",
       assessment?.title || "Assessment",
     );
-
-    // Reuse the student's own saved active attempt when reopening the exam.
-    // This prevents a normal refresh/reopen from creating a second Redis
-    // session and showing the misleading "another session" error.
-    const localAttemptId = getLocalActiveAttemptId(assessmentId);
-    if (localAttemptId) {
-      examUrl.searchParams.set("attemptId", localAttemptId);
-    }
 
     /*
      * Navigate the already-open popup. The popup now contains only the
@@ -533,7 +589,6 @@ export default function StudentExamPortal({
       }
 
       const launchData: ExamLaunchData = {
-        assessmentId,
         attemptId,
         totalQuestions: questions.length,
         currentQuestion,
@@ -697,15 +752,6 @@ export default function StudentExamPortal({
 
         try {
           const launch = JSON.parse(rawLaunch) as ExamLaunchData;
-
-          if (
-            launch.assessmentId &&
-            String(launch.assessmentId) !== String(assessmentId)
-          ) {
-            throw new Error(
-              "Saved examination session belongs to a different assessment.",
-            );
-          }
 
           if (launch.sessionId) {
             sessionStorage.setItem(

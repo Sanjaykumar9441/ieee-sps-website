@@ -185,10 +185,7 @@ export default function QuestionCard({
               type="text"
               value={textAnswer}
               onChange={(event) => {
-                const value = event.target.value
-                  .normalize("NFKC")
-                  .replace(/\s+/g, " ")
-                  .toUpperCase();
+                const value = event.target.value.toUpperCase();
                 onChange(value ? [value] : []);
               }}
               placeholder="Type your answer here..."
@@ -197,8 +194,7 @@ export default function QuestionCard({
               className="w-full rounded-xl border border-slate-300 bg-white px-4 py-4 text-base text-slate-900 outline-none transition focus:border-[#00629B] focus:ring-4 focus:ring-[#00629B]/10"
             />
             <p className="mt-2 text-xs text-slate-400">
-              Your answer is automatically converted to CAPITAL LETTERS. Extra
-              spaces are normalized.
+              Your answer is automatically converted to CAPITAL LETTERS.
             </p>
           </div>
         ) : (

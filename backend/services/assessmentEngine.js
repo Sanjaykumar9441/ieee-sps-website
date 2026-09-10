@@ -45,7 +45,9 @@ async function getAssessmentBanks(assessmentId) {
       .eq("assessment_id", assessmentId);
 
     if (error) throw error;
-    const result = data || [];
+    const result = (data || []).filter(
+      (row) => row.question_banks?.is_active !== false,
+    );
     assessmentBankCache.set(key, {
       data: result,
       expiresAt: Date.now() + ASSESSMENT_BANK_CACHE_TTL_MS,
@@ -154,20 +156,23 @@ function normalizeQuestionType(value) {
 async function buildQuestionPaper(assessment) {
   const mappings = await getAssessmentBanks(assessment.id);
 
+  if (!mappings.length) {
+    throw new Error("No question banks are assigned to this assessment.");
+  }
+
   let paper = [];
   const randomQuestions = assessment.random_questions ?? true;
   const shuffleQuestions = assessment.shuffle_questions ?? true;
 
+  // Question-bank allocations are the source of truth for the actual paper.
+  // Older assessments can have a stale assessments.total_questions value
+  // after a bank was edited/deleted. Do not block an otherwise valid exam with
+  // the stale value; reconcile it to the current allocations instead.
+  let allocationTotal = 0;
+
   for (const mapping of mappings) {
     const bankQuestions = await getBankQuestions(mapping.question_bank_id);
-    let count = Number(mapping.questions_to_pick);
-
-    // For the common one-bank setup, the assessment total is authoritative.
-    // This also repairs older banks that were created before the total/pick
-    // fields were synchronized correctly.
-    if (mappings.length === 1 && Number(assessment.total_questions) > 0) {
-      count = Number(assessment.total_questions);
-    }
+    const count = Number(mapping.questions_to_pick);
 
     if (!Number.isInteger(count) || count < 1) {
       throw new Error("Question bank selection count must be at least 1.");
@@ -179,6 +184,8 @@ async function buildQuestionPaper(assessment) {
       );
     }
 
+    allocationTotal += count;
+
     const picked = randomQuestions
       ? selectRandomQuestions(bankQuestions, count)
       : bankQuestions.slice(0, count);
@@ -186,11 +193,26 @@ async function buildQuestionPaper(assessment) {
     paper.push(...picked);
   }
 
+  // Keep the assessment record synchronized as well. This fixes the admin
+  // dashboard when the allocation changed but total_questions was left at an
+  // older value. The update is best-effort and never prevents exam start.
   const configuredTotal = Number(assessment.total_questions || 0);
-  if (configuredTotal > 0 && paper.length !== configuredTotal) {
-    throw new Error(
-      `Assessment is configured for ${configuredTotal} questions, but its question-bank allocations provide ${paper.length}. Adjust Questions to Pick in Question Banks.`,
-    );
+  if (configuredTotal !== allocationTotal) {
+    assessment.total_questions = allocationTotal;
+    try {
+      await supabase
+        .from("assessments")
+        .update({
+          total_questions: allocationTotal,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", assessment.id);
+    } catch (error) {
+      console.warn(
+        "[ASSESSMENT] Could not reconcile total_questions:",
+        error.message,
+      );
+    }
   }
 
   return shuffleQuestions ? shuffle(paper) : paper;

@@ -1,8 +1,11 @@
 const QuestionBank = require("../models/QuestionBank");
 const liveEvents = require("../services/liveEvents");
+const assessmentEngine = require("../services/assessmentEngine");
 
 function normalizeDifficulty(value) {
-  const raw = String(value || "MEDIUM").trim().toUpperCase();
+  const raw = String(value || "MEDIUM")
+    .trim()
+    .toUpperCase();
   return ["EASY", "MEDIUM", "HARD"].includes(raw) ? raw : "MEDIUM";
 }
 
@@ -77,6 +80,8 @@ exports.create = async (req, res) => {
       });
     }
 
+    assessmentEngine.invalidateQuestionBankCache(data?.id);
+    assessmentEngine.invalidateAssessmentBankCache(body.assessment_id);
     liveEvents.emitQuestionBankCreated?.(body.assessment_id, data);
 
     return res.status(201).json({
@@ -115,7 +120,8 @@ exports.update = async (req, res) => {
 
     if (
       payload.questions_to_pick !== undefined &&
-      (!Number.isInteger(payload.questions_to_pick) || payload.questions_to_pick < 1)
+      (!Number.isInteger(payload.questions_to_pick) ||
+        payload.questions_to_pick < 1)
     ) {
       return res.status(400).json({
         success: false,
@@ -126,10 +132,19 @@ exports.update = async (req, res) => {
     const { data, error } = await QuestionBank.update(id, payload);
     if (error) throw error;
 
-    const assessmentId =
-      req.body.assessment_id ||
-      (await QuestionBank.get(id)).data?.assessment_id;
+    let assessmentId = req.body.assessment_id || null;
+    if (!assessmentId) {
+      const { data: mapping } = await require("../lib/supabase")
+        .supabase.from("assessment_question_banks")
+        .select("assessment_id")
+        .eq("question_bank_id", id)
+        .limit(1)
+        .maybeSingle();
+      assessmentId = mapping?.assessment_id || null;
+    }
 
+    assessmentEngine.invalidateQuestionBankCache(id);
+    assessmentEngine.invalidateAssessmentBankCache(assessmentId);
     liveEvents.emitQuestionBankUpdated?.(assessmentId, data);
 
     return res.json({
@@ -152,6 +167,8 @@ exports.duplicate = async (req, res) => {
     const { data, error } = await QuestionBank.duplicate(id);
     if (error) throw error;
 
+    assessmentEngine.invalidateQuestionBankCache(id);
+    assessmentEngine.invalidateAssessmentBankCache(data.assessmentId);
     liveEvents.emitQuestionBankCreated?.(data.assessmentId, data.questionBank);
 
     return res.status(201).json({
@@ -173,6 +190,8 @@ exports.delete = async (req, res) => {
     const { data, error } = await QuestionBank.delete(id);
     if (error) throw error;
 
+    assessmentEngine.invalidateQuestionBankCache(id);
+    assessmentEngine.invalidateAssessmentBankCache(data.assessmentId);
     liveEvents.emitQuestionBankDeleted?.(data.assessmentId, data.questionBank);
 
     return res.json({

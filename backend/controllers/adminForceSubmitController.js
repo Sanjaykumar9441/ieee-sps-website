@@ -3,13 +3,12 @@ const engine = require("../services/assessmentEngine");
 const scoring = require("../services/scoringService");
 const session = require("../services/studentSessionService");
 const liveEvents = require("../services/liveEvents");
-const { getSubmissionStatus } = require("../services/submissionQueue");
 
 async function refreshLeaderboard(assessmentId) {
   const { data: attempts, error } = await supabase
     .from("assessment_attempts")
     .select(
-      "id,student_id,team_id,score,correct,wrong,unanswered,percentage,submitted_at,started_at,status",
+      "id,student_id,score,correct,wrong,unanswered,percentage,submitted_at,started_at,status",
     )
     .eq("assessment_id", assessmentId)
     .eq("status", "SUBMITTED");
@@ -95,17 +94,6 @@ async function refreshLeaderboard(assessmentId) {
   return rows;
 }
 
-async function waitForQueuedSubmission(attemptId, timeoutMs = 5000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const state = await getSubmissionStatus(attemptId).catch(() => null);
-    if (!state) return null;
-    if (state.state === "COMPLETED" || state.state === "FAILED") return state;
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-  return null;
-}
-
 async function forceSubmitAttempt(attemptId, reason = "ADMIN_FORCE_SUBMIT") {
   const attempt = await engine.getAttempt(attemptId);
   if (!attempt) {
@@ -115,19 +103,6 @@ async function forceSubmitAttempt(attemptId, reason = "ADMIN_FORCE_SUBMIT") {
   }
   if (attempt.status === "SUBMITTED")
     return { attempt, alreadyFinished: true, result: null };
-
-  // A browser close sends the same final snapshot to the Redis submission
-  // queue. Give that queued submission a short window to finish before an
-  // admin force-submit falls back to scoring durable answers.
-  const queuedState = await waitForQueuedSubmission(attemptId);
-  if (queuedState?.state === "COMPLETED") {
-    const completed = await engine.getAttempt(attemptId);
-    return {
-      attempt: completed || attempt,
-      alreadyFinished: true,
-      result: null,
-    };
-  }
 
   const result = await scoring.calculateScore(attemptId);
   const updated = await engine.finishAttempt(attemptId, result, "SUBMITTED");
