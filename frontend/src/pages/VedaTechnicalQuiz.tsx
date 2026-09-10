@@ -26,7 +26,7 @@ const ASSESSMENTS = [
     description:
       "The opening assessment used to shortlist teams for the final stages of the Technical Quiz.",
     meta: ["25 MCQs", "15 minutes", "Team assessment"],
-    href: "student/exam/29c228ed-7508-4280-82fe-63b055937fac",
+    href: "/student/exam/29c228ed-7508-4280-82fe-63b055937fac", 
     accent: "from-[#00629B] to-[#00A8E8]",
   },
   {
