@@ -22,7 +22,6 @@ async function syncQuestionBankTotal(bankId) {
     .eq("id", bankId);
 
   if (updateError) throw updateError;
-
   return total;
 }
 
@@ -39,6 +38,18 @@ async function getAssessmentIdsForBank(bankId) {
   ];
 }
 
+/*
+ * The assessment question count is derived from ACTIVE question banks.
+ *
+ * Older code kept the previous assessments.total_questions value whenever it
+ * was greater than zero. That meant deleting every bank could leave an
+ * assessment stuck at e.g. 30 questions forever. It also meant a bank could
+ * request 30 questions while only one active question actually existed.
+ *
+ * The dashboard and exam should use the same effective count: for each active
+ * bank, take the smaller of questions_to_pick and the number of active
+ * questions in that bank.
+ */
 async function syncAssessmentQuestionCount(assessmentId) {
   if (!assessmentId) return 0;
 
@@ -56,7 +67,6 @@ async function syncAssessmentQuestionCount(assessmentId) {
   ];
 
   let activeBankIds = new Set();
-
   if (bankIds.length) {
     const { data: activeBanks, error: bankError } = await supabase
       .from("question_banks")
@@ -65,56 +75,62 @@ async function syncAssessmentQuestionCount(assessmentId) {
       .eq("is_active", true);
 
     if (bankError) throw bankError;
-
     activeBankIds = new Set((activeBanks || []).map((bank) => bank.id));
   }
 
-  const allocatedTotal = (mappings || []).reduce(
-    (sum, row) =>
-      activeBankIds.has(row.question_bank_id)
-        ? sum + Math.max(0, Number(row.questions_to_pick || 0))
-        : sum,
-    0,
-  );
+  const activeIds = [...activeBankIds];
+  const countsByBank = new Map();
+
+  if (activeIds.length) {
+    const { data: activeQuestions, error: questionError } = await supabase
+      .from("questions")
+      .select("bank_id")
+      .in("bank_id", activeIds)
+      .eq("is_active", true);
+
+    if (questionError) throw questionError;
+
+    for (const row of activeQuestions || []) {
+      countsByBank.set(
+        row.bank_id,
+        Number(countsByBank.get(row.bank_id) || 0) + 1,
+      );
+    }
+  }
+
+  const effectiveTotal = (mappings || []).reduce((sum, row) => {
+    if (!activeBankIds.has(row.question_bank_id)) return sum;
+
+    const available = Number(countsByBank.get(row.question_bank_id) || 0);
+    const requested = Math.max(Number(row.questions_to_pick || 0), 0);
+
+    return sum + Math.min(requested, available);
+  }, 0);
 
   const { data: assessment, error: assessmentError } = await supabase
     .from("assessments")
-    .select("total_questions, marks_per_question, pass_percentage")
+    .select("marks_per_question, pass_percentage")
     .eq("id", assessmentId)
     .single();
 
   if (assessmentError) throw assessmentError;
 
-  const configuredTotal = Math.max(
-    0,
-    Number(assessment?.total_questions || 0),
-  );
-  const effectiveTotal = configuredTotal > 0 ? configuredTotal : allocatedTotal;
-  const marks = 1;
-  const passPercentage = Math.max(
-    0,
-    Number(assessment?.pass_percentage ?? 40),
-  );
+  const marks = Math.max(0, Number(assessment?.marks_per_question ?? 1));
+  const passPercentage = Math.max(0, Number(assessment?.pass_percentage ?? 40));
   const passingScore = Number(
     ((effectiveTotal * marks * passPercentage) / 100).toFixed(2),
   );
 
-  const updatePayload = {
-    passing_score: passingScore,
-    updated_at: new Date().toISOString(),
-  };
-
-  if (configuredTotal === 0 && allocatedTotal > 0) {
-    updatePayload.total_questions = allocatedTotal;
-  }
-
   const { error: updateError } = await supabase
     .from("assessments")
-    .update(updatePayload)
+    .update({
+      total_questions: effectiveTotal,
+      passing_score: passingScore,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", assessmentId);
 
   if (updateError) throw updateError;
-
   return effectiveTotal;
 }
 

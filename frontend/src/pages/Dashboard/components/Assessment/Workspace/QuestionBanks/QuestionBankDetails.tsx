@@ -38,14 +38,16 @@ interface Question {
   question_text: string;
   question_type: QuestionType;
   options: string[];
-  correct_answers: number[];
+  correct_answers: Array<number | string>;
+  marks: number;
+  negative_marks: number;
   is_active?: boolean;
 }
 interface ImportQuestion {
   question_text: string;
   question_type: QuestionType;
   options: string[];
-  correct_answers: number[];
+  correct_answers: Array<number | string>;
 }
 
 const parseCSV = (text: string) => {
@@ -127,17 +129,31 @@ const normalizeCorrect = (
   value: string,
   type: QuestionType,
   options: string[] = [],
-) => {
+): Array<number | string> => {
   const values = String(value ?? "")
     .split(/[|;,]/)
     .map((v) => v.trim())
     .filter(Boolean);
+
+  if (type === "FILL_IN_THE_BLANK") {
+    return [
+      ...new Set(
+        values
+          .map((v) =>
+            v.normalize("NFKC").replace(/\s+/g, " ").trim().toUpperCase(),
+          )
+          .filter(Boolean),
+      ),
+    ];
+  }
+
   if (type === "TRUE_FALSE") {
     const v = (values[0] || "").toLowerCase();
     if (["true", "a", "1"].includes(v)) return [0];
     if (["false", "b", "2"].includes(v)) return [1];
     return [];
   }
+
   return values
     .map((v) => {
       const upper = v.toUpperCase();
@@ -229,17 +245,38 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
           .filter((q: any) => q?.is_active !== false)
           .map((q: any) => ({
             ...q,
+            marks: Number(q.marks ?? 1),
+            negative_marks: Number(q.negative_marks ?? 0),
             options: normalizeOptions(q.options),
-            correct_answers: (Array.isArray(q.correct_answers)
-              ? q.correct_answers
-              : [q.correct_answers].filter((v) => v != null)
-            )
-              .map((v: any) => {
-                if (typeof v === "number") return v;
-                const s = String(v).trim().toUpperCase();
-                return /^[A-D]$/.test(s) ? s.charCodeAt(0) - 65 : Number(s);
-              })
-              .filter((v: number) => Number.isInteger(v) && v >= 0 && v < 4),
+            correct_answers:
+              String(q.question_type || "").toUpperCase() ===
+              "FILL_IN_THE_BLANK"
+                ? (Array.isArray(q.correct_answers)
+                    ? q.correct_answers
+                    : [q.correct_answers].filter((v) => v != null)
+                  )
+                    .map((v: any) =>
+                      String(v ?? "")
+                        .normalize("NFKC")
+                        .replace(/\s+/g, " ")
+                        .trim()
+                        .toUpperCase(),
+                    )
+                    .filter(Boolean)
+                : (Array.isArray(q.correct_answers)
+                    ? q.correct_answers
+                    : [q.correct_answers].filter((v) => v != null)
+                  )
+                    .map((v: any) => {
+                      if (typeof v === "number") return v;
+                      const s = String(v).trim().toUpperCase();
+                      return /^[A-D]$/.test(s)
+                        ? s.charCodeAt(0) - 65
+                        : Number(s);
+                    })
+                    .filter(
+                      (v: number) => Number.isInteger(v) && v >= 0 && v < 4,
+                    ),
           })),
       );
     } catch (error) {
@@ -327,16 +364,16 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
         "False",
         "",
         "",
-        "True",
+        "A",
       ],
       [
-        "The output of an AND gate with all inputs HIGH is ___.",
+        "The SI unit of frequency is ___",
         "FILL_IN_THE_BLANK",
-        "HIGH",
-        "LOW",
-        "Z",
-        "X",
-        "A",
+        "",
+        "",
+        "",
+        "",
+        "HERTZ | HZ",
       ],
     ];
     const csv = rows
@@ -390,12 +427,14 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
             const options =
               type === "TRUE_FALSE"
                 ? ["True", "False"]
-                : [
-                    getField(record, "option_a"),
-                    getField(record, "option_b"),
-                    getField(record, "option_c"),
-                    getField(record, "option_d"),
-                  ];
+                : type === "FILL_IN_THE_BLANK"
+                  ? []
+                  : [
+                      getField(record, "option_a"),
+                      getField(record, "option_b"),
+                      getField(record, "option_c"),
+                      getField(record, "option_d"),
+                    ];
             return {
               question_text: getField(record, "question_text"),
               question_type: type,
@@ -587,9 +626,12 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
           {filtered.map((q, index) => {
             const opts =
               q.question_type === "TRUE_FALSE" ? ["True", "False"] : q.options;
-            const correct = q.correct_answers.map((a) =>
-              String.fromCharCode(65 + a),
-            );
+            const isFill = q.question_type === "FILL_IN_THE_BLANK";
+            const correct = isFill
+              ? q.correct_answers.map((a) => String(a))
+              : q.correct_answers
+                  .filter((a): a is number => typeof a === "number")
+                  .map((a) => String.fromCharCode(65 + a));
             return (
               <div
                 key={q.id}
@@ -617,19 +659,30 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
                     <p className="mt-4 text-base font-medium leading-7 text-slate-900">
                       {q.question_text}
                     </p>
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                      {opts.map((opt, i) => (
-                        <div
-                          key={i}
-                          className={`rounded-xl border p-3 text-sm ${correct.includes(String.fromCharCode(65 + i)) ? "border-emerald-300 bg-emerald-50" : "border-slate-200"}`}
-                        >
-                          <span className="mr-2 font-bold">
-                            {String.fromCharCode(65 + i)}.
-                          </span>
-                          {opt}
-                        </div>
-                      ))}
-                    </div>
+                    {isFill ? (
+                      <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                          Accepted answers
+                        </p>
+                        <p className="mt-2 font-semibold text-emerald-900">
+                          {correct.join(" / ") || "—"}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                        {opts.map((opt, i) => (
+                          <div
+                            key={i}
+                            className={`rounded-xl border p-3 text-sm ${correct.includes(String.fromCharCode(65 + i)) ? "border-emerald-300 bg-emerald-50" : "border-slate-200"}`}
+                          >
+                            <span className="mr-2 font-bold">
+                              {String.fromCharCode(65 + i)}.
+                            </span>
+                            {opt}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2 lg:w-40 lg:justify-end">
                     <button
@@ -689,7 +742,9 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
                     ? "Select all correct answers."
                     : preview.question_type === "TRUE_FALSE"
                       ? "Select True or False."
-                      : "Select one correct answer."}
+                      : preview.question_type === "FILL_IN_THE_BLANK"
+                        ? "Student enters a text answer."
+                        : "Select one correct answer."}
                 </p>
               </div>
               <button
@@ -704,22 +759,40 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
               <p className="text-lg font-semibold text-slate-900">
                 {preview.question_text}
               </p>
-              <div className="mt-6 space-y-3">
-                {(preview.question_type === "TRUE_FALSE"
-                  ? ["True", "False"]
-                  : preview.options
-                ).map((opt, i) => (
-                  <div
-                    key={i}
-                    className="flex items-start gap-3 rounded-xl border p-4"
-                  >
-                    <span className="font-bold">
-                      {String.fromCharCode(65 + i)}.
-                    </span>
-                    <span>{opt}</span>
+              {preview.question_type === "FILL_IN_THE_BLANK" ? (
+                <div className="mt-6 space-y-4">
+                  <input
+                    disabled
+                    placeholder="Type your answer here..."
+                    className="w-full rounded-xl border px-4 py-3"
+                  />
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                      Accepted answers
+                    </p>
+                    <p className="mt-2 font-semibold text-emerald-900">
+                      {preview.correct_answers.map(String).join(" / ") || "—"}
+                    </p>
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <div className="mt-6 space-y-3">
+                  {(preview.question_type === "TRUE_FALSE"
+                    ? ["True", "False"]
+                    : preview.options
+                  ).map((opt, i) => (
+                    <div
+                      key={i}
+                      className="flex items-start gap-3 rounded-xl border p-4"
+                    >
+                      <span className="font-bold">
+                        {String.fromCharCode(65 + i)}.
+                      </span>
+                      <span>{opt}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -732,7 +805,7 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
                 <h2 className="text-xl font-bold">Import Questions from CSV</h2>
                 <p className="mt-1 text-sm text-slate-500">
                   Supports MCQ, Multiple Correct, True / False and Fill in the
-                  Blank. No explanation, tag or per-question scoring columns.
+                  Blank. No explanation or tag columns.
                 </p>
               </div>
               <button
@@ -752,7 +825,7 @@ export default function QuestionBankDetails({ bank, onBack }: Props) {
                 </p>
                 <p className="mt-2">
                   MCQ: A · Multiple Correct: A|C|D · True/False: True or False ·
-                  Fill in the Blank: A.
+                  Fill in the Blank: HERTZ | HZ.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">

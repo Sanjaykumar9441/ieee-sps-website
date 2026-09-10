@@ -213,10 +213,6 @@ export default function ImportQuestionsModal({
         "Option C": "Decoder",
         "Option D": "Register",
         "Correct Answer": "A",
-        Explanation: "A multiplexer selects one input from multiple inputs.",
-        Difficulty: "MEDIUM",
-        Marks: 1,
-        "Negative Marks": 0,
       },
       {
         Question: "Which are programming languages?",
@@ -226,10 +222,6 @@ export default function ImportQuestionsModal({
         "Option C": "HTML",
         "Option D": "JavaScript",
         "Correct Answer": "A,B,D",
-        Explanation: "C, Python and JavaScript are programming languages.",
-        Difficulty: "MEDIUM",
-        Marks: 1,
-        "Negative Marks": 0,
       },
       {
         Question: "The Earth is the third planet from the Sun.",
@@ -239,10 +231,6 @@ export default function ImportQuestionsModal({
         "Option C": "",
         "Option D": "",
         "Correct Answer": "TRUE",
-        Explanation: "Earth is the third planet from the Sun.",
-        Difficulty: "MEDIUM",
-        Marks: 1,
-        "Negative Marks": 0,
       },
       {
         Question: "The SI unit of frequency is ___",
@@ -252,10 +240,6 @@ export default function ImportQuestionsModal({
         "Option C": "",
         "Option D": "",
         "Correct Answer": "HERTZ | HZ",
-        Explanation: "Frequency is measured in hertz.",
-        Difficulty: "MEDIUM",
-        Marks: 1,
-        "Negative Marks": 0,
       },
     ];
     const worksheet = XLSX.utils.json_to_sheet(rows);
@@ -366,10 +350,6 @@ export default function ImportQuestionsModal({
                     "Option C",
                     "Option D",
                     "Correct Answer / Accepted Answers",
-                    "Explanation",
-                    "Difficulty",
-                    "Marks",
-                    "Negative Marks",
                   ].map((column) => (
                     <div
                       key={column}

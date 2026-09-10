@@ -3,18 +3,72 @@ const { supabase } = require("../lib/supabase");
 
 async function enrichAssessmentQuestions(assessment) {
   if (!assessment?.id) return assessment;
-  const { data: mappings } = await supabase
-    .from("assessment_question_banks")
-    .select("questions_to_pick")
-    .eq("assessment_id", assessment.id);
-  const selected = (mappings || []).reduce(
-    (sum, m) => sum + Number(m.questions_to_pick || 0),
-    0,
-  );
-  return {
-    ...assessment,
-    total_questions: selected || Number(assessment.total_questions || 0),
-  };
+
+  try {
+    const { data: mappings, error: mappingError } = await supabase
+      .from("assessment_question_banks")
+      .select("question_bank_id, questions_to_pick")
+      .eq("assessment_id", assessment.id);
+
+    if (mappingError) throw mappingError;
+
+    const bankIds = [
+      ...new Set(
+        (mappings || []).map((row) => row.question_bank_id).filter(Boolean),
+      ),
+    ];
+
+    if (!bankIds.length) {
+      return { ...assessment, total_questions: 0 };
+    }
+
+    const { data: banks, error: bankError } = await supabase
+      .from("question_banks")
+      .select("id")
+      .in("id", bankIds)
+      .eq("is_active", true);
+
+    if (bankError) throw bankError;
+
+    const activeIds = new Set((banks || []).map((bank) => bank.id));
+    const activeBankIds = [...activeIds];
+    const counts = new Map();
+
+    if (activeBankIds.length) {
+      const { data: questions, error: questionError } = await supabase
+        .from("questions")
+        .select("bank_id")
+        .in("bank_id", activeBankIds)
+        .eq("is_active", true);
+
+      if (questionError) throw questionError;
+
+      for (const question of questions || []) {
+        counts.set(
+          question.bank_id,
+          Number(counts.get(question.bank_id) || 0) + 1,
+        );
+      }
+    }
+
+    const selected = (mappings || []).reduce((sum, mapping) => {
+      if (!activeIds.has(mapping.question_bank_id)) return sum;
+      const requested = Math.max(Number(mapping.questions_to_pick || 0), 0);
+      const available = Number(counts.get(mapping.question_bank_id) || 0);
+      return sum + Math.min(requested, available);
+    }, 0);
+
+    return { ...assessment, total_questions: selected };
+  } catch (error) {
+    console.warn(
+      "[ASSESSMENT] Unable to calculate live question count; using stored total:",
+      error.message,
+    );
+    return {
+      ...assessment,
+      total_questions: Number(assessment.total_questions || 0),
+    };
+  }
 }
 
 exports.getAssessments = async (req, res) => {

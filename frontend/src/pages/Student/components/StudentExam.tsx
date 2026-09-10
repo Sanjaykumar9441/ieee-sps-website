@@ -82,6 +82,7 @@ export default function StudentExam({
 }: Props) {
   const finishingRef = useRef(false);
   const submittingRef = useRef(false);
+  const pageHideSubmitRef = useRef(false);
   const submitRef = useRef<(reason: SubmitReason) => void>(() => undefined);
   const answersRef = useRef<AnswerMap>({});
   const deadlineRef = useRef(Date.now() + Math.max(0, initialSeconds) * 1000);
@@ -183,6 +184,65 @@ export default function StudentExam({
     },
     [attemptId, finishExam, persistCurrentAnswer, questions],
   );
+
+  useEffect(() => {
+    const submitSnapshotOnPageHide = () => {
+      if (
+        finishingRef.current ||
+        submittingRef.current ||
+        pageHideSubmitRef.current
+      )
+        return;
+      pageHideSubmitRef.current = true;
+
+      try {
+        persistCurrentAnswer();
+
+        const answers = questions.map((item) => ({
+          attemptQuestionId: item.id,
+          selectedAnswers: answersRef.current[item.id] || [],
+        }));
+
+        const token =
+          localStorage.getItem("studentToken") ||
+          localStorage.getItem("token") ||
+          "";
+        const sessionId =
+          sessionStorage.getItem(`quiz_session_${attemptId}`) ||
+          localStorage.getItem(`quiz_session_${attemptId}`) ||
+          "";
+
+        const url = `${import.meta.env.VITE_API_URL}/api/student-assessments/${attemptId}/submit`;
+
+        // keepalive lets the browser finish the single final snapshot request
+        // while the exam popup is being closed. This is NOT a per-answer API.
+        void fetch(url, {
+          method: "POST",
+          keepalive: true,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            "x-assessment-session": sessionId,
+          },
+          body: JSON.stringify({
+            reason: "AUTO_SUBMIT",
+            answers,
+          }),
+        }).catch((error) => {
+          console.warn(
+            "[EXAM] Close-time submission could not be sent:",
+            error,
+          );
+        });
+      } catch (error) {
+        console.warn("[EXAM] Close-time submission preparation failed:", error);
+      }
+    };
+
+    window.addEventListener("pagehide", submitSnapshotOnPageHide);
+    return () =>
+      window.removeEventListener("pagehide", submitSnapshotOnPageHide);
+  }, [attemptId, persistCurrentAnswer, questions]);
 
   submitRef.current = submitForReason;
 
