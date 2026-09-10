@@ -3,6 +3,8 @@ const engine = require("../services/assessmentEngine");
 const session = require("../services/studentSessionService");
 const liveEvents = require("../services/liveEvents");
 const antiCheat = require("../services/antiCheatService");
+const { supabase } = require("../lib/supabase");
+const scoring = require("../services/scoringService");
 const crypto = require("crypto");
 const {
   processSubmission,
@@ -399,16 +401,6 @@ exports.submitAssessment = async (req, res) => {
       });
     }
 
-    if (attempt.status === "SUBMITTED") {
-      return res.json({
-        success: true,
-        alreadySubmitted: true,
-        queued: false,
-        status: "SUBMITTED",
-        submittedAt: attempt.submitted_at || null,
-      });
-    }
-
     const requestedReason = String(req.body?.reason || "STUDENT_SUBMIT");
     const allowedReasons = new Set([
       "STUDENT_SUBMIT",
@@ -419,6 +411,102 @@ exports.submitAssessment = async (req, res) => {
       ? requestedReason
       : "STUDENT_SUBMIT";
     const answers = Array.isArray(req.body?.answers) ? req.body.answers : [];
+
+    // IMPORTANT: timer/security auto-submit can race with the server's
+    // expiry reconciliation. The reconciliation may mark the attempt
+    // SUBMITTED before the browser's final answer snapshot arrives.
+    // Persist that snapshot even when the attempt is already terminal, so
+    // the admin question-wise review sees the same answers as a normal submit.
+    if (attempt.status === "SUBMITTED") {
+      if (answers.length) {
+        const { data: attemptQuestions, error: questionError } = await supabase
+          .from("assessment_attempt_questions")
+          .select("id")
+          .eq("attempt_id", attemptId);
+
+        if (questionError) throw questionError;
+
+        const validIds = new Set(
+          (attemptQuestions || []).map((row) => String(row.id)),
+        );
+        const latest = new Map();
+
+        for (const row of answers) {
+          const id =
+            row?.attemptQuestionId || row?.attempt_question_id || row?.id;
+          if (!id || !validIds.has(String(id))) continue;
+
+          const selected = Array.isArray(row.selectedAnswers)
+            ? row.selectedAnswers
+            : Array.isArray(row.selected_answers)
+              ? row.selected_answers
+              : [];
+
+          latest.set(String(id), {
+            attempt_question_id: id,
+            selected_answers: selected,
+            answered_at: new Date().toISOString(),
+          });
+        }
+
+        const rows = [...latest.values()];
+        if (rows.length) {
+          const { error: answerError } = await supabase
+            .from("assessment_answers")
+            .upsert(rows, { onConflict: "attempt_question_id" });
+          if (answerError) throw answerError;
+        }
+
+        // If this was an auto/security submission, refresh the stored score
+        // from the final browser snapshot as well. This covers the race where
+        // expiry reconciliation submitted first using an older DB snapshot.
+        if (reason !== "STUDENT_SUBMIT") {
+          const result = await scoring.calculateScoreFromAnswers(
+            attemptId,
+            answers,
+          );
+
+          const { data: refreshedAttempt, error: refreshError } = await supabase
+            .from("assessment_attempts")
+            .update({
+              score: result.score,
+              correct: result.correct,
+              wrong: result.wrong,
+              unanswered: result.unanswered,
+              answered_questions: result.answeredQuestions,
+              percentage: result.percentage,
+            })
+            .eq("id", attemptId)
+            .select()
+            .single();
+
+          if (refreshError) throw refreshError;
+
+          liveEvents.emitSubmitted(attempt.assessment_id, refreshedAttempt);
+          liveEvents.emitStudentSubmitted(attempt.assessment_id);
+          liveEvents.emitDashboardRefresh(attempt.assessment_id);
+          liveEvents.emitLeaderboard(attempt.assessment_id, []);
+
+          return res.json({
+            success: true,
+            alreadySubmitted: true,
+            queued: false,
+            status: "SUBMITTED",
+            submittedAt: refreshedAttempt.submitted_at || null,
+            attempt: refreshedAttempt,
+            message: "Assessment auto-submitted successfully.",
+          });
+        }
+      }
+
+      return res.json({
+        success: true,
+        alreadySubmitted: true,
+        queued: false,
+        status: "SUBMITTED",
+        submittedAt: attempt.submitted_at || null,
+      });
+    }
 
     if (answers.length > 500) {
       return res.status(400).json({
