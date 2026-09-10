@@ -497,66 +497,97 @@ exports.getStatus = async (req, res) => {
 };
 
 /* ============================================================
-   SUBMIT ASSESSMENT — QUEUED BATCH WRITE
+   SUBMIT ASSESSMENT — DIRECT SUBMIT (LIVE FIX)
 ============================================================ */
 
 exports.submitAssessment = async (req, res) => {
   try {
     const { attemptId } = req.params;
+
     const attempt =
       req.assessmentAttempt || (await engine.getAttempt(attemptId));
 
     if (!attempt) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Attempt not found." });
+      return res.status(404).json({
+        success: false,
+        message: "Attempt not found.",
+      });
     }
 
+    // Already submitted? Return success.
     if (attempt.status === "SUBMITTED") {
       return res.json({
         success: true,
         alreadySubmitted: true,
         queued: false,
-        status: attempt.status,
+        status: "SUBMITTED",
       });
     }
 
     const requestedReason = String(req.body?.reason || "STUDENT_SUBMIT");
+
     const allowedReasons = new Set([
       "STUDENT_SUBMIT",
       "AUTO_SUBMIT",
       "SECURITY_AUTO_SUBMIT",
     ]);
+
     const reason = allowedReasons.has(requestedReason)
       ? requestedReason
       : "STUDENT_SUBMIT";
+
     const answers = Array.isArray(req.body?.answers) ? req.body.answers : [];
 
     if (answers.length > 500) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Too many answer records were submitted.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Too many answer records were submitted.",
+      });
     }
 
-    await enqueueSubmission({
+    // ---------------------------------------------------------
+    // DIRECTLY PROCESS SUBMISSION
+    // This immediately updates assessment_attempts.status to SUBMITTED
+    // ---------------------------------------------------------
+    const { processSubmission } = require("../services/submissionQueue");
+
+    const updatedAttempt = await processSubmission({
       attemptId,
       reason,
       answers,
       queuedAt: new Date().toISOString(),
     });
 
-    return res.status(202).json({
+    return res.json({
       success: true,
-      queued: true,
-      status: "PROCESSING",
-      message: "Assessment submission accepted and queued for processing.",
+      queued: false,
+      status: updatedAttempt.status,
+      submittedAt: updatedAttempt.submitted_at,
+      score: updatedAttempt.score,
+      percentage: updatedAttempt.percentage,
+      message: "Assessment submitted successfully.",
     });
   } catch (err) {
-    console.error("QUEUE ASSESSMENT SUBMISSION ERROR:", err);
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("DIRECT SUBMIT ERROR:", err);
+
+    // Race condition protection
+    if (
+      String(err.message || "")
+        .toLowerCase()
+        .includes("already submitted")
+    ) {
+      return res.json({
+        success: true,
+        alreadySubmitted: true,
+        queued: false,
+        status: "SUBMITTED",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 
