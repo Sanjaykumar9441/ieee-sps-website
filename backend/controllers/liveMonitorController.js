@@ -522,11 +522,29 @@ exports.getStudentDetails = async (req, res) => {
         (typeof answer?.coding_answer === "string" &&
           answer.coding_answer.trim().length > 0);
 
-      const isCorrect =
-        selected.length > 0 &&
-        correctAnswers.length > 0 &&
-        JSON.stringify(answerSet(selected)) ===
-          JSON.stringify(answerSet(correctAnswers));
+      const isFillInTheBlank =
+        String(question.questions?.question_type || "")
+          .toUpperCase()
+          .replace(/[\s-]+/g, "_") === "FILL_IN_THE_BLANK";
+
+      const normalizeTextAnswer = (value) =>
+        String(value ?? "")
+          .normalize("NFKC")
+          .trim()
+          .replace(/\s+/g, " ")
+          .toLocaleLowerCase();
+
+      const isCorrect = isFillInTheBlank
+        ? selected.length > 0 &&
+          correctAnswers.length > 0 &&
+          correctAnswers.some(
+            (answer) =>
+              normalizeTextAnswer(answer) === normalizeTextAnswer(selected[0]),
+          )
+        : selected.length > 0 &&
+          correctAnswers.length > 0 &&
+          JSON.stringify(answerSet(selected)) ===
+            JSON.stringify(answerSet(correctAnswers));
 
       const storedMarks = Number(question.marks);
       const marks =

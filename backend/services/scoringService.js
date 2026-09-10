@@ -4,23 +4,49 @@ const OPTION_INDEX = Object.freeze({ A: 0, B: 1, C: 2, D: 3 });
 
 function normalizeAnswerValue(answer) {
   if (typeof answer === "number" && Number.isFinite(answer)) return answer;
-
   if (typeof answer === "string") {
     const value = answer.trim().toUpperCase();
     if (OPTION_INDEX[value] !== undefined) return OPTION_INDEX[value];
     if (/^\d+$/.test(value)) return Number(value);
   }
-
   return answer;
 }
 
 function normalizeAnswerSet(value) {
   const values = Array.isArray(value) ? value : value == null ? [] : [value];
-
   return values.map(normalizeAnswerValue).sort((a, b) => {
     if (typeof a === "number" && typeof b === "number") return a - b;
     return String(a).localeCompare(String(b));
   });
+}
+
+function normalizeTextAnswer(value) {
+  return String(value ?? "")
+    .normalize("NFKC")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase();
+}
+
+function sameTextAnswer(selectedAnswers, acceptedAnswers) {
+  const selected = Array.isArray(selectedAnswers)
+    ? selectedAnswers
+    : selectedAnswers == null
+      ? []
+      : [selectedAnswers];
+  const accepted = Array.isArray(acceptedAnswers)
+    ? acceptedAnswers
+    : acceptedAnswers == null
+      ? []
+      : [acceptedAnswers];
+  if (!selected.length || !accepted.length) return false;
+
+  const studentAnswer = normalizeTextAnswer(selected[0]);
+  if (!studentAnswer) return false;
+
+  return accepted.some(
+    (answer) => normalizeTextAnswer(answer) === studentAnswer,
+  );
 }
 
 function sameAnswerSet(left, right) {
@@ -37,9 +63,8 @@ function originalKey(value) {
     if (/^\d+$/.test(v)) return String.fromCharCode(65 + Number(v));
     return v;
   }
-  if (typeof value === "number" && Number.isFinite(value)) {
+  if (typeof value === "number" && Number.isFinite(value))
     return String.fromCharCode(65 + value);
-  }
   return null;
 }
 
@@ -52,7 +77,6 @@ function optionObject(value) {
       ]),
     );
   }
-
   if (value && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value).map(([key, text]) => [
@@ -61,23 +85,15 @@ function optionObject(value) {
       ]),
     );
   }
-
   return {};
 }
 
-/*
- * Older attempts may have an empty correct_answers value in the frozen row.
- * The original question still contains its answer key. Because the attempt
- * paper may have shuffled options, recover the answer by matching the original
- * correct option's text against the frozen shuffled option text.
- */
 function resolveCorrectAnswers(question) {
   const frozen = Array.isArray(question.correct_answers)
     ? question.correct_answers.filter(
         (v) => v !== null && v !== undefined && v !== "",
       )
     : [];
-
   if (frozen.length) return frozen;
 
   const source = question.questions || {};
@@ -86,23 +102,19 @@ function resolveCorrectAnswers(question) {
     : source.correct_answers == null
       ? []
       : [source.correct_answers];
-
   if (!sourceAnswers.length) return [];
 
   const originalOptions = optionObject(source.options);
   const shuffledOptions = optionObject(question.shuffled_options);
-
   const recovered = [];
 
   for (const answer of sourceAnswers) {
     const key = originalKey(answer);
     const answerText =
       (key && originalOptions[key]) || String(answer ?? "").trim();
-
     const shuffledKey = Object.entries(shuffledOptions).find(
       ([, text]) => String(text).trim() === String(answerText).trim(),
     )?.[0];
-
     if (shuffledKey) recovered.push(shuffledKey);
   }
 
@@ -141,7 +153,6 @@ async function getAssessmentForAttempt(attemptId) {
     .select("assessment_id")
     .eq("id", attemptId)
     .single();
-
   if (attemptError) throw attemptError;
 
   const { data: assessment, error: assessmentError } = await supabase
@@ -149,10 +160,16 @@ async function getAssessmentForAttempt(attemptId) {
     .select("marks_per_question,negative_marks")
     .eq("id", attempt.assessment_id)
     .single();
-
   if (assessmentError) throw assessmentError;
 
   return { attempt, assessment };
+}
+
+function isFillInTheBlank(question) {
+  const type = String(question?.questions?.question_type || "")
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_");
+  return ["FILL_IN_THE_BLANK", "FILL_IN_BLANK", "FILL_BLANK"].includes(type);
 }
 
 function calculateAgainstQuestions(questions, answerMap, assessment) {
@@ -169,32 +186,50 @@ function calculateAgainstQuestions(questions, answerMap, assessment) {
   let maximumMarks = 0;
 
   for (const question of questions) {
-    // Assessment-level scoring is authoritative. Older attempt rows can have
-    // 0/null marks, so those values must not make a real question worth zero.
     const storedMarks = Number(question.marks);
     const questionMarks =
       Number.isFinite(storedMarks) && storedMarks > 0
         ? storedMarks
         : fallbackMarks;
-
     const storedNegative = Number(question.negative_marks);
     const negativeMarks =
       Number.isFinite(storedNegative) && storedNegative >= 0
         ? storedNegative
         : fallbackNegative;
-
     maximumMarks += questionMarks;
 
     const selectedAnswers = answerMap.get(String(question.id));
-    const selected = normalizeAnswerSet(selectedAnswers);
 
+    if (isFillInTheBlank(question)) {
+      const selected = Array.isArray(selectedAnswers)
+        ? selectedAnswers
+        : selectedAnswers == null
+          ? []
+          : [selectedAnswers];
+      const accepted = resolveCorrectAnswers(question);
+
+      if (!selected.length || !String(selected[0] ?? "").trim()) {
+        unanswered++;
+        continue;
+      }
+
+      if (sameTextAnswer(selected, accepted)) {
+        correct++;
+        score += questionMarks;
+      } else {
+        wrong++;
+        score -= negativeMarks;
+      }
+      continue;
+    }
+
+    const selected = normalizeAnswerSet(selectedAnswers);
     if (selected.length === 0) {
       unanswered++;
       continue;
     }
 
     const expected = normalizeAnswerSet(resolveCorrectAnswers(question));
-
     if (expected.length > 0 && sameAnswerSet(selected, expected)) {
       correct++;
       score += questionMarks;
@@ -231,11 +266,9 @@ exports.calculateScoreFromAnswers = async (
   ]);
 
   const answerMap = new Map();
-
   for (const row of Array.isArray(submittedAnswers) ? submittedAnswers : []) {
     const id = row?.attemptQuestionId || row?.attempt_question_id || row?.id;
     if (!id) continue;
-
     answerMap.set(
       String(id),
       Array.isArray(row.selectedAnswers)
@@ -258,13 +291,11 @@ exports.calculateScore = async (attemptId) => {
 
   const ids = questions.map((q) => q.id);
   let answers = [];
-
   if (ids.length) {
     const { data, error } = await supabase
       .from("assessment_answers")
       .select("attempt_question_id,selected_answers")
       .in("attempt_question_id", ids);
-
     if (error) throw error;
     answers = data || [];
   }
@@ -283,3 +314,5 @@ exports.resolveCorrectAnswers = resolveCorrectAnswers;
 exports.normalizeAnswerSet = normalizeAnswerSet;
 exports.sameAnswerSet = sameAnswerSet;
 exports.calculateAgainstQuestions = calculateAgainstQuestions;
+exports.normalizeTextAnswer = normalizeTextAnswer;
+exports.sameTextAnswer = sameTextAnswer;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Eye, CheckCircle, Save, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, CheckCircle, Eye, Plus, Save, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   createQuestion,
@@ -35,6 +35,7 @@ interface Question {
   question_type: QuestionType;
   options: string[];
   correct_answers: number[];
+  accepted_answers: string[];
 }
 
 const blankQuestion: Question = {
@@ -42,6 +43,7 @@ const blankQuestion: Question = {
   question_type: "MCQ",
   options: ["", "", "", ""],
   correct_answers: [],
+  accepted_answers: [""],
 };
 
 function normalizeOptions(value: unknown): string[] {
@@ -55,7 +57,7 @@ function normalizeOptions(value: unknown): string[] {
   return [];
 }
 
-function normalizeAnswerInput(value: unknown): unknown[] {
+function normalizeAnswers(value: unknown): unknown[] {
   if (Array.isArray(value)) return value;
   if (value == null) return [];
   if (typeof value === "string") {
@@ -69,7 +71,7 @@ function normalizeAnswerInput(value: unknown): unknown[] {
         const parsed = JSON.parse(text);
         return Array.isArray(parsed) ? parsed : [parsed];
       } catch {
-        // Fall through to separator parsing.
+        // Continue with separator parsing.
       }
     }
     return text
@@ -80,10 +82,10 @@ function normalizeAnswerInput(value: unknown): unknown[] {
   return [value];
 }
 
-function normalizeCorrect(value: unknown, options: string[]): number[] {
+function normalizeCorrectIndexes(value: unknown, options: string[]): number[] {
   return [
     ...new Set(
-      normalizeAnswerInput(value)
+      normalizeAnswers(value)
         .map((answer) => {
           const text = String(answer ?? "").trim();
           if (!text) return -1;
@@ -99,11 +101,21 @@ function normalizeCorrect(value: unknown, options: string[]): number[] {
           );
         })
         .filter(
-          (index) =>
+          (index): index is number =>
             Number.isInteger(index) && index >= 0 && index < options.length,
         ),
     ),
   ];
+}
+
+function normalizeAcceptedAnswers(value: unknown): string[] {
+  return normalizeAnswers(value)
+    .map((answer) => String(answer ?? "").trim())
+    .filter(Boolean);
+}
+
+function hasBlank(text: string) {
+  return /(___+|\[blank\])/i.test(text);
 }
 
 export default function QuestionEditor({
@@ -114,15 +126,20 @@ export default function QuestionEditor({
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [validation, setValidation] = useState<string[]>([]);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [question, setQuestion] = useState<Question>({
     ...blankQuestion,
     options: [...blankQuestion.options],
+    accepted_answers: [...blankQuestion.accepted_answers],
   });
-  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (!initialQuestion) {
-      setQuestion({ ...blankQuestion, options: [...blankQuestion.options] });
+      setQuestion({
+        ...blankQuestion,
+        options: [...blankQuestion.options],
+        accepted_answers: [...blankQuestion.accepted_answers],
+      });
       setValidation([]);
       return;
     }
@@ -133,13 +150,11 @@ export default function QuestionEditor({
     const type: QuestionType =
       rawType === "TRUE_FALSE"
         ? "TRUE_FALSE"
-        : rawType === "MULTIPLE_CORRECT" ||
-            rawType === "MULTIPLE_CHOICE" ||
-            rawType === "MULTIPLE"
+        : ["MULTIPLE_CORRECT", "MULTIPLE_CHOICE", "MULTIPLE"].includes(rawType)
           ? "MULTIPLE_CORRECT"
-          : rawType === "FILL_IN_THE_BLANK" ||
-              rawType === "FILL_IN_BLANK" ||
-              rawType === "FILL_BLANK"
+          : ["FILL_IN_THE_BLANK", "FILL_IN_BLANK", "FILL_BLANK"].includes(
+                rawType,
+              )
             ? "FILL_IN_THE_BLANK"
             : "MCQ";
 
@@ -150,25 +165,34 @@ export default function QuestionEditor({
 
     while (type !== "TRUE_FALSE" && options.length < 4) options.push("");
 
+    const rawCorrect = normalizeAnswers(initialQuestion.correct_answers);
+    const legacyFillIndexes = normalizeCorrectIndexes(rawCorrect, options);
+    const acceptedAnswers =
+      type === "FILL_IN_THE_BLANK"
+        ? legacyFillIndexes.length
+          ? legacyFillIndexes.map((index) => options[index]).filter(Boolean)
+          : normalizeAcceptedAnswers(rawCorrect)
+        : [""];
+
     setQuestion({
       id: initialQuestion.id,
       bank_id: initialQuestion.bank_id,
       question_text: String(initialQuestion.question_text || ""),
       question_type: type,
-      options,
-      correct_answers: normalizeCorrect(
-        initialQuestion.correct_answers,
-        options,
-      ),
+      options:
+        type === "FILL_IN_THE_BLANK" && legacyFillIndexes.length
+          ? options
+          : options,
+      correct_answers: type === "FILL_IN_THE_BLANK" ? [] : legacyFillIndexes,
+      accepted_answers: acceptedAnswers.length ? acceptedAnswers : [""],
     });
     setValidation([]);
   }, [initialQuestion]);
 
   const compactOptions = () => {
-    const original = question.options;
     const options: string[] = [];
     const indexMap = new Map<number, number>();
-    original.forEach((option, index) => {
+    question.options.forEach((option, index) => {
       const value = option.trim();
       if (!value) return;
       indexMap.set(index, options.length);
@@ -180,12 +204,41 @@ export default function QuestionEditor({
     return { options, correct: [...new Set(correct)] };
   };
 
+  const compactAcceptedAnswers = () => [
+    ...new Set(
+      question.accepted_answers
+        .map((answer) =>
+          answer.normalize("NFKC").trim().replace(/\s+/g, " ").toUpperCase(),
+        )
+        .filter(Boolean),
+    ),
+  ];
+
   const handleValidate = () => {
     const errors: string[] = [];
-    if (!question.question_text.trim())
-      errors.push("Question text is required.");
+    const text = question.question_text.trim();
 
-    if (question.question_type === "TRUE_FALSE") {
+    if (!text) errors.push("Question text is required.");
+
+    if (question.question_type === "FILL_IN_THE_BLANK") {
+      if (!hasBlank(text)) {
+        errors.push(
+          "Fill in the Blank question must contain a blank using ___ or [blank].",
+        );
+      }
+
+      const accepted = compactAcceptedAnswers();
+      if (!accepted.length) {
+        errors.push("Add at least one accepted answer.");
+      }
+
+      if (
+        new Set(accepted.map((answer) => answer.toLowerCase())).size !==
+        accepted.length
+      ) {
+        errors.push("Accepted answers must be different.");
+      }
+    } else if (question.question_type === "TRUE_FALSE") {
       if (
         question.correct_answers.length !== 1 ||
         ![0, 1].includes(question.correct_answers[0])
@@ -203,16 +256,8 @@ export default function QuestionEditor({
         errors.push("Answer options must be different.");
       }
       if (!correct.length) errors.push("Select at least one correct answer.");
-      if (
-        (question.question_type === "MCQ" ||
-          question.question_type === "FILL_IN_THE_BLANK") &&
-        correct.length !== 1
-      ) {
-        errors.push(
-          question.question_type === "FILL_IN_THE_BLANK"
-            ? "Fill in the Blank requires exactly one correct option."
-            : "MCQ requires exactly one correct answer.",
-        );
+      if (question.question_type === "MCQ" && correct.length !== 1) {
+        errors.push("MCQ requires exactly one correct answer.");
       }
       if (question.question_type === "MULTIPLE_CORRECT" && correct.length < 2) {
         errors.push("Multiple Correct requires at least two correct answers.");
@@ -230,6 +275,7 @@ export default function QuestionEditor({
 
     try {
       setLoading(true);
+      const isFill = question.question_type === "FILL_IN_THE_BLANK";
       const { options, correct } =
         question.question_type === "TRUE_FALSE"
           ? { options: ["True", "False"], correct: question.correct_answers }
@@ -238,8 +284,8 @@ export default function QuestionEditor({
       const payload = {
         question_text: question.question_text.trim(),
         question_type: question.question_type,
-        options,
-        correct_answers: correct,
+        options: isFill ? [] : options,
+        correct_answers: isFill ? compactAcceptedAnswers() : correct,
       };
 
       if (question.id) await updateQuestion(question.id, payload);
@@ -256,21 +302,39 @@ export default function QuestionEditor({
   };
 
   const setType = (type: QuestionType) => {
-    setQuestion((current) => ({
-      ...current,
-      question_type: type,
-      options:
-        type === "TRUE_FALSE"
-          ? ["True", "False"]
-          : [
-              ...current.options.slice(0, 4),
-              ...Array(Math.max(0, 4 - current.options.length)).fill(""),
-            ],
-      correct_answers:
-        type === "MCQ" || type === "FILL_IN_THE_BLANK" || type === "TRUE_FALSE"
-          ? current.correct_answers.slice(0, 1)
-          : current.correct_answers,
-    }));
+    if (type === "TRUE_FALSE") {
+      setQuestion((current) => ({
+        ...current,
+        question_type: type,
+        options: ["True", "False"],
+        correct_answers: current.correct_answers.slice(0, 1),
+        accepted_answers: [""],
+      }));
+    } else if (type === "FILL_IN_THE_BLANK") {
+      setQuestion((current) => ({
+        ...current,
+        question_type: type,
+        options: [],
+        correct_answers: [],
+        accepted_answers: current.accepted_answers.filter(Boolean).length
+          ? current.accepted_answers.filter(Boolean)
+          : [""],
+      }));
+    } else {
+      setQuestion((current) => ({
+        ...current,
+        question_type: type,
+        options:
+          current.options.length >= 2
+            ? current.options.slice(0, 4)
+            : ["", "", "", ""],
+        correct_answers:
+          type === "MCQ"
+            ? current.correct_answers.slice(0, 1)
+            : current.correct_answers,
+        accepted_answers: [""],
+      }));
+    }
     setValidation([]);
   };
 
@@ -297,11 +361,35 @@ export default function QuestionEditor({
     }));
   };
 
+  const addAcceptedAnswer = () => {
+    setQuestion((current) => ({
+      ...current,
+      accepted_answers: [...current.accepted_answers, ""],
+    }));
+  };
+
+  const setAcceptedAnswer = (index: number, value: string) => {
+    setQuestion((current) => {
+      const accepted_answers = [...current.accepted_answers];
+      accepted_answers[index] = value.toUpperCase();
+      return { ...current, accepted_answers };
+    });
+    setValidation([]);
+  };
+
+  const deleteAcceptedAnswer = (index: number) => {
+    setQuestion((current) => {
+      const next = current.accepted_answers.filter(
+        (_, answerIndex) => answerIndex !== index,
+      );
+      return { ...current, accepted_answers: next.length ? next : [""] };
+    });
+  };
+
   const setCorrectAnswer = (index: number) => {
     setQuestion((current) => {
       if (
         current.question_type === "MCQ" ||
-        current.question_type === "FILL_IN_THE_BLANK" ||
         current.question_type === "TRUE_FALSE"
       ) {
         return { ...current, correct_answers: [index] };
@@ -317,6 +405,7 @@ export default function QuestionEditor({
   };
 
   const optionLabel = (index: number) => String.fromCharCode(65 + index);
+  const isFill = question.question_type === "FILL_IN_THE_BLANK";
 
   return (
     <div className="pb-10">
@@ -327,8 +416,7 @@ export default function QuestionEditor({
             onClick={onBack}
             className="flex items-center gap-2 text-[#00629B]"
           >
-            <ArrowLeft size={18} />
-            Back
+            <ArrowLeft size={18} /> Back
           </button>
           <h1 className="mt-3 text-3xl font-bold">Question Editor</h1>
           <p className="mt-1 text-sm text-gray-500">
@@ -342,16 +430,14 @@ export default function QuestionEditor({
             onClick={() => setPreviewOpen(true)}
             className="flex items-center gap-2 rounded-xl border px-5 py-3"
           >
-            <Eye size={18} />
-            Preview
+            <Eye size={18} /> Preview
           </button>
           <button
             type="button"
             onClick={handleValidate}
             className="flex items-center gap-2 rounded-xl border px-5 py-3"
           >
-            <CheckCircle size={18} />
-            Validate
+            <CheckCircle size={18} /> Validate
           </button>
           <button
             type="button"
@@ -359,8 +445,7 @@ export default function QuestionEditor({
             disabled={loading}
             className="flex items-center gap-2 rounded-xl bg-[#00629B] px-5 py-3 text-white disabled:opacity-50"
           >
-            <Save size={18} />
-            {loading ? "Saving..." : "Save"}
+            <Save size={18} /> {loading ? "Saving..." : "Save"}
           </button>
         </div>
       </div>
@@ -393,7 +478,7 @@ export default function QuestionEditor({
             </option>
             <option value="TRUE_FALSE">True / False</option>
             <option value="FILL_IN_THE_BLANK">
-              Fill in the Blank with Options
+              Fill in the Blank — User Enters Answer
             </option>
           </select>
         </div>
@@ -405,85 +490,138 @@ export default function QuestionEditor({
             setValidation([]);
           }}
           placeholder={
-            question.question_type === "FILL_IN_THE_BLANK"
+            isFill
               ? "Enter the sentence with a blank (___) here..."
               : "Enter question here..."
           }
           className="mt-5 w-full rounded-xl border p-4"
         />
+        {isFill && (
+          <p className="mt-2 text-sm text-slate-500">
+            Use <strong>___</strong> or <strong>[blank]</strong> where the
+            student should enter the answer.
+          </p>
+        )}
       </section>
 
       <section className="mt-8 rounded-2xl border bg-white p-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold">Answer Options</h2>
-            <p className="mt-1 text-sm text-gray-500">
-              {question.question_type === "TRUE_FALSE"
-                ? "Choose True or False."
-                : question.question_type === "MCQ"
-                  ? "Select exactly one correct option."
-                  : question.question_type === "FILL_IN_THE_BLANK"
-                    ? "Enter the sentence with a blank (___) and select exactly one correct option."
-                    : "Select all correct options."}
-            </p>
-          </div>
-          {question.question_type !== "TRUE_FALSE" &&
-            question.options.length < 4 && (
+        {isFill ? (
+          <>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Accepted Answers</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Students type their own answer. Add alternative answers that
+                  should also receive full marks.
+                </p>
+              </div>
               <button
                 type="button"
-                onClick={() =>
-                  setQuestion((current) => ({
-                    ...current,
-                    options: [...current.options, ""],
-                  }))
-                }
+                onClick={addAcceptedAnswer}
                 className="flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold"
               >
-                <Plus size={16} />
-                Add Option
+                <Plus size={16} /> Add Accepted Answer
               </button>
-            )}
-        </div>
-
-        <div className="mt-5 space-y-4">
-          {question.options.map((option, index) => (
-            <div
-              key={`${index}-${optionLabel(index)}`}
-              className="flex items-center gap-3"
-            >
-              <input
-                type={
-                  question.question_type === "MULTIPLE_CORRECT"
-                    ? "checkbox"
-                    : "radio"
-                }
-                name="correct-answer"
-                checked={question.correct_answers.includes(index)}
-                onChange={() => setCorrectAnswer(index)}
-                aria-label={`Mark option ${optionLabel(index)} correct`}
-              />
-              <span className="w-6 font-semibold">{optionLabel(index)}</span>
-              <input
-                value={option}
-                disabled={question.question_type === "TRUE_FALSE"}
-                onChange={(event) => setOption(index, event.target.value)}
-                placeholder={`Option ${optionLabel(index)}`}
-                className="w-full rounded-xl border p-3 disabled:bg-gray-50"
-              />
-              {question.question_type !== "TRUE_FALSE" && (
-                <button
-                  type="button"
-                  onClick={() => deleteOption(index)}
-                  title="Delete option"
-                  aria-label={`Delete option ${optionLabel(index)}`}
-                  className="rounded-xl border border-red-200 p-3 text-red-600 hover:bg-red-50"
-                >
-                  <Trash2 size={18} />
-                </button>
-              )}
             </div>
-          ))}
-        </div>
+            <div className="mt-5 space-y-4">
+              {question.accepted_answers.map((answer, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <span className="w-8 text-center font-semibold text-slate-500">
+                    {index + 1}
+                  </span>
+                  <input
+                    value={answer}
+                    onChange={(event) =>
+                      setAcceptedAnswer(index, event.target.value)
+                    }
+                    placeholder="Accepted answer, e.g. Hertz"
+                    className="w-full rounded-xl border p-3"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => deleteAcceptedAnswer(index)}
+                    title="Delete accepted answer"
+                    aria-label={`Delete accepted answer ${index + 1}`}
+                    className="rounded-xl border border-red-200 p-3 text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Answer Options</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  {question.question_type === "TRUE_FALSE"
+                    ? "Choose True or False."
+                    : question.question_type === "MCQ"
+                      ? "Select exactly one correct option."
+                      : "Select all correct options."}
+                </p>
+              </div>
+              {question.question_type !== "TRUE_FALSE" &&
+                question.options.length < 4 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setQuestion((current) => ({
+                        ...current,
+                        options: [...current.options, ""],
+                      }))
+                    }
+                    className="flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold"
+                  >
+                    <Plus size={16} /> Add Option
+                  </button>
+                )}
+            </div>
+            <div className="mt-5 space-y-4">
+              {question.options.map((option, index) => (
+                <div
+                  key={`${index}-${optionLabel(index)}`}
+                  className="flex items-center gap-3"
+                >
+                  <input
+                    type={
+                      question.question_type === "MULTIPLE_CORRECT"
+                        ? "checkbox"
+                        : "radio"
+                    }
+                    name="correct-answer"
+                    checked={question.correct_answers.includes(index)}
+                    onChange={() => setCorrectAnswer(index)}
+                    aria-label={`Mark option ${optionLabel(index)} correct`}
+                  />
+                  <span className="w-6 font-semibold">
+                    {optionLabel(index)}
+                  </span>
+                  <input
+                    value={option}
+                    disabled={question.question_type === "TRUE_FALSE"}
+                    onChange={(event) => setOption(index, event.target.value)}
+                    placeholder={`Option ${optionLabel(index)}`}
+                    className="w-full rounded-xl border p-3 disabled:bg-gray-50"
+                  />
+                  {question.question_type !== "TRUE_FALSE" && (
+                    <button
+                      type="button"
+                      onClick={() => deleteOption(index)}
+                      title="Delete option"
+                      aria-label={`Delete option ${optionLabel(index)}`}
+                      className="rounded-xl border border-red-200 p-3 text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
       {previewOpen && (
@@ -510,25 +648,37 @@ export default function QuestionEditor({
                 {question.question_text || "Question text will appear here."}
               </p>
               <p className="mt-2 text-sm font-medium text-[#00629B]">
-                {question.question_type === "MCQ"
-                  ? "MCQ — Select one answer"
-                  : question.question_type === "MULTIPLE_CORRECT"
-                    ? "Multiple Correct — Select all applicable answers"
-                    : question.question_type === "TRUE_FALSE"
-                      ? "True / False — Select one answer"
-                      : "Fill in the Blank — Select one answer"}
+                {isFill
+                  ? "Fill in the Blank — Type Your Answer"
+                  : question.question_type === "MCQ"
+                    ? "MCQ — Select one answer"
+                    : question.question_type === "MULTIPLE_CORRECT"
+                      ? "Multiple Correct — Select all applicable answers"
+                      : "True / False — Select one answer"}
               </p>
-              <div className="mt-6 space-y-3">
-                {question.options.map((option, index) => (
-                  <div
-                    key={index}
-                    className="flex items-start gap-3 rounded-xl border p-4"
-                  >
-                    <span className="font-bold">{optionLabel(index)}.</span>
-                    <span>{option || "Option not filled"}</span>
-                  </div>
-                ))}
-              </div>
+              {isFill ? (
+                <div className="mt-6 rounded-xl border border-dashed p-4 text-slate-500">
+                  Student answer field appears here.
+                </div>
+              ) : (
+                <div className="mt-6 space-y-3">
+                  {question.options.map((option, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start gap-3 rounded-xl border p-4"
+                    >
+                      <span className="font-bold">{optionLabel(index)}.</span>
+                      <span>{option || "Option not filled"}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {isFill &&
+                question.accepted_answers.filter(Boolean).length > 0 && (
+                  <p className="mt-5 text-xs text-slate-400">
+                    Accepted answers are hidden from students.
+                  </p>
+                )}
             </div>
           </div>
         </div>

@@ -29,27 +29,30 @@ function validate(question) {
   }
 
   if (type === "FILL_IN_THE_BLANK") {
-    if (
-      !Array.isArray(question.options) ||
-      question.options.length < 2 ||
-      question.options.length > 4
-    ) {
-      return "Fill in the Blank requires 2 to 4 options.";
+    if (!/(___+|\[blank\])/i.test(String(question.question_text))) {
+      return "Fill in the Blank must contain a blank using ___ or [blank].";
+    }
+    if (!Array.isArray(question.options) || question.options.length !== 0) {
+      return "Fill in the Blank must not contain selectable options.";
     }
     if (
       !Array.isArray(question.correct_answers) ||
-      question.correct_answers.length !== 1
+      question.correct_answers.length < 1
     ) {
-      return "Fill in the Blank requires exactly one correct option.";
+      return "Fill in the Blank requires at least one accepted answer.";
     }
-    const invalid = question.correct_answers.some(
-      (answer) =>
-        !Number.isInteger(Number(answer)) ||
-        Number(answer) < 0 ||
-        Number(answer) >= question.options.length,
-    );
-    if (invalid)
-      return "Fill in the Blank correct answer must point to an available option.";
+    const answers = question.correct_answers
+      .map((answer) => String(answer ?? "").trim())
+      .filter(Boolean);
+    if (answers.length !== question.correct_answers.length) {
+      return "Fill in the Blank contains an empty accepted answer.";
+    }
+    if (
+      new Set(answers.map((answer) => answer.toLowerCase())).size !==
+      answers.length
+    ) {
+      return "Fill in the Blank accepted answers must be different.";
+    }
     return null;
   }
 
@@ -60,18 +63,15 @@ function validate(question) {
   ) {
     return "MCQ questions must have 2 to 4 options.";
   }
-
   if (
     !Array.isArray(question.correct_answers) ||
     question.correct_answers.length < 1
   ) {
     return "At least one correct answer is required.";
   }
-
   if (type === "MCQ" && question.correct_answers.length !== 1) {
     return "MCQ requires exactly one correct answer.";
   }
-
   if (type === "MULTIPLE_CORRECT" && question.correct_answers.length < 2) {
     return "Multiple Correct requires at least two correct answers.";
   }

@@ -25,9 +25,9 @@ function normalizeType(value) {
   ) {
     return "MULTIPLE_CORRECT";
   }
-
-  if (["TRUEFALSE", "TRUE_OR_FALSE", "TRUE_FALSE_QUESTION"].includes(raw))
+  if (["TRUEFALSE", "TRUE_OR_FALSE", "TRUE_FALSE_QUESTION"].includes(raw)) {
     return "TRUE_FALSE";
+  }
   if (
     [
       "FILL_BLANK",
@@ -36,42 +36,33 @@ function normalizeType(value) {
       "FILLINTHEBLANK",
       "FILL_IN_THE_BLANK_WITH_OPTIONS",
     ].includes(raw)
-  )
+  ) {
     return "FILL_IN_THE_BLANK";
+  }
   return raw;
 }
 
 function normalizeOptions(value) {
-  if (Array.isArray(value)) {
+  if (Array.isArray(value))
     return value.map((item) => String(item ?? "").trim());
-  }
-
   if (value && typeof value === "object") {
     return ["A", "B", "C", "D"].map((key) =>
       String(value[key] ?? value[key.toLowerCase()] ?? "").trim(),
     );
   }
-
   return [];
 }
 
 function normalizeCorrectAnswers(value, options = [], questionType = "MCQ") {
   let input = Array.isArray(value) ? value : value == null ? [] : [value];
-
-  if (typeof value === "string") {
-    input = value.split(/[|,;]/);
-  }
+  if (typeof value === "string") input = value.split(/[|,;]/);
 
   const result = [];
-
   for (const answer of input) {
     const text = String(answer ?? "").trim();
     if (!text) continue;
 
     let index = -1;
-
-    // Frontend editors commonly send zero-based numeric indexes (0, 1, 2, 3).
-    // Accept those directly, while still supporting A-D, 1-4 and option text.
     if (typeof answer === "number" && Number.isInteger(answer)) {
       index = answer;
     } else if (/^[0-3]$/.test(text)) {
@@ -90,12 +81,34 @@ function normalizeCorrectAnswers(value, options = [], questionType = "MCQ") {
       );
     }
 
-    if (Number.isInteger(index) && index >= 0 && index < options.length) {
-      if (!result.includes(index)) result.push(index);
+    if (
+      Number.isInteger(index) &&
+      index >= 0 &&
+      index < options.length &&
+      !result.includes(index)
+    ) {
+      result.push(index);
     }
   }
-
   return result;
+}
+
+function normalizeTextAnswers(value) {
+  let input = Array.isArray(value) ? value : value == null ? [] : [value];
+  if (typeof value === "string") input = value.split("|");
+  return [
+    ...new Set(
+      input
+        .map((answer) =>
+          String(answer ?? "")
+            .normalize("NFKC")
+            .trim()
+            .replace(/\s+/g, " ")
+            .toUpperCase(),
+        )
+        .filter(Boolean),
+    ),
+  ];
 }
 
 function toStoredOptions(options) {
@@ -109,13 +122,16 @@ function toStoredOptions(options) {
 
 function normalizeQuestionPayload(input, bankId) {
   const questionType = normalizeType(input.question_type);
+  const isFillInTheBlank = questionType === "FILL_IN_THE_BLANK";
   let options = normalizeOptions(input.options);
 
   if (questionType === "TRUE_FALSE") {
     options = ["True", "False"];
+  } else if (isFillInTheBlank) {
+    // Fill-in-the-blank has no selectable options. The answer key is stored
+    // as accepted text values in correct_answers.
+    options = [];
   } else {
-    // Store only real options. This keeps correct-answer indexes stable even
-    // when a CSV/template leaves option C or D empty.
     options = options.filter(Boolean).slice(0, 4);
   }
 
@@ -130,15 +146,9 @@ function normalizeQuestionPayload(input, bankId) {
     question_text: String(input.question_text || "").trim(),
     question_image_id: input.question_image_id || null,
     options,
-    correct_answers: normalizeCorrectAnswers(
-      incomingCorrect,
-      options,
-      questionType,
-    ),
-    // Marks are configured at assessment level, not per question.
-    // The database may still contain legacy marks columns, but the question
-    // workflow deliberately does not read or write them.
-    // Kept for compatibility with the existing schema; not exposed in the UI.
+    correct_answers: isFillInTheBlank
+      ? normalizeTextAnswers(incomingCorrect)
+      : normalizeCorrectAnswers(incomingCorrect, options, questionType),
     difficulty: "MEDIUM",
     estimated_seconds: 60,
     language: String(input.language || "en").trim() || "en",
@@ -150,14 +160,39 @@ function normalizeQuestionPayload(input, bankId) {
 function validateQuestion(question, rowLabel = "Question") {
   const errors = [];
 
-  if (!question.question_text) {
+  if (!question.question_text)
     errors.push(`${rowLabel}: Question text is required.`);
-  }
 
   if (!QUESTION_TYPES.includes(question.question_type)) {
     errors.push(
       `${rowLabel}: Question type must be MCQ, MULTIPLE_CORRECT, TRUE_FALSE or FILL_IN_THE_BLANK.`,
     );
+    return errors;
+  }
+
+  if (question.question_type === "FILL_IN_THE_BLANK") {
+    if (!/(___+|\[blank\])/i.test(question.question_text)) {
+      errors.push(
+        `${rowLabel}: Fill in the Blank question must contain a blank using ___ or [blank].`,
+      );
+    }
+
+    const accepted = normalizeTextAnswers(question.correct_answers);
+    if (!accepted.length)
+      errors.push(`${rowLabel}: At least one accepted answer is required.`);
+
+    if (
+      new Set(accepted.map((answer) => answer.toLowerCase())).size !==
+      accepted.length
+    ) {
+      errors.push(`${rowLabel}: Accepted answers must be different.`);
+    }
+
+    if (question.options.length !== 0) {
+      errors.push(
+        `${rowLabel}: Fill in the Blank must not contain selectable options.`,
+      );
+    }
     return errors;
   }
 
@@ -172,40 +207,6 @@ function validateQuestion(question, rowLabel = "Question") {
       ![0, 1].includes(question.correct_answers[0])
     ) {
       errors.push(`${rowLabel}: Correct answer must be True or False.`);
-    }
-    return errors;
-  }
-
-  if (question.question_type === "FILL_IN_THE_BLANK") {
-    const filled = question.options.filter(Boolean);
-    const hasBlank = /(___+|\[blank\])/i.test(question.question_text);
-    if (!hasBlank) {
-      errors.push(
-        `${rowLabel}: Fill in the Blank question must contain a blank (___).`,
-      );
-    }
-    if (filled.length < 2 || filled.length > 4) {
-      errors.push(`${rowLabel}: Fill in the Blank requires 2 to 4 options.`);
-    }
-    if (
-      new Set(filled.map((option) => option.toLowerCase())).size !==
-      filled.length
-    ) {
-      errors.push(`${rowLabel}: Answer options must be different.`);
-    }
-    if (question.correct_answers.length !== 1) {
-      errors.push(
-        `${rowLabel}: Fill in the Blank requires exactly one correct option.`,
-      );
-    }
-    if (
-      question.correct_answers.some(
-        (index) => index < 0 || index >= filled.length,
-      )
-    ) {
-      errors.push(
-        `${rowLabel}: Correct answer must point to an available option.`,
-      );
     }
     return errors;
   }
@@ -272,10 +273,8 @@ exports.list = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Question Bank ID is required." });
     }
-
     const { data, error } = await Question.getAll(questionBankId);
     if (error) throw error;
-
     return res.json({ success: true, questions: data || [] });
   } catch (err) {
     console.error("LIST QUESTIONS ERROR:", err);
@@ -290,10 +289,8 @@ exports.get = async (req, res) => {
       return res
         .status(400)
         .json({ success: false, message: "Question ID is required." });
-
     const { data, error } = await Question.getById(id);
     if (error) throw error;
-
     return res.json({ success: true, question: data });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -303,21 +300,22 @@ exports.get = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const bankId = req.params.bankId || req.body.bank_id;
-    if (!bankId) {
+    if (!bankId)
       return res
         .status(400)
         .json({ success: false, message: "Question Bank ID is required." });
-    }
 
     const payload = normalizeQuestionPayload(req.body || {}, bankId);
     const errors = validateQuestion(payload);
-    if (errors.length) {
+    if (errors.length)
       return res
         .status(400)
         .json({ success: false, message: errors.join(" "), errors });
-    }
 
-    const dbPayload = { ...payload, options: toStoredOptions(payload.options) };
+    const dbPayload = {
+      ...payload,
+      options: toStoredOptions(payload.options),
+    };
     const { data, error } = await Question.create(dbPayload);
     if (error) throw error;
 
@@ -325,11 +323,13 @@ exports.create = async (req, res) => {
     assessmentEngine.invalidateQuestionBankCache(bankId);
     liveEvents.emitQuestionCreated?.(bankId, data);
 
-    return res.status(201).json({
-      success: true,
-      message: "Question created successfully.",
-      question: data,
-    });
+    return res
+      .status(201)
+      .json({
+        success: true,
+        message: "Question created successfully.",
+        question: data,
+      });
   } catch (err) {
     console.error("CREATE QUESTION ERROR:", err);
     return res.status(500).json({
@@ -351,25 +351,22 @@ exports.update = async (req, res) => {
         .json({ success: false, message: "Question ID is required." });
 
     const { data: existing, error: getError } = await Question.getById(id);
-    if (getError || !existing) {
+    if (getError || !existing)
       return res
         .status(404)
         .json({ success: false, message: "Question not found." });
-    }
 
     const payload = normalizeQuestionPayload(
       { ...existing, ...req.body },
       existing.bank_id,
     );
     const errors = validateQuestion(payload);
-    if (errors.length) {
+    if (errors.length)
       return res
         .status(400)
         .json({ success: false, message: errors.join(" "), errors });
-    }
 
     delete payload.bank_id;
-
     const dbPayload = { ...payload, options: toStoredOptions(payload.options) };
     const { data, error } = await Question.update(id, dbPayload);
     if (error) throw error;
@@ -398,11 +395,10 @@ exports.delete = async (req, res) => {
         .json({ success: false, message: "Question ID is required." });
 
     const { data: existing, error: getError } = await Question.getById(id);
-    if (getError || !existing) {
+    if (getError || !existing)
       return res
         .status(404)
         .json({ success: false, message: "Question not found." });
-    }
 
     const { error } = await Question.delete(id);
     if (error) throw error;
@@ -437,11 +433,13 @@ exports.duplicate = async (req, res) => {
     assessmentEngine.invalidateQuestionBankCache(source.bank_id);
     liveEvents.emitQuestionCreated?.(source.bank_id, data);
 
-    return res.status(201).json({
-      success: true,
-      message: "Question duplicated successfully.",
-      question: data,
-    });
+    return res
+      .status(201)
+      .json({
+        success: true,
+        message: "Question duplicated successfully.",
+        question: data,
+      });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -487,14 +485,13 @@ exports.checkDuplicates = async (req, res) => {
   try {
     const { bankId } = req.params;
     const { questions } = req.body || {};
-    if (!bankId || !Array.isArray(questions)) {
+    if (!bankId || !Array.isArray(questions))
       return res
         .status(400)
         .json({
           success: false,
           message: "Bank ID and questions are required.",
         });
-    }
 
     const { data: existingQuestions, error } = await Question.getAll(bankId);
     if (error) throw error;
@@ -507,7 +504,6 @@ exports.checkDuplicates = async (req, res) => {
       ),
     );
     const seen = new Set();
-
     const duplicates = questions
       .map((q, index) => {
         const key = String(q.question_text || "")
@@ -533,11 +529,10 @@ exports.validateQuestions = async (req, res) => {
   try {
     const { bankId } = req.params;
     const { questions } = req.body || {};
-    if (!Array.isArray(questions)) {
+    if (!Array.isArray(questions))
       return res
         .status(400)
         .json({ success: false, message: "Questions must be an array." });
-    }
 
     const results = questions.map((raw, index) => {
       const normalized = normalizeQuestionPayload(raw, bankId);
@@ -552,7 +547,6 @@ exports.validateQuestions = async (req, res) => {
     const invalidCount = results.filter(
       (result) => result.status === "invalid",
     ).length;
-
     return res.json({
       success: true,
       valid: invalidCount === 0,
@@ -573,16 +567,14 @@ exports.finalImport = async (req, res) => {
   try {
     const { bankId } = req.params;
     const { questions } = req.body || {};
-
     if (!bankId)
       return res
         .status(400)
         .json({ success: false, message: "Question Bank ID is required." });
-    if (!Array.isArray(questions) || !questions.length) {
+    if (!Array.isArray(questions) || !questions.length)
       return res
         .status(400)
         .json({ success: false, message: "No questions to import." });
-    }
 
     const normalized = questions.map((question) =>
       normalizeQuestionPayload(question, bankId),
@@ -619,15 +611,13 @@ exports.finalImport = async (req, res) => {
           .toLowerCase(),
       ),
     );
-
     const importable = [];
     let duplicateCount = 0;
 
     for (const question of normalized) {
       const key = question.question_text.toLowerCase();
-      if (existingTexts.has(key)) {
-        duplicateCount += 1;
-      } else {
+      if (existingTexts.has(key)) duplicateCount += 1;
+      else {
         importable.push(question);
         existingTexts.add(key);
       }

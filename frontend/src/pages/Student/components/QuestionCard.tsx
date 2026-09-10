@@ -6,15 +6,32 @@ interface Props {
   selectedAnswers: string[];
   onChange: (answers: string[]) => void;
 }
+
 type NormalizedOption = { key: string; text: string };
-function questionTypeLabel(type: string) {
-  const normalized = String(type || "MCQ").toUpperCase();
-  if (normalized === "TRUE_FALSE") return "True / False";
-  if (normalized === "MULTIPLE_CORRECT")
+
+type QuestionKind =
+  | "MCQ"
+  | "MULTIPLE_CORRECT"
+  | "TRUE_FALSE"
+  | "FILL_IN_THE_BLANK";
+
+function questionTypeLabel(type: QuestionKind) {
+  if (type === "TRUE_FALSE") return "True / False";
+  if (type === "MULTIPLE_CORRECT")
     return "Multiple Choice — Multiple Correct Answers";
-  if (normalized === "FILL_IN_THE_BLANK")
-    return "Fill in the Blank — Choose One";
+  if (type === "FILL_IN_THE_BLANK")
+    return "Fill in the Blank — Type Your Answer";
   return "MCQ — One Correct Answer";
+}
+
+function inferType(rawType: string): QuestionKind {
+  const normalized = rawType.toUpperCase().replace(/[\s-]+/g, "_");
+  if (normalized === "TRUE_FALSE") return "TRUE_FALSE";
+  if (["MULTIPLE_CORRECT", "MULTIPLE_CHOICE", "MULTIPLE"].includes(normalized))
+    return "MULTIPLE_CORRECT";
+  if (["FILL_IN_THE_BLANK", "FILL_IN_BLANK", "FILL_BLANK"].includes(normalized))
+    return "FILL_IN_THE_BLANK";
+  return "MCQ";
 }
 
 export default function QuestionCard({
@@ -30,12 +47,13 @@ export default function QuestionCard({
         </p>
       </div>
     );
+
   const raw: any = question;
   const data =
     raw.question && typeof raw.question === "object" ? raw.question : raw;
-  const rawType = String(
-    data.question_type ?? data.questionType ?? data.type ?? "MCQ",
-  ).toUpperCase();
+  const inferredType = inferType(
+    String(data.question_type ?? data.questionType ?? data.type ?? "MCQ"),
+  );
   const questionText =
     data.question_text ?? data.questionText ?? data.text ?? "";
   const questionOrder =
@@ -44,6 +62,8 @@ export default function QuestionCard({
     data.question_order ??
     data.questionOrder ??
     "";
+  const marks = Number(data.marks ?? raw.marks ?? 1);
+
   let rawOptions: any =
     data.options ??
     data.question_options ??
@@ -51,6 +71,7 @@ export default function QuestionCard({
     raw.options ??
     raw.question_options ??
     null;
+
   if (typeof rawOptions === "string") {
     try {
       rawOptions = JSON.parse(rawOptions);
@@ -58,41 +79,42 @@ export default function QuestionCard({
       rawOptions = null;
     }
   }
+
   const optionEntries: NormalizedOption[] = [];
   const addOption = (key: unknown, value: unknown) => {
     if (key == null || value == null) return;
-    const k = String(key).trim().toUpperCase(),
-      t = String(value).trim();
-    if (k && t && !optionEntries.some((o) => o.key === k))
-      optionEntries.push({ key: k, text: t });
-  };
-  const readOptions = (value: any) => {
-    if (Array.isArray(value)) {
-      value.forEach((option, index) => {
-        if (option && typeof option === "object")
-          addOption(
-            option.key ??
-              option.label ??
-              option.option_key ??
-              String.fromCharCode(65 + index),
-            option.text ??
-              option.value ??
-              option.option_text ??
-              option.content ??
-              "",
-          );
-        else addOption(String.fromCharCode(65 + index), option);
-      });
-      return;
-    }
-    if (value && typeof value === "object") {
-      ["A", "B", "C", "D"].forEach((key) =>
-        addOption(key, value[key] ?? value[key.toLowerCase()]),
-      );
+    const k = String(key).trim().toUpperCase();
+    const text = String(value).trim();
+    if (k && text && !optionEntries.some((option) => option.key === k)) {
+      optionEntries.push({ key: k, text });
     }
   };
-  readOptions(rawOptions);
-  if (!optionEntries.length && rawType !== "TRUE_FALSE")
+
+  if (Array.isArray(rawOptions)) {
+    rawOptions.forEach((option, index) => {
+      if (option && typeof option === "object") {
+        addOption(
+          option.key ??
+            option.label ??
+            option.option_key ??
+            String.fromCharCode(65 + index),
+          option.text ??
+            option.value ??
+            option.option_text ??
+            option.content ??
+            "",
+        );
+      } else {
+        addOption(String.fromCharCode(65 + index), option);
+      }
+    });
+  } else if (rawOptions && typeof rawOptions === "object") {
+    ["A", "B", "C", "D"].forEach((key) =>
+      addOption(key, rawOptions[key] ?? rawOptions[key.toLowerCase()]),
+    );
+  }
+
+  if (!optionEntries.length && inferredType !== "TRUE_FALSE") {
     ["A", "B", "C", "D"].forEach((key) =>
       addOption(
         key,
@@ -101,37 +123,31 @@ export default function QuestionCard({
           raw[`option_${key.toLowerCase()}`],
       ),
     );
-  const looksTrueFalse =
-    optionEntries.length === 2 &&
-    optionEntries.some((o) => o.text.toLowerCase() === "true") &&
-    optionEntries.some((o) => o.text.toLowerCase() === "false");
-  const inferredType =
-    rawType === "TRUE_FALSE" || looksTrueFalse
-      ? "TRUE_FALSE"
-      : rawType === "MULTIPLE_CORRECT" ||
-          rawType === "MULTIPLE_CHOICE" ||
-          rawType === "MULTIPLE"
-        ? "MULTIPLE_CORRECT"
-        : rawType === "FILL_IN_THE_BLANK" ||
-            rawType === "FILL_IN_BLANK" ||
-            rawType === "FILL_BLANK"
-          ? "FILL_IN_THE_BLANK"
-          : "MCQ";
+  }
+
   if (inferredType === "TRUE_FALSE" && !optionEntries.length) {
     addOption("A", "True");
     addOption("B", "False");
   }
+
   optionEntries.sort((a, b) => a.key.localeCompare(b.key));
+
   const isMultipleCorrect = inferredType === "MULTIPLE_CORRECT";
+
   const toggleOption = (key: string) => {
-    if (isMultipleCorrect)
+    if (isMultipleCorrect) {
       onChange(
         selectedAnswers.includes(key)
-          ? selectedAnswers.filter((a) => a !== key)
+          ? selectedAnswers.filter((answer) => answer !== key)
           : [...selectedAnswers, key],
       );
-    else onChange([key]);
+      return;
+    }
+    onChange([key]);
   };
+
+  const textAnswer = selectedAnswers[0] ?? "";
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="p-6 lg:p-8">
@@ -148,45 +164,81 @@ export default function QuestionCard({
               : inferredType === "TRUE_FALSE"
                 ? "Select True or False."
                 : inferredType === "FILL_IN_THE_BLANK"
-                  ? "Choose one option."
+                  ? "Type your answer in the field below."
                   : "Select one correct answer."}{" "}
-            · {Number(data.marks ?? raw.marks ?? 1)} mark
-            {Number(data.marks ?? raw.marks ?? 1) === 1 ? "" : "s"}
+            · {marks} mark{marks === 1 ? "" : "s"}
           </p>
         </div>
-        <div className="mt-7 text-[17px] font-medium leading-8 text-slate-900">
+
+        <div className="mt-7 whitespace-pre-wrap text-[17px] font-medium leading-8 text-slate-900">
           {questionText || (
             <span className="text-red-500">Question text unavailable.</span>
           )}
         </div>
-        <div className="mt-8 space-y-3">
-          {optionEntries.length === 0 ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-              No answer options are available for this question.
-            </div>
-          ) : (
-            optionEntries.map(({ key, text }) => {
-              const selected = selectedAnswers.includes(key);
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => toggleOption(key)}
-                  className={`w-full rounded-xl border p-4 text-left flex items-start gap-4 transition ${selected ? "border-[#00629B] bg-[#00629B]/5 ring-2 ring-[#00629B]/10" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}
-                >
-                  <span
-                    className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-sm font-bold border ${selected ? "bg-[#00629B] text-white border-[#00629B]" : "bg-white text-slate-500 border-slate-300"}`}
+
+        {inferredType === "FILL_IN_THE_BLANK" ? (
+          <div className="mt-8">
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Your Answer
+            </label>
+            <input
+              type="text"
+              value={textAnswer}
+              onChange={(event) => {
+                const value = event.target.value
+                  .normalize("NFKC")
+                  .replace(/\s+/g, " ")
+                  .toUpperCase();
+                onChange(value ? [value] : []);
+              }}
+              placeholder="Type your answer here..."
+              autoComplete="off"
+              spellCheck={false}
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-4 text-base text-slate-900 outline-none transition focus:border-[#00629B] focus:ring-4 focus:ring-[#00629B]/10"
+            />
+            <p className="mt-2 text-xs text-slate-400">
+              Your answer is automatically converted to CAPITAL LETTERS. Extra
+              spaces are normalized.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-8 space-y-3">
+            {optionEntries.length === 0 ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                No answer options are available for this question.
+              </div>
+            ) : (
+              optionEntries.map(({ key, text }) => {
+                const selected = selectedAnswers.includes(key);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleOption(key)}
+                    className={`flex w-full items-start gap-4 rounded-xl border p-4 text-left transition ${
+                      selected
+                        ? "border-[#00629B] bg-[#00629B]/5 ring-2 ring-[#00629B]/10"
+                        : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
                   >
-                    {selected ? <Check size={16} /> : key}
-                  </span>
-                  <span className="pt-1 text-sm leading-6 text-slate-700">
-                    {text}
-                  </span>
-                </button>
-              );
-            })
-          )}
-        </div>
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-sm font-bold ${
+                        selected
+                          ? "border-[#00629B] bg-[#00629B] text-white"
+                          : "border-slate-300 bg-white text-slate-500"
+                      }`}
+                    >
+                      {selected ? <Check size={16} /> : key}
+                    </span>
+                    <span className="pt-1 text-sm leading-6 text-slate-700">
+                      {text}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
