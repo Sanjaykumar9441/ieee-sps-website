@@ -4,7 +4,10 @@ const session = require("../services/studentSessionService");
 const liveEvents = require("../services/liveEvents");
 const antiCheat = require("../services/antiCheatService");
 const crypto = require("crypto");
-const { enqueueSubmission } = require("../services/submissionQueue");
+const {
+  enqueueSubmission,
+  getSubmissionStatus,
+} = require("../services/submissionQueue");
 
 function getRemainingSecondsFromAttempt(attempt) {
   if (!attempt?.expires_at) return 0;
@@ -756,6 +759,51 @@ exports.heartbeat = async (req, res) => {
   } catch (err) {
     console.error("ASSESSMENT HEARTBEAT ERROR:", err);
 
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+/* ============================================================
+   GET SUBMISSION QUEUE STATUS
+   Kept as a lightweight status endpoint. It reads the Redis job state
+   created by enqueueSubmission() and falls back to the database attempt
+   state when no Redis job exists.
+============================================================ */
+
+exports.getSubmissionQueueStatus = async (req, res) => {
+  try {
+    const { attemptId } = req.params;
+    if (!attemptId) {
+      return res.status(400).json({
+        success: false,
+        message: "Attempt ID is required.",
+      });
+    }
+
+    const attempt =
+      req.assessmentAttempt || (await engine.getAttempt(attemptId));
+
+    if (!attempt) {
+      return res.status(404).json({
+        success: false,
+        message: "Attempt not found.",
+      });
+    }
+
+    const job = await getSubmissionStatus(attemptId);
+
+    return res.json({
+      success: true,
+      attemptId,
+      status: attempt.status,
+      queued: Boolean(job),
+      submission: job,
+    });
+  } catch (err) {
+    console.error("GET SUBMISSION QUEUE STATUS ERROR:", err);
     return res.status(500).json({
       success: false,
       message: err.message,
