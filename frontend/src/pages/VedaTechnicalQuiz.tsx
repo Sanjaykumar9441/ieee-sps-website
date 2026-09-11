@@ -15,41 +15,111 @@ import {
 import { Link } from "react-router-dom";
 
 /**
- * Add the assessment URLs/paths here when each assessment is created.
- * Example: "/student/exam/YOUR-ASSESSMENT-ID"
+ * ============================================================
+ * VEDA TECHNICAL QUIZ — ASSESSMENT LINKS
+ * ============================================================
+ *
+ * Batch 1 and Batch 2 are always shown.
+ *
+ * Batch 3 is optional:
+ *   false = Batch 3 hidden
+ *   true  = Batch 3 shown
+ *
+ * Later, only replace the href values with your real
+ * assessment IDs/links.
  */
+
+const SHOW_ELIMINATION_BATCH_3 = true;
+
 const ASSESSMENTS = [
+  // ==========================================================
+  // ELIMINATION — BATCH 1
+  // ==========================================================
   {
-    key: "elimination",
+    key: "elimination-batch-1",
     round: "01",
-    title: "Elimination Round",
+    title: "Elimination Round — Batch 1",
     description:
-      "The opening assessment used to shortlist teams for the final stages of the Technical Quiz.",
+      "The first elimination assessment for teams participating in the Technical Quiz.",
     meta: ["25 MCQs", "15 minutes", "Team assessment"],
-    href: "/student/exam/ed45b7b5-5efa-497a-b37a-05cfc09f4d2c", 
+    href: "/student/exam/ed45b7b5-5efa-497a-b37a-05cfc09f4d2c",
     accent: "from-[#00629B] to-[#00A8E8]",
+    stage: "elimination",
   },
+
+  // ==========================================================
+  // ELIMINATION — BATCH 2
+  // ==========================================================
+  {
+    key: "elimination-batch-2",
+    round: "02",
+    title: "Elimination Round — Batch 2",
+    description:
+      "The second elimination assessment for teams participating in the Technical Quiz.",
+    meta: ["25 MCQs", "15 minutes", "Team assessment"],
+    href: "/student/exam/1c14d9e6-0eff-4227-a340-cd5763eb1cc1",
+    accent: "from-[#00629B] to-[#00A8E8]",
+    stage: "elimination",
+  },
+
+  // ==========================================================
+  // ELIMINATION — BATCH 3
+  // ==========================================================
+  // This batch is automatically removed when the setting above
+  // is false.
+  {
+    key: "elimination-batch-3",
+    round: "03",
+    title: "Elimination Round — Batch 3",
+    description:
+      "The optional third elimination assessment for teams participating in the Technical Quiz.",
+    meta: ["25 MCQs", "15 minutes", "Team assessment"],
+    href: "/student/exam/0b06a1ef-1c2d-4d57-95ff-3faf8821f1c6",
+    accent: "from-[#00629B] to-[#00A8E8]",
+    stage: "elimination",
+    optional: true,
+  },
+
+  // ==========================================================
+  // FINAL ROUND 1
+  // ==========================================================
   {
     key: "final-1",
-    round: "02",
+    round: "04",
     title: "Final Round 1",
     description:
       "The first final-stage assessment for teams that qualify through the elimination round.",
     meta: ["Final stage", "ECE focused", "Team assessment"],
-    href: "/student/exam/a5b7bacf-66ec-4a80-b0ae-2f060a758a84",
+    href: "/student/exam/c78dba9a-7b85-40a0-b5e9-88c6ac8a4906",
     accent: "from-[#F59E0B] to-[#F97316]",
+    stage: "final",
   },
+
+  // ==========================================================
+  // FINAL ROUND 2
+  // ==========================================================
   {
     key: "final-2",
-    round: "03",
+    round: "05",
     title: "Final Round 2",
     description:
       "The concluding final-stage assessment used to determine the final standings.",
     meta: ["Final stage", "ECE focused", "Team assessment"],
-    href: "/student/exam/cee49be2-76c7-4e6c-8004-18f22c0da6e8",
+    href: "/student/exam/ee8535e1-56f3-4459-a0d3-fc4fbcaa47c1",
     accent: "from-[#0F766E] to-[#14B8A6]",
+    stage: "final",
   },
 ] as const;
+
+// ============================================================
+// ONLY SHOW BATCH 3 WHEN ENABLED
+// ============================================================
+
+const VISIBLE_ASSESSMENTS = ASSESSMENTS.filter(
+  (assessment) =>
+    assessment.key !== "elimination-batch-3" ||
+    SHOW_ELIMINATION_BATCH_3
+);
 
 // Keep this false until you intentionally create and enable the tie-break assessment.
 const SHOW_TIE_BREAK = false;
@@ -181,7 +251,7 @@ export default function VedaTechnicalQuiz() {
                   </div>
 
                   <div className="mt-7 space-y-3">
-                    {ASSESSMENTS.map((assessment) => (
+                    {VISIBLE_ASSESSMENTS.map((assessment) => (
                       <div
                         key={assessment.key}
                         className="flex items-center gap-4 rounded-2xl border border-slate-200 p-4"
@@ -244,7 +314,7 @@ export default function VedaTechnicalQuiz() {
         </div>
 
         <div className="grid gap-5 lg:grid-cols-3">
-          {ASSESSMENTS.map((assessment, index) => (
+          {VISIBLE_ASSESSMENTS.map((assessment, index) => (
             <motion.article
               key={assessment.key}
               initial={{ opacity: 0, y: 20 }}
