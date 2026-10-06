@@ -20,7 +20,7 @@ import {
 const EVENT = {
   title: "IEEE SPS Membership Development Drive",
   status: "Upcoming",
-  date: "2026-07-11",
+  date: "2026-10-06",
   certificate:
     " E-Certificate will be provided upon successful completion of the workshop." +
     " Participation will also help you earn valuable SABL Points.",

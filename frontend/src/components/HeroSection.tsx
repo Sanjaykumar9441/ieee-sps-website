@@ -1,12 +1,9 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import VedaPopup from "./VedaPopup";
 
 const HeroSection = () => {
   return (
     <>
-      <VedaPopup />
-
       <section
         id="home"
         className="bg-white min-h-screen lg:min-h-screen flex items-center"

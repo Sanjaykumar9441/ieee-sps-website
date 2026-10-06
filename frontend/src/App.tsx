@@ -27,7 +27,6 @@ import SpaceDayRegistrationStatus from "./pages/SpaceDayRegistrationStatus";
 import StudentExamPortal from "./pages/Student/components/StudentExamPortal";
 import StudentExamCompleted from "./pages/Student/components/StudentExamCompleted";
 import CertificateDownload from "./pages/CertificateDownload";
-import VedaTechnicalQuiz from "./pages/VedaTechnicalQuiz";
 
 function StudentExamRoute() {
   const { assessmentId } = useParams();
@@ -82,7 +81,6 @@ function App() {
             <Route path="/student/exam/:assessmentId" element={<StudentExamRoute />} />
             <Route path="/student/exam/completed" element={<StudentExamCompleted />} />
             <Route path="/certificates" element={<CertificateDownload />} />
-            <Route path="/veda-2k26" element={<VedaTechnicalQuiz />} />
           </Routes>
         </div>
       </div>
